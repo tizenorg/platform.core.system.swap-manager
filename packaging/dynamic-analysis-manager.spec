@@ -38,7 +38,7 @@ cd ../eventutil
 %defattr(-,root,root,-)
 %{_prefix}/bin/da_manager
 %{_prefix}/bin/da_event
-
+%{_prefix}/bin/da_command
 
 %changelog
 

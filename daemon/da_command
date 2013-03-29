@@ -1,0 +1,89 @@
+#!/bin/bash
+
+KILL=/usr/bin/killall
+MANAGER=/usr/bin/da_manager
+EVENT=/usr/bin/da_event
+
+print_usage()
+{
+	echo "usage: da_command [options]"
+	echo "Options:"
+	echo "killmanager               terminate da_manager"
+	echo "killapp apppath           terminate application"
+	echo "runmanager                execute da_manager"
+	echo "runevent record|play      execute da_event"
+}
+
+kill_manager()
+{
+	$KILL $MANAGER
+}
+
+kill_app()
+{
+	$KILL $APPPATH
+}
+
+run_manager()
+{
+	$MANAGER
+}
+
+run_event()
+{
+	case "$EVENTOPTION" in
+		record)
+			EVENTMODE="-r"
+			;;
+		play)
+			EVENTMODE="-s"
+			;;
+		*)
+			echo "Invalid event option!"
+			print_usage
+			exit 1
+			;;
+	esac
+
+	$EVENT $EVENTMODE
+}
+
+if test $# -gt 2 -o $# -lt 1; then
+	print_usage
+	exit 1
+fi
+
+if test -n "$2"; then
+	case "$1" in
+		runevent)
+			EVENTOPTION=$2
+			;;
+		killapp)
+			APPPATH=$2
+			;;
+		*)
+			print_usage
+			exit 1
+			;;
+	esac
+fi
+
+case "$1" in
+	killmanager)
+		kill_manager
+		;;
+	killapp)
+		kill_app
+		;;
+	runmanager)
+		run_manager
+		;;
+	runevent)
+		run_event
+		;;
+	*)
+		echo "Unknown option!"
+		print_usage
+		;;
+esac
+

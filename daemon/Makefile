@@ -45,6 +45,7 @@ DEBUG_ON := -DDEBUG=1
 FLAGS = -pthread -Wall
 
 TARGET = da_manager
+DASCRIPT = da_command
 
 all: $(TARGET)
 
@@ -56,7 +57,7 @@ localtest:
 
 install:
 	[ -d "$(DESTDIR)/$(INSTALLDIR)" ] || mkdir -p $(DESTDIR)/$(INSTALLDIR)
-	install $(TARGET) $(DESTDIR)/$(INSTALLDIR)/
+	install $(TARGET) $(DASCRIPT) $(DESTDIR)/$(INSTALLDIR)/
 
 clean:
 	rm $(TARGET) 

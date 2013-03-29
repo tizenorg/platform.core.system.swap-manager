@@ -47,8 +47,8 @@ extern "C" {
 #define LAUNCH_APP_NAME			"launch_app"
 #define DA_PRELOAD_EXEC			"__AUL_SDK_DYNAMIC_ANALYSIS"
 #define DA_PRELOAD(AppType)		AppType ? DA_PRELOAD_OSP : DA_PRELOAD_TIZEN
-#define DA_PRELOAD_TIZEN		"LD_PRELOAD=/home/developer/sdk_tools/da/da_probe_tizen.so"
-#define DA_PRELOAD_OSP			"LD_PRELOAD=/home/developer/sdk_tools/da/da_probe_osp.so"
+#define DA_PRELOAD_TIZEN		"LD_PRELOAD=/usr/lib/da_probe_tizen.so"
+#define DA_PRELOAD_OSP			"LD_PRELOAD=/usr/lib/da_probe_osp.so"
 #define BATT_LOG_FILE			"/home/developer/sdk_tools/da/battery/"
 #define SHELL_CMD				"/bin/sh"
 
