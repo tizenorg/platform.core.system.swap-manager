@@ -53,6 +53,11 @@ if test $# -gt 2 -o $# -lt 1; then
 	exit 1
 fi
 
+process_list()
+{
+	ps -eo pid,cmd
+}
+
 if test -n "$2"; then
 	case "$1" in
 		runevent)
@@ -80,6 +85,9 @@ case "$1" in
 		;;
 	runevent)
 		run_event
+		;;
+	process)
+		process_list
 		;;
 	*)
 		echo "Unknown option!"
