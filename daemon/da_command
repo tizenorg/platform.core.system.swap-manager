@@ -3,6 +3,8 @@
 KILL=/usr/bin/killall
 MANAGER=/usr/bin/da_manager
 EVENT=/usr/bin/da_event
+FIND=/usr/bin/find
+GETAPPINSTALLPATH="/usr/bin/pkgcmd -a"
 
 print_usage()
 {
@@ -12,6 +14,7 @@ print_usage()
 	echo "killapp apppath           terminate application"
 	echo "runmanager                execute da_manager"
 	echo "runevent record|play      execute da_event"
+	echo "findunittest              find unittest project"
 }
 
 kill_manager()
@@ -48,15 +51,21 @@ run_event()
 	$EVENT $EVENTMODE
 }
 
-if test $# -gt 2 -o $# -lt 1; then
-	print_usage
-	exit 1
-fi
+find_unittest()
+{
+	$FIND `$GETAPPINSTALLPATH | awk '{if (FNR==1) printf $NF}'` -name *.unittest
+}
 
 process_list()
 {
 	ps -eo pid,cmd
 }
+
+
+if test $# -gt 2 -o $# -lt 1; then
+	print_usage
+	exit 1
+fi
 
 if test -n "$2"; then
 	case "$1" in
@@ -85,6 +94,9 @@ case "$1" in
 		;;
 	runevent)
 		run_event
+		;;
+	findunittest)
+		find_unittest
 		;;
 	process)
 		process_list

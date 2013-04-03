@@ -35,6 +35,7 @@ cd ../eventutil
 %make_install
 
 %files
+%manifest dynamic-analysis-manager.manifest
 %defattr(-,root,root,-)
 %{_prefix}/bin/da_manager
 %{_prefix}/bin/da_event
