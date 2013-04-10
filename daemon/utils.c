@@ -26,16 +26,238 @@
 *
 */ 
 
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+
 #include <pthread.h>
+#include <unistd.h>		// for unlink
+#include <dirent.h>		// for opendir, readdir
+#include <sys/types.h>	// for open
+#include <sys/stat.h>	// for open
+#include <fcntl.h>		// for open
+#include <grp.h>		// for setgroups
+
+#include "daemon.h"
 #include "utils.h"
-#include "da_debug.h"
 
-#define BUFFER_MAX		1024
+#define BUFFER_MAX			1024
+#define APP_GROUPS_MAX		100
+#define APP_GROUP_LIST		"/usr/share/privilege-control/app_group_list"
+#define SELF_LABEL_FILE		"/proc/self/attr/current"
+#define SMACK_LABEL_LEN		255
+#define SID_APP				5000
 
-static int file_fd = -1;
+#define APPDIR1				"/opt/apps/"
+#define APPDIR2				"/opt/usr/apps/"
 
-static pthread_mutex_t write_mutex;
+uint64_t str_to_uint64(char* str)
+{
+	uint64_t res = 0;
+	
+	if(str != NULL)
+	{
+		while(*str >= '0' && *str <= '9')
+		{
+			res = res * 10 + (*str - '0');
+			str++;
+		}
+	}
+
+	return res;
+}
+
+int64_t str_to_int64(char* str)
+{
+	int64_t res = 0;
+	int64_t factor = 1;
+	
+	if(str != NULL)
+	{
+		if(*str == '-')
+		{
+			factor = -1;
+			str++;
+		}
+		else if(*str == '+')
+		{
+			factor = 1;
+			str++;
+		}
+
+		while(*str >= '0' && *str <= '9')
+		{
+			res = res * 10 + (*str - '0');
+			str++;
+		}
+	}
+
+	return (res * factor);
+}
+
+int read_line(const int fd, char* ptr, const unsigned int maxlen)
+{
+	unsigned int n = 0;
+	char c[2];
+	int rc;
+
+	while(n != maxlen)
+	{
+		if((rc = read(fd, c, 1)) != 1)
+			return -1; // eof or read err
+
+		if(*c == '\n')
+		{
+			ptr[n] = 0;
+			return n;
+		}
+		ptr[n++] = *c;
+	}
+	return -1; // no space
+}
+
+int smack_set_label_for_self(const char *label)
+{
+	int len;
+	int fd;
+	int ret;
+
+	len = strnlen(label, SMACK_LABEL_LEN + 1);
+	if (len > SMACK_LABEL_LEN)
+		return -1;
+
+	fd = open(SELF_LABEL_FILE, O_WRONLY);
+	if (fd < 0)
+		return -1;
+
+	ret = write(fd, label, len);
+	close(fd);
+
+	return (ret < 0) ? -1 : 0;
+}
+
+void set_appuser_groups(void)
+{
+	int fd = 0;
+	char buffer[5];
+	gid_t t_gid = -1;
+	gid_t groups[APP_GROUPS_MAX] = {0, };
+	int cnt = 0;
+
+	// groups[cnt++] = SID_DEVELOPER;
+	fd = open(APP_GROUP_LIST, O_RDONLY);
+	if(fd < 0)
+	{
+		LOGE("cannot get app's group lists from %s", APP_GROUP_LIST);
+		return;
+	}
+
+	for(;;)
+	{
+		if(read_line(fd, buffer, sizeof buffer) < 0)
+		{
+			break;
+		}
+
+		t_gid = strtoul(buffer, 0, 10);
+		errno = 0;
+		if(errno != 0)
+		{
+			LOGE("cannot change string to integer: [%s]\n", buffer);
+			continue;
+		}
+
+		if(t_gid)
+		{
+			if(cnt < APP_GROUPS_MAX)
+			{
+				groups[cnt++] = t_gid;
+			}
+			else
+			{
+				LOGE("cannot add groups more than %d", APP_GROUPS_MAX);
+				break;
+			}
+		}
+	}
+
+	if(cnt > 0)
+	{
+		if(setgroups(sizeof(groups) / sizeof(groups[0]), groups) != 0)
+		{
+			fprintf(stderr, "set groups failed errno: %d\n", errno);
+			exit(1);
+		}
+	}
+}
+
+int get_smack_label(const char* execpath, char* buffer, int buflen)
+{
+	int i, ret = 0;
+	char* temp;
+	if(strncmp(execpath, APPDIR1, strlen(APPDIR1)) == 0)
+	{
+		execpath = execpath + strlen(APPDIR1);
+		temp = strchr(execpath, '/');
+		for(i = 0; i < strlen(execpath) ; i++)
+		{
+			if(execpath + i == temp)
+				break;
+			buffer[i] = execpath[i];
+		}
+		buffer[i] = '\0';
+	}
+	else if(strncmp(execpath, APPDIR2, strlen(APPDIR2)) == 0)
+	{
+		execpath = execpath + strlen(APPDIR2);
+		temp = strchr(execpath, '/');
+		for(i = 0; i < strlen(execpath) ; i++)
+		{
+			if(execpath + i == temp)
+				break;
+			buffer[i] = execpath[i];
+		}
+		buffer[i] = '\0';
+	}
+	else
+	{
+		ret = -1;
+	}
+
+	return ret;
+}
+
+// return 0 if succeed
+// return -1 if error occured
+int remove_indir(const char *dirname)
+{
+	DIR *dir;
+	struct dirent *entry;
+	char path[PATH_MAX];
+
+	dir = opendir(dirname);
+	if(dir == NULL)
+	{
+		return -1;
+	}
+
+	while((entry = readdir(dir)) != NULL)
+	{
+		if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, ".."))
+		{
+			snprintf(path, (size_t) PATH_MAX, "%s/%s", dirname, entry->d_name);
+			if (entry->d_type != DT_DIR)	// file
+			{
+				unlink(path);
+			}
+			else { }	// directory
+		}
+	}
+	closedir(dir);
+
+	return 0;
+}
 
 // get application name from executable binary path
 char* get_app_name(char* binary_path)
@@ -56,6 +278,7 @@ int exec_app(const char* exec_path, int app_type)
 {
 	pid_t   pid;
 	char command[PATH_MAX];
+	char appid[SMACK_LABEL_LEN];
 
 	if (exec_path == NULL || strlen(exec_path) <= 0) 
 	{
@@ -69,83 +292,34 @@ int exec_app(const char* exec_path, int app_type)
     else if(pid > 0)
     	return 1;		// exit parent process with successness
 
-	sprintf(command, "%s %s", DA_PRELOAD(app_type), exec_path);
-	LOGI("launch app path is %s, executable path is %s\n", LAUNCH_APP_PATH, exec_path);
-	execl(SHELL_CMD, SHELL_CMD, "-c", command, NULL);
-
-	return 1;
-}
-
-#ifdef USE_LAUNCH_PAD
-// execute application by launch pad
-// return 0 to fail to execute
-// return 1 to succeed to execute
-int exec_app_by_launchpad(const char* pkg_name)
-{
-	pid_t   pid;
-
-	if (pkg_name == NULL || strlen(pkg_name) <= 0) 
+	if(get_smack_label(exec_path, appid, SMACK_LABEL_LEN) < 0)
 	{
-		LOGE("Package name is not correct\n");
+		LOGE("failed to get smack label\n");
 		return 0;
-	}
-
-	if (( pid = fork()) < 0)	// fork error
-    	return 0;
-
-    else if(pid > 0)
-    	return 1;		// exit parent process with successness
-
-	LOGI("launch app path is %s, pkg name is %s\n", LAUNCH_APP_PATH, pkg_name);
-	execl(LAUNCH_APP_PATH, LAUNCH_APP_NAME, pkg_name, DA_PRELOAD_EXEC, NULL);
-
-	return 1;
-}
-#endif
-
-#if 0
-void kill_app(const char* binary_path)		// fork version
-{
-	pid_t pid;
-	pid_t pkg_pid;
-	char command[PATH_MAX];
-
-	if (( pid = fork()) < 0)
-    	return;
-
-    //exit parent process
-    else if(pid > 0)
-    	return;
-	
-	pkg_pid = find_pid_from_path(binary_path);
-
-	if(pkg_pid > 0)
-	{
-		sprintf(command, "kill -9 %d", pkg_pid);
-		LOGI(" : %s\n", command);
-		execl(SHELL_CMD, SHELL_CMD, "-c", command, NULL);
 	}
 	else
 	{
-		exit(0);
+		LOGI("smack lable is %s\n", appid);
+		if(smack_set_label_for_self(appid) < 0)
+		{
+			LOGE("failed to set label for self\n");
+		}
+
+		set_appuser_groups();
+		if(setgid(SID_APP) < 0)
+		{
+			LOGE("failed to setgid\n");
+		}
+		if(setuid(SID_APP) < 0)
+		{
+			LOGE("failed to setuid\n");
+		}
+		sprintf(command, "%s %s", DA_PRELOAD(app_type), exec_path);
+		LOGI("launch app path is %s, executable path is %s\n", LAUNCH_APP_PATH, exec_path);
+		execl(SHELL_CMD, SHELL_CMD, "-c", command, NULL);
+		return 1;
 	}
 }
-#else
-void kill_app(const char* binary_path)		// non fork version
-{
-	pid_t pkg_pid;
-	char command[PATH_MAX];
-
-	pkg_pid = find_pid_from_path(binary_path);
-
-	if(pkg_pid > 0)
-	{
-		sprintf(command, "kill -9 %d", pkg_pid);
-		LOGI("kill app : %s\n", command);
-		system(command);
-	}
-}
-#endif
 
 // find process id from executable binary path
 pid_t find_pid_from_path(const char* path)
@@ -183,78 +357,215 @@ pid_t find_pid_from_path(const char* path)
 	return status;
 }
 
-static void mkdirs()
+void kill_app(const char* binary_path)
 {
-	mkdir("/home/developer/sdk_tools/da", 0775);
-	mkdir("/home/developer/sdk_tools/da/battery", 0775);
-}
+	pid_t pkg_pid;
+	char command[PATH_MAX];
 
-int create_open_batt_log(const char* app_name) 
-{
-	char log_path[PATH_MAX];
-
-	pthread_mutex_init(&write_mutex, NULL);
-	sprintf(log_path, "%s%s", BATT_LOG_FILE, app_name);
-
-	if ((file_fd = open(log_path, O_WRONLY|O_CREAT|O_TRUNC)) == -1)
+	pkg_pid = find_pid_from_path(binary_path);
+	if(pkg_pid > 0)
 	{
-		mkdirs();
-		if ((file_fd = open(log_path, O_WRONLY|O_CREAT|O_TRUNC)) == -1)
-		{		
-			LOGE("Failed to open batt log file\n");
-			return 0;
-		}
+		sprintf(command, "kill -9 %d", pkg_pid);
+		system(command);
 	}
-
-	return file_fd;
 }
 
-int get_batt_fd()
+int get_app_type(char* appPath)
 {
-	return file_fd;
-}
+	int fd;
+	char buf[BUFFER_MAX];
 
-int write_batt_log(const char* msg) 
-{
-	int length = -1;
-
-	if (file_fd == -1 ) 
+	sprintf(buf, "%s.exe", appPath);
+	fd = open(buf, O_RDONLY);
+	if(fd != -1)
 	{
+		close(fd);
+		return APP_TYPE_OSP;
+	}
+	else
+	{
+		return APP_TYPE_TIZEN;
+	}
+}
+
+int get_executable(char* appPath, char* buf, int buflen)
+{
+	int fd;
+
+	sprintf(buf, "%s.exe", appPath);
+	fd = open(buf, O_RDONLY);
+	if(fd != -1)
+	{
+		close(fd);
+	}
+	else
+	{
+		strcpy(buf, appPath);
+	}
+	return 0;
+}
+
+int get_app_install_path(char *strAppInstall, int length)
+{
+	FILE *fp;
+	char buf[BUFFER_MAX];
+	char *p;
+	int i;
+
+	if ((fp = fopen(DA_INSTALL_PATH, "r")) == NULL)
+	{
+		LOGE("Failed to open %s\n", DA_INSTALL_PATH);
 		return -1;
 	}
 
-	pthread_mutex_lock(&write_mutex);
+	/*ex : <15>   DW_AT_comp_dir    : (indirect string, offset: 0x25f): /home/yt/workspace/templatetest/Debug-Tizen-Emulator	*/
+	while (fgets(buf, BUFFER_MAX, fp) != NULL)
+	{
+		//name
+		p = buf;
+		for (i = 0; i < BUFFER_MAX; i++)
+		{
+			if (*p == ':')
+				break;
+			p++;
+		}
 
-	length = write(file_fd, msg, strlen(msg));
+		if (*p != ':')
+			break;
+		else
+			p++;
 
-	pthread_mutex_unlock(&write_mutex);
+		//(...,offset:...)
+		for (; i < BUFFER_MAX; i++)
+		{
+			if (*p == '(')
+			{
+				while (*p != ')')
+				{
+					p++;
+				}
+			}
+			if (*p == ':')
+				break;
+			p++;
+		}
 
-	return length;
+		//find
+		if (*p != ':')
+			break;
+		for (; i < BUFFER_MAX; i++)
+		{
+			if (*p == ':' || *p == ' ' || *p == '\t')
+				p++;
+			else
+				break;
+		}
+
+		//name
+		if (strlen(p) <= length)
+		{
+			sprintf(strAppInstall, "%s", p);
+			for (i = 0; i < strlen(p); i++)
+			{
+				if (strAppInstall[i] == '\n' || strAppInstall[i] == '\t')
+				{
+					strAppInstall[i] = '\0';
+					break;
+				}
+			}
+			fclose(fp);
+			return 1;
+		}
+	}
+	fclose(fp);
+	return -1;
 }
 
-void close_batt_fd()
+int is_app_built_pie(void)
 {
-	close(file_fd);
-	file_fd = -1;
+	int result;
+	FILE *fp;
+	char buf[BUFFER_MAX];
+
+	if((fp = fopen(DA_BUILD_OPTION, "r")) == NULL)
+	{
+		LOGE("Failed to open %s\n", DA_BUILD_OPTION);
+		return -1;
+	}
+
+	if(fgets(buf, BUFFER_MAX, fp) != NULL)
+	{
+		if(strcmp(buf, "DYN\n") == 0)
+			result = 1;
+		else if(strcmp(buf, "EXEC\n") == 0)
+			result = 0;
+		else
+			result = -1;
+	}
+	else
+	{
+		result = -1;
+	}
+	fclose(fp);
+
+	return result;
 }
 
-#if DEBUG
-void write_log()
+int get_app_base_address(int *baseAddress)
 {
-    int fd;
+	int res;
+	FILE *fp;
+	char buf[BUFFER_MAX];
 
-    fd = open("/dev/null", O_RDONLY);
-    dup2(fd, 0);
+	if((fp = fopen(DA_BASE_ADDRESS, "r")) == NULL)
+	{
+		LOGE("Failed to open %s\n", DA_BASE_ADDRESS);
+		return -1;
+	}
 
-    fd = open("/tmp/da_daemon.log", O_WRONLY | O_CREAT | O_TRUNC, 0640);
-    if(fd < 0) {
-        fd = open("/dev/null", O_WRONLY);
-    }
-    dup2(fd, 1);
-    dup2(fd, 2);
+	if(fgets(buf, BUFFER_MAX, fp) != NULL)
+	{
+		res = sscanf(buf, "%x", baseAddress);
+	}
+	else
+	{
+		res = -1;
+	}
+	fclose(fp);
 
-    fprintf(stderr,"--- da starting (pid %d) ---\n", getpid());
+	return res;
 }
+
+int is_same_app_process(char* appPath, int pid)
+{
+	int ret = 0;
+	FILE *fp;
+	char buf[BUFFER_MAX];
+	char cmdPath[PATH_MAX];
+	char execPath[PATH_MAX];
+
+	get_executable(appPath, execPath, PATH_MAX);
+	sprintf(cmdPath, "/proc/%d/cmdline", pid);
+
+	if((fp = fopen(cmdPath, "r")) == NULL)
+	{
+		return 0;
+	}
+
+	if(fgets(buf, BUFFER_MAX, fp) != NULL)
+	{
+#ifdef RUN_APP_LOADER
+		if(strcmp(buf, appPath) == 0)
+#else
+		// use execPath instead of manager.appPath
+		if(strcmp(buf, execPath) == 0)
 #endif
+			ret = 1;
+		else
+			ret = 0;
+	}
+	fclose(fp);
 
+	return ret;
+}
 

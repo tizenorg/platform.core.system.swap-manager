@@ -33,19 +33,6 @@
 extern "C" {
 #endif
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <dirent.h>
-#include <string.h>
-#include <pthread.h>
-#include <errno.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/time.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/vfs.h>
-
 #define CHARGERFD					"/sys/class/power_supply/battery/charge_now"
 #define VOLTAGEFD					"/sys/class/power_supply/battery/voltage_now"
 

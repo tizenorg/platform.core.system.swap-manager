@@ -21,8 +21,11 @@ INC := 	-I/usr/include	\
 		-I/usr/include/vconf
 
 DAEMON_SRCS :=	\
-	da_daemon.c	\
-	utils.c	\
+	main.c		\
+	daemon.c	\
+	threads.c	\
+	da_debug.c	\
+	utils.c		\
 	sys_stat.c
 
 LDLIBS_PATH := -L/usr/lib -L./lib/
@@ -38,7 +41,6 @@ LIBS_TIZEN :=# -lcapi-system-runtime-info \
 				-lSLP-db-util
 LIBS_COMMON :=	-lglib-2.0 \
 				-lvconf \
-				-laul \
 				-lcapi-system-info
 
 DEBUG_ON := -DDEBUG=1

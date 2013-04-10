@@ -1,10 +1,11 @@
 Name:       dynamic-analysis-manager
 Summary:    dynamic analyzer manager
-Version:    2.1.0
+Version:    2.1.1
 Release:    1
 Group:      System/Libraries
 License:	Apache License, Version 2
 Source:    %{name}_%{version}.tar.gz
+BuildRequires:  libattr-devel
 BuildRequires:  glib2-devel
 BuildRequires:  aul-devel
 BuildRequires:  vconf-devel

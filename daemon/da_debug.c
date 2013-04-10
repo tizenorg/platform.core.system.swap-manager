@@ -3,12 +3,12 @@
 *
 * Copyright (c) 2000 - 2011 Samsung Electronics Co., Ltd. All rights reserved.
 *
-* Contact: 
+* Contact:
 *
 * Jaewon Lim <jaewon81.lim@samsung.com>
 * Woojin Jung <woojin2.jung@samsung.com>
 * Juyoung Kim <j0.kim@samsung.com>
-* 
+*
  * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
 * You may obtain a copy of the License at
@@ -24,31 +24,38 @@
 * Contributors:
 * - S-Core Co., Ltd
 *
-*/ 
+*/
 
-#ifndef _DA_DEBUG_H_
-#define _DA_DEBUG_H_
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "daemon.h"
+
+#define DEBUG_LOGFILE		"/tmp/daemonlog.da"
 
 #if DEBUG
-	#define LOGI(...)	do{ fprintf(stderr, "[INF]" __VA_ARGS__ ); fflush(stderr); } while(0)
-	#define LOGE(...)	do{ fprintf(stderr, "[ERR]" __VA_ARGS__ ); fflush(stderr); } while(0)
-	#define LOGW(...)	do{ fprintf(stderr, "[WRN]" __VA_ARGS__ ); fflush(stderr); } while(0)
+void initialize_log()
+{
+    int fd;
+
+    fd = open("/dev/null", O_RDONLY);
+    dup2(fd, 0);
+
+    fd = open(DEBUG_LOGFILE, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+    if(fd < 0) {
+        fd = open("/dev/null", O_WRONLY);
+    }
+    dup2(fd, 1);
+    dup2(fd, 2);
+
+    fprintf(stderr, "--- daemon starting (pid %d) ---\n", getpid());
+}
 #else
-	#define LOGI(...)	do{} while(0)
-	#define LOGE(...)	do{} while(0)
-	#define LOGW(...)	do{} while(0)
-#endif
-
-
-
-
-
-#ifdef __cplusplus
+void initialize_log()
+{
 }
 #endif
 
-#endif // _DA_DEBUG_H_

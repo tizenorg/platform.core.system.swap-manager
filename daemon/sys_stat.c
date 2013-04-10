@@ -27,10 +27,14 @@
 */ 
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <stdbool.h>
 #include <ctype.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/vfs.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <dirent.h>
@@ -49,11 +53,10 @@
 #endif
 
 #include "sys_stat.h"
-#include "da_debug.h"
+#include "daemon.h"
 
 // defines for runtime environment
 #define FOR_EACH_CPU
-
 
 #define BUFFER_MAX			1024
 #define LARGE_BUFFER		512
@@ -77,18 +80,11 @@
 #define DA_PROBE_TIZEN_SONAME		"da_probe_tizen.so"
 #define DA_PROBE_OSP_SONAME			"da_probe_osp.so"
 
-#ifndef likely
-#define likely(x)	__builtin_expect((x), 1)
-#define unlikely(x)	__builtin_expect((x), 0)
-#endif
-
 enum PROCESS_DATA
 {
 	PROCDATA_STAT,
 	PROCDATA_SMAPS
 };
-
-long long get_total_alloc_size();
 
 // declared by greatim
 static int Hertz = 0;
@@ -97,19 +93,6 @@ static int num_of_freq = 0;
 static unsigned long mem_slot_array[MEM_SLOT_MAX];
 static CPU_t* cpus = NULL;
 static unsigned long probe_so_size = 0;
-
-// utility function
-int get_flag_num(unsigned int flag)
-{
-	int i;
-	for(i = 0; flag != 0; i++)
-	{
-		flag &= (flag - 1);
-	}
-	return i;
-}
-
-
 
 // daemon api : get status from file
 // pfd must not be null
