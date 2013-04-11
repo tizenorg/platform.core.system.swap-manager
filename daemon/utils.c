@@ -38,6 +38,7 @@
 #include <sys/stat.h>	// for open
 #include <fcntl.h>		// for open
 #include <grp.h>		// for setgroups
+#include <sys/smack.h>
 
 #include "daemon.h"
 #include "utils.h"
@@ -194,38 +195,18 @@ void set_appuser_groups(void)
 
 int get_smack_label(const char* execpath, char* buffer, int buflen)
 {
-	int i, ret = 0;
-	char* temp;
-	if(strncmp(execpath, APPDIR1, strlen(APPDIR1)) == 0)
+	char* appid = NULL;
+	int rc;
+
+	rc = smack_lgetlabel(execpath, &appid, SMACK_LABEL_ACCESS);
+	if(rc == 0 && appid != NULL)
 	{
-		execpath = execpath + strlen(APPDIR1);
-		temp = strchr(execpath, '/');
-		for(i = 0; i < strlen(execpath) ; i++)
-		{
-			if(execpath + i == temp)
-				break;
-			buffer[i] = execpath[i];
-		}
-		buffer[i] = '\0';
-	}
-	else if(strncmp(execpath, APPDIR2, strlen(APPDIR2)) == 0)
-	{
-		execpath = execpath + strlen(APPDIR2);
-		temp = strchr(execpath, '/');
-		for(i = 0; i < strlen(execpath) ; i++)
-		{
-			if(execpath + i == temp)
-				break;
-			buffer[i] = execpath[i];
-		}
-		buffer[i] = '\0';
+		strncpy(buffer, appid, (buflen < strlen(appid))? buflen:strlen(appid));
+		free(appid);
+		return 0;
 	}
 	else
-	{
-		ret = -1;
-	}
-
-	return ret;
+		return -1;
 }
 
 // return 0 if succeed
@@ -292,7 +273,7 @@ int exec_app(const char* exec_path, int app_type)
     else if(pid > 0)
     	return 1;		// exit parent process with successness
 
-	if(get_smack_label(exec_path, appid, SMACK_LABEL_LEN) < 0)
+	if(get_smack_label(exec_path, appid, SMACK_LABEL_LEN - 1) < 0)
 	{
 		LOGE("failed to get smack label\n");
 		return 0;

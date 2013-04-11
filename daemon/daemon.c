@@ -871,7 +871,16 @@ int daemonLoop()
 			}
 			else if(events[i].data.fd == manager.host.data_socket)
 			{
-				LOGW("host message from data socket\n");
+				char recvBuf[32];
+				recvLen = recv(manager.host.data_socket, recvBuf, RECV_BUF_MAX, MSG_DONTWAIT);
+				if(recvLen == 0)
+				{	// close data socket
+					epoll_ctl(efd, EPOLL_CTL_DEL, manager.host.data_socket, NULL);
+					close(manager.host.data_socket);
+					manager.host.data_socket = -1;
+				}
+	
+				LOGW("host message from data socket %d\n", recvLen);
 			}
 			// unknown socket
 			else

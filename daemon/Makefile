@@ -41,6 +41,7 @@ LIBS_TIZEN :=# -lcapi-system-runtime-info \
 				-lSLP-db-util
 LIBS_COMMON :=	-lglib-2.0 \
 				-lvconf \
+				-lsmack \
 				-lcapi-system-info
 
 DEBUG_ON := -DDEBUG=1
