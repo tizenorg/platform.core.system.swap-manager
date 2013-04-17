@@ -11,7 +11,7 @@ print_usage()
 	echo "usage: da_command [options]"
 	echo "Options:"
 	echo "killmanager               terminate da_manager"
-	echo "killapp apppath           terminate application"
+#	echo "killapp apppath           terminate application"
 	echo "runmanager                execute da_manager"
 	echo "runevent record|play      execute da_event"
 	echo "findunittest              find unittest project"
@@ -72,9 +72,9 @@ if test -n "$2"; then
 		runevent)
 			EVENTOPTION=$2
 			;;
-		killapp)
-			APPPATH=$2
-			;;
+#		killapp)
+#			APPPATH=$2
+#			;;
 		*)
 			print_usage
 			exit 1
@@ -86,9 +86,9 @@ case "$1" in
 	killmanager)
 		kill_manager
 		;;
-	killapp)
-		kill_app
-		;;
+#	killapp)
+#		kill_app
+#		;;
 	runmanager)
 		run_manager
 		;;
