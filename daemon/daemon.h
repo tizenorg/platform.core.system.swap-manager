@@ -162,6 +162,7 @@ typedef struct
 	int				socket;			// written only by main thread
 	pthread_t		recv_thread;	// written only by main thread
 	int				event_fd;		// for thread communication (from recv thread to main thread)
+	int				initial_log;	// written only by main thread
 } __da_target_info;
 
 typedef struct

@@ -260,6 +260,7 @@ static int initializeManager()
 		manager.target[i].socket = -1;
 		manager.target[i].event_fd = -1;
 		manager.target[i].recv_thread = -1;
+		manager.target[i].initial_log = 0;
 		manager.target[i].allocmem = 0;
 		manager.target[i].starttime = 0;
 	}

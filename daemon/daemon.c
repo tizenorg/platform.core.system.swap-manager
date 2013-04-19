@@ -86,6 +86,7 @@ static void setEmptyTargetSlot(int index)
 		manager.target[index].recv_thread = -1;
 		manager.target[index].allocmem = 0;
 		manager.target[index].starttime	= 0;
+		manager.target[index].initial_log = 0;
 		if(manager.target[index].event_fd != -1)
 			close(manager.target[index].event_fd);
 		manager.target[index].event_fd = -1;
@@ -560,6 +561,7 @@ static int targetEventHandler(int epollfd, int index, uint64_t msg)
 			log.length = sprintf(log.data, "%d`,%Lu", manager.target[index].pid, manager.target[index].starttime);
 		}
 
+		manager.target[index].initial_log = 1;
 		sendDataToHost(&log);
 	}
 

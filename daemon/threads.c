@@ -46,6 +46,7 @@
 static void* recvThread(void* data)
 {
 	int index = (int)data;
+	int pass = 0;
 	uint64_t event;
 	ssize_t recvLen;
 	msg_t log;
@@ -126,6 +127,12 @@ static void* recvThread(void* data)
 			write(manager.target[index].event_fd, &event, sizeof(uint64_t));
 			break;
 		}
+		else if(log.type == MSG_MSG)
+		{
+			// don't send to host
+			LOGI("EXTRA MSG %d|%d|%s\n", log.type, log.length, log.data);
+			continue;
+		}
 #ifdef PRINT_TARGET_LOG
 		else if(log.type == MSG_LOG)
 		{
@@ -153,6 +160,15 @@ static void* recvThread(void* data)
 #endif
 
 		// any message before MSG_PID message arrived did not be sent to host
+		if(unlikely(pass == 0))
+		{
+			while(manager.target[index].initial_log == 0)
+			{
+				sleep(0);
+			}
+		}
+		pass = 1;
+
 		if(manager.target[index].pid != -1)
 			sendDataToHost(&log);
 	}

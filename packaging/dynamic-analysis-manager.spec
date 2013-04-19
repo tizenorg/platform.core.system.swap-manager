@@ -1,6 +1,6 @@
 Name:       dynamic-analysis-manager
 Summary:    dynamic analyzer manager
-Version:    2.1.1
+Version:    2.1.2
 Release:    1
 Group:      System/Libraries
 License:	Apache License, Version 2
