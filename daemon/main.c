@@ -214,9 +214,11 @@ static int singleton(void)
 	{
 		writeToPortfile(ERR_ALREADY_RUNNING);
 		LOGE("another instance of daemon is already running");
+		close(fd);
 		return -1;
 	}
 
+	close(fd);
 	return 0;
 }
 

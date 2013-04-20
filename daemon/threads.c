@@ -159,7 +159,7 @@ static void* recvThread(void* data)
 		}
 #endif
 
-		// any message before MSG_PID message arrived did not be sent to host
+		// do not send any message to host until MSG_PID message arrives
 		if(unlikely(pass == 0))
 		{
 			while(manager.target[index].initial_log == 0)
@@ -193,7 +193,7 @@ int makeRecvThread(int index)
 
 static void* samplingThread(void* data)
 {
-	int err, signo, i;
+	int err, signo, i, res;
 	int pidarray[MAX_TARGET_COUNT];
 	int pidcount;
 	sigset_t waitsigmask;
@@ -223,10 +223,11 @@ static void* samplingThread(void* data)
 					pidarray[pidcount++] = manager.target[i].pid;
 			}
 
-			log.length = get_resource_info(log.data, DA_MSG_MAX, pidarray, pidcount);
-			if(log.length >= 0)
+			res = get_resource_info(log.data, DA_MSG_MAX, pidarray, pidcount);
+			if(res >= 0)
 			{
 				log.type = MSG_RESOURCE;
+				log.length = res;
 				sendDataToHost(&log);
 			}
 		}
@@ -237,8 +238,8 @@ static void* samplingThread(void* data)
 		}
 		else
 		{
-			// not happened
-			LOGE("This should not be happend in sampling thread\n");
+			// never happen
+			LOGE("This should never happen in sampling thread\n");
 		}
 	}
 

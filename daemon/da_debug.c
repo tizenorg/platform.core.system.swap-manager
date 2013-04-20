@@ -42,16 +42,23 @@ void initialize_log()
     int fd;
 
     fd = open("/dev/null", O_RDONLY);
-    dup2(fd, 0);
+	if(fd >= 0)
+	{
+		dup2(fd, 0);
+		close(fd);
+	}
 
     fd = open(DEBUG_LOGFILE, O_WRONLY | O_CREAT | O_TRUNC, 0777);
     if(fd < 0) {
         fd = open("/dev/null", O_WRONLY);
-    }
+		if(fd < 0) 
+			return;
+	}
     dup2(fd, 1);
     dup2(fd, 2);
 
     fprintf(stderr, "--- daemon starting (pid %d) ---\n", getpid());
+	close(fd);
 }
 #else
 void initialize_log()

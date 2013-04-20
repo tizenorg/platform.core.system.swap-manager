@@ -89,7 +89,7 @@ static int _file_read(FILE* fp, char *buffer, int size)
 static int get_input_id(char* inputname)
 {
 	static int query_cmd_type = 0;	// 1 if /lib/udev/input_id, 2 if udevadm
-	FILE* cmd_fp;
+	FILE* cmd_fp = NULL;
 	char buffer[BUF_SIZE];
 	char command[MAX_FILENAME];
 	int ret = -1;
@@ -108,7 +108,8 @@ static int get_input_id(char* inputname)
 		{
 			query_cmd_type = 2;
 		}
-		pclose(cmd_fp);
+		if(cmd_fp != NULL)
+			pclose(cmd_fp);
 	}
 
 	// make command string
@@ -149,7 +150,8 @@ static int get_input_id(char* inputname)
 		ret = INPUT_ID_TOUCH;
 	}
 
-	pclose(cmd_fp);
+	if(cmd_fp != NULL)
+		pclose(cmd_fp);
 	return ret;
 }
 
@@ -162,22 +164,24 @@ static void _get_fds(input_dev *dev, int input_id)
 
 	dp = opendir("/sys/class/input");
 
-	while((d = readdir(dp)) != NULL)
+	if(dp != NULL)
 	{
-		if(!strncmp(d->d_name, "event", 5))	// start with "event"
+		while((d = readdir(dp)) != NULL)
 		{
-			// event file
-			if(input_id == get_input_id(d->d_name))
+			if(!strncmp(d->d_name, "event", 5))	// start with "event"
 			{
-				sprintf(dev[count].fileName, "/dev/input/%s", d->d_name);
-				dev[count].fd = open(dev[count].fileName, O_RDWR);
-				count++;
+				// event file
+				if(input_id == get_input_id(d->d_name))
+				{
+					sprintf(dev[count].fileName, "/dev/input/%s", d->d_name);
+					dev[count].fd = open(dev[count].fileName, O_RDWR);
+					count++;
+				}
 			}
 		}
+
+		closedir(dp);
 	}
-
-	closedir(dp);
-
 	dev[count].fd = ARRAY_END;	// end of input_dev array
 }
 

@@ -188,9 +188,11 @@ void set_appuser_groups(void)
 		if(setgroups(sizeof(groups) / sizeof(groups[0]), groups) != 0)
 		{
 			fprintf(stderr, "set groups failed errno: %d\n", errno);
+			close(fd);
 			exit(1);
 		}
 	}
+	close(fd);
 }
 
 int get_smack_label(const char* execpath, char* buffer, int buflen)

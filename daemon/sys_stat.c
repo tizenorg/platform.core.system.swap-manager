@@ -261,6 +261,7 @@ static int get_brightness_status()
 					brightness_status = get_file_status(&brightnessfd, fullpath);
 				}
 			}
+			closedir(dir_info);
 		}
 		else
 		{
@@ -300,6 +301,7 @@ static int get_max_brightness()
 					max_brightness = get_file_status(&maxbrightnessfd, fullpath);
 				}
 			}
+			closedir(dir_info);
 		}
 		else
 		{
@@ -1215,6 +1217,7 @@ static unsigned long get_system_total_memory()
 	if((num = read(meminfo_fd, buf, BUFFER_MAX)) < 0)
 	{
 		LOGE("Failed to read from " PROCMEMINFO "\n");
+		close(meminfo_fd);
 		return 0;
 	}
 	buf[num] = '\0';

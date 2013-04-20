@@ -723,7 +723,7 @@ static int controlSocketHandler()
 	msg_t log;
 
 	// host log format xxx|length|str
-	recvLen = recv(manager.host.control_socket, recvBuf, RECV_BUF_MAX, 0);
+	recvLen = recv(manager.host.control_socket, recvBuf, DA_MSG_MAX, 0);
 
 	if (recvLen > 0)
 	{
@@ -874,7 +874,7 @@ int daemonLoop()
 			else if(events[i].data.fd == manager.host.data_socket)
 			{
 				char recvBuf[32];
-				recvLen = recv(manager.host.data_socket, recvBuf, RECV_BUF_MAX, MSG_DONTWAIT);
+				recvLen = recv(manager.host.data_socket, recvBuf, 32, MSG_DONTWAIT);
 				if(recvLen == 0)
 				{	// close data socket
 					epoll_ctl(efd, EPOLL_CTL_DEL, manager.host.data_socket, NULL);
