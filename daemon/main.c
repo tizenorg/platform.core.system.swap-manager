@@ -94,6 +94,11 @@ static void _unlink_file(void)
 	unlink(SINGLETON_LOCKFILE);
 }
 
+void unlink_portfile(void)
+{
+	unlink(PORTFILE);
+}
+
 // ===============================================================================
 // making sockets
 // ===============================================================================

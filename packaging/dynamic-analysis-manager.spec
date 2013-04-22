@@ -26,21 +26,16 @@ This binary will be installed in target.
 %build
 cd daemon
 make
-cd ../eventutil
-make
 
 %install
 rm -rf ${RPM_BUILD_ROOT}
 cd daemon
-%make_install
-cd ../eventutil
 %make_install
 
 %files
 %manifest dynamic-analysis-manager.manifest
 %defattr(-,root,root,-)
 %{_prefix}/bin/da_manager
-%{_prefix}/bin/da_event
 %{_prefix}/bin/da_command
 
 %changelog

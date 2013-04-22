@@ -84,6 +84,8 @@ enum HostMessageType
 	MSG_ALIVE = 105,
 	MSG_BATT_START = 106,
 	MSG_BATT_STOP = 107,
+	MSG_RECORD = 801,
+	MSG_REPLAY = 802,
 	MSG_OK = 901,
 	MSG_NOTOK = 902,
 	MSG_VERSION = 999,
@@ -184,6 +186,7 @@ void initialize_log();
 int daemonLoop();
 int sendDataToHost(msg_t* log);
 long long get_total_alloc_size();
+void unlink_portfile(void);
 
 int makeRecvThread(int index);
 int samplingStart();

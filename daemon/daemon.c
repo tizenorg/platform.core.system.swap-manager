@@ -39,6 +39,9 @@
 #include <sys/epoll.h>		// for epoll apis
 #include <unistd.h>			// for access, sleep
 #include <attr/xattr.h>		// for fsetxattr
+#include <linux/input.h>
+#include <dirent.h>
+#include <fcntl.h>
 
 #include "daemon.h"
 #include "sys_stat.h"
@@ -48,10 +51,162 @@
 #define DA_READELF_PATH			"/home/developer/sdk_tools/da/readelf"
 #define SCREENSHOT_DIR			"/tmp/da"
 
-#define EPOLL_SIZE 10
-#define MAX_CONNECT_SIZE 12
+#define EPOLL_SIZE				10
+#define MAX_CONNECT_SIZE		12
 
-static void terminate_error(char* errstr, int sendtohost);
+#define INPUT_ID_TOUCH			0
+#define INPUT_ID_KEY			1	
+#define STR_TOUCH				"TOUCH"
+#define STR_KEY					"KEY"
+#define INPUT_ID_STR_KEY		"ID_INPUT_KEY=1"
+#define INPUT_ID_STR_TOUCH		"ID_INPUT_TOUCHSCREEN=1"
+#define INPUT_ID_STR_KEYBOARD	"ID_INPUT_KEYBOARD=1"
+#define INPUT_ID_STR_TABLET		"ID_INPUT_TABLET=1"
+
+#define MAX_DEVICE				10
+#define MAX_FILENAME			128
+#define BUF_SIZE				1024
+#define ARRAY_END				(-11)
+
+typedef struct _input_dev
+{
+	int fd;
+	char fileName[MAX_FILENAME];
+} input_dev;
+
+input_dev g_key_dev[MAX_DEVICE];
+input_dev g_touch_dev[MAX_DEVICE];
+
+// return bytes size of readed data
+// return 0 if no data readed or error occurred
+static int _file_read(FILE* fp, char *buffer, int size)
+{
+	int ret = 0;
+
+	if(fp != NULL && size > 0)
+	{
+		ret = fread((void*)buffer, sizeof(char), size, fp);
+	}
+	else
+	{
+		// fp is null
+		if(size > 0)
+			buffer[0] = '\0';
+
+		ret = 0;	// error case
+	}
+
+	return ret;
+}
+
+// get input id of given input device
+static int get_input_id(char* inputname)
+{
+	static int query_cmd_type = 0;	// 1 if /lib/udev/input_id, 2 if udevadm
+	FILE* cmd_fp = NULL;
+	char buffer[BUF_SIZE];
+	char command[MAX_FILENAME];
+	int ret = -1;
+
+	// determine input_id query command
+	if(unlikely(query_cmd_type == 0))
+	{
+		sprintf(command, "ls /lib/udev/input_id; echo cmd_ret:$?;");
+		cmd_fp = popen(command, "r");
+		_file_read(cmd_fp, buffer, BUF_SIZE);
+		if(strstr(buffer, "cmd_ret:0"))		// there is /lib/udev/input_id
+		{
+			query_cmd_type = 1;
+		}
+		else	// there is not /lib/udev/input_id
+		{
+			query_cmd_type = 2;
+		}
+		if(cmd_fp != NULL)
+			pclose(cmd_fp);
+	}
+
+	// make command string
+	if(query_cmd_type == 1)
+	{
+		sprintf(command, "/lib/udev/input_id /class/input/%s", inputname);
+	}
+	else if(query_cmd_type == 2)
+	{
+		sprintf(command, "udevadm info --name=input/%s --query=property", inputname);
+	}
+	else
+	{
+		// not impossible
+		LOGE("query cmd type is not valid");
+	}
+
+	// run command
+	cmd_fp = popen(command, "r");
+	_file_read(cmd_fp, buffer, BUF_SIZE);
+
+	// determine input id
+	if(strstr(buffer, INPUT_ID_STR_KEY))			// key
+	{
+		ret = INPUT_ID_KEY;
+	}
+	else if(strstr(buffer, INPUT_ID_STR_TOUCH))		// touch
+	{
+		ret = INPUT_ID_TOUCH;
+	}
+	else if(strstr(buffer, INPUT_ID_STR_KEYBOARD))	// keyboard
+	{
+		ret = INPUT_ID_KEY;
+	}
+	else if(strstr(buffer, INPUT_ID_STR_TABLET))	// touch (emulator)
+	{
+		ret = INPUT_ID_TOUCH;
+	}
+
+	if(cmd_fp != NULL)
+		pclose(cmd_fp);
+	return ret;
+}
+
+// get filename and fd of given input type devices
+static void _get_fds(input_dev *dev, int input_id)
+{
+	DIR *dp;
+	struct dirent *d;
+	int count = 0;
+
+	dp = opendir("/sys/class/input");
+
+	if(dp != NULL)
+	{
+		while((d = readdir(dp)) != NULL)
+		{
+			if(!strncmp(d->d_name, "event", 5))	// start with "event"
+			{
+				// event file
+				if(input_id == get_input_id(d->d_name))
+				{
+					sprintf(dev[count].fileName, "/dev/input/%s", d->d_name);
+					dev[count].fd = open(dev[count].fileName, O_RDWR);
+					count++;
+				}
+			}
+		}
+
+		closedir(dp);
+	}
+	dev[count].fd = ARRAY_END;	// end of input_dev array
+}
+
+static void _device_write(input_dev *dev, struct input_event* in_ev)
+{
+	int i;
+	for(i = 0; dev[i].fd != ARRAY_END; i++)
+	{
+		if(dev[i].fd >= 0)
+			write(dev[i].fd, in_ev, sizeof(struct input_event));
+	}
+}
 
 long long get_total_alloc_size()
 {
@@ -274,6 +429,66 @@ static void terminate_error(char* errstr, int sendtohost)
 // message parsing and handling functions
 // ===========================================================================================
 
+static int parseDeviceMessage(msg_t* log)
+{
+	char eventType[MAX_FILENAME];
+	struct input_event in_ev;
+	int i, index;
+
+	if(log == NULL)
+		return -1;
+
+	in_ev.type = 0;
+	in_ev.code = 0;
+	in_ev.value = 0;
+
+	index = 0;
+	for(i = 0; i < log->length; i++)
+	{
+		if(log->data[i] == '\n')
+			break;
+
+		if(log->data[i] == '`')	// meet separate
+		{
+			i++;
+			index++;
+			continue;
+		}
+
+		if(index == 0)		// parse eventType
+		{
+			eventType[i] = log->data[i];
+			eventType[i+1] = '\0';
+		}
+		else if(index == 1)	// parse in_ev.type
+		{
+			in_ev.type = in_ev.type * 10 + (log->data[i] - '0');
+		}
+		else if(index == 2)	// parse in_ev.code
+		{
+			in_ev.code = in_ev.code * 10 + (log->data[i] - '0');
+		}
+		else if(index == 3)	// parse in_ev.value
+		{
+			in_ev.value = in_ev.value * 10 + (log->data[i] - '0');
+		}
+	}
+
+	if(index != 3)
+		return -1;	// parse error
+
+	if(0 == strncmp(eventType, STR_TOUCH, strlen(STR_TOUCH)))
+	{
+		_device_write(g_touch_dev, &in_ev);
+	}
+	else if(0 == strncmp(eventType, STR_KEY, strlen(STR_KEY)))
+	{
+		_device_write(g_key_dev, &in_ev);
+	}
+
+	return 0;
+}
+
 // return 0 for normal case
 // return negative value for error case
 static int parseHostMessage(msg_t* log, char* msg)
@@ -361,6 +576,10 @@ static int hostMessageHandler(msg_t* log)
 
 	switch (log->type)
 	{
+	case MSG_REPLAY:
+		sendACKStrToHost(MSG_OK, NULL);
+		parseDeviceMessage(log);
+		break;
 	case MSG_VERSION:
 		if(strcmp(PROTOCOL_VERSION, log->data) != 0)
 		{
@@ -492,6 +711,44 @@ static int hostMessageHandler(msg_t* log)
 // ========================================================================================
 // socket and event_fd handling functions
 // ========================================================================================
+
+// return 0 if normal case
+// return plus value if non critical error occur
+// return minus value if critical error occur
+static int deviceEventHandler(input_dev* dev, int input_type)
+{
+	int ret = 0;
+	struct input_event in_ev;
+	msg_t log;
+
+	if(input_type == INPUT_ID_TOUCH)
+	{
+		//touch read
+		read(dev->fd, &in_ev, sizeof(struct input_event));
+		log.type = MSG_RECORD;
+		log.length = sprintf(log.data, "%s`,%s`,%ld`,%ld`,%hu`,%hu`,%u",
+				STR_TOUCH, dev->fileName, in_ev.time.tv_sec,
+				in_ev.time.tv_usec, in_ev.type, in_ev.code, in_ev.value);
+		sendDataToHost(&log);
+	}
+	else if(input_type == INPUT_ID_KEY)
+	{
+		//key read
+		read(dev->fd, &in_ev, sizeof(struct input_event));
+		log.type = MSG_RECORD;
+		log.length = sprintf(log.data, "%s`,%s`,%ld`,%ld`,%hu`,%hu`,%u",
+				STR_KEY, dev->fileName, in_ev.time.tv_sec,
+				in_ev.time.tv_usec, in_ev.type, in_ev.code, in_ev.value);
+		sendDataToHost(&log);
+	}
+	else
+	{
+		LOGW("unknown input_type\n");
+		ret = 1;
+	}
+
+	return ret;
+}
 
 // return 0 if normal case
 // return plus value if non critical error occur
@@ -694,6 +951,7 @@ static int hostServerHandler(int efd)
 		if(hostserverorder == 0)
 		{
 			manager.host.control_socket = csocket;
+			unlink_portfile();
 			LOGI("host control socket connected = %d\n", csocket);
 		}
 		else
@@ -757,6 +1015,9 @@ int daemonLoop()
 	int efd;		// epoll fd
 	int numevent;	// number of occured events
 
+	_get_fds(g_key_dev, INPUT_ID_KEY);
+	_get_fds(g_touch_dev, INPUT_ID_TOUCH);
+
 	// initialize epoll event pool
 	events = (struct epoll_event*) malloc(sizeof(struct epoll_event) * EPOLL_SIZE);
 	if(events == NULL)
@@ -788,6 +1049,33 @@ int daemonLoop()
 		LOGE("Target server socket epoll_ctl error\n");
 		ret = -1;
 		goto END_EFD;
+	}
+
+	// add device fds to epoll event pool
+	ev.events = EPOLLIN;
+	for(i = 0; g_key_dev[i].fd != ARRAY_END; i++)
+	{
+		if(g_key_dev[i].fd >= 0)
+		{
+			ev.data.fd = g_key_dev[i].fd;
+			if(epoll_ctl(efd, EPOLL_CTL_ADD, g_key_dev[i].fd, &ev) < 0)
+			{
+				LOGE("keyboard device file epoll_ctl error\n");
+			}
+		}
+	}
+
+	ev.events = EPOLLIN;
+	for(i = 0; g_touch_dev[i].fd != ARRAY_END; i++)
+	{
+		if(g_touch_dev[i].fd >= 0)
+		{
+			ev.data.fd = g_touch_dev[i].fd;
+			if(epoll_ctl(efd, EPOLL_CTL_ADD, g_touch_dev[i].fd, &ev) < 0)
+			{
+				LOGE("touch device file epoll_ctl error\n");
+			}
+		}
 	}
 
 	// handler loop
@@ -829,6 +1117,43 @@ int daemonLoop()
 			}
 
 			if(k != MAX_TARGET_COUNT)
+				continue;
+
+			// check for request from device fd
+			for(k = 0; g_touch_dev[k].fd != ARRAY_END; k++)
+			{
+				if(g_touch_dev[k].fd >= 0 && 
+						events[i].data.fd == g_touch_dev[k].fd)
+				{
+					if(deviceEventHandler(&g_touch_dev[k], INPUT_ID_TOUCH) < 0)
+					{
+						terminate_error("Internal DA framework error, Please re-run the profiling.", 1);
+						ret = -1;
+						goto END_EFD;
+					}
+					break;
+				}
+			}
+
+			if(g_touch_dev[k].fd != ARRAY_END)
+				continue;
+
+			for(k = 0; g_key_dev[k].fd != ARRAY_END; k++)
+			{
+				if(g_key_dev[k].fd >= 0 && 
+						events[i].data.fd == g_key_dev[k].fd)
+				{
+					if(deviceEventHandler(&g_key_dev[k], INPUT_ID_KEY) < 0)
+					{
+						terminate_error("Internal DA framework error, Please re-run the profiling.", 1);
+						ret = -1;
+						goto END_EFD;
+					}
+					break;
+				}
+			}
+
+			if(g_key_dev[k].fd != ARRAY_END)
 				continue;
 
 			// connect request from target
