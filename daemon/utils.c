@@ -297,6 +297,12 @@ int exec_app(const char* exec_path, int app_type)
 		{
 			LOGE("failed to setuid\n");
 		}
+
+		pid = getpid();
+		if(setpgid(pid, pid) < 0)
+		{
+			LOGE("failedj to setpgid\n");
+		}
 		sprintf(command, "%s %s", DA_PRELOAD(app_type), exec_path);
 		LOGI("launch app path is %s, executable path is %s\n", LAUNCH_APP_PATH, exec_path);
 		execl(SHELL_CMD, SHELL_CMD, "-c", command, NULL);
