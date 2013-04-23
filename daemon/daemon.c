@@ -128,14 +128,9 @@ static int get_input_id(char* inputname)
 	{
 		sprintf(command, "/lib/udev/input_id /class/input/%s", inputname);
 	}
-	else if(query_cmd_type == 2)
-	{
-		sprintf(command, "udevadm info --name=input/%s --query=property", inputname);
-	}
 	else
 	{
-		// not impossible
-		LOGE("query cmd type is not valid");
+		sprintf(command, "udevadm info --name=input/%s --query=property", inputname);
 	}
 
 	// run command
@@ -435,6 +430,7 @@ static int parseDeviceMessage(msg_t* log)
 	if(log == NULL)
 		return -1;
 
+	eventType[0] = '\0';
 	in_ev.type = 0;
 	in_ev.code = 0;
 	in_ev.value = 0;
