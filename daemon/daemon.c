@@ -111,10 +111,7 @@ static int get_input_id(char* inputname)
 	// determine input_id query command
 	if(unlikely(query_cmd_type == 0))
 	{
-		sprintf(command, "ls /lib/udev/input_id; echo cmd_ret:$?;");
-		cmd_fp = popen(command, "r");
-		_file_read(cmd_fp, buffer, BUF_SIZE);
-		if(strstr(buffer, "cmd_ret:0"))		// there is /lib/udev/input_id
+		if(access("/lib/udev/input_id", F_OK) == 0)		// there is /lib/udev/input_id
 		{
 			query_cmd_type = 1;
 		}

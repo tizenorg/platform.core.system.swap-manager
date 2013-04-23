@@ -5,6 +5,7 @@ MANAGER=/usr/bin/da_manager
 EVENT=/usr/bin/da_event
 FIND=/usr/bin/find
 GETAPPINSTALLPATH="/usr/bin/pkgcmd -a"
+PORTFILE=/tmp/port.da
 
 print_usage()
 {
@@ -20,6 +21,7 @@ print_usage()
 kill_manager()
 {
 	$KILL $MANAGER
+	rm -f $PORTFILE
 }
 
 kill_app()
@@ -29,6 +31,7 @@ kill_app()
 
 run_manager()
 {
+	kill_manager
 	$MANAGER
 }
 
