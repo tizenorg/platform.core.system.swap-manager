@@ -119,8 +119,6 @@ static int get_input_id(char* inputname)
 		{
 			query_cmd_type = 2;
 		}
-		if(cmd_fp != NULL)
-			pclose(cmd_fp);
 	}
 
 	// make command string
