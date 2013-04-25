@@ -49,9 +49,7 @@
 #define SELF_LABEL_FILE		"/proc/self/attr/current"
 #define SMACK_LABEL_LEN		255
 #define SID_APP				5000
-
-#define APPDIR1				"/opt/apps/"
-#define APPDIR2				"/opt/usr/apps/"
+#define MANIFEST_PATH		"/info/manifest.xml"
 
 uint64_t str_to_uint64(char* str)
 {
@@ -254,12 +252,38 @@ char* get_app_name(char* binary_path)
 	return pos;
 }
 
+// return 0 to normal case
+// return non-zero to error case
+int get_manifest_path(const char* exec_path, char* buf, int buflen)
+{
+	char* chr;
+
+	strcpy(buf, exec_path);
+
+	chr = strrchr(buf, '/');
+	if(chr == NULL)
+		return -1;
+
+	*chr = '\0';
+
+	chr = strrchr(buf, '/');
+	if(chr == NULL)
+		return -1;
+
+	*chr = '\0';
+
+	strcat(buf, MANIFEST_PATH);
+	return 0;
+}
+
 // execute applcation with executable binary path
 // return 0 to fail to execute
 // return 1 to succeed to execute
 int exec_app(const char* exec_path, int app_type)
 {
 	pid_t   pid;
+	int isHwAcc = 0;
+	char manifest[PATH_MAX];
 	char command[PATH_MAX];
 	char appid[SMACK_LABEL_LEN];
 
@@ -274,6 +298,27 @@ int exec_app(const char* exec_path, int app_type)
 
     else if(pid > 0)
     	return 1;		// exit parent process with successness
+
+	if(get_manifest_path(exec_path, manifest, PATH_MAX) == 0)
+	{
+		FILE* fp;
+		char buffer[BUFFER_MAX];
+		char* res;
+
+		// grep for manifest
+		sprintf(command, "grep \"HwAcceleration=\\\"On\\\"\" %s", manifest);
+		fp = popen(command, "r");
+		if(fp != NULL)
+		{
+			buffer[0] = '\0';
+			res = fgets(buffer, BUFFER_MAX, fp);
+			if(res != NULL && strlen(buffer) != 0)
+			{
+				isHwAcc = 1;
+			}
+			pclose(fp);
+		}
+	}
 
 	if(get_smack_label(exec_path, appid, SMACK_LABEL_LEN - 1) < 0)
 	{
@@ -301,9 +346,18 @@ int exec_app(const char* exec_path, int app_type)
 		pid = getpid();
 		if(setpgid(pid, pid) < 0)
 		{
-			LOGE("failedj to setpgid\n");
+			LOGE("failed to setpgid\n");
 		}
-		sprintf(command, "%s %s", DA_PRELOAD(app_type), exec_path);
+
+		if(isHwAcc != 0)
+		{
+			sprintf(command, "HWACC=USE %s %s", DA_PRELOAD(app_type), exec_path);
+		}
+		else
+		{
+			sprintf(command, "%s %s", DA_PRELOAD(app_type), exec_path);
+		}
+
 		LOGI("launch app path is %s, executable path is %s\n", LAUNCH_APP_PATH, exec_path);
 		execl(SHELL_CMD, SHELL_CMD, "-c", command, NULL);
 		return 1;
