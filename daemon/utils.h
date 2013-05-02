@@ -39,7 +39,8 @@ extern "C" {
 #define LAUNCH_APP_PATH			"/usr/bin/launch_app"
 #define KILL_APP_PATH			"/usr/bin/pkill"
 #define LAUNCH_APP_NAME			"launch_app"
-#define DA_PRELOAD_EXEC			"__AUL_SDK_DYNAMIC_ANALYSIS"
+#define LAUNCH_APP_SDK			"__AUL_SDK__"
+#define DA_PRELOAD_EXEC			"DYNAMIC_ANALYSIS"
 #define DA_PRELOAD(AppType)		AppType ? DA_PRELOAD_OSP : DA_PRELOAD_TIZEN
 #define DA_PRELOAD_TIZEN		"LD_PRELOAD=/usr/lib/da_probe_tizen.so"
 #define DA_PRELOAD_OSP			"LD_PRELOAD=/usr/lib/da_probe_osp.so"

@@ -51,6 +51,9 @@
 #define SID_APP				5000
 #define MANIFEST_PATH		"/info/manifest.xml"
 
+#define APPDIR1				"/opt/apps/"
+#define APPDIR2				"/opt/usr/apps/"
+
 uint64_t str_to_uint64(char* str)
 {
 	uint64_t res = 0;
@@ -209,6 +212,56 @@ int get_smack_label(const char* execpath, char* buffer, int buflen)
 		return -1;
 }
 
+int get_appid(const char* execpath, char* buffer, int buflen)
+{
+	int i, ret = 0;
+	char* temp;
+	if(strncmp(execpath, APPDIR1, strlen(APPDIR1)) == 0)
+	{
+		execpath = execpath + strlen(APPDIR1);
+		temp = strchr(execpath, '/');
+		for(i = 0; i < strlen(execpath); i++)
+		{
+			if(execpath + i == temp)
+				break;
+			buffer[i] = execpath[i];
+		}
+		buffer[i] = '.';
+		buffer[i+1] = '\0';
+		temp = strrchr(execpath, '/');
+		if(temp != NULL)
+		{
+			temp++;
+			strcat(buffer, temp);
+		}
+	}
+	else if(strncmp(execpath, APPDIR2, strlen(APPDIR2)) == 0)
+	{
+		execpath = execpath + strlen(APPDIR2);
+		temp = strchr(execpath, '/');
+		for(i = 0; i < strlen(execpath); i++)
+		{
+			if(execpath + i == temp)
+				break;
+			buffer[i] = execpath[i];
+		}
+		buffer[i] = '.';
+		buffer[i+1] = '\0';
+		temp = strrchr(execpath, '/');
+		if(temp != NULL)
+		{
+			temp++;
+			strcat(buffer, temp);
+		}
+	}
+	else
+	{
+		ret = -1;
+	}
+
+	return ret;
+}
+
 // return 0 if succeed
 // return -1 if error occured
 int remove_indir(const char *dirname)
@@ -279,6 +332,37 @@ int get_manifest_path(const char* exec_path, char* buf, int buflen)
 // execute applcation with executable binary path
 // return 0 to fail to execute
 // return 1 to succeed to execute
+#ifdef USE_LAUNCH_PAD
+int exec_app(const char* exec_path, int app_type)
+{
+	pid_t pid;
+	char command[PATH_MAX];
+	char appid[PATH_MAX];
+
+	if (exec_path == NULL || strlen(exec_path) <= 0) 
+	{
+		LOGE("Executable path is not correct\n");
+		return 0;
+	}
+
+	if (( pid = fork()) < 0)	// fork error
+    	return 0;
+    else if(pid > 0)
+    	return 1;		// exit parent process with successness
+
+	if(get_appid(exec_path, appid, PATH_MAX) < 0)
+	{
+		LOGE("failed to get appid\n");
+		return 0;
+	}
+	else
+	{
+		LOGI("launch app path is %s, executable path is %s\n", LAUNCH_APP_PATH, exec_path);
+		execl(LAUNCH_APP_PATH, LAUNCH_APP_NAME, appid, LAUNCH_APP_SDK, DA_PRELOAD_EXEC, NULL);
+		return 1;
+	}
+}
+#else
 int exec_app(const char* exec_path, int app_type)
 {
 	pid_t   pid;
@@ -363,6 +447,7 @@ int exec_app(const char* exec_path, int app_type)
 		return 1;
 	}
 }
+#endif
 
 // find process id from executable binary path
 pid_t find_pid_from_path(const char* path)
