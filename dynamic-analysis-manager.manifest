@@ -1,5 +1,11 @@
 <manifest>
-    <request>
-        <domain name="_" />
-    </request>
+	<define>
+		<domain name="dynamic-analyzer" />
+    <permit>
+		<smack permit="sdbd" type="rw" />
+    </permit>
+	</define>
+	<request>
+		<domain name="dynamic-analyzer" />
+	</request>
 </manifest>
