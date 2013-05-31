@@ -253,20 +253,10 @@ static void* samplingThread(void* data)
 // return plus value if non-critical error
 int samplingStart()
 {
-	sigset_t newsigmask;
 	struct itimerval timerval;
 
 	if(manager.sampling_thread != -1)	// already started
 		return 1;
-
-	sigemptyset(&newsigmask);
-	sigaddset(&newsigmask, SIGALRM);
-	sigaddset(&newsigmask, SIGUSR1);
-	if(pthread_sigmask(SIG_BLOCK, &newsigmask, NULL) != 0)
-	{
-		LOGE("Failed to signal masking for main thread\n");
-		return -1;
-	}
 
 	if(pthread_create(&(manager.sampling_thread), NULL, samplingThread, NULL) < 0)
 	{
@@ -288,11 +278,6 @@ int samplingStop()
 	if(manager.sampling_thread != -1)
 	{
 		struct itimerval stopval;
-//		int status;
-//		sigset_t oldsigmask;
-//		sigemptyset(&oldsigmask);
-//		sigaddset(&oldsigmask, SIGALRM);
-//		sigaddset(&oldsigmask, SIGUSR1);
 
 		// stop timer
 		stopval.it_interval.tv_sec = 0;
@@ -304,11 +289,6 @@ int samplingStop()
 		pthread_kill(manager.sampling_thread, SIGUSR1);
 		pthread_join(manager.sampling_thread, NULL);
 
-		// this code commented because this phrase occurs an error
-//		if(sigprocmask(SIG_UNBLOCK, &oldsigmask, NULL) < 0)
-//		{
-//			LOGE("Failed to pthread_sigmask\n");
-//		}
 		manager.sampling_thread = -1;
 	}
 

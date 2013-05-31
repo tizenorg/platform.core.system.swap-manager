@@ -52,6 +52,7 @@ enum ErrorCode
 	ERR_INITIALIZE_SYSTEM_INFO_FAILED = -103,
 	ERR_HOST_SERVER_SOCKET_CREATE_FAILED = -104,
 	ERR_TARGET_SERVER_SOCKET_CREATE_FAILED = -105,
+	ERR_SIGNAL_MASK_SETTING_FAILED = -106,
 	ERR_WRONG_MESSAGE_FORMAT = -201,
 	ERR_WRONG_MESSAGE_TYPE = -202,
 	ERR_WRONG_MESSAGE_DATA = -203,
@@ -175,6 +176,7 @@ typedef struct
 	int					target_server_socket;
 	int					target_count;
 	unsigned int		config_flag;
+	int					app_launch_timerfd;
 	pthread_t			sampling_thread;
 	__da_host_info		host;
 	__da_target_info	target[MAX_TARGET_COUNT];

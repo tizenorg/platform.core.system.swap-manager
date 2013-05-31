@@ -52,9 +52,10 @@
 // initialize global variable
 __da_manager manager =
 {
-	NULL, -1, -1,								// portfile pointer, host / target server socket
+	NULL, -1, -1,							// portfile pointer, host / target server socket
 	0,										// target count
 	0,										// config_flag
+	-1,										// app launch timerfd
 	-1,										// sampling_thread handle
 	{-1, -1, PTHREAD_MUTEX_INITIALIZER},	// host
 	{{0L, }, },								// target
@@ -231,6 +232,7 @@ static int singleton(void)
 static int initializeManager()
 {
 	int i;
+	sigset_t newsigmask;
 
 	atexit(_close_server_socket);
 
@@ -256,6 +258,16 @@ static int initializeManager()
 	else	// host server socket creation succeed
 	{
 		writeToPortfile(i);
+	}
+
+	// initialize signal mask
+	sigemptyset(&newsigmask);
+	sigaddset(&newsigmask, SIGALRM);
+	sigaddset(&newsigmask, SIGUSR1);
+	if(pthread_sigmask(SIG_BLOCK, &newsigmask, NULL) != 0)
+	{
+		writeToPortfile(ERR_SIGNAL_MASK_SETTING_FAILED);
+		return -1;
 	}
 
 	LOGI("SUCCESS to write port\n");

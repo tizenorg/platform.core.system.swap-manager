@@ -37,6 +37,7 @@
 #include <sys/stat.h>		// for mkdir
 #include <sys/eventfd.h>	// for eventfd
 #include <sys/epoll.h>		// for epoll apis
+#include <sys/timerfd.h>	// for timerfd
 #include <unistd.h>			// for access, sleep
 #include <attr/xattr.h>		// for fsetxattr
 #include <linux/input.h>
@@ -53,6 +54,7 @@
 
 #define EPOLL_SIZE				10
 #define MAX_CONNECT_SIZE		12
+#define MAX_APP_LAUNCH_TIME		6
 
 #define INPUT_ID_TOUCH			0
 #define INPUT_ID_KEY			1	
@@ -325,16 +327,16 @@ static int startProfiling(long launchflag)
 #else
 	get_executable(manager.appPath, execPath, PATH_MAX);
 #endif
-	if(exec_app(execPath, get_app_type(manager.appPath)))
-	{
-		if(samplingStart() < 0)
-		{
-			return -1;
-		}
-		LOGI("Timer Started\n");
-	}
-	else
+	if(samplingStart() < 0)
 		return -1;
+
+	if(exec_app(execPath, get_app_type(manager.appPath)) == 0)
+	{
+		samplingStop();
+		return -1;
+	}
+
+	LOGI("Timer Started\n");
 
 	return 0;
 }
@@ -555,7 +557,7 @@ static int parseHostMessage(msg_t* log, char* msg)
 // return 0 if normal case
 // return plus value if non critical error occur
 // return minus value if critical error occur
-static int hostMessageHandler(msg_t* log)
+static int hostMessageHandler(int efd, msg_t* log)
 {
 	int ret = 0;
 	long flag = 0;
@@ -631,6 +633,7 @@ static int hostMessageHandler(msg_t* log)
 
 		{
 			char command[PATH_MAX];
+			struct epoll_event ev;
 
 			//save app install path
 			mkdir(DA_WORK_DIR, 0775);
@@ -650,6 +653,35 @@ static int hostMessageHandler(msg_t* log)
 			{
 				sendACKCodeToHost(MSG_NOTOK, ERR_CANNOT_START_PROFILING);
 				return -1;
+			}
+
+			manager.app_launch_timerfd = timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC);
+			if(manager.app_launch_timerfd > 0)
+			{
+				struct itimerspec ctime;
+				ctime.it_value.tv_sec = MAX_APP_LAUNCH_TIME;
+				ctime.it_value.tv_nsec = 0;
+				ctime.it_interval.tv_sec = 0;
+				ctime.it_interval.tv_nsec = 0;
+				if(0 > timerfd_settime(manager.app_launch_timerfd, 0, &ctime, NULL))
+				{
+					LOGE("fail to set app launch timer\n");
+					close(manager.app_launch_timerfd);
+					manager.app_launch_timerfd = -1;
+				}
+				else
+				{
+					// add event fd to epoll list
+					ev.events = EPOLLIN;
+					ev.data.fd = manager.app_launch_timerfd;
+					if(epoll_ctl(efd, EPOLL_CTL_ADD, manager.app_launch_timerfd, &ev) < 0)
+					{
+						// fail to add event fd
+						LOGE("fail to add app launch timer fd to epoll list\n");
+						close(manager.app_launch_timerfd);
+						manager.app_launch_timerfd = -1;
+					}
+				}
 			}
 		}
 		sendACKStrToHost(MSG_OK, NULL);
@@ -809,8 +841,8 @@ static int targetEventHandler(int epollfd, int index, uint64_t msg)
 			log.length = sprintf(log.data, "%d`,%Lu", manager.target[index].pid, manager.target[index].starttime);
 		}
 
-		manager.target[index].initial_log = 1;
 		sendDataToHost(&log);
+		manager.target[index].initial_log = 1;
 	}
 
 	if(msg & EVENT_STOP || msg & EVENT_ERROR)
@@ -890,6 +922,13 @@ static int targetServerHandler(int efd)
 			goto TARGET_CONNECT_FAIL;
 		}
 
+		if(manager.app_launch_timerfd >= 0)
+		{
+			epoll_ctl(efd, EPOLL_CTL_DEL, manager.app_launch_timerfd, NULL);
+			close(manager.app_launch_timerfd);
+			manager.app_launch_timerfd = -1;
+		}
+
 		LOGI("target connected = %d(running %d target)\n",
 				manager.target[index].socket, manager.target_count + 1);
 
@@ -965,7 +1004,7 @@ static int hostServerHandler(int efd)
 // return plus value if non critical error occur
 // return minus value if critical error occur
 // return -11 if socket closed
-static int controlSocketHandler()
+static int controlSocketHandler(int efd)
 {
 	ssize_t recvLen;
 	char recvBuf[DA_MSG_MAX];
@@ -987,7 +1026,7 @@ static int controlSocketHandler()
 		}
 
 		// host msg command handling
-		return hostMessageHandler(&log);
+		return hostMessageHandler(efd, &log);
 	}
 	else	// close request from HOST
 	{
@@ -1171,7 +1210,7 @@ int daemonLoop()
 			// control message from host
 			else if(events[i].data.fd == manager.host.control_socket)
 			{
-				int result = controlSocketHandler();
+				int result = controlSocketHandler(efd);
 				if(result == -11)	// socket close
 				{
 					// close target and host socket and quit
@@ -1199,6 +1238,17 @@ int daemonLoop()
 				}
 	
 				LOGW("host message from data socket %d\n", recvLen);
+			}
+			// check for application launch timerfd
+			else if(events[i].data.fd == manager.app_launch_timerfd)
+			{
+				// send to host timeout error message for launching application
+				terminate_error("Failed to launch application", 1);
+				epoll_ctl(efd, EPOLL_CTL_DEL, manager.app_launch_timerfd, NULL);
+				close(manager.app_launch_timerfd);
+				manager.app_launch_timerfd = -1;
+				ret = -1;
+				goto END_EFD;
 			}
 			// unknown socket
 			else
