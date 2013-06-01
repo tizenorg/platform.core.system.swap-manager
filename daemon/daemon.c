@@ -43,6 +43,7 @@
 #include <linux/input.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <sys/smack.h>
 
 #include "daemon.h"
 #include "sys_stat.h"
@@ -319,6 +320,7 @@ static int startProfiling(long launchflag)
 	// remove previous screen capture files
 	remove_indir(SCREENSHOT_DIR);
 	mkdir(SCREENSHOT_DIR, 0777);
+	smack_lsetlabel(SCREENSHOT_DIR, "*", SMACK_LABEL_ACCESS);
 
 	manager.config_flag = launchflag;
 
