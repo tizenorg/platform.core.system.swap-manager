@@ -40,6 +40,9 @@
 #include "utils.h"
 #include "sys_stat.h"
 
+#include "da_protocol.h"
+#include "da_data.h"
+
 #define TIMER_INTERVAL_SEC			1
 #define TIMER_INTERVAL_USEC			0
 
@@ -191,13 +194,15 @@ int makeRecvThread(int index)
 	return 0;
 }
 
-static void* samplingThread(void* data)
+//static 
+void* samplingThread(void* data)
 {
-	int err, signo, i, res;
-	int pidarray[MAX_TARGET_COUNT];
+	int err, signo, i;
+	uint32_t res;
+	int pidarr[MAX_TARGET_COUNT];
 	int pidcount;
 	sigset_t waitsigmask;
-	msg_t log;
+	struct msg_data_t log;
 
 	LOGI("sampling thread started\n");
 
@@ -220,16 +225,21 @@ static void* samplingThread(void* data)
 			for(i = 0; i < MAX_TARGET_COUNT; i++)
 			{
 				if(manager.target[i].socket != -1 && manager.target[i].pid != -1)
-					pidarray[pidcount++] = manager.target[i].pid;
+					pidarr[pidcount++] = manager.target[i].pid;
 			}
 
-			res = get_resource_info(log.data, DA_MSG_MAX, pidarray, pidcount);
-			if(res >= 0)
+//#ifndef HOST_BUILD
+			//res = get_resource_info_new(&log.payload, DA_MSG_MAX, pidarr, pidcount);
+			res = gen_message_sytem_info(&log, DA_MSG_MAX, pidarr, pidcount);
+			if(res > 0)
 			{
-				log.type = MSG_RESOURCE;
-				log.length = res;
-				sendDataToHost(&log);
+				LOGI("payload_len=%d\n",log.len);
+				LOGI("sizeof(float) = %d\n", sizeof(float));
+				//sendDataToHost(&log);
+				pseudoSendDataToHost(&log);
 			}
+			break;
+//#endif
 		}
 		else if(signo == SIGUSR1)
 		{

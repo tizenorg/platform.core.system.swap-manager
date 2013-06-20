@@ -37,9 +37,11 @@
 #include <signal.h>			// for signal
 #include <unistd.h>			// for unlink
 #include <fcntl.h>			// for open, fcntl
+#ifndef HOST_BUILD
 #include <attr/xattr.h>		// for fsetxattr
-
+#endif
 #include "daemon.h"
+#include "da_protocol.h"
 #include "sys_stat.h"
 
 #define SINGLETON_LOCKFILE			"/tmp/lockfile.da"
@@ -48,6 +50,7 @@
 
 #define INIT_PORT				8001
 #define LIMIT_PORT				8100
+
 
 // initialize global variable
 __da_manager manager =
@@ -235,12 +238,13 @@ static int initializeManager()
 	sigset_t newsigmask;
 
 	atexit(_close_server_socket);
-
+#ifndef HOST_BUILD
 	if(initialize_system_info() < 0)
 	{
 		writeToPortfile(ERR_INITIALIZE_SYSTEM_INFO_FAILED);
 		return -1;
 	}
+#endif
 
 	// make server socket
 	if(makeTargetServerSocket() != 0)
@@ -293,8 +297,9 @@ static int initializeManager()
 
 static int finalizeManager()
 {
+#ifndef HOST_BUILD
 	finalize_system_info();
-
+#endif
 	LOGI("Finalize daemon\n");
 
 	// close host client socket
@@ -312,6 +317,7 @@ int main()
 	int result;
 	initialize_log();
 
+	LOGE("da_started\n");
 	atexit(_unlink_file);
 
 	manager.portfile = fopen(PORTFILE, "w");
@@ -337,6 +343,8 @@ int main()
 	if(result == 0)
 	{
 		//daemon work
+		//FIX ME remove samplingThread it is only for debug
+		//samplingThread(NULL);
 		daemonLoop();
 
 		finalizeManager();

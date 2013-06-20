@@ -39,16 +39,19 @@
 #include <sys/epoll.h>		// for epoll apis
 #include <sys/timerfd.h>	// for timerfd
 #include <unistd.h>			// for access, sleep
+#ifndef HOST_BUILD
 #include <attr/xattr.h>		// for fsetxattr
+#endif
 #include <linux/input.h>
 #include <dirent.h>
 #include <fcntl.h>
+#ifndef HOST_BUILD
 #include <sys/smack.h>
-
+#endif
 #include "daemon.h"
 #include "sys_stat.h"
 #include "utils.h"
-
+#include "da_protocol.h"
 #define DA_WORK_DIR				"/home/developer/sdk_tools/da/"
 #define DA_READELF_PATH			"/home/developer/sdk_tools/da/readelf"
 #define SCREENSHOT_DIR			"/tmp/da"
@@ -180,7 +183,7 @@ static void _get_fds(input_dev *dev, int input_id)
 				if(input_id == get_input_id(d->d_name))
 				{
 					sprintf(dev[count].fileName, "/dev/input/%s", d->d_name);
-					dev[count].fd = open(dev[count].fileName, O_RDWR);
+					dev[count].fd = open(dev[count].fileName, O_RDWR | O_NONBLOCK);
 					count++;
 				}
 			}
@@ -248,6 +251,33 @@ static void setEmptyTargetSlot(int index)
 // send functions to host
 // ======================================================================================
 
+int pseudoSendDataToHost(struct msg_data_t* log)
+{
+	uint32_t total_len = 
+					sizeof(log->id) +
+					sizeof(log->sequence) +
+					sizeof(uint64_t) + //time
+					sizeof(log->len);
+
+	char *buf = malloc(total_len+log->len);
+	char *p = buf;
+	memset(p,0,total_len);
+
+	pack_int(p,log->id);
+	pack_int(p,log->sequence);
+	pack_time(p,log->time);
+	pack_int(p,log->len);
+
+	memcpy(p,log->payload,log->len);
+	printBuf(buf,total_len+log->len);
+	if (event_fd >0){
+		write(event_fd, buf, total_len+log->len);
+	}
+	free(buf);
+
+	return 0;
+}
+
 int sendDataToHost(msg_t* log)
 {
 	if (manager.host.data_socket != -1)
@@ -291,8 +321,13 @@ static int sendACKStrToHost(enum HostMessageType resp, char* msgstr)
 		return 1;
 }
 
+
+
 static int sendACKCodeToHost(enum HostMessageType resp, int msgcode)
 {
+	// FIXME:
+	//disabled string protocol
+	return 0;
 	if (manager.host.control_socket != -1)
 	{
 		char codestr[16];
@@ -320,8 +355,9 @@ static int startProfiling(long launchflag)
 	// remove previous screen capture files
 	remove_indir(SCREENSHOT_DIR);
 	mkdir(SCREENSHOT_DIR, 0777);
+#ifndef HOST_BUILD
 	smack_lsetlabel(SCREENSHOT_DIR, "*", SMACK_LABEL_ACCESS);
-
+#endif
 	manager.config_flag = launchflag;
 
 #ifdef RUN_APP_LOADER
@@ -484,84 +520,13 @@ static int parseDeviceMessage(msg_t* log)
 	return 0;
 }
 
-// return 0 for normal case
-// return negative value for error case
-static int parseHostMessage(msg_t* log, char* msg)
-{
-	int i;
-	int bfind = 0;
-	int ret = 0;	// parsing success
-
-	if(log == NULL || msg == NULL)
-		return -1;
-
-	// Host message looks like this
-	// MSG_TYPE|MSG_LENGTH|MSG_STRING
-	// MSG_TYPE is always 3 digits number
-	if(msg[3] == '|')
-	{
-		msg[3] = '\0';
-		log->type = atoi(msg);
-
-		msg = msg + 4;
-		for(i = 0; msg[i] != '\0'; i++)
-		{
-			if(msg[i] == '|')
-			{
-				bfind = 1;
-				msg[i] = '\0';
-				break;
-			}
-		}
-		log->length = atoi(msg);
-
-		if(log->length == 0)
-		{
-			log->data[0] = '\0';
-		}
-		else
-		{
-			if(bfind != 0)
-			{
-				int msglen;
-				msg = msg + i + 1;
-				msglen = strlen(msg);
-
-				if(msglen == log->length)
-				{
-					strcpy(log->data, msg);
-					log->data[log->length] = '\0';
-				}
-//				else if(msglen > log->length)
-//				{
-//					strncpy(log->data, msg, log->length);
-//					log->data[log->length] = '\0';
-//				}
-				else
-				{
-					ret = -1;	// parsing error
-				}
-			}
-			else
-			{
-				ret = -1;	// parsing error
-			}
-		}
-	}
-	else
-	{
-		ret = -1;	// parsing error
-	}
-
-	return ret;
-}
-
 // return 0 if normal case
 // return plus value if non critical error occur
 // return minus value if critical error occur
-static int hostMessageHandler(int efd, msg_t* log)
+static int _hostMessageHandler(int efd,struct msg_t* log)
 {
 	int ret = 0;
+	/*
 	long flag = 0;
 	char *barloc, *tmploc;
 	char execPath[PATH_MAX];
@@ -729,7 +694,7 @@ static int hostMessageHandler(int efd, msg_t* log)
 		ret = 1;
 		break;
 	}
-
+*/
 	return ret;
 }
 
@@ -772,6 +737,57 @@ static int deviceEventHandler(input_dev* dev, int input_type)
 		ret = 1;
 	}
 
+	return ret;
+}
+
+#define MAX_EVENTS_NUM 10
+static int deviceEventHandlerNew(input_dev* dev, int input_type)
+{
+	int ret = 0;
+	ssize_t size = 0;
+	int count = 0;
+	struct input_event in_ev[MAX_EVENTS_NUM];
+	struct msg_data_t log;
+
+	if(input_type == INPUT_ID_TOUCH || input_type == INPUT_ID_KEY)
+	{
+		do {
+//			LOGI(">read %s events\n,", input_type==INPUT_ID_KEY?STR_KEY:STR_TOUCH);
+			size = read(dev->fd, &in_ev[count], sizeof(*in_ev) );
+//			LOGI("<read %s events : size = %d\n,", input_type==INPUT_ID_KEY?STR_KEY:STR_TOUCH,size);
+			if (size >0)
+				count++;
+		} while (count < MAX_EVENTS_NUM && size > 0);
+
+		if(count != 0){
+			LOGI("readed %d %s events\n,", count, input_type==INPUT_ID_KEY?STR_KEY:STR_TOUCH);
+			gen_message_event(&log,&in_ev[0],count,input_type);
+			pseudoSendDataToHost(&log);
+			reset_data_msg(&log);
+		}
+	}
+	else
+	{
+		LOGW("unknown input_type\n");
+		ret = 1;
+	}
+/*
+	if(input_type == INPUT_ID_TOUCH || input_type == INPUT_ID_KEY)
+	{
+
+		if (size = read(dev->fd, &in_ev, sizeof(in_ev) ) !=0 )
+		{
+			LOGI("readed %d touch events\n,", 1);
+			gen_message_event(&log,&in_ev,1,input_type);
+			pseudoSendDataToHost(&log);
+		}
+	}
+	else
+	{
+		LOGW("unknown input_type\n");
+		ret = 1;
+	}
+*/
 	return ret;
 }
 
@@ -818,7 +834,11 @@ static int targetEventHandler(int epollfd, int index, uint64_t msg)
 
 			tempPath[0] = '\0';
 			get_app_install_path(tempPath, PATH_MAX);
+
+#ifndef HOST_BUILD
 			get_device_info(tempBuff, DA_MSG_MAX);
+#endif
+
 			log.type = MSG_DEVICE;
 			if (strlen(tempPath) > 0)
 			{
@@ -1002,10 +1022,43 @@ static int hostServerHandler(int efd)
 	}
 }
 
+
+//TODO del it or move to debug section
+void printBuf (char * buf, int len)
+{
+	int i,j;
+	char local_buf[3*16 + 2*16 + 1];
+	char * p1, * p2;
+	LOGI("BUFFER:\n");
+	for ( i = 0; i < len/16 + 1; i++)
+	{
+		memset(local_buf, ' ', 5*16);
+		p1 = local_buf;
+		p2 = local_buf + 3*17;
+		for ( j = 0; j < 16; j++)
+			if (i*16+j < len )
+			{
+				sprintf(p1, "%02X ",(unsigned char) *buf);
+				p1+=3;
+				if (isprint( *buf)){
+					sprintf(p2, "%c ",(int)*buf);
+				}else{
+					sprintf(p2,". ");
+				}
+				p2+=2;
+				buf++;
+			}
+		*p1 = ' ';
+		*p2 = '\0';
+		LOGI("%s\n",local_buf);
+	}
+}
+
 // return 0 if normal case
 // return plus value if non critical error occur
 // return minus value if critical error occur
 // return -11 if socket closed
+
 static int controlSocketHandler(int efd)
 {
 	ssize_t recvLen;
@@ -1018,8 +1071,8 @@ static int controlSocketHandler(int efd)
 	if (recvLen > 0)
 	{
 		recvBuf[recvLen] = '\0';
+		printBuf(recvBuf,recvLen);
 		LOGI("host sent control msg str(%s)\n", recvBuf);
-
 		if(parseHostMessage(&log, recvBuf) < 0)
 		{
 			// error to parse host message
@@ -1028,7 +1081,7 @@ static int controlSocketHandler(int efd)
 		}
 
 		// host msg command handling
-		return hostMessageHandler(efd, &log);
+		return hostMessageHandle(&log);
 	}
 	else	// close request from HOST
 	{
@@ -1157,7 +1210,7 @@ int daemonLoop()
 				if(g_touch_dev[k].fd >= 0 && 
 						events[i].data.fd == g_touch_dev[k].fd)
 				{
-					if(deviceEventHandler(&g_touch_dev[k], INPUT_ID_TOUCH) < 0)
+					if(deviceEventHandlerNew(&g_touch_dev[k], INPUT_ID_TOUCH) < 0)
 					{
 						terminate_error("Internal DA framework error, Please re-run the profiling.", 1);
 						ret = -1;
@@ -1175,7 +1228,7 @@ int daemonLoop()
 				if(g_key_dev[k].fd >= 0 && 
 						events[i].data.fd == g_key_dev[k].fd)
 				{
-					if(deviceEventHandler(&g_key_dev[k], INPUT_ID_KEY) < 0)
+					if(deviceEventHandlerNew(&g_key_dev[k], INPUT_ID_KEY) < 0)
 					{
 						terminate_error("Internal DA framework error, Please re-run the profiling.", 1);
 						ret = -1;

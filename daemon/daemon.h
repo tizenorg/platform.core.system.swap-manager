@@ -26,11 +26,12 @@
 *
 */ 
 
-#include <stdint.h>		// for uint64_t, int64_t
-#include <pthread.h>	// for pthread_mutex_t
 
 #ifndef _DAEMON_H_
 #define _DAEMON_H_
+
+#include <stdint.h>		// for uint64_t, int64_t
+#include <pthread.h>	// for pthread_mutex_t
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,7 +45,7 @@ extern "C" {
 #define MAX_TARGET_COUNT			8
 #define DA_MSG_MAX					4096
 #define RECV_BUF_MAX				4104	// = sizeof(msg_t)
-
+/*
 enum ErrorCode
 {
 	ERR_LOCKFILE_CREATE_FAILED = -101,
@@ -58,7 +59,7 @@ enum ErrorCode
 	ERR_WRONG_MESSAGE_DATA = -203,
 	ERR_CANNOT_START_PROFILING = -204,
 	ERR_WRONG_PROTOCOL_VERSION = -205
-};
+};*/
 
 enum TargetMessageType
 {

@@ -73,6 +73,8 @@ extern "C" {
 
 #define MAXNAMESIZE 16
 
+#include <stdint.h>
+
 typedef unsigned long long tic_t;
 
 typedef struct {
@@ -128,6 +130,18 @@ typedef struct _mem_t {
 	unsigned long* slot;	// memory value slot
 } mem_t;
 
+struct target_info_t {
+	uint32_t sys_mem_size;
+	uint32_t storage_size;
+	uint32_t bluetooth_supp;
+	uint32_t gps_supp;
+	uint32_t wifi_supp;
+	uint32_t camera_count;
+	uint32_t network_type;
+	uint32_t max_brightness;
+	uint32_t CPU_core_count;
+};
+
 int get_device_info(char* buffer, int buffer_len);
 
 int get_resource_info(char* buffer, int buffer_len, int* pidarray, int pidcount);
@@ -137,6 +151,8 @@ int get_file_status(int* pfd, const char* filename);
 int initialize_system_info();
 
 int finalize_system_info();
+
+int fill_target_info(struct target_info_t *target_info);
 
 #ifdef __cplusplus
 }

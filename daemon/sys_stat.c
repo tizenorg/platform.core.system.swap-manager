@@ -38,18 +38,27 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <errno.h>
 
 #ifndef LOCALTEST
+#ifndef HOST_BUILD
 #include <system_info.h>
 #include <runtime_info.h>
 #include <telephony_network.h>
 #include <call.h>
 #endif
+#endif
+
+#include "da_protocol.h"
+#include "da_data.h"
+struct msg_system_t msg_system;
 
 #define USE_VCONF
 
 #ifdef USE_VCONF
+#ifndef HOST_BUILD
 #include "vconf.h"
+#endif
 #endif
 
 #include "sys_stat.h"
@@ -1200,7 +1209,8 @@ static int update_system_memory_data(unsigned long *memtotal, unsigned long *mem
 
 // return 0 for error case
 // return system total memory in MB
-static unsigned long get_system_total_memory()
+//static 
+unsigned long get_system_total_memory()
 {
 	int meminfo_fd = -1;
 	char *head, *tail;
@@ -2002,4 +2012,196 @@ int finalize_system_info()
 
 	return 0;
 }
+
+//CMD SOCKET FUNCTIONS
+int fill_target_info(struct target_info_t *target_info)
+{
+	//get sys_mem_size
+	target_info->sys_mem_size = get_system_total_memory();
+//	target_info->sys_mem_size=1;
+	
+
+	target_info->storage_size = 2;//get_fsinfo("/", int type)
+	target_info->bluetooth_supp = get_bt_status();
+	target_info->gps_supp = get_gps_status();
+	target_info->wifi_supp = get_wifi_status();
+	target_info->camera_count = get_camera_status();
+	target_info->network_type = 7;
+	target_info->max_brightness = get_max_brightness();
+	target_info->CPU_core_count = sysconf(_SC_NPROCESSORS_CONF);
+	return 0;
+}
+
+//DATA SOCKET FUNCTIONS
+float freq[4] = {1.1, 2.2, 3.3, 4.4};
+struct thread_info_t th_load[1] = {{0x111, 10.6}};
+struct process_info_t pr_load[1] = {{0x222, 20.7}};
+int fill_message_system(struct msg_system_t * sys)
+{
+
+//	struct msg_system_t * psys = sys;
+
+	memset(sys,0,sizeof(*sys)); //del for speed up
+/*
+	psys->energy = 0;
+	psys->WiFi_status = get_wifi_status();
+	psys->BT_status = get_bt_status();
+	psys->GPS_status = get_gps_status();
+	psys->brightness_status = 	get_brightness_status();
+	psys->camera_status = get_camera_status();
+	psys->sound_status = get_sound_status();
+	psys->audio_status = get_audio_status();
+	psys->vibration_status = get_vibration_status();
+	psys->voltage_status = get_voltage_status();
+	psys->RSSI_status = get_rssi_status();
+	psys->video_status = get_video_status();
+	psys->call_status = get_call_status();
+	psys->DNet_status = get_dnet_status();
+//	psys->CPU_frequency = 	get_cpu_frequency(), freqbuf in get_resource_info()
+//	psys->app_CPU_usage = 	app_cpu_usage in get_resource_info()
+//	psys->CPU_load	cpuload in get_resource_info()
+//	psys->virtual_memory = virtual in get_resource_info()
+//	psys->resident_memory = resident in get_resource_info()
+//	psys->shared_memory = shared in get_resource_info()
+//	psys->PSS_memory = pss in get_resource_info()
+//	psys->total_alloc_size = get_total_alloc_size();
+//	psys->system_memory_total = get_system_total_memory(), sysmemtotal in get_resource_info();
+//	psys->system_memory_used = update_system_memory_data(), sysmemused in get_resource_info();
+	 psys->total_used_drive = get_total_used_drive();
+//	psys->count_of_threads = thread in get_resource_info()
+//	psys->thread_load = thread_load in get_resource_info()
+//	psys->count_of_processes	 = procNode* proc in get_resource_info() but no count
+/*/
+	sys->energy = 1;
+	sys->WiFi_status = 2;
+	sys->BT_status = 3;
+	sys->GPS_status = 4;
+	sys->brightness_status = 5;
+	sys->camera_status = 6;
+	sys->sound_status = 7;
+	sys->audio_status = 8;
+	sys->vibration_status = 9;
+	sys->voltage_status = 0xa;
+	sys->RSSI_status = 0xb;
+	sys->video_status = 0xc;
+	sys->call_status = 0xd;
+	sys->DNet_status = 0xe;
+
+	sys->CPU_count = 4;	//FIXME HARDCODE CPU count
+	sys->CPU_frequency = 	freq;
+
+	sys->app_CPU_usage = 	10.0;
+	sys->CPU_load	= freq;
+
+	sys->virtual_memory = 0x12;
+	sys->resident_memory = 0x13;
+	sys->shared_memory = 0x14;
+	sys->PSS_memory = 0x15;
+	sys->total_alloc_size = 0x16;
+	sys->system_memory_total = 0x17;
+	sys->system_memory_used = 0x18;
+	sys->total_used_drive = 0x19;
+
+	sys->count_of_threads = 0x1;
+	sys->thread_load = th_load;
+
+	sys->count_of_processes = 0x1;
+	sys->process_load	 = pr_load;
+
+	sys->DISK_read_size = 0x20;
+	sys->DISK_write_size = 0x21;
+	sys->network_send_size = 0x22;
+	sys->network_receive_size = 0x23;
+
+
+//*/
+	return 0;
+};
+
+//uint32_t get_resource_info_new(char** buf, int buffer_len, int* pidarray, int pidcount)
+uint32_t gen_message_sytem_info(struct msg_data_t *msg, int buffer_len, int* pidarray, int pidcount)
+{
+	char *p = 0;
+	uint32_t len,total_len = 0;
+	int i = 0;
+	struct msg_system_t sys;
+
+	fill_message_system(&sys);
+
+	total_len = 
+				sizeof(sys) 
+				- sizeof(sys.thread_load)
+				- sizeof(sys.process_load) +
+				2*sys.CPU_count*sizeof(float) + //CPU
+				sys.count_of_threads * sizeof(*(sys.thread_load)) + //treads
+				sys.count_of_processes * sizeof(*(sys.process_load)) //process
+				;
+	msg->payload = malloc(total_len);
+	memset(msg->payload,0,total_len);
+	p = msg->payload;
+	
+	pack_int(p,sys.energy);
+	pack_int(p,sys.WiFi_status);
+	pack_int(p,sys.BT_status);
+	pack_int(p,sys.GPS_status);
+	pack_int(p,sys.brightness_status);
+	pack_int(p,sys.camera_status);
+	pack_int(p,sys.sound_status);
+	pack_int(p,sys.audio_status);
+	pack_int(p,sys.vibration_status);
+	pack_int(p,sys.voltage_status);
+	pack_int(p,sys.RSSI_status);
+	pack_int(p,sys.video_status);
+	pack_int(p,sys.call_status);
+	pack_int(p,sys.DNet_status);
+
+	//CPU
+	for (i=0; i<sys.CPU_count; i++)
+		pack_float(p,sys.CPU_frequency[i]); //FIXME wrong pack float define
+
+	pack_int(p,sys.app_CPU_usage);
+
+	for (i=0; i<sys.CPU_count; i++)
+		pack_float(p,sys.CPU_load[i]); //FIXME wrong pack float define
+
+	pack_int(p,sys.app_CPU_usage);
+	pack_int(p,sys.CPU_load);
+	pack_int(p,sys.virtual_memory);
+	pack_int(p,sys.resident_memory);
+	pack_int(p,sys.shared_memory);
+	pack_int(p,sys.PSS_memory);
+	pack_int(p,sys.total_alloc_size);
+	pack_int(p,sys.system_memory_total);
+	pack_int(p,sys.system_memory_used);
+	pack_int(p,sys.total_used_drive);
+
+	//thread
+	pack_int(p,sys.count_of_threads);
+	for (i=0; i<sys.count_of_threads; i++)
+	{
+		pack_int(p,sys.thread_load[i].id); //FIXME wrong pack float define
+		pack_float(p,sys.thread_load[i].load); //FIXME wrong pack float define
+	}
+
+	//process
+	pack_int(p,sys.count_of_processes)
+	for (i=0; i<sys.count_of_processes; i++)
+	{
+		pack_int(p,sys.process_load[i].id); //FIXME wrong pack float define
+		pack_float(p,sys.process_load[i].load); //FIXME wrong pack float define
+	}
+
+
+	pack_int(p,sys.DISK_read_size);
+	pack_int(p,sys.DISK_write_size);
+	pack_int(p,sys.network_send_size);
+	pack_int(p,sys.network_receive_size);
+
+	total_len = p - msg->payload;
+	fill_data_msg_head(msg,NMSG_SYSTEM,0,total_len);
+
+	return total_len;
+
+}
+
 

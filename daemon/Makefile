@@ -18,15 +18,29 @@ endif
 INC := 	-I/usr/include	\
 		-I/usr/include/system \
 		-I/usr/include/telephony \
-		-I/usr/include/vconf
+		-I/usr/include/vconf \
+		-I.
 
 DAEMON_SRCS :=	\
 	main.c		\
 	daemon.c	\
+	da_protocol.c	\
 	threads.c	\
 	da_debug.c	\
+	da_data.c	\
 	utils.c		\
 	sys_stat.c
+
+DAEMON_SRCS_HOST :=	\
+	main.c		\
+	daemon.c	\
+	da_protocol.c	\
+	threads.c	\
+	da_debug.c	\
+	da_data.c	\
+	utils.c	\
+	sys_stat.c
+
 
 LDLIBS_PATH := -L/usr/lib -L./lib/
 LIBS_TIZEN :=# -lcapi-system-runtime-info \
@@ -44,19 +58,24 @@ LIBS_COMMON :=	-lglib-2.0 \
 				-lsmack \
 				-lcapi-system-info
 
+LIBS_COMMON_HOST :=	-lglib-2.0
+HOST_BUILD := -DHOST_BUILD=1 -DLOCALTEST=1
 DEBUG_ON := -DDEBUG=1
-FLAGS = -pthread -Wall
+FLAGS = -pthread -Wall -O0
 
 TARGET = da_manager
 DASCRIPT = da_command
 
 all: $(TARGET)
 
+host: $(DAEMON_SRCS_HOST)
+	$(CC) $(INC) $(FLAGS) $(DEBUG_ON) $(HOST_BUILD) $(DEVICE) -o $(TARGET) $(DAEMON_SRCS_HOST) $(LDLIBS_PATH) $(LIBS_COMMON_HOST) $(LIBS_TIZEN)
+
 $(TARGET): $(DAEMON_SRCS)
 	$(CC) $(INC) $(FLAGS) $(DEBUG_ON) $(DEVICE) -o $@ $(DAEMON_SRCS) $(LDLIBS_PATH) $(LIBS_COMMON) $(LIBS_TIZEN)
 
 localtest:
-	$(CC) -DLOCALTEST $(INC) $(FLAGS) -o $(TARGET) $(DEBUG_ON) $(DEVICE) $(LDLIBS_PATH) $(LIBS_COMMON) $(DAEMON_SRCS)
+	$(CC) -DLOCALTEST -DHOST_BUILD $(INC) $(FLAGS) -o $(TARGET) $(DEBUG_ON) $(DEVICE) $(LDLIBS_PATH) $(LIBS_COMMON) $(DAEMON_SRCS)
 
 install:
 	[ -d "$(DESTDIR)/$(INSTALLDIR)" ] || mkdir -p $(DESTDIR)/$(INSTALLDIR)
