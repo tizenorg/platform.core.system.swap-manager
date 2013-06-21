@@ -18,8 +18,7 @@ endif
 INC := 	-I/usr/include	\
 		-I/usr/include/system \
 		-I/usr/include/telephony \
-		-I/usr/include/vconf \
-		-I.
+		-I/usr/include/vconf
 
 DAEMON_SRCS :=	\
 	main.c		\
