@@ -13,7 +13,7 @@
 #include "da_protocol.h"
 #include "daemon.h"
 #include "sys_stat.h"
-#define parce_deb_on
+#define parse_deb_on
 
 /*
 struct msg_t msg;
@@ -222,14 +222,14 @@ void feature_code_str(uint32_t feature, char * to)
 	print_feature_a(FL_OPENGL_API_PROBING);
 
 }
-#ifdef parce_deb_on
+#ifdef parse_deb_on
 #define parse_deb(...) do{\
 							LOGI("%s->\t",__FUNCTION__);\
 							LOGI(__VA_ARGS__);\
 							}while(0)
 #else
 #define parse_deb(...) do{}while(0)
-#endif /*parce_on*/
+#endif /*parse_on*/
 
 //PARSE FUNCTIONS
 static int receive_msg_header(struct msg_t *msg)
@@ -440,7 +440,7 @@ static char * parse_func_inst_list(char *buf,
 		// TODO: report error
 		return 0;
 	}
-	//parce user space function list
+	//parse user space function list
 
 	LOGI("us_func_inst_list size = %d * %d\n",(*num) , (int)sizeof(**us_func_inst_list) );
 	*us_func_inst_list = 
@@ -488,7 +488,7 @@ static char * parse_lib_inst_list(char *buf,
 		return 0;
 	}
 
-	//parce user space lib list
+	//parse user space lib list
 	LOGI("lib_list size = %d\n", (*num) * (int)sizeof(**us_lib_inst_list) );
 	*us_lib_inst_list = 
 		(struct us_lib_inst_t *) 
@@ -529,7 +529,7 @@ static char * parse_app_inst(char *buf,
 		// TODO: report error
 		return 0;
 	}
-	//parce user space function list
+	//parse user space function list
 	
 	LOGI(">=%04X : %s, %s, %d\n", app_inst->app_type, app_inst->app_id, app_inst->exec_path , num);
 
@@ -940,7 +940,7 @@ int hostMessageHandle(struct msg_t *msg)
 	case NMSG_CONFIG:
 		if (!parse_msg_config(msg->payload, &prof_session.conf)) {
 			// TODO: report error
-			LOGE("parce error <%s>\n",msg_ID_str(msg->id));
+			LOGE("parse error <%s>\n",msg_ID_str(msg->id));
 			sendACKToHost(ID,ERR_WRONG_MESSAGE_FORMAT,0,0);
 			return 1;
 		}
