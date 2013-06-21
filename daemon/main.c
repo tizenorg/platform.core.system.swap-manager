@@ -124,9 +124,11 @@ static int makeTargetServerSocket()
 		return -1;
 	}
 
+#ifndef HOST_BUILD
 	// set smack attribute for certification
 	fsetxattr(manager.target_server_socket, "security.SMACK64IPIN", "*", 1, 0);
 	fsetxattr(manager.target_server_socket, "security.SMACK64IPOUT", "*", 1, 0);
+#endif /* HOST_BUILD */
 
 	bzero(&serverAddrUn, sizeof(serverAddrUn));
 	serverAddrUn.sun_family = AF_UNIX;

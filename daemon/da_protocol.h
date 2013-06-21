@@ -191,6 +191,8 @@ struct prof_session_t {
 //int hostMessageHandle(struct msg_t *msg);
 int parseHostMessage(struct msg_t *log, char* msg);
 
+int hostMessageHandle(struct msg_t *msg);
+
 //static void dispose_payload(struct msg_t *msg);
 
 
