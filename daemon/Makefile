@@ -59,9 +59,9 @@ LIBS_COMMON :=	-lglib-2.0 \
 				-lcapi-system-info
 
 LIBS_COMMON_HOST :=	-lglib-2.0
-HOST_BUILD := -DHOST_BUILD=1 -DLOCALTEST=1
+HOST_BUILD := -DHOST_BUILD=1 -DLOCALTEST=1 -O0 -g
 DEBUG_ON := -DDEBUG=1
-FLAGS = -pthread -Wall -O0
+FLAGS = -pthread -Wall
 
 TARGET = da_manager
 DASCRIPT = da_command
