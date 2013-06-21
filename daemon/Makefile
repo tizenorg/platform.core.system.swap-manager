@@ -37,7 +37,7 @@ DAEMON_SRCS_HOST :=	\
 	threads.c	\
 	da_debug.c	\
 	da_data.c	\
-	utils.c	\
+	utils.c		\
 	sys_stat.c
 
 
@@ -57,7 +57,7 @@ LIBS_COMMON :=	-lglib-2.0 \
 				-lsmack \
 				-lcapi-system-info
 
-LIBS_COMMON_HOST :=	-lglib-2.0
+LIBS_COMMON_HOST :=		-lglib-2.0
 HOST_BUILD := -DHOST_BUILD=1 -DLOCALTEST=1 -O0 -g
 DEBUG_ON := -DDEBUG=1
 FLAGS = -pthread -Wall
