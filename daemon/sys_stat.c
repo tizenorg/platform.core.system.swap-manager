@@ -1116,7 +1116,7 @@ static int update_system_cpu_data(int cur_index)
 
 // return 0 for normal case
 // return negative value for error
-static int update_system_memory_data(unsigned long *memtotal, unsigned long *memused)
+static int update_system_memory_data(uint32_t *memtotal, uint32_t *memused)
 {
 	static int meminfo_fd = -1;
 	char *head, *tail;
@@ -1175,8 +1175,9 @@ static int update_system_memory_data(unsigned long *memtotal, unsigned long *mem
 		*memused = mem_slot_array[MEM_SLOT_TOTAL] - mem_slot_array[MEM_SLOT_FREE] -
 			mem_slot_array[MEM_SLOT_BUFFER] - mem_slot_array[MEM_SLOT_CACHED];
 
-		*memtotal *= 1024;	// change to Byte
-		*memused *= 1024;	// change to Byte
+		// FIXME: if in bytes than overflow
+		/* *memtotal *= 1024;	// change to Byte */
+		/* *memused *= 1024;	// change to Byte */
 		return 0;
 	}
 	else
@@ -2055,8 +2056,15 @@ int get_system_info(struct system_info_t *sys_info)
 	sys_info->shared_memory = 0;//shared in get_resource_info()
 	sys_info->pss_memory = 0;//pss in get_resource_info()
 	sys_info->total_alloc_size = get_total_alloc_size();
-	sys_info->system_memory_total = 0;//get_system_total_memory(), sysmemtotal in get_resource_info();
-	sys_info->system_memory_used = 0;//update_system_memory_data(), sysmemused in get_resource_info();
+
+	uint32_t sysmemtotal = 0;
+	uint32_t sysmemused = 0;
+	if (update_system_memory_data(&sysmemtotal, &sysmemused) < 0) {
+		LOGE("Failed to update system memory data\n");
+		return 1;
+	}
+	sys_info->system_memory_total = sysmemtotal;
+	sys_info->system_memory_used = sysmemused;
 	sys_info->total_used_drive = get_total_used_drive();
 	sys_info->count_of_threads = 0;//thread in get_resource_info()
 	/* sys_info->thread_load = thread_load in get_resource_info() */
@@ -2095,8 +2103,15 @@ int get_system_info(struct system_info_t *sys_info)
 	sys_info->shared_memory = 0x14;
 	sys_info->pss_memory = 0x15;
 	sys_info->total_alloc_size = 0x16;
-	sys_info->system_memory_total = 0x17;
-	sys_info->system_memory_used = 0x18;
+
+	uint32_t sysmemtotal = 0;
+	uint32_t sysmemused = 0;
+	if (update_system_memory_data(&sysmemtotal, &sysmemused) < 0) {
+		LOGE("Failed to update system memory data\n");
+		return 1;
+	}
+	sys_info->system_memory_total = sysmemtotal;
+	sys_info->system_memory_used = sysmemused;
 	sys_info->total_used_drive = 0x19;
 
 	sys_info->count_of_threads = 0x1;
