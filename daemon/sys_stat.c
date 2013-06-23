@@ -51,7 +51,6 @@
 
 #include "da_protocol.h"
 #include "da_data.h"
-struct msg_system_t msg_system;
 
 #define USE_VCONF
 
@@ -591,45 +590,25 @@ static int get_voltage_status()
 // =====================================================================
 // cpu information getter functions
 // =====================================================================
-static int get_cpu_frequency()
+static void get_cpu_frequency(float *freqs)
 {
-	static int frequencyfd = -2;
-	int ret = -1;
+	char filename[MIDDLE_BUFFER];
+	char freq_str[SMALL_BUFFER];
+	FILE *f;
+	int i = 0;
 
-	if(frequencyfd != -1)	// first time or file is exist
-		ret = get_file_status(&frequencyfd, FREQFD);
-
-	if(ret < 0)		// error occured
-	{
-		FILE* cpufp;
-		char buf[SMALL_BUFFER];
-		int strsize = strlen(CPUMHZ);
-		double freq;
-
-		cpufp = fopen(PROCCPUINFO, "r");
-		if(likely(cpufp != NULL))
-		{
-			while(fgets(buf, SMALL_BUFFER, cpufp) != NULL)
-			{
-				if(strncmp(buf, CPUMHZ, strsize) == 0)
-				{
-					freq = atof(strchr(buf, ':') + 1);
-					ret = (int)(freq * 1000.0);
-					break;
-				}
-			}
-
-			fclose(cpufp);
-		}
-		else
-		{	// do nothing
-		}
+	while (1) {
+		snprintf(filename, MIDDLE_BUFFER,
+			 "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq", i);
+		f = fopen(filename, "r");
+		if (!f)
+			break;
+		fscanf(f, "%s", freq_str);
+		freqs[i] = atof(freq_str);
+		i++;
 	}
-
-	if(ret < 0)
-		ret = 0;
-
-	return ret;
+	for (; i < num_of_cpu; i++)
+		freqs[i] = 0.0;
 }
 
 // ========================================================================
@@ -1927,7 +1906,7 @@ int get_resource_info(char* buffer, int buffer_len, int* pidarray, int pidcount)
 	}
 	else	// update system cpu frequency is failed
 	{
-		freqbufpos = get_cpu_frequency();
+		/* freqbufpos = get_cpu_frequency(); */
 		sprintf(freqbuf, "%d", (freqbufpos > 0)? freqbufpos : 0);
 	}
 
@@ -1969,7 +1948,7 @@ int initialize_system_info()
 {
 	int i;
 
-	num_of_cpu = sysconf(_SC_NPROCESSORS_ONLN);
+	num_of_cpu = sysconf(_SC_NPROCESSORS_CONF);
 	if(num_of_cpu < 1)
 		num_of_cpu = 1;
 	Hertz = sysconf(_SC_CLK_TCK);
@@ -2036,172 +2015,191 @@ int fill_target_info(struct target_info_t *target_info)
 float freq[4] = {1.1, 2.2, 3.3, 4.4};
 struct thread_info_t th_load[1] = {{0x111, 10.6}};
 struct process_info_t pr_load[1] = {{0x222, 20.7}};
-int fill_message_system(struct msg_system_t * sys)
+int get_system_info(struct system_info_t *sys_info)
 {
+#ifndef HOST_BUILD
+	sys_info->energy = 0; // not implemented
+	sys_info->wifi_status = get_wifi_status();
+	sys_info->bt_status = get_bt_status();
+	sys_info->gps_status = get_gps_status();
+	sys_info->brightness_status = get_brightness_status();
+	sys_info->camera_status = get_camera_status();
+	sys_info->sound_status = get_sound_status();
+	sys_info->audio_status = get_audio_status();
+	sys_info->vibration_status = get_vibration_status();
+	sys_info->voltage_status = get_voltage_status();
+	sys_info->rssi_status = get_rssi_status();
+	sys_info->video_status = get_video_status();
+	sys_info->call_status = get_call_status();
+	sys_info->dnet_status = get_dnet_status();
 
-//	struct msg_system_t * psys = sys;
+	sys_info->cpu_frequency = malloc(num_of_cpu * sizeof(float));
+	if (!sys_info->cpu_frequency) {
+		LOGE("Cannot alloc cpu freq\n");
+		return 1;
+	}
+	get_cpu_frequency(sys_info->cpu_frequency);
 
-	memset(sys,0,sizeof(*sys)); //del for speed up
-/*
-	psys->energy = 0;
-	psys->WiFi_status = get_wifi_status();
-	psys->BT_status = get_bt_status();
-	psys->GPS_status = get_gps_status();
-	psys->brightness_status = 	get_brightness_status();
-	psys->camera_status = get_camera_status();
-	psys->sound_status = get_sound_status();
-	psys->audio_status = get_audio_status();
-	psys->vibration_status = get_vibration_status();
-	psys->voltage_status = get_voltage_status();
-	psys->RSSI_status = get_rssi_status();
-	psys->video_status = get_video_status();
-	psys->call_status = get_call_status();
-	psys->DNet_status = get_dnet_status();
-//	psys->CPU_frequency = 	get_cpu_frequency(), freqbuf in get_resource_info()
-//	psys->app_CPU_usage = 	app_cpu_usage in get_resource_info()
-//	psys->CPU_load	cpuload in get_resource_info()
-//	psys->virtual_memory = virtual in get_resource_info()
-//	psys->resident_memory = resident in get_resource_info()
-//	psys->shared_memory = shared in get_resource_info()
-//	psys->PSS_memory = pss in get_resource_info()
-//	psys->total_alloc_size = get_total_alloc_size();
-//	psys->system_memory_total = get_system_total_memory(), sysmemtotal in get_resource_info();
-//	psys->system_memory_used = update_system_memory_data(), sysmemused in get_resource_info();
-	 psys->total_used_drive = get_total_used_drive();
-//	psys->count_of_threads = thread in get_resource_info()
-//	psys->thread_load = thread_load in get_resource_info()
-//	psys->count_of_processes	 = procNode* proc in get_resource_info() but no count
-/*/
-	sys->energy = 1;
-	sys->WiFi_status = 2;
-	sys->BT_status = 3;
-	sys->GPS_status = 4;
-	sys->brightness_status = 5;
-	sys->camera_status = 6;
-	sys->sound_status = 7;
-	sys->audio_status = 8;
-	sys->vibration_status = 9;
-	sys->voltage_status = 0xa;
-	sys->RSSI_status = 0xb;
-	sys->video_status = 0xc;
-	sys->call_status = 0xd;
-	sys->DNet_status = 0xe;
+	sys_info->app_cpu_usage = .0; // TODO: app_cpu_usage in get_resource_info()
 
-	sys->CPU_count = 4;	//FIXME HARDCODE CPU count
-	sys->CPU_frequency = 	freq;
+	sys_info->cpu_load = malloc(num_of_cpu * sizeof(float));
+	if (!sys_info->cpu_load) {
+		LOGE("Cannot alloc cpu freq\n");
+		return 1;
+	}
+	// TODO:
+//	sys_info->CPU_load	cpuload in get_resource_info()
 
-	sys->app_CPU_usage = 	10.0;
-	sys->CPU_load	= freq;
+	sys_info->virtual_memory = 0;//virtual in get_resource_info()
+	sys_info->resident_memory = 0;//resident in get_resource_info()
+	sys_info->shared_memory = 0;//shared in get_resource_info()
+	sys_info->pss_memory = 0;//pss in get_resource_info()
+	sys_info->total_alloc_size = get_total_alloc_size();
+	sys_info->system_memory_total = 0;//get_system_total_memory(), sysmemtotal in get_resource_info();
+	sys_info->system_memory_used = 0;//update_system_memory_data(), sysmemused in get_resource_info();
+	sys_info->total_used_drive = get_total_used_drive();
+	sys_info->count_of_threads = 0;//thread in get_resource_info()
+	/* sys_info->thread_load = thread_load in get_resource_info() */
+	sys_info->count_of_processes = 0;//procNode* proc in get_resource_info() but no count
+	sys_info->disk_read_size = 0; // TODO
+	sys_info->disk_write_size = 0; // TODO
+	sys_info->network_send_size = 0; // TODO
+	sys_info->network_receive_size = 0; // TODO
+#else /* HOST_BUILD */
+	sys_info->energy = 1;
+	sys_info->wifi_status = 2;
+	sys_info->bt_status = 3;
+	sys_info->gps_status = 4;
+	sys_info->brightness_status = 5;
+	sys_info->camera_status = 6;
+	sys_info->sound_status = 7;
+	sys_info->audio_status = 8;
+	sys_info->vibration_status = 9;
+	sys_info->voltage_status = 0xa;
+	sys_info->rssi_status = 0xb;
+	sys_info->video_status = 0xc;
+	sys_info->call_status = 0xd;
+	sys_info->dnet_status = 0xe;
 
-	sys->virtual_memory = 0x12;
-	sys->resident_memory = 0x13;
-	sys->shared_memory = 0x14;
-	sys->PSS_memory = 0x15;
-	sys->total_alloc_size = 0x16;
-	sys->system_memory_total = 0x17;
-	sys->system_memory_used = 0x18;
-	sys->total_used_drive = 0x19;
+	sys_info->cpu_frequency = malloc(num_of_cpu * sizeof(float));
+	if (!sys_info->cpu_frequency) {
+		LOGE("Cannot alloc cpu freq\n");
+		return 1;
+	}
+	get_cpu_frequency(sys_info->cpu_frequency);
 
-	sys->count_of_threads = 0x1;
-	sys->thread_load = th_load;
+	sys_info->app_cpu_usage = 10.0;
+	sys_info->cpu_load = freq;
+	sys_info->virtual_memory = 0x12;
+	sys_info->resident_memory = 0x13;
+	sys_info->shared_memory = 0x14;
+	sys_info->pss_memory = 0x15;
+	sys_info->total_alloc_size = 0x16;
+	sys_info->system_memory_total = 0x17;
+	sys_info->system_memory_used = 0x18;
+	sys_info->total_used_drive = 0x19;
 
-	sys->count_of_processes = 0x1;
-	sys->process_load	 = pr_load;
+	sys_info->count_of_threads = 0x1;
+	sys_info->thread_load = th_load;
 
-	sys->DISK_read_size = 0x20;
-	sys->DISK_write_size = 0x21;
-	sys->network_send_size = 0x22;
-	sys->network_receive_size = 0x23;
+	sys_info->count_of_processes = 0x1;
+	sys_info->process_load = pr_load;
 
+	sys_info->disk_read_size = 0x20;
+	sys_info->disk_write_size = 0x21;
+	sys_info->network_send_size = 0x22;
+	sys_info->network_receive_size = 0x23;
+#endif /* HOST_BUILD */
 
-//*/
 	return 0;
 };
 
-//uint32_t get_resource_info_new(char** buf, int buffer_len, int* pidarray, int pidcount)
-uint32_t gen_message_sytem_info(struct msg_data_t *msg, int buffer_len, int* pidarray, int pidcount)
+struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 {
-	char *p = 0;
-	uint32_t len,total_len = 0;
+	struct msg_data_t *msg = NULL;
+	char *p = NULL;
 	int i = 0;
-	struct msg_system_t sys;
+	struct timeval tv;
 
-	fill_message_system(&sys);
+	uint32_t id = NMSG_SYSTEM;
+	uint32_t seq_num = 0; // TODO
+	gettimeofday(&tv, NULL);
+	uint32_t sec = tv.tv_sec;
+	uint32_t usec = tv.tv_usec;
+	uint32_t len = sizeof(*sys_info) -
+		(sizeof(sys_info->thread_load) +
+		 sizeof(sys_info->process_load)) +
+		2 * 4 * sizeof(float) +
+		sys_info->count_of_threads * sizeof(*sys_info->thread_load) +
+		sys_info->count_of_processes * sizeof(*sys_info->process_load);
 
-	total_len = 
-				sizeof(sys) 
-				- sizeof(sys.thread_load)
-				- sizeof(sys.process_load) +
-				2*sys.CPU_count*sizeof(float) + //CPU
-				sys.count_of_threads * sizeof(*(sys.thread_load)) + //treads
-				sys.count_of_processes * sizeof(*(sys.process_load)) //process
-				;
-	msg->payload = malloc(total_len);
-	memset(msg->payload,0,total_len);
-	p = msg->payload;
+	msg = malloc(MSG_DATA_HDR_LEN + len);
+	if (!msg) {
+		LOGE("Cannot alloc message: %d bytes\n", len);
+		return NULL;
+	}
+	msg->id = id;
+	msg->seq_num = seq_num;
+	msg->sec = sec;
+	msg->usec = usec;
+	msg->len = len;
+	p = &msg->payload;
 	
-	pack_int(p,sys.energy);
-	pack_int(p,sys.WiFi_status);
-	pack_int(p,sys.BT_status);
-	pack_int(p,sys.GPS_status);
-	pack_int(p,sys.brightness_status);
-	pack_int(p,sys.camera_status);
-	pack_int(p,sys.sound_status);
-	pack_int(p,sys.audio_status);
-	pack_int(p,sys.vibration_status);
-	pack_int(p,sys.voltage_status);
-	pack_int(p,sys.RSSI_status);
-	pack_int(p,sys.video_status);
-	pack_int(p,sys.call_status);
-	pack_int(p,sys.DNet_status);
+	pack_int(p, sys_info->energy);
+	pack_int(p, sys_info->wifi_status);
+	pack_int(p, sys_info->bt_status);
+	pack_int(p, sys_info->gps_status);
+	pack_int(p, sys_info->brightness_status);
+	pack_int(p, sys_info->camera_status);
+	pack_int(p, sys_info->sound_status);
+	pack_int(p, sys_info->audio_status);
+	pack_int(p, sys_info->vibration_status);
+	pack_int(p, sys_info->voltage_status);
+	pack_int(p, sys_info->rssi_status);
+	pack_int(p, sys_info->video_status);
+	pack_int(p, sys_info->call_status);
+	pack_int(p, sys_info->dnet_status);
 
-	//CPU
-	for (i=0; i<sys.CPU_count; i++)
-		pack_float(p,sys.CPU_frequency[i]); //FIXME wrong pack float define
-
-	pack_int(p,sys.app_CPU_usage);
-
-	for (i=0; i<sys.CPU_count; i++)
-		pack_float(p,sys.CPU_load[i]); //FIXME wrong pack float define
-
-	pack_int(p,sys.app_CPU_usage);
-	pack_int(p,sys.CPU_load);
-	pack_int(p,sys.virtual_memory);
-	pack_int(p,sys.resident_memory);
-	pack_int(p,sys.shared_memory);
-	pack_int(p,sys.PSS_memory);
-	pack_int(p,sys.total_alloc_size);
-	pack_int(p,sys.system_memory_total);
-	pack_int(p,sys.system_memory_used);
-	pack_int(p,sys.total_used_drive);
-
-	//thread
-	pack_int(p,sys.count_of_threads);
-	for (i=0; i<sys.count_of_threads; i++)
-	{
-		pack_int(p,sys.thread_load[i].id); //FIXME wrong pack float define
-		pack_float(p,sys.thread_load[i].load); //FIXME wrong pack float define
+	// CPU
+	for (i = 0; i < 4/* num_of_cpu */; i++) {
+		pack_float(p, sys_info->cpu_frequency[i]); //FIXME wrong pack float define
 	}
 
-	//process
-	pack_int(p,sys.count_of_processes)
-	for (i=0; i<sys.count_of_processes; i++)
-	{
-		pack_int(p,sys.process_load[i].id); //FIXME wrong pack float define
-		pack_float(p,sys.process_load[i].load); //FIXME wrong pack float define
+	pack_float(p, sys_info->app_cpu_usage);
+
+	for (i = 0; i < 4/* num_of_cpu */; i++) {
+		pack_float(p, sys_info->cpu_load[i]); //FIXME wrong pack float define
 	}
 
+	pack_int(p, sys_info->virtual_memory);
+	pack_int(p, sys_info->resident_memory);
+	pack_int(p, sys_info->shared_memory);
+	pack_int(p, sys_info->pss_memory);
+	pack_int(p, sys_info->total_alloc_size);
+	pack_int(p, sys_info->system_memory_total);
+	pack_int(p, sys_info->system_memory_used);
+	pack_int(p, sys_info->total_used_drive);
 
-	pack_int(p,sys.DISK_read_size);
-	pack_int(p,sys.DISK_write_size);
-	pack_int(p,sys.network_send_size);
-	pack_int(p,sys.network_receive_size);
+	// thread
+	pack_int(p, sys_info->count_of_threads);
+	for (i = 0; i < sys_info->count_of_threads; i++)
+	{
+		pack_int(p, sys_info->thread_load[i].id); //FIXME wrong pack float define
+		pack_float(p, sys_info->thread_load[i].load); //FIXME wrong pack float define
+	}
 
-	total_len = p - msg->payload;
-	fill_data_msg_head(msg,NMSG_SYSTEM,0,total_len);
+	// process
+	pack_int(p, sys_info->count_of_processes);
+	for (i = 0; i < sys_info->count_of_processes; i++)
+	{
+		pack_int(p, sys_info->process_load[i].id); //FIXME wrong pack float define
+		pack_float(p, sys_info->process_load[i].load); //FIXME wrong pack float define
+	}
 
-	return total_len;
+	pack_int(p, sys_info->disk_read_size);
+	pack_int(p, sys_info->disk_write_size);
+	pack_int(p, sys_info->network_send_size);
+	pack_int(p, sys_info->network_receive_size);
 
+	return msg;
 }
-
-

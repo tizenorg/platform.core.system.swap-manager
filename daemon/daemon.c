@@ -253,27 +253,23 @@ static void setEmptyTargetSlot(int index)
 
 int pseudoSendDataToHost(struct msg_data_t* log)
 {
-	uint32_t total_len = 
-					sizeof(log->id) +
-					sizeof(log->sequence) +
-					sizeof(uint64_t) + //time
-					sizeof(log->len);
+	/* uint32_t total_len = MSG_DATA_HDR_LEN; */
 
-	char *buf = malloc(total_len+log->len);
-	char *p = buf;
-	memset(p,0,total_len);
+	/* char *buf = malloc(total_len+log->len); */
+	/* char *p = buf; */
+	/* memset(p,0,total_len); */
 
-	pack_int(p,log->id);
-	pack_int(p,log->sequence);
-	pack_time(p,log->time);
-	pack_int(p,log->len);
+	/* pack_int(p,log->id); */
+	/* pack_int(p,log->seq_num); */
+	/* pack_time(p,log->time); */
+	/* pack_int(p,log->len); */
 
-	memcpy(p,log->payload,log->len);
-	printBuf(buf,total_len+log->len);
-	if (event_fd >0){
-		write(event_fd, buf, total_len+log->len);
-	}
-	free(buf);
+	/* memcpy(p,log->payload,log->len); */
+	/* printBuf(buf,total_len+log->len); */
+	/* if (event_fd >0){ */
+	/* 	write(event_fd, buf, total_len+log->len); */
+	/* } */
+	/* free(buf); */
 
 	return 0;
 }
@@ -525,177 +521,176 @@ static int parseDeviceMessage(msg_t* log)
 // return minus value if critical error occur
 static int _hostMessageHandler(int efd,struct msg_t* log)
 {
-	int ret = 0;
-	/*
-	long flag = 0;
-	char *barloc, *tmploc;
-	char execPath[PATH_MAX];
+/* 	int ret = 0; */
+	
+/* 	long flag = 0; */
+/* 	char *barloc, *tmploc; */
+/* 	char execPath[PATH_MAX]; */
 
-	if (log == NULL)
-		return 1;
+/* 	if (log == NULL) */
+/* 		return 1; */
 
-	switch (log->type)
-	{
-	case MSG_REPLAY:
-		sendACKStrToHost(MSG_OK, NULL);
-		parseDeviceMessage(log);
-		break;
-	case MSG_VERSION:
-		if(strcmp(PROTOCOL_VERSION, log->data) != 0)
-		{
-			sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_PROTOCOL_VERSION);
-		}
-		else
-		{
-			sendACKStrToHost(MSG_OK, NULL);
-		}
-		break;
-	case MSG_START:
-		LOGI("MSG_START handling : %s\n", log->data);
-		if(log->length == 0)
-		{
-			sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_DATA);
-			return -1;		// wrong message format
-		}
+/* 	switch (log->type) */
+/* 	{ */
+/* 	case MSG_REPLAY: */
+/* 		sendACKStrToHost(MSG_OK, NULL); */
+/* 		parseDeviceMessage(log); */
+/* 		break; */
+/* 	case MSG_VERSION: */
+/* 		if(strcmp(PROTOCOL_VERSION, log->data) != 0) */
+/* 		{ */
+/* 			sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_PROTOCOL_VERSION); */
+/* 		} */
+/* 		else */
+/* 		{ */
+/* 			sendACKStrToHost(MSG_OK, NULL); */
+/* 		} */
+/* 		break; */
+/* 	case MSG_START: */
+/* 		LOGI("MSG_START handling : %s\n", log->data); */
+/* 		if(log->length == 0) */
+/* 		{ */
+/* 			sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_DATA); */
+/* 			return -1;		// wrong message format */
+/* 		} */
 
-		// parsing for host start status
-		tmploc  = log->data;
-		barloc = strchr(tmploc, '|');
-		if(barloc == NULL)
-		{
-			sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_FORMAT);
-			return -1;		// wrong message format
-		}
+/* 		// parsing for host start status */
+/* 		tmploc  = log->data; */
+/* 		barloc = strchr(tmploc, '|'); */
+/* 		if(barloc == NULL) */
+/* 		{ */
+/* 			sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_FORMAT); */
+/* 			return -1;		// wrong message format */
+/* 		} */
 
-		// parsing for target launch option flag
-		tmploc = barloc + 1;
-		barloc = strchr(tmploc, '|');
-		if(barloc != NULL)
-		{
-			while(tmploc < barloc)
-			{
-				flag = (flag * 10) + (*tmploc - '0');
-				tmploc++;
-			}
-		}
-		else
-		{
-			sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_FORMAT);
-			return -1;	// wrong message format
-		}
-		LOGI("launch flag : %lx\n", flag);
+/* 		// parsing for target launch option flag */
+/* 		tmploc = barloc + 1; */
+/* 		barloc = strchr(tmploc, '|'); */
+/* 		if(barloc != NULL) */
+/* 		{ */
+/* 			while(tmploc < barloc) */
+/* 			{ */
+/* 				flag = (flag * 10) + (*tmploc - '0'); */
+/* 				tmploc++; */
+/* 			} */
+/* 		} */
+/* 		else */
+/* 		{ */
+/* 			sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_FORMAT); */
+/* 			return -1;	// wrong message format */
+/* 		} */
+/* 		LOGI("launch flag : %lx\n", flag); */
 
-		// parsing for application package name
-		tmploc = barloc + 1;
-		strcpy(manager.appPath, tmploc);
+/* 		// parsing for application package name */
+/* 		tmploc = barloc + 1; */
+/* 		strcpy(manager.appPath, tmploc); */
 
-		get_executable(manager.appPath, execPath, PATH_MAX); // get exact app executable file name
-		LOGI("executable app path %s\n", manager.appPath);
+/* 		get_executable(manager.appPath, execPath, PATH_MAX); // get exact app executable file name */
+/* 		LOGI("executable app path %s\n", manager.appPath); */
 
-#ifdef RUN_APP_LOADER
-		kill_app(manager.appPath);
-#else
-		kill_app(execPath);
-#endif
+/* #ifdef RUN_APP_LOADER */
+/* 		kill_app(manager.appPath); */
+/* #else */
+/* 		kill_app(execPath); */
+/* #endif */
 
-		{
-			char command[PATH_MAX];
-			struct epoll_event ev;
+/* 		{ */
+/* 			char command[PATH_MAX]; */
+/* 			struct epoll_event ev; */
 
-			//save app install path
-			mkdir(DA_WORK_DIR, 0775);
-			sprintf(command,
-					"%s -Wwi %s | grep DW_AT_comp_dir > %s", DA_READELF_PATH,
-					execPath, DA_INSTALL_PATH);
-			LOGI("appInstallCommand %s\n", command);
-			system(command);
+/* 			//save app install path */
+/* 			mkdir(DA_WORK_DIR, 0775); */
+/* 			sprintf(command, */
+/* 					"%s -Wwi %s | grep DW_AT_comp_dir > %s", DA_READELF_PATH, */
+/* 					execPath, DA_INSTALL_PATH); */
+/* 			LOGI("appInstallCommand %s\n", command); */
+/* 			system(command); */
 
-			sprintf(command,
-					"%s -h %s | grep Type | cut -d\" \" -f33 > %s", DA_READELF_PATH,
-					execPath, DA_BUILD_OPTION);
-			LOGI("appInstallCommand %s\n", command);
-			system(command);
+/* 			sprintf(command, */
+/* 					"%s -h %s | grep Type | cut -d\" \" -f33 > %s", DA_READELF_PATH, */
+/* 					execPath, DA_BUILD_OPTION); */
+/* 			LOGI("appInstallCommand %s\n", command); */
+/* 			system(command); */
 
-			if(startProfiling(flag) < 0)
-			{
-				sendACKCodeToHost(MSG_NOTOK, ERR_CANNOT_START_PROFILING);
-				return -1;
-			}
+/* 			if(startProfiling(flag) < 0) */
+/* 			{ */
+/* 				sendACKCodeToHost(MSG_NOTOK, ERR_CANNOT_START_PROFILING); */
+/* 				return -1; */
+/* 			} */
 
-			manager.app_launch_timerfd = timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC);
-			if(manager.app_launch_timerfd > 0)
-			{
-				struct itimerspec ctime;
-				ctime.it_value.tv_sec = MAX_APP_LAUNCH_TIME;
-				ctime.it_value.tv_nsec = 0;
-				ctime.it_interval.tv_sec = 0;
-				ctime.it_interval.tv_nsec = 0;
-				if(0 > timerfd_settime(manager.app_launch_timerfd, 0, &ctime, NULL))
-				{
-					LOGE("fail to set app launch timer\n");
-					close(manager.app_launch_timerfd);
-					manager.app_launch_timerfd = -1;
-				}
-				else
-				{
-					// add event fd to epoll list
-					ev.events = EPOLLIN;
-					ev.data.fd = manager.app_launch_timerfd;
-					if(epoll_ctl(efd, EPOLL_CTL_ADD, manager.app_launch_timerfd, &ev) < 0)
-					{
-						// fail to add event fd
-						LOGE("fail to add app launch timer fd to epoll list\n");
-						close(manager.app_launch_timerfd);
-						manager.app_launch_timerfd = -1;
-					}
-				}
-			}
-		}
-		sendACKStrToHost(MSG_OK, NULL);
-		break;
-	case MSG_STOP:
-		LOGI("MSG_STOP handling\n");
-		sendACKStrToHost(MSG_OK, NULL);
-		terminate_all();
-		break;
-	case MSG_OPTION:
-		if(log->length > 0)
-		{
-			int i;
-			msg_t sendlog;
-			manager.config_flag = atoi(log->data);
-			sendACKStrToHost(MSG_OK, NULL);
+/* 			manager.app_launch_timerfd = timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC); */
+/* 			if(manager.app_launch_timerfd > 0) */
+/* 			{ */
+/* 				struct itimerspec ctime; */
+/* 				ctime.it_value.tv_sec = MAX_APP_LAUNCH_TIME; */
+/* 				ctime.it_value.tv_nsec = 0; */
+/* 				ctime.it_interval.tv_sec = 0; */
+/* 				ctime.it_interval.tv_nsec = 0; */
+/* 				if(0 > timerfd_settime(manager.app_launch_timerfd, 0, &ctime, NULL)) */
+/* 				{ */
+/* 					LOGE("fail to set app launch timer\n"); */
+/* 					close(manager.app_launch_timerfd); */
+/* 					manager.app_launch_timerfd = -1; */
+/* 				} */
+/* 				else */
+/* 				{ */
+/* 					// add event fd to epoll list */
+/* 					ev.events = EPOLLIN; */
+/* 					ev.data.fd = manager.app_launch_timerfd; */
+/* 					if(epoll_ctl(efd, EPOLL_CTL_ADD, manager.app_launch_timerfd, &ev) < 0) */
+/* 					{ */
+/* 						// fail to add event fd */
+/* 						LOGE("fail to add app launch timer fd to epoll list\n"); */
+/* 						close(manager.app_launch_timerfd); */
+/* 						manager.app_launch_timerfd = -1; */
+/* 					} */
+/* 				} */
+/* 			} */
+/* 		} */
+/* 		sendACKStrToHost(MSG_OK, NULL); */
+/* 		break; */
+/* 	case MSG_STOP: */
+/* 		LOGI("MSG_STOP handling\n"); */
+/* 		sendACKStrToHost(MSG_OK, NULL); */
+/* 		terminate_all(); */
+/* 		break; */
+/* 	case MSG_OPTION: */
+/* 		if(log->length > 0) */
+/* 		{ */
+/* 			int i; */
+/* 			msg_t sendlog; */
+/* 			manager.config_flag = atoi(log->data); */
+/* 			sendACKStrToHost(MSG_OK, NULL); */
 
-			LOGI("MSG_OPTION : str(%s), flag(%x)\n", log->data, manager.config_flag);
+/* 			LOGI("MSG_OPTION : str(%s), flag(%x)\n", log->data, manager.config_flag); */
 
-			sendlog.type = MSG_OPTION;
-			sendlog.length = sprintf(sendlog.data, "%u", manager.config_flag);
+/* 			sendlog.type = MSG_OPTION; */
+/* 			sendlog.length = sprintf(sendlog.data, "%u", manager.config_flag); */
 
-			for(i = 0; i < MAX_TARGET_COUNT; i++)
-			{
-				if(manager.target[i].socket != -1)
-				{
-					send(manager.target[i].socket, &sendlog, sizeof(sendlog.type) + sizeof(sendlog.length) + sendlog.length, MSG_NOSIGNAL);
-				}
-			}
-		}
-		else
-		{
-			sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_DATA);
-			ret = 1;
-		}
-		break;
-	case MSG_ISALIVE:
-		sendACKStrToHost(MSG_OK, NULL);
-		break;
-	default:
-		LOGW("Unknown msg\n");
-		sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_TYPE);
-		ret = 1;
-		break;
-	}
-*/
-	return ret;
+/* 			for(i = 0; i < MAX_TARGET_COUNT; i++) */
+/* 			{ */
+/* 				if(manager.target[i].socket != -1) */
+/* 				{ */
+/* 					send(manager.target[i].socket, &sendlog, sizeof(sendlog.type) + sizeof(sendlog.length) + sendlog.length, MSG_NOSIGNAL); */
+/* 				} */
+/* 			} */
+/* 		} */
+/* 		else */
+/* 		{ */
+/* 			sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_DATA); */
+/* 			ret = 1; */
+/* 		} */
+/* 		break; */
+/* 	case MSG_ISALIVE: */
+/* 		sendACKStrToHost(MSG_OK, NULL); */
+/* 		break; */
+/* 	default: */
+/* 		LOGW("Unknown msg\n"); */
+/* 		sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_TYPE); */
+/* 		ret = 1; */
+/* 		break; */
+/* 	} */
+/* 	return ret; */
 }
 
 // ========================================================================================
@@ -761,7 +756,7 @@ static int deviceEventHandlerNew(input_dev* dev, int input_type)
 
 		if(count != 0){
 			LOGI("readed %d %s events\n,", count, input_type==INPUT_ID_KEY?STR_KEY:STR_TOUCH);
-			gen_message_event(&log,&in_ev[0],count,input_type);
+			/* gen_message_event(&log,&in_ev[0],count,input_type); */
 			pseudoSendDataToHost(&log);
 			reset_data_msg(&log);
 		}

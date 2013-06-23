@@ -210,8 +210,7 @@ void* samplingThread(void* data)
 	sigaddset(&waitsigmask, SIGALRM);
 	sigaddset(&waitsigmask, SIGUSR1);
 
-	while(1)
-	{
+	while (1) {
 		err = sigwait(&waitsigmask, &signo);
 		if(err != 0)
 		{
@@ -229,20 +228,37 @@ void* samplingThread(void* data)
 			}
 
 //#ifndef HOST_BUILD
-			//res = get_resource_info_new(&log.payload, DA_MSG_MAX, pidarr, pidcount);
-			res = gen_message_sytem_info(&log, DA_MSG_MAX, pidarr, pidcount);
-			if(res > 0)
-			{
-				LOGI("payload_len=%d\n",log.len);
-				LOGI("sizeof(float) = %d\n", sizeof(float));
-				//sendDataToHost(&log);
-				pseudoSendDataToHost(&log);
+			struct system_info_t sys_info;
+			if (get_system_info(&sys_info) == -1) {
+				LOGE("Cannot get system info\n");
 			}
-			break;
+
+			struct msg_t *msg;
+			msg = pack_system_info(&sys_info);
+			if (!msg) {
+				LOGE("Cannot pack system info\n");
+			}
+			if (write_to_buf(msg) == -1) {
+				LOGE("Cannot write system info to buffer\n");
+			}
+
+			free_msg_data(msg);
+			free_sys_info(&sys_info);
+			//res = get_resource_info_new(&log.payload, DA_MSG_MAX, pidarr, pidcount);
+			/* res = gen_message_sytem_info(&log, DA_MSG_MAX, pidarr, pidcount); */
+			/* if(res > 0) */
+			/* { */
+			/* 	LOGI("payload_len=%d\n",log.len); */
+			/* 	LOGI("sizeof(float) = %d\n", sizeof(float)); */
+			/* 	//sendDataToHost(&log); */
+			/* 	pseudoSendDataToHost(&log); */
+			/* } */
+			/* break; */
 //#endif
 		}
 		else if(signo == SIGUSR1)
 		{
+			LOGI("SIGUSR1 catched\n");
 			// end this thread
 			break;
 		}

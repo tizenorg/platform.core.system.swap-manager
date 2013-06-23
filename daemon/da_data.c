@@ -40,67 +40,69 @@ int fill_message_system(struct msg_system_t ** sys){
 */
 
 
-int fill_data_msg_head (struct msg_data_t *data, uint32_t msgid, uint32_t seq, uint32_t len)
-{
-	data->id = msgid;
-	data->sequence = seq; // TODO fill good value
-	gettimeofday(&data->time, NULL);
-	data->len = len;
-	return 0;
-}
+/* int fill_data_msg_head (struct msg_data_t *data, uint32_t msgid, uint32_t seq, uint32_t len) */
+/* { */
+/* 	data->id = msgid; */
+/* 	data->seq_num = seq; // TODO fill good value */
+/* 	/\* gettimeofday(&data->time, NULL); *\/ */
+/* 	data->len = len; */
+/* 	return 0; */
+/* } */
 
+
+/* //allocate memory, need free!!! */
+/* int gen_message_terminate(struct msg_data_t *data, uint32_t id) */
+/* { */
+/* 	char *p; */
+/* 	fill_data_msg_head(data,NMSG_TERMINATE, 0, sizeof(uint32_t) ); */
+/* 	// TODO fill good value */
+/* 	data->payload = malloc(data->len); */
+
+/* 	p = data->payload; */
+/* 	pack_int(p,id); */
+/* } */
 
 //allocate memory, need free!!!
-int gen_message_terminate(struct msg_data_t *data, uint32_t id)
-{
-	char *p;
-	fill_data_msg_head(data,NMSG_TERMINATE, 0, sizeof(uint32_t) );
-	// TODO fill good value
-	data->payload = malloc(data->len);
+/* int gen_message_error(struct msg_data_t *data, const char * err_msg) */
+/* { */
+/* 	char *p; */
+/* 	fill_data_msg_head(data, NMSG_ERROR, 0, strlen(err_msg)+1 ); */
+/* 	data->payload = malloc(strlen(err_msg)+1); */
 
-	p = data->payload;
-	pack_int(p,id);
-}
+/* 	p = data->payload; */
+/* 	pack_str(p,err_msg); */
+/* 	return 0; */
+/* } */
 
-//allocate memory, need free!!!
-int gen_message_error(struct msg_data_t *data, const char * err_msg)
-{
-	char *p;
-	fill_data_msg_head(data, NMSG_ERROR, 0, strlen(err_msg)+1 );
-	data->payload = malloc(strlen(err_msg)+1);
-
-	p = data->payload;
-	pack_str(p,err_msg);
-	return 0;
-}
-
-//allocatr memory, need free!!!
-int gen_message_event(struct msg_data_t *data, struct input_event *events,
-						uint32_t events_count, uint32_t id)
-{
-	uint32_t i = 0;
-	uint32_t payload_len = 
-		events_count * sizeof(*events)+
-		sizeof(payload_len);
-	char *p;
+/* //allocatr memory, need free!!! */
+/* int gen_message_event(struct msg_data_t *data, */
+/* 		      struct input_event *events, */
+/* 		      uint32_t events_count, */
+/* 		      uint32_t id) */
+/* { */
+/* 	uint32_t i = 0; */
+/* 	uint32_t payload_len = */
+/* 		events_count * sizeof(*events)+ */
+/* 		sizeof(payload_len); */
+/* 	char *p; */
 
 
 
-	fill_data_msg_head(data, NMSG_RECORD, 0, payload_len );
+/* 	fill_data_msg_head(data, NMSG_RECORD, 0, payload_len ); */
 
-	data->payload = malloc(payload_len);
+/* 	data->payload = malloc(payload_len); */
 
-	p = data->payload;
-	pack_int(p,events_count);
-	for (i=0; i<events_count; i++){
-		pack_int32(p,id);
-		pack_int32(p,events[i].type);
-		pack_int32(p,events[i].code);
-		pack_int32(p,events[i].value);
-	}
+/* 	p = data->payload; */
+/* 	pack_int(p,events_count); */
+/* 	for (i=0; i<events_count; i++){ */
+/* 		pack_int32(p,id); */
+/* 		pack_int32(p,events[i].type); */
+/* 		pack_int32(p,events[i].code); */
+/* 		pack_int32(p,events[i].value); */
+/* 	} */
 
-	return 0;
-}
+/* 	return 0; */
+/* } */
 
 int reset_data_msg(struct msg_data_t *data)
 {

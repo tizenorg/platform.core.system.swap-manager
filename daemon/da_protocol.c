@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -14,6 +15,54 @@
 #include "daemon.h"
 #include "sys_stat.h"
 #define parse_deb_on
+
+
+#define BUF_FILENAME "/tmp/daemon_events"
+int buf_fd = 0;
+
+int open_buf(void)
+{
+	buf_fd = creat(BUF_FILENAME, 0644);
+	if (buf_fd == -1) {
+		LOGE("Cannot open buffer: %s\n", strerror(errno));
+		return 1;
+	}
+	LOGI("buffer opened: %s, %d\n", BUF_FILENAME, buf_fd);
+
+	return 0;
+}
+
+void close_buf(void)
+{
+	close(buf_fd);
+}
+
+int write_to_buf(struct msg_data_t *msg)
+{
+	if (write(buf_fd, msg, MSG_DATA_HDR_LEN + msg->len) == -1) {
+		LOGE("write to buf: %s\n", strerror(errno));
+		return 1;
+	}
+	return 0;
+}
+
+void inline free_msg_data(struct msg_data_t *msg)
+{
+	free(msg);
+}
+
+void inline free_msg_payload(struct msg_t *msg)
+{
+	free(msg->payload);
+}
+
+void free_sys_info(struct system_info_t *sys_info)
+{
+	free(sys_info->cpu_frequency);
+	/* free(sys_info->cpu_load); */
+	/* free(sys_info->thread_load); */
+	/* free(sys_info->process_load); */
+}
 
 /*
 struct msg_t msg;
@@ -923,18 +972,51 @@ int hostMessageHandle(struct msg_t *msg)
 			sendACKToHost(ID,ERR_WRONG_MESSAGE_FORMAT,0,0);
 			return 1;
 		}
-		remove("/tmp/daemon_events");
-		event_fd = open("/tmp/daemon_events",O_RDWR | O_CREAT , S_IRUSR | S_IRGRP | S_IROTH);
-		LOGI("open = %d\n", event_fd);
+
+		// prepare buffer to write
+		if (open_buf() != 0) {
+			LOGE("Cannot open buffer\n");
+			return 1;
+		}
+
+		// TODO: launch translator thread
+
+		// TODO: get app path
+		/* get_executable(manager.appPath, execPath, PATH_MAX); // get exact app executable file name */
+		/* LOGI("executable app path %s\n", manager.appPath); */
+
+		// TODO: kill app
+/* #ifdef RUN_APP_LOADER */
+/* 		kill_app(manager.appPath); */
+/* #else */
+/* 		kill_app(execPath); */
+/* #endif */
+
+		// TODO: get install path (via pseudo readelf)
+
+		// TODO: get build option (via pseudo readelf)
+
 		// TODO: apply_prof_session()
+		if (0) {
+			sendACKCodeToHost(MSG_NOTOK, ERR_CANNOT_START_PROFILING);
+			return -1;
+		}
+
+		// TODO: start_sampling_thread()
+		if (samplingStart() < 0)
+			return -1;
+
+		// TODO: exec app
+
+		// TODO: start app launch timer
+
+		// success
 		sendACKToHost(ID,ERR_NO,0,0);
 		break;
 	case NMSG_STOP:
 		sendACKToHost(ID,ERR_NO,0,0);
 		// TODO: remove_prof_session()
-		if (event_fd>0){
-			close(event_fd);
-		}
+		close_buf();
 		reset_prof_session(&prof_session);
 		break;
 	case NMSG_CONFIG:

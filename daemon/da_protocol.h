@@ -1,3 +1,6 @@
+#ifndef _DA_PROTOCOL_
+#define _DA_PROTOCOL_
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -97,12 +100,14 @@ enum feature_code{
 };
 #define MAX_FILENAME 128
 
+#define MSG_DATA_HDR_LEN 20
 struct msg_data_t {
 	uint32_t id;
-	uint32_t sequence;
-	struct timeval time;
+	uint32_t seq_num;
+	uint32_t sec;
+	uint32_t usec;
 	uint32_t len;
-	char *payload;
+	char payload[0];
 };
 
 struct msg_t {
@@ -187,7 +192,6 @@ struct prof_session_t {
 	struct replay_event_seq_t replay_event_seq;
 };
 
-
 //int hostMessageHandle(struct msg_t *msg);
 int parseHostMessage(struct msg_t *log, char* msg);
 
@@ -230,50 +234,40 @@ struct process_info_t{
 	float load;
 };
 
-struct msg_system_t{
+struct system_info_t {
 	uint32_t energy;
-	uint32_t WiFi_status;
-	uint32_t BT_status;
-	uint32_t GPS_status;
+	uint32_t wifi_status;
+	uint32_t bt_status;
+	uint32_t gps_status;
 	uint32_t brightness_status;
 	uint32_t camera_status;
 	uint32_t sound_status;
 	uint32_t audio_status;
 	uint32_t vibration_status;
 	uint32_t voltage_status;
-	uint32_t RSSI_status;
+	uint32_t rssi_status;
 	uint32_t video_status;
 	uint32_t call_status;
-	uint32_t DNet_status;
-
-
-	uint32_t CPU_count;
-	float *CPU_frequency;
-
-	uint32_t app_CPU_usage;
-
-	float *CPU_load;
-
+	uint32_t dnet_status;
+	float *cpu_frequency;
+	float app_cpu_usage;
+	float *cpu_load;
 	uint32_t virtual_memory;
 	uint32_t resident_memory;
 	uint32_t shared_memory;
-	uint32_t PSS_memory;
+	uint32_t pss_memory;
 	uint32_t total_alloc_size;
 	uint32_t system_memory_total;
 	uint32_t system_memory_used;
 	uint32_t total_used_drive;
-
 	uint32_t count_of_threads;
 	struct thread_info_t *thread_load;
-
 	uint32_t count_of_processes;
 	struct process_info_t *process_load;
-
-	uint32_t DISK_read_size;
-	uint32_t DISK_write_size;
+	uint32_t disk_read_size;
+	uint32_t disk_write_size;
 	uint32_t network_send_size;
 	uint32_t network_receive_size;
-
 };
 
 struct recorded_event_t{
@@ -326,3 +320,14 @@ static  char *pack_timestamp(char *to)
 
 //event file descriptor
 int event_fd;
+
+int get_system_info(struct system_info_t *sys_info);
+struct msg_data_t *pack_system_info(struct system_info_t *sys_info);
+int write_to_buf(struct msg_data_t *msg);
+void free_msg_data(struct msg_data_t *msg);
+void free_msg_payload(struct msg_t *msg);
+int open_buf(void);
+void close_buf(void);
+void free_sys_info(struct system_info_t *sys_info);
+
+#endif /* _DA_PROTOCOL_ */
