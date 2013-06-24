@@ -253,23 +253,27 @@ static void setEmptyTargetSlot(int index)
 
 int pseudoSendDataToHost(struct msg_data_t* log)
 {
-	/* uint32_t total_len = MSG_DATA_HDR_LEN; */
+	struct timeval time;
+	uint32_t total_len = MSG_DATA_HDR_LEN;
 
-	/* char *buf = malloc(total_len+log->len); */
-	/* char *p = buf; */
-	/* memset(p,0,total_len); */
+/*	char *buf = malloc(total_len+log->len);
+	char *p = buf;
+	memset(p,0,total_len);
 
-	/* pack_int(p,log->id); */
-	/* pack_int(p,log->seq_num); */
-	/* pack_time(p,log->time); */
-	/* pack_int(p,log->len); */
+	pack_int(p,log->id);
+	pack_int(p,log->seq_num);
+	pack_int(p,log->sec);
+	pack_int(p,log->usec);
 
-	/* memcpy(p,log->payload,log->len); */
-	/* printBuf(buf,total_len+log->len); */
-	/* if (event_fd >0){ */
-	/* 	write(event_fd, buf, total_len+log->len); */
-	/* } */
-	/* free(buf); */
+	pack_int(p,log->len);
+
+	memcpy(p,log->payload,log->len);
+	*/
+	printBuf(log,total_len+log->len);
+	if (event_fd >0){
+		write(event_fd, log, total_len+log->len);
+	}
+/*	free(buf);*/
 
 	return 0;
 }
@@ -742,7 +746,7 @@ static int deviceEventHandlerNew(input_dev* dev, int input_type)
 	ssize_t size = 0;
 	int count = 0;
 	struct input_event in_ev[MAX_EVENTS_NUM];
-	struct msg_data_t log;
+	struct msg_data_t *log;
 
 	if(input_type == INPUT_ID_TOUCH || input_type == INPUT_ID_KEY)
 	{
@@ -755,10 +759,10 @@ static int deviceEventHandlerNew(input_dev* dev, int input_type)
 		} while (count < MAX_EVENTS_NUM && size > 0);
 
 		if(count != 0){
-			LOGI("readed %d %s events\n,", count, input_type==INPUT_ID_KEY?STR_KEY:STR_TOUCH);
-			/* gen_message_event(&log,&in_ev[0],count,input_type); */
-			pseudoSendDataToHost(&log);
-			reset_data_msg(&log);
+			LOGI("readed %d %s events\n", count, input_type==INPUT_ID_KEY?STR_KEY:STR_TOUCH);
+			log = gen_message_event(in_ev,count,input_type);
+			pseudoSendDataToHost(log);
+			reset_data_msg(log);
 		}
 	}
 	else
