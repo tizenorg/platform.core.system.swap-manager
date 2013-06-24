@@ -14,6 +14,7 @@
 #include "da_protocol.h"
 #include "daemon.h"
 #include "sys_stat.h"
+#include "elf.h"
 #define parse_deb_on
 
 
@@ -815,11 +816,15 @@ static char *parse_msg_binary_info(char * msg_payload,
 	return p;
 }
 
+static void reset_msg(struct msg_t *msg)
+{
+	free(msg->payload);
+}
 
 static void reset_app_info(struct app_info_t *app_info)
 {
-	app_info->app_id[0] = '\0';
-	app_info->exe_path[0] = '\0';
+	free(app_info->app_id);
+	free(app_info->exe_path);
 }
 
 static void reset_conf(struct conf_t *conf)
@@ -874,6 +879,41 @@ static void reset_prof_session(struct prof_session_t *prof_session)
 	//reset_app_inst(&prof_session->app_inst);
 }
 
+static struct msg_t *gen_binary_info_reply(struct app_info_t *app_info)
+{
+	uint32_t binary_type = get_binary_type(app_info->exe_path);
+	char binary_path[] = "unknown path";
+	struct msg_t *msg;
+	char *p = NULL;
+
+	if (binary_type == BINARY_TYPE_UNKNOWN) {
+		LOGE("Binary is neither relocatable, nor executable\n");
+		return NULL;
+	}
+
+	msg = malloc(sizeof(msg));
+	if (!msg) {
+		LOGE("Cannot alloc bin info msg\n");
+		return NULL;
+	}
+
+	msg->payload = malloc(sizeof(binary_type) + strlen(binary_path) + 1);
+	if (!msg) {
+		LOGE("Cannot alloc bin info msg payload\n");
+		return NULL;
+	}
+
+	msg->id = NMSG_BINARY_INFO_ACK;
+	p = msg->payload;
+
+	pack_int(p, binary_type);
+	pack_str(p, binary_path);
+
+	msg->len = p - msg->payload;
+
+	return msg;
+}
+
 // return 0 for normal case
 // return negative value for error case
 int parseHostMessage(struct msg_t* log, char* msg)
@@ -893,7 +933,23 @@ int parseHostMessage(struct msg_t* log, char* msg)
 	return ret;
 }
 
-// msgstr can be NULL
+static int send_reply(struct msg_t *msg)
+{
+	if (send(manager.host.control_socket,
+		 msg, MSG_CMD_HDR_LEN, MSG_NOSIGNAL) == -1) {
+		LOGE("Cannot send reply header: %s\n", strerror(errno));
+		return 1;
+	}
+
+	if (send(manager.host.control_socket,
+		 msg->payload, msg->len, MSG_NOSIGNAL) == -1) {
+		LOGE("Cannot send reply payload: %s\n", strerror(errno));
+		return 1;
+	}
+
+	return 0;
+}
+
 static int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 			char *payload, int payload_size)
 {
@@ -966,6 +1022,8 @@ int hostMessageHandle(struct msg_t *msg)
 	uint32_t answer_len = 0;
 	uint32_t ID = msg->id;
 	struct user_space_inst_t user_space_inst;
+	struct app_info_t app_info;
+	struct msg_t *msg_reply;
 
 	LOGI("MY HANDLE %s (%X)\n",msg_ID_str(msg->id),msg->id);
 	switch (ID) {
@@ -1030,19 +1088,30 @@ int hostMessageHandle(struct msg_t *msg)
 			LOGE("config parsing error\n");
 			LOGE("parse error <%s>\n",msg_ID_str(msg->id));
 			sendACKToHost(ID,ERR_WRONG_MESSAGE_FORMAT,0,0);
-			return 1;
+			return 0;
 		}
 
 		sendACKToHost(ID,ERR_NO,0,0);
 		break;
 	case NMSG_BINARY_INFO:
-		if (!parse_msg_binary_info(msg->payload, &prof_session.app_info)) {
+		if (!parse_msg_binary_info(msg->payload, &app_info)) {
 			LOGE("binary info parsing error\n");
-			return 1;
+			sendACKToHost(ID, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
+			return 0;
+		}
+		msg_reply = gen_binary_info_reply(&app_info);
+		if (!msg_reply) {
+			sendACKToHost(ID, ERR_UNKNOWN, 0, 0);
+			return 0;
 		}
 
-		sendACKToHost(ID,ERR_NO,0,0);
+		if (send_reply(msg_reply) != 0) {
+			LOGE("Cannot send reply\n");
+		}
 
+		reset_app_info(&app_info);
+		reset_msg(msg_reply);
+		free(msg_reply);
 		break;
 	case NMSG_SWAP_INST_ADD:
 		if (!parse_user_space_inst(msg->payload, &prof_session.user_space_inst)){

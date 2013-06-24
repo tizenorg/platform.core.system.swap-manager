@@ -108,6 +108,7 @@ struct msg_data_t {
 	char payload[0];
 };
 
+#define MSG_CMD_HDR_LEN 8
 struct msg_t {
 	uint32_t id;
 	uint32_t len;
@@ -116,8 +117,8 @@ struct msg_t {
 
 struct app_info_t {
 	uint32_t app_type;
-	char *app_id;//[MAX_FILENAME];
-	char *exe_path;//[MAX_FILENAME];
+	char *app_id;
+	char *exe_path;
 };
 
 //typedef uint32_t conf_t;
