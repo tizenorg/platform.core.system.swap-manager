@@ -227,7 +227,6 @@ void* samplingThread(void* data)
 					pidarr[pidcount++] = manager.target[i].pid;
 			}
 
-//#ifndef HOST_BUILD
 			struct system_info_t sys_info;
 			if (get_system_info(&sys_info) == -1) {
 				LOGE("Cannot get system info\n");
@@ -254,7 +253,6 @@ void* samplingThread(void* data)
 			/* 	pseudoSendDataToHost(&log); */
 			/* } */
 			/* break; */
-//#endif
 		}
 		else if(signo == SIGUSR1)
 		{

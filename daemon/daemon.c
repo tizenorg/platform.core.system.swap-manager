@@ -39,15 +39,15 @@
 #include <sys/epoll.h>		// for epoll apis
 #include <sys/timerfd.h>	// for timerfd
 #include <unistd.h>			// for access, sleep
-#ifndef HOST_BUILD
+
+#ifndef LOCALTEST
 #include <attr/xattr.h>		// for fsetxattr
+#include <sys/smack.h>
 #endif
+
 #include <linux/input.h>
 #include <dirent.h>
 #include <fcntl.h>
-#ifndef HOST_BUILD
-#include <sys/smack.h>
-#endif
 #include "daemon.h"
 #include "sys_stat.h"
 #include "utils.h"
@@ -351,7 +351,7 @@ static int startProfiling(long launchflag)
 	// remove previous screen capture files
 	remove_indir(SCREENSHOT_DIR);
 	mkdir(SCREENSHOT_DIR, 0777);
-#ifndef HOST_BUILD
+#ifndef LOCALTEST
 	smack_lsetlabel(SCREENSHOT_DIR, "*", SMACK_LABEL_ACCESS);
 #endif
 	manager.config_flag = launchflag;
@@ -830,7 +830,7 @@ static int targetEventHandler(int epollfd, int index, uint64_t msg)
 			tempPath[0] = '\0';
 			get_app_install_path(tempPath, PATH_MAX);
 
-#ifndef HOST_BUILD
+#ifndef LOCALTEST
 			get_device_info(tempBuff, DA_MSG_MAX);
 #endif
 
@@ -902,11 +902,11 @@ static int targetServerHandler(int efd)
 
 	if(manager.target[index].socket >= 0)	// accept succeed
 	{
-#ifndef HOST_BUILD
+#ifndef LOCALTEST
 		// set smack attribute for certification
 		fsetxattr(manager.target[index].socket, "security.SMACK64IPIN", "*", 1, 0);
 		fsetxattr(manager.target[index].socket, "security.SMACK64IPOUT", "*", 1, 0);
-#endif /* HOST_BUILD */
+#endif /* LOCALTEST */
 
 		// send config message to target process
 		log.type = MSG_OPTION;

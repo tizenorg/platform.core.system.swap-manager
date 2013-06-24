@@ -41,23 +41,21 @@
 #include <errno.h>
 
 #ifndef LOCALTEST
-#ifndef HOST_BUILD
 #include <system_info.h>
 #include <runtime_info.h>
 #include <telephony_network.h>
 #include <call.h>
 #endif
-#endif
 
 #include "da_protocol.h"
 #include "da_data.h"
 
+#ifndef LOCALTEST
 #define USE_VCONF
+#endif
 
 #ifdef USE_VCONF
-#ifndef HOST_BUILD
 #include "vconf.h"
-#endif
 #endif
 
 #include "sys_stat.h"
@@ -2013,7 +2011,7 @@ struct thread_info_t th_load[1] = {{0x111, 10.6}};
 struct process_info_t pr_load[1] = {{0x222, 20.7}};
 int get_system_info(struct system_info_t *sys_info)
 {
-#ifndef HOST_BUILD
+#ifndef LOCALTEST
 	sys_info->energy = 0; // not implemented
 	sys_info->wifi_status = get_wifi_status();
 	sys_info->bt_status = get_bt_status();
@@ -2068,7 +2066,7 @@ int get_system_info(struct system_info_t *sys_info)
 	sys_info->disk_write_size = 0; // TODO
 	sys_info->network_send_size = 0; // TODO
 	sys_info->network_receive_size = 0; // TODO
-#else /* HOST_BUILD */
+#else /* LOCALTEST */
 	sys_info->energy = 1;
 	sys_info->wifi_status = 2;
 	sys_info->bt_status = 3;
@@ -2119,7 +2117,7 @@ int get_system_info(struct system_info_t *sys_info)
 	sys_info->disk_write_size = 0x21;
 	sys_info->network_send_size = 0x22;
 	sys_info->network_receive_size = 0x23;
-#endif /* HOST_BUILD */
+#endif /* LOCALTEST */
 
 	return 0;
 };

@@ -38,7 +38,7 @@
 #include <sys/stat.h>	// for open
 #include <fcntl.h>		// for open
 #include <grp.h>		// for setgroups
-#ifndef HOST_BUILD
+#ifndef LOCALTEST
 #include <sys/smack.h>
 #endif
 #include "daemon.h"
@@ -48,9 +48,11 @@
 #define APP_GROUPS_MAX		100
 #define APP_GROUP_LIST		"/usr/share/privilege-control/app_group_list"
 #define SELF_LABEL_FILE		"/proc/self/attr/current"
-#ifndef HOST_BUILD
+
+#ifndef LOCALTEST
 #define SMACK_LABEL_LEN		255
 #endif
+
 #define SID_APP				5000
 #define MANIFEST_PATH		"/info/manifest.xml"
 
@@ -122,7 +124,7 @@ int read_line(const int fd, char* ptr, const unsigned int maxlen)
 	return -1; // no space
 }
 
-#ifndef HOST_BUILD
+#ifndef LOCALTEST
 int smack_set_label_for_self(const char *label)
 {
 	int len;
@@ -201,7 +203,7 @@ void set_appuser_groups(void)
 	close(fd);
 }
 
-#ifndef HOST_BUILD
+#ifndef LOCALTEST
 int get_smack_label(const char* execpath, char* buffer, int buflen)
 {
 	char* appid = NULL;
@@ -376,7 +378,7 @@ int exec_app(const char* exec_path, int app_type)
 	int isHwAcc = 0;
 	char manifest[PATH_MAX];
 	char command[PATH_MAX];
-#ifndef HOST_BUILDl
+#ifndef LOCALTEST
 	char appid[SMACK_LABEL_LEN];
 #endif
 	if (exec_path == NULL || strlen(exec_path) <= 0) 
@@ -412,7 +414,7 @@ int exec_app(const char* exec_path, int app_type)
 		}
 	}
 
-#ifndef HOST_BUILDl
+#ifndef LOCALTEST
 	if(get_smack_label(exec_path, appid, SMACK_LABEL_LEN - 1) < 0)
 	{
 		LOGE("failed to get smack label\n");
@@ -421,7 +423,7 @@ int exec_app(const char* exec_path, int app_type)
 	else
 #endif
 	{
-#ifndef HOST_BUILD
+#ifndef LOCALTEST
 		LOGI("smack lable is %s\n", appid);
 		if(smack_set_label_for_self(appid) < 0)
 		{

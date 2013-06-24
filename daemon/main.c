@@ -37,7 +37,7 @@
 #include <signal.h>			// for signal
 #include <unistd.h>			// for unlink
 #include <fcntl.h>			// for open, fcntl
-#ifndef HOST_BUILD
+#ifndef LOCALTEST
 #include <attr/xattr.h>		// for fsetxattr
 #endif
 #include "daemon.h"
@@ -124,11 +124,11 @@ static int makeTargetServerSocket()
 		return -1;
 	}
 
-#ifndef HOST_BUILD
+#ifndef LOCALTEST
 	// set smack attribute for certification
 	fsetxattr(manager.target_server_socket, "security.SMACK64IPIN", "*", 1, 0);
 	fsetxattr(manager.target_server_socket, "security.SMACK64IPOUT", "*", 1, 0);
-#endif /* HOST_BUILD */
+#endif /* LOCALTEST */
 
 	bzero(&serverAddrUn, sizeof(serverAddrUn));
 	serverAddrUn.sun_family = AF_UNIX;
@@ -240,7 +240,7 @@ static int initializeManager()
 	sigset_t newsigmask;
 
 	atexit(_close_server_socket);
-#ifndef HOST_BUILD
+#ifndef LOCALTEST
 	if(initialize_system_info() < 0)
 	{
 		writeToPortfile(ERR_INITIALIZE_SYSTEM_INFO_FAILED);
@@ -299,7 +299,7 @@ static int initializeManager()
 
 static int finalizeManager()
 {
-#ifndef HOST_BUILD
+#ifndef LOCALTEST
 	finalize_system_info();
 #endif
 	LOGI("Finalize daemon\n");

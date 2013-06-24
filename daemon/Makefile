@@ -58,7 +58,7 @@ LIBS_COMMON :=	-lglib-2.0 \
 				-lcapi-system-info
 
 LIBS_COMMON_HOST :=		-lglib-2.0
-HOST_BUILD := -DHOST_BUILD=1 -DLOCALTEST=1 -O0 -g
+HOST_BUILD := -DLOCALTEST=1 -O0 -g
 DEBUG_ON := -DDEBUG=1
 FLAGS = -pthread -Wall
 
