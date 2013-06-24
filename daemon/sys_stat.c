@@ -1995,12 +1995,8 @@ int finalize_system_info()
 //CMD SOCKET FUNCTIONS
 int fill_target_info(struct target_info_t *target_info)
 {
-	//get sys_mem_size
 	target_info->sys_mem_size = get_system_total_memory();
-//	target_info->sys_mem_size=1;
-	
-
-	target_info->storage_size = 2;//get_fsinfo("/", int type)
+	target_info->storage_size = stat_get_storageinfo(FSINFO_TYPE_TOTAL);
 	target_info->bluetooth_supp = get_bt_status();
 	target_info->gps_supp = get_gps_status();
 	target_info->wifi_supp = get_wifi_status();
