@@ -55,7 +55,6 @@ NMSG_PROBE_SYNC				=0X3010	//N	irregular	resource log
 };
 #define MSG_MAX_NUM NMSG_SWAP_INST_REMOVE
 
-#define NMSG_ACK_FLAG 0x1000
 enum ErrorCode{
 	ERR_NO									=0,		//success	
 	ERR_LOCKFILE_CREATE_FAILED				=-101,	//lock file create failed	
