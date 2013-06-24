@@ -72,7 +72,7 @@ enum ErrorCode{
 	ERR_SERV_SOCK_CREATE					=-900,	//server socket creation failed (written in /tmp/da.port file)	
 	ERR_SERV_SOCK_BIND						=-901,	//server socket bind failed (written in /tmp/da.port file)	
 	ERR_SERV_SOCK_LISTEN					=-902,	//server socket listen failed (written in /tmp/da.port file)	
-	ERR_UNCKNOWN							=-999	//unknown error	
+	ERR_UNKNOWN							=-999	//unknown error
 };
 
 enum feature_code{

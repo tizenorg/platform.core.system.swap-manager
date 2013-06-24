@@ -210,7 +210,7 @@ static char *msgErrStr(enum ErrorCode err)
 		return "server socket bind failed (written in /tmp/da.port file)";
 	case ERR_SERV_SOCK_LISTEN:
 		return "server socket listen failed (written in /tmp/da.port file)";
-	case ERR_UNCKNOWN:
+	case ERR_UNKNOWN:
 	default:
 		return "unknown error";
 	}
