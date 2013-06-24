@@ -28,7 +28,8 @@ DAEMON_SRCS :=	\
 	da_debug.c	\
 	da_data.c	\
 	utils.c		\
-	sys_stat.c
+	sys_stat.c	\
+	elf.c
 
 DAEMON_SRCS_HOST :=	\
 	main.c		\
@@ -38,7 +39,8 @@ DAEMON_SRCS_HOST :=	\
 	da_debug.c	\
 	da_data.c	\
 	utils.c		\
-	sys_stat.c
+	sys_stat.c	\
+	elf.c
 
 
 LDLIBS_PATH := -L/usr/lib -L./lib/
