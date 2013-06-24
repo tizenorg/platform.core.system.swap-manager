@@ -1995,15 +1995,31 @@ int finalize_system_info()
 //CMD SOCKET FUNCTIONS
 int fill_target_info(struct target_info_t *target_info)
 {
+	/* system_info_get_value_bool() changes only 1 byte
+	   so we need to be sure that the integer as a whole is correct */
+	target_info->bluetooth_supp = 0;
+	target_info->gps_supp = 0;
+	target_info->wifi_supp = 0;
+	target_info->camera_count = 0;
+	target_info->network_type = 0;
+
 	target_info->sys_mem_size = get_system_total_memory();
 	target_info->storage_size = stat_get_storageinfo(FSINFO_TYPE_TOTAL);
-	target_info->bluetooth_supp = get_bt_status();
-	target_info->gps_supp = get_gps_status();
-	target_info->wifi_supp = get_wifi_status();
-	target_info->camera_count = get_camera_status();
-	target_info->network_type = 7;
+#ifndef LOCALTEST
+	system_info_get_value_bool(SYSTEM_INFO_KEY_BLUETOOTH_SUPPORTED,
+				   &target_info->bluetooth_supp);
+	system_info_get_value_bool(SYSTEM_INFO_KEY_GPS_SUPPORTED,
+				   &target_info->gps_supp);
+	system_info_get_value_bool(SYSTEM_INFO_KEY_WIFI_SUPPORTED,
+				   &target_info->wifi_supp);
+	system_info_get_value_int(SYSTEM_INFO_KEY_CAMERA_COUNT,
+				  &target_info->camera_count);
+	// FIXME: network type is a string
+	system_info_get_value_string(SYSTEM_INFO_KEY_NETWORK_TYPE,
+				     &target_info->network_type);
+#endif /* LOCALTEST */
 	target_info->max_brightness = get_max_brightness();
-	target_info->CPU_core_count = sysconf(_SC_NPROCESSORS_CONF);
+	target_info->cpu_core_count = sysconf(_SC_NPROCESSORS_CONF);
 	return 0;
 }
 

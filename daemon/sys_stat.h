@@ -139,7 +139,7 @@ struct target_info_t {
 	uint32_t camera_count;
 	uint32_t network_type;
 	uint32_t max_brightness;
-	uint32_t CPU_core_count;
+	uint32_t cpu_core_count;
 };
 
 int get_device_info(char* buffer, int buffer_len);
