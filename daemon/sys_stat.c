@@ -98,7 +98,7 @@ enum PROCESS_DATA
 static int Hertz = 0;
 static int num_of_cpu = 0;
 static int num_of_freq = 0;
-static unsigned long mem_slot_array[MEM_SLOT_MAX];
+static uint64_t mem_slot_array[MEM_SLOT_MAX];
 static CPU_t* cpus = NULL;
 static unsigned long probe_so_size = 0;
 
@@ -1116,7 +1116,7 @@ static int update_system_cpu_data(int cur_index)
 
 // return 0 for normal case
 // return negative value for error
-static int update_system_memory_data(uint32_t *memtotal, uint32_t *memused)
+static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 {
 	static int meminfo_fd = -1;
 	char *head, *tail;
@@ -1175,9 +1175,8 @@ static int update_system_memory_data(uint32_t *memtotal, uint32_t *memused)
 		*memused = mem_slot_array[MEM_SLOT_TOTAL] - mem_slot_array[MEM_SLOT_FREE] -
 			mem_slot_array[MEM_SLOT_BUFFER] - mem_slot_array[MEM_SLOT_CACHED];
 
-		// FIXME: if in bytes than overflow
-		/* *memtotal *= 1024;	// change to Byte */
-		/* *memused *= 1024;	// change to Byte */
+		*memtotal *= 1024;	// change to Byte
+		*memused *= 1024;	// change to Byte
 		return 0;
 	}
 	else
@@ -2057,8 +2056,8 @@ int get_system_info(struct system_info_t *sys_info)
 	sys_info->pss_memory = 0;//pss in get_resource_info()
 	sys_info->total_alloc_size = get_total_alloc_size();
 
-	uint32_t sysmemtotal = 0;
-	uint32_t sysmemused = 0;
+	uint64_t sysmemtotal = 0;
+	uint64_t sysmemused = 0;
 	if (update_system_memory_data(&sysmemtotal, &sysmemused) < 0) {
 		LOGE("Failed to update system memory data\n");
 		return 1;
@@ -2104,8 +2103,8 @@ int get_system_info(struct system_info_t *sys_info)
 	sys_info->pss_memory = 0x15;
 	sys_info->total_alloc_size = 0x16;
 
-	uint32_t sysmemtotal = 0;
-	uint32_t sysmemused = 0;
+	uint64_t sysmemtotal = 0;
+	uint64_t sysmemused = 0;
 	if (update_system_memory_data(&sysmemtotal, &sysmemused) < 0) {
 		LOGE("Failed to update system memory data\n");
 		return 1;

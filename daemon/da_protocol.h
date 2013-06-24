@@ -257,8 +257,8 @@ struct system_info_t {
 	uint32_t shared_memory;
 	uint32_t pss_memory;
 	uint32_t total_alloc_size;
-	uint32_t system_memory_total;
-	uint32_t system_memory_used;
+	uint64_t system_memory_total;
+	uint64_t system_memory_used;
 	uint32_t total_used_drive;
 	uint32_t count_of_threads;
 	struct thread_info_t *thread_load;
