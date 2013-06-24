@@ -125,9 +125,8 @@ char* msg_ID_str ( enum HostMessageT ID)
 		NMSG_START,
 		NMSG_STOP,
 		NMSG_CONFIG,
-
+		0,
 		NMSG_BINARY_INFO,
-		NMSG_SWAP_INST,
 		NMSG_GET_TARGET_INFO,
 		NMSG_SWAP_INST_ADD
 		)
@@ -1037,9 +1036,6 @@ int hostMessageHandle(struct msg_t *msg)
 
 		sendACKToHost(ID,ERR_NO,0,0);
 
-		break;
-	case NMSG_SWAP_INST:
-		sendACKToHost(ID,ERR_NO,0,0);
 		break;
 	case NMSG_SWAP_INST_ADD:
 		if (!parse_user_space_inst(msg->payload, &prof_session.user_space_inst)){
