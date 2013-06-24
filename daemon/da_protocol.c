@@ -88,30 +88,7 @@ static void print_prof_session(struct prof_session_t *prof_session);
 
 //DEBUG FUNCTIONS
 #define dstr(x) #x
-/*
-char* MSG_to_str_arr[ 2 * MSG_MAX_NUM + 1 ] = {
-"MSG_???",
-"MSG_KEEP_ALIVE",
-"MSG_START",
-"MSG_STOP",
-"MSG_CONFIG",
-"MSG_BINARY_INFO",
-"MSG_SWAP_INST",
-"MSG_GET_TARGET_INFO",
-"MSG_SWAP_INST_ADD",
-"MSG_SWAP_INST_REMOVE",
 
-"MSG_KEEP_ALIVE_ACK",
-"MSG_START_ACK",
-"MSG_STOP_ACK",
-"MSG_CONFIG_ACK",
-"MSG_BINARY_INFO_ACK",
-"MSG_SWAP_INST_ACK",
-"MSG_GET_TARGET_INFO_ACK",
-"MSG_SWAP_INST_ADD_ACK",
-"MSG_SWAP_INST_REMOVE_ACK",
-
-};*/
 #define check_and_return(par,check) if ( par == check ) {return dstr(check);}
 #define check_2(a1,a2) check_and_return(ID,a1) else check_and_return(ID,a2)
 #define check_4(a1,a2,a3,a4) check_2(a1,a2) else check_2(a3,a4)
@@ -931,7 +908,37 @@ static int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 		msg = (struct msg_t *)logstr;
 		char *p = &(msg->payload);
 
-		resp |= NMSG_ACK_FLAG;
+		//get ack message ID
+		switch (resp) {
+			case NMSG_KEEP_ALIVE:
+				resp = NMSG_KEEP_ALIVE_ACK;
+				break;
+			case NMSG_START:
+				resp = NMSG_START_ACK;
+				break;
+			case NMSG_STOP:
+				resp = NMSG_STOP_ACK;
+				break;
+			case NMSG_CONFIG:
+				resp = NMSG_CONFIG_ACK;
+				break;
+			case NMSG_BINARY_INFO:
+				resp = NMSG_BINARY_INFO_ACK;
+				break;
+			case NMSG_GET_TARGET_INFO:
+				resp = NMSG_GET_TARGET_INFO_ACK;
+				break;
+			case NMSG_SWAP_INST_ADD:
+				resp = NMSG_SWAP_INST_ADD_ACK;
+				break;
+			case NMSG_SWAP_INST_REMOVE:
+				resp = NMSG_SWAP_INST_REMOVE_ACK;
+				break;
+			default:
+				//TODO report error
+				free(logstr);
+				return 1;
+		}
 
 		//set message id 
 		msg->id = resp;
