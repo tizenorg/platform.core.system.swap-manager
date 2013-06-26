@@ -240,13 +240,11 @@ static int initializeManager()
 	sigset_t newsigmask;
 
 	atexit(_close_server_socket);
-#ifndef LOCALTEST
 	if(initialize_system_info() < 0)
 	{
 		writeToPortfile(ERR_INITIALIZE_SYSTEM_INFO_FAILED);
 		return -1;
 	}
-#endif
 
 	// make server socket
 	if(makeTargetServerSocket() != 0)

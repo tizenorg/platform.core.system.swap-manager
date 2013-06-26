@@ -689,6 +689,7 @@ static int del_node(procNode **head, pid_t pid)
 
 	t = *head;
 	prev = NULL;
+/* 	LOGI("dell t=%d\n",t); */
 	while (t != NULL) {
 		if (t->proc_data.pid == pid) {
 			if (prev != NULL)
@@ -702,6 +703,7 @@ static int del_node(procNode **head, pid_t pid)
 		t = t->next;
 	}
 
+/* 	LOGI("ret 0\n"); */
 	return 0;
 }
 
@@ -899,6 +901,7 @@ static int update_process_data(int* pidarray, int pidcount, enum PROCESS_DATA da
 
 	for(i = 0; i < pidcount; i++)
 	{
+/* 		LOGI("#%d\n", i); */
 		if (pidarray[i] == 0)	// pid is invalid
 		{
 			ret = 1;
@@ -906,15 +909,19 @@ static int update_process_data(int* pidarray, int pidcount, enum PROCESS_DATA da
 		}
 
 		sprintf(buf, "/proc/%d", pidarray[i]);
+/* 		LOGI("#->%s\n", buf); */
 		if (unlikely(stat(buf, &sb) == -1))	// cannot access anymore
 		{
+/* 			LOGI("#del from prochead=%d\n", prochead); */
 			del_node(&prochead, pidarray[i]);
 			ret = errno;
 			continue;
 		}
 
+/* 		LOGI("find node = %d\n", procnode); */
 		if ((procnode = find_node(prochead, pidarray[i])) == NULL)	// new process
 		{
+/* 			LOGI("proc node1 = %d\n", procnode); */
 			procnode = add_node(&prochead, pidarray[i]);
 			if(datatype == PROCDATA_STAT)
 			{
@@ -944,6 +951,7 @@ static int update_process_data(int* pidarray, int pidcount, enum PROCESS_DATA da
 		}
 		else
 		{
+/* 			LOGI("proc node2 = %d\n", procnode); */
 			if(datatype == PROCDATA_STAT)
 			{
 				if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data))) < 0))
@@ -969,10 +977,12 @@ static int update_process_data(int* pidarray, int pidcount, enum PROCESS_DATA da
 			}
 		}
 	}
-
+/* 	LOGI("del_notfound_node\n"); */
 	del_notfound_node(&prochead);
+/* 	LOGI("reset_found_node\n"); */
 	reset_found_node(prochead);
 
+/* 	LOGI("ret %d\n", ret); */
 	return ret;
 }
 
@@ -1045,6 +1055,8 @@ static int update_system_cpu_frequency(int cur_index)
 // return negative value for error
 static int update_system_cpu_data(int cur_index)
 {
+/* 	LOGI(">\n"); */
+
 	static FILE* fp = NULL;
 	int num;
 	char buf[BUFFER_MAX];
@@ -1065,8 +1077,11 @@ static int update_system_cpu_data(int cur_index)
 	{
 		LOGE("Failed to read first line of " PROCSTAT "\n");
 //		fclose(fp);
+/* 		LOGI("< -1"); */
 		return -1;
 	}
+
+/* LOGI("scan; cpus = %d\n", cpus); */
 
 	cpus[num_of_cpu].x = 0;
 	cpus[num_of_cpu].y = 0;
@@ -1086,13 +1101,16 @@ static int update_system_cpu_data(int cur_index)
 	{
 		LOGE("Failed to read from " PROCSTAT "\n");
 //		fclose(fp);
+/* 		LOGI("< -1"); */
 		return -1;
 	}
 
 #ifdef FOR_EACH_CPU
+
+/* 	LOGI("cpu num = %d\n", num_of_cpu); */
 	// and just in case we're 2.2.xx compiled without SMP support...
 	if(num_of_cpu == 1)
-	{ 
+	{
 		cpus[0].id = cpus[1].id = 0;
 		memcpy(cpus, &cpus[1], sizeof(tic_t) * 8);
 		cpus[0].cur_load_index = cur_index;
@@ -1130,10 +1148,11 @@ static int update_system_cpu_data(int cur_index)
 	{
 		// not possible
 //		fclose(fp);
+/* 		LOGI("< -1"); */
 		return -1;
 	}
 #endif
-
+/* 	LOGI("<0"); */
 //	fclose(fp);
 	return 0;
 }
@@ -1339,6 +1358,7 @@ static int get_total_used_drive()
 
 	if (storage < 0 && card < 0)
 	{
+		LOGI("total_used_drive = -1\n");
 		return -1;
 	}
 
@@ -1953,10 +1973,10 @@ int fill_cpu_frequecy(int event_num)
 
 int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 {
-	LOGI("start\n");
-#ifndef LOCALTEST
 	static struct timeval old_time = {0, 0};
 	static int event_num = 0;
+	LOGI("start\n");
+
 
 	struct timeval current_time;
 	uint64_t sysmemtotal = 0;
@@ -2052,6 +2072,7 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 		LOGE("Failed to fill threads info\n");
 	}
 
+#ifndef LOCALTEST
 	// Fill result strutcture
 	LOGI("fill result structure\n");
 
@@ -2082,9 +2103,9 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 
 #else /* LOCALTEST */
 
-	static float freq[4] = {1.1, 2.2, 3.3, 4.4};
-	static struct thread_info_t th_load[1] = {{0x111, 10.6}};
-	static struct process_info_t pr_load[1] = {{0x222, 20.7}};
+/* 	static float freq[4] = {1.1, 2.2, 3.3, 4.4}; */
+/* 	static struct thread_info_t th_load[1] = {{0x111, 10.6}}; */
+/* 	static struct process_info_t pr_load[1] = {{0x222, 20.7}}; */
 
 	sys_info->energy = 1;
 	sys_info->wifi_status = 2;
@@ -2101,36 +2122,11 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 	sys_info->call_status = 0xd;
 	sys_info->dnet_status = 0xe;
 
-	sys_info->cpu_frequency = malloc(num_of_cpu * sizeof(float));
-	if (!sys_info->cpu_frequency) {
-		LOGE("Cannot alloc cpu freq\n");
-		return 1;
-	}
-	get_cpu_frequency(sys_info->cpu_frequency);
+	sys_info->total_alloc_size = get_total_alloc_size();
 
-	sys_info->app_cpu_usage = 10.0;
-	sys_info->cpu_load = freq;
-	sys_info->virtual_memory = 0x12;
-	sys_info->resident_memory = 0x13;
-	sys_info->shared_memory = 0x14;
-	sys_info->pss_memory = 0x15;
-	sys_info->total_alloc_size = 0x16;
-
-	uint64_t sysmemtotal = 0;
-	uint64_t sysmemused = 0;
-	if (update_system_memory_data(&sysmemtotal, &sysmemused) < 0) {
-		LOGE("Failed to update system memory data\n");
-		return 1;
-	}
 	sys_info->system_memory_total = sysmemtotal;
 	sys_info->system_memory_used = sysmemused;
-	sys_info->total_used_drive = 0x19;
-
-	sys_info->count_of_threads = 0x1;
-	sys_info->thread_load = th_load;
-
-	sys_info->count_of_processes = 0x1;
-	sys_info->process_load = pr_load;
+	sys_info->total_used_drive = get_total_used_drive();
 
 	sys_info->disk_read_size = 0x20;
 	sys_info->disk_write_size = 0x21;
