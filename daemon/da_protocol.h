@@ -224,7 +224,7 @@ static void print_prof_session(struct prof_session_t *prof_session);
 
 //data protocol
 struct thread_info_t{
-	uint32_t id;
+	uint32_t pid;
 	float load;
 };
 
@@ -320,7 +320,6 @@ static  char *pack_timestamp(char *to)
 //event file descriptor
 int event_fd;
 
-int get_system_info(struct system_info_t *sys_info);
 struct msg_data_t *pack_system_info(struct system_info_t *sys_info);
 int write_to_buf(struct msg_data_t *msg);
 void free_msg_data(struct msg_data_t *msg);

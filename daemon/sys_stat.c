@@ -1166,6 +1166,7 @@ static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 		return -1;
 	}
 	buf[num] = '\0';
+//	LOGI("buffer=<%s>\n", buf);
 
 	num = 0;	// number of found element
 	head = buf;
@@ -1186,18 +1187,24 @@ static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 			}
 		}
 		if(i == mem_table_size)	// cannot find entry
+		{
 			head = tail + 1;
+		}
 		tail = strchr(head, '\n');
 		if(tail == NULL)
 			break;
 		head = tail + 1;
 	}
-
+/* 		LOGI("Buffers = %016LX\n", mem_slot_array[MEM_SLOT_BUFFER]); */
+/* 		LOGI("Cached  = %016LX\n", mem_slot_array[MEM_SLOT_CACHED]); */
+/* 		LOGI("MemFree = %016LX\n", mem_slot_array[MEM_SLOT_FREE]); */
+/* 		LOGI("MemTotal= %016LX\n", mem_slot_array[MEM_SLOT_TOTAL]); */
 	if(num == mem_table_size)	// find all element
 	{
 		*memtotal = mem_slot_array[MEM_SLOT_TOTAL];
 		*memused = mem_slot_array[MEM_SLOT_TOTAL] - mem_slot_array[MEM_SLOT_FREE] -
 			mem_slot_array[MEM_SLOT_BUFFER] - mem_slot_array[MEM_SLOT_CACHED];
+
 
 		*memtotal *= 1024;	// change to Byte
 		*memused *= 1024;	// change to Byte
@@ -1209,6 +1216,7 @@ static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 		return -1;
 	}
 }
+
 
 // return 0 for error case
 // return system total memory in MB
@@ -1336,6 +1344,8 @@ static int get_total_used_drive()
 
 	free = storage + card;
 	total = get_total_drive() - free;
+
+	LOGI("total_used_drive = %d\n",total);
 
 	return total;
 }
@@ -1622,131 +1632,10 @@ int get_device_info(char* buffer, int buffer_len)
 	return res;
 }
 
-// return log length (>0) for normal case
-// return negative value for error
-int get_resource_info(char* buffer, int buffer_len, int* pidarray, int pidcount)
+int update_cpus_info(int event_num, float elapsed)
 {
-	static struct timeval old_time = {0, 0};
-	static int event_num = 0;
-
-	int res = 0;
-	int i, j;
-	float elapsed;
-	float factor;
-	procNode* proc;
+	int i = 0;
 	CPU_t* cpuptr;
-	struct timeval current_time;
-
-	// data variable
-	unsigned long virtual = 0;
-	unsigned long resident = 0;
-	unsigned long shared = 0;
-	unsigned long pssmem = 0;
-	int num_thread = 0;
-	unsigned long long ticks = 0, freqsum;
-	float app_cpu_usage, sys_usage, thread_load;
-	unsigned long sysmemtotal = 0;
-	unsigned long sysmemused = 0;
-	unsigned long curtime;
-//	long long idle_tick_sum = 0, total_tick_sum = 0;
-	int call_time = 0;
-	int rssi_time = 0;
-
-	// buffers
-	char thread_loadbuf[LARGE_BUFFER] = {0, };
-	char thread_loadtmpbuf[SMALL_BUFFER];
-	char freqbuf[MIDDLE_BUFFER];
-	char cpuload[SMALL_BUFFER];
-	int freqbufpos = 0;
-	int cpuloadpos = 0;
-//	unsigned int failed_cpu = 0;
-
-	LOGI("PID count : %d\n", pidcount);
-
-	if(update_process_data(pidarray, pidcount, PROCDATA_STAT) < 0)
-	{
-		LOGE("Failed to update process stat data\n");
-		return -1;
-	}
-
-	// this position is optimized position of timestamp.
-	// just before get system cpu data and just after get process cpu data
-	// because cpu data is changed so fast and variance is so remarkable
-	gettimeofday(&current_time, NULL);	// DO NOT MOVE THIS SENTENCE!
-
-	if(update_system_cpu_data(event_num) < 0)
-	{
-		LOGE("Failed to update system cpu data\n");
-		return -1;
-	}
-
-	// freqbufpos is temporary used
-	freqbufpos = update_system_cpu_frequency(event_num);
-
-	// memory data is changed slowly and variance is not remarkable
-	// so memory data is less related with timestamp then cpu data
-	if(update_process_data(pidarray, pidcount, PROCDATA_SMAPS) < 0)
-	{
-		LOGE("Failed to update process smaps data\n");
-		return -1;
-	}
-
-	if(update_thread_data(pidarray[0]) < 0)
-	{
-		LOGE("Failed to update thread stat data\n");
-		return -1;
-	}
-
-	if(update_system_memory_data(&sysmemtotal, &sysmemused) < 0)
-	{
-		LOGE("Failed to update system memory data\n");
-		return -1;
-	}
-
-	// prepare calculate
-	elapsed = (current_time.tv_sec - old_time.tv_sec) +
-		((float)(current_time.tv_usec - old_time.tv_usec) / 1000000.0f);
-	old_time.tv_sec = current_time.tv_sec;
-	old_time.tv_usec = current_time.tv_usec;
-	curtime = ((unsigned long)current_time.tv_sec * 10000) +
-			((unsigned long)current_time.tv_usec / 100);
-
-	factor = 100.0f / ((float)Hertz * elapsed * num_of_cpu);
-
-
-	// calculate process for process
-	for(proc = prochead; proc != NULL; proc = proc->next)
-	{
-		num_thread += proc->proc_data.numofthread;
-		virtual += proc->proc_data.vir_mem;					// Byte
-		resident += (proc->proc_data.res_memblock * 4);		// KByte
-		pssmem += (proc->proc_data.pss);					// KByte
-		ticks += (proc->proc_data.utime + proc->proc_data.stime - proc->saved_utime - proc->saved_stime);
-
-		proc->saved_utime = proc->proc_data.utime;
-		proc->saved_stime = proc->proc_data.stime;
-	}
-	app_cpu_usage = (float)ticks * factor;
-	if(app_cpu_usage > 100.0f)
-		app_cpu_usage = 100.0f;
-	resident = resident * 1024;		// change to Byte
-	pssmem = pssmem * 1024;			// change to Byte
-
-	// calculate thread load
-	for(proc = thread_prochead; proc != NULL; proc = proc->next)
-	{
-		thread_load = (float)(proc->proc_data.utime + proc->proc_data.stime - proc->saved_utime - proc->saved_stime)
-			* factor;
-		if(thread_load > 100.0f)
-			thread_load = 100.0f;
-
-		sprintf(thread_loadtmpbuf, "%d,%.1f,", proc->proc_data.pid, thread_load);
-		strcat(thread_loadbuf, thread_loadtmpbuf);
-
-		proc->saved_utime = proc->proc_data.utime;
-		proc->saved_stime = proc->proc_data.stime;
-	}
-
 	// calculate for system cpu load
 #ifdef FOR_EACH_CPU
 	for(i = 0; i < num_of_cpu; i++)
@@ -1754,6 +1643,7 @@ int get_resource_info(char* buffer, int buffer_len, int* pidarray, int pidcount)
 	for(i = num_of_cpu; i <= num_of_cpu; i++)
 #endif
 	{
+	LOGI("CPU #%d\n",i);
 		cpuptr = &(cpus[i]);
 
 		if(cpuptr->cur_load_index == event_num)
@@ -1830,7 +1720,6 @@ int get_resource_info(char* buffer, int buffer_len, int* pidarray, int pidcount)
 		}
 	}
 
-#ifdef FOR_EACH_CPU
 	// calculate for cpu core load that failed to get tick information
 /*
 	if(failed_cpu != 0)
@@ -1855,115 +1744,403 @@ int get_resource_info(char* buffer, int buffer_len, int* pidarray, int pidcount)
 		}
 	}
 */
+	return 0;
+}
+
+int fill_system_processes_info(float factor, struct system_info_t * sys_info)
+{
+	procNode* proc;
+	int i = 0;
+	float thread_load;
+	// data variable
+	unsigned long virtual = 0;
+	unsigned long resident = 0;
+	unsigned long shared = 0;
+	unsigned long pssmem = 0;
+	uint64_t ticks = 0;
+	float app_cpu_usage = 0.0;
+
+	LOGI("prochead = %X\n",prochead);
+	for(proc = prochead; proc != NULL; proc = proc->next)
+	{
+		//increment process count
+		sys_info->count_of_processes++; //maybe wrong
+	}
+	sys_info->process_load = malloc (
+										sys_info->count_of_processes *
+										sizeof(*sys_info->process_load)
+									);
+	i = 0;
+	for(proc = prochead; proc != NULL; proc = proc->next)
+	{
+		LOGI ("proc#%d (%d %d),(%d %d) (%d) %f\n",
+				i,
+				proc->proc_data.utime , proc->proc_data.stime ,
+				proc->saved_utime , proc->saved_stime,
+				(int)(proc->proc_data.utime + proc->proc_data.stime - proc->saved_utime - proc->saved_stime),
+				(float)(
+					proc->saved_utime + proc->saved_stime -
+					proc->proc_data.utime - proc->proc_data.stime
+					) * factor);
+		thread_load = (float)(proc->proc_data.utime + proc->proc_data.stime - proc->saved_utime - proc->saved_stime)
+			* factor;
+
+		if(thread_load > 100.0f)
+			thread_load = 100.0f;
+
+		//num_thread += proc->proc_data.numofthread;
+		virtual += proc->proc_data.vir_mem;					// Byte
+		resident += (proc->proc_data.res_memblock * 4);		// KByte
+		pssmem += (proc->proc_data.pss);					// KByte
+		ticks += (proc->proc_data.utime + proc->proc_data.stime - proc->saved_utime - proc->saved_stime);
+
+		proc->saved_utime = proc->proc_data.utime;
+		proc->saved_stime = proc->proc_data.stime;
+
+
+		sys_info->process_load[i].id = proc->proc_data.pid;
+		sys_info->process_load[i].load = thread_load;
+		i++;
+
+	}
+
+	app_cpu_usage = (float)ticks * factor;
+	if(app_cpu_usage > 100.0f)
+		app_cpu_usage = 100.0f;
+	resident = resident * 1024;		// change to Byte
+	pssmem = pssmem * 1024;			// change to Byte
+
+	sys_info->virtual_memory = virtual;
+	sys_info->resident_memory = resident;
+	sys_info->shared_memory = shared;
+	sys_info->pss_memory = pssmem;
+
+	sys_info->app_cpu_usage = app_cpu_usage;
+
+	return 0;
+
+}
+
+// fill threads information
+int fill_system_threads_info(float factor, struct system_info_t * sys_info)
+{
+	procNode* proc;
+	float thread_load;
+	int i;
+
+	for(proc = thread_prochead; proc != NULL; proc = proc->next)
+		//increment thread count
+		sys_info->count_of_threads++; //maybe wrong
+
+	LOGI("thread load\n");
+	struct thread_info_t *pthread;
+	if (sys_info->count_of_threads != 0)
+	{
+		sys_info->thread_load = malloc( sys_info->count_of_threads * sizeof(*sys_info->thread_load) );
+		pthread = sys_info->thread_load;
+	}
+
+	for(proc = thread_prochead; proc != NULL; proc = proc->next)
+	{
+		thread_load = (float)(proc->proc_data.utime + proc->proc_data.stime - proc->saved_utime - proc->saved_stime)
+			* factor;
+		if(thread_load > 100.0f)
+			thread_load = 100.0f;
+
+		pthread->pid = proc->proc_data.pid;
+		pthread->load = thread_load;
+		pthread++;
+
+//		sprintf(thread_loadtmpbuf, "%d,%.1f,", proc->proc_data.pid, thread_load);
+//		strcat(thread_loadbuf, thread_loadtmpbuf);
+
+		proc->saved_utime = proc->proc_data.utime;
+		proc->saved_stime = proc->proc_data.stime;
+	}
+}
+
+//fill system cpu information
+int fill_system_cpu_info(struct system_info_t *sys_info)
+{
+	float sys_usage = 0.0f;
+	int i = 0;
 
 	// calculate for whole cpu load by average all core load
-	sys_usage = 0.0f;
+	LOGI("calculate for whole cpu load num_of_cpu=%d\n",num_of_cpu);
 	for(i = 0 ; i < num_of_cpu; i++)
-	{
 		sys_usage += cpus[i].cpu_usage;
-	}
-	cpus[num_of_cpu].cpu_usage = sys_usage / num_of_cpu;
 
-	// make cpu load string
-	for(i = 0; i <= num_of_cpu; i++)
+	// fill cpu load
+	float *pcpu_usage;
+	if (num_of_cpu != 0)
 	{
-		cpuloadpos += sprintf(cpuload + cpuloadpos, "%.1f,", cpus[i].cpu_usage);
-	}
-	cpuload[cpuloadpos - 1] = '\0';		// remove last ,
-#else
-	sprintf(cpuload, "%.1f", cpus[num_of_cpu].cpu_usage);
-#endif
-
-	// calculate for system cpu frequency
-	if(freqbufpos >= 0)
-	{
-		sys_usage = 0.0f;
-		freqbufpos = 0;
-		ticks = 0;
-		freqsum = 0;
+		sys_info->cpu_load = malloc( num_of_cpu * sizeof(*sys_info->cpu_load) );
+		pcpu_usage = sys_info->cpu_load;
 		for(i = 0; i < num_of_cpu; i++)
 		{
-			cpuptr = &(cpus[i]);
+			LOGI("cpu#%d : %.1f\n" , i,  cpus[i].cpu_usage);
+			*pcpu_usage = cpus[i].cpu_usage;
+			pcpu_usage++;
+		}
+	}
 
-			if(cpuptr->cur_freq_index == event_num)
+	//fill CPU frequency
+	sys_info->cpu_frequency = malloc(num_of_cpu * sizeof(float));
+	if (!sys_info->cpu_frequency) {
+		LOGE("Cannot alloc cpu freq\n");
+		return 1;
+	}
+	get_cpu_frequency(sys_info->cpu_frequency);
+}
+
+
+//fill cpu frequency based on cpu tick count in different cpu frequence states
+int fill_cpu_frequecy(int event_num)
+{
+	// calculate for system cpu frequency
+	float sys_usage = 0.0f;
+	uint64_t ticks = 0, freqsum = 0;
+	int i, j;
+	CPU_t* cpuptr;
+
+	for(i = 0; i < num_of_cpu; i++)
+	{
+		cpuptr = &(cpus[i]);
+
+		if(cpuptr->cur_freq_index == event_num)
+		{
+			if(cpuptr->sav_freq_index == event_num - 1)
 			{
-				if(cpuptr->sav_freq_index == event_num - 1)
-				{
-					for(j = 0; j < num_of_freq; j++)
-					{
-						freqsum += (cpuptr->pfreq[j].freq *
-								(cpuptr->pfreq[j].tick - cpuptr->pfreq[j].tick_sav));
-						ticks += (cpuptr->pfreq[j].tick - cpuptr->pfreq[j].tick_sav);
-					}
-				}
-				else
-				{	// do nothing
-				}
-
 				for(j = 0; j < num_of_freq; j++)
 				{
-					cpuptr->pfreq[j].tick_sav = cpuptr->pfreq[j].tick;		// restore last tick value
+					freqsum += (cpuptr->pfreq[j].freq *
+							(cpuptr->pfreq[j].tick - cpuptr->pfreq[j].tick_sav));
+					ticks += (cpuptr->pfreq[j].tick - cpuptr->pfreq[j].tick_sav);
 				}
-				cpuptr->sav_freq_index = cpuptr->cur_freq_index;
-			}
-
-#ifdef FOR_EACH_CPU
-			if(ticks != 0)
-			{
-				if(sys_usage == 0.0f)
-					sys_usage = (float)freqsum / (float)ticks;
-				freqbufpos += sprintf(freqbuf + freqbufpos, "%.0f,", (float)freqsum / (float)ticks);
 			}
 			else
-			{
-				freqbufpos += sprintf(freqbuf + freqbufpos, "%.0f,", sys_usage);
+			{	// do nothing
 			}
-			ticks = 0;
-			freqsum = 0;
-#endif
+
+			for(j = 0; j < num_of_freq; j++)
+			{
+				cpuptr->pfreq[j].tick_sav = cpuptr->pfreq[j].tick;		// restore last tick value
+			}
+			cpuptr->sav_freq_index = cpuptr->cur_freq_index;
 		}
-#ifndef FOR_EACH_CPU
-		freqbufpos += sprintf(freqbuf + freqbufpos, "%.0f", (float)freqsum / (float)ticks);
-#else
-		freqbuf[freqbufpos - 1] = '\0';		// remove last ,
+
+#ifdef FOR_EACH_CPU
+		if(ticks != 0)
+		{
+			if(sys_usage == 0.0f)
+				sys_usage = (float)freqsum / (float)ticks;
+			// TODO use sys_usage as cpu #i core freq
+		}
+		else
+		{
+			//freqbufpos += sprintf(freqbuf + freqbufpos, "%.0f,", sys_usage);
+			// TODO ?
+		}
+		ticks = 0;
+		freqsum = 0;
 #endif
 	}
-	else	// update system cpu frequency is failed
+	return -0;
+}
+
+// return log length (>0) for normal case
+// return negative value for error
+
+int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
+{
+	LOGI("start\n");
+#ifndef LOCALTEST
+	static struct timeval old_time = {0, 0};
+	static int event_num = 0;
+
+	struct timeval current_time;
+	uint64_t sysmemtotal = 0;
+	uint64_t sysmemused = 0;
+	float elapsed;
+	float factor;
+	unsigned long curtime;
+	int res = 0;
+
+	/* system_info_get_value_bool() changes only 1 byte
+	   so we need to be sure that the integer as a whole is correct
+	   just clean it */
+
+	//clean output structure
+	memset(sys_info, 0, sizeof(*sys_info));
+
+
+	LOGI("PID count : %d\n", pidcount);
+
+	if (update_process_data(pidarray, pidcount, PROCDATA_STAT) < 0)
 	{
-		/* freqbufpos = get_cpu_frequency(); */
-		sprintf(freqbuf, "%d", (freqbufpos > 0)? freqbufpos : 0);
+		LOGE("Failed to update process stat data\n");
+		return -1;
 	}
 
-	// print log
-	res = sprintf(buffer, "9`,"
-			"%d`,%d`,%lu`,"				// event number, reserved, current time
-			"%d`,%d`,%d`,"				// device status(wifi, bt, gps)
-			"%d`,%d`,%d`,"				// device status(bright, camera, sound)
-			"%d`,%d`,%d`,"				// device status(audio, vibration, voltage)
-			"%d`,%d`,%d`,%d`,"			// device status(rssi, video, call, dnet status)
-			"%d`,%d`,"					// device status(call_time, rssi_time)
-			"%s`,%.1f`,%s`,"			// cpu frequency and usage (app, system)
-			"%lu`,%lu`,%lu`,%lu`,%Ld`,"	// process memory
-			"%lu`,%lu`,"				// system total memory, used memory
-			"%d`,"						// system drive
-			"%d`,"						// number of thread
-			"%s`,\n",					// thread load
-			event_num, 0, curtime,		// 0 is reserved value
-			get_wifi_status(), get_bt_status(),	get_gps_status(),
-			get_brightness_status(), get_camera_status(), get_sound_status(),
-			get_audio_status(), get_vibration_status(), get_voltage_status(),
-			get_rssi_status(), get_video_status(), get_call_status(), get_dnet_status(),
-			call_time, rssi_time,
-			freqbuf, app_cpu_usage, cpuload,
-			virtual, resident, shared, pssmem, get_total_alloc_size(),
-			sysmemtotal, sysmemused,
-			get_total_used_drive(),
-			num_thread,
-			thread_loadbuf
-			);
-	
-	LOGI("get_resource_info result : %s", buffer);
+	// this position is optimized position of timestamp.
+	// just before get system cpu data and just after get process cpu data
+	// because cpu data is changed so fast and variance is so remarkable
+	gettimeofday(&current_time, NULL);	// DO NOT MOVE THIS SENTENCE!
 
+	if (update_system_cpu_data(event_num) < 0)
+	{
+		LOGE("Failed to update system cpu data\n");
+		return -1;
+	}
+
+	// update cpu freq
+	update_system_cpu_frequency(event_num);
+
+	// memory data is changed slowly and variance is not remarkable
+	// so memory data is less related with timestamp then cpu data
+	if (update_process_data(pidarray, pidcount, PROCDATA_SMAPS) < 0)
+	{
+		LOGE("Failed to update process smaps data\n");
+		return -1;
+	}
+
+	if (pidcount > 0)
+		if (update_thread_data(pidarray[0]) < 0)
+		{
+			LOGE("Failed to update thread stat data\n");
+			return -1;
+		}
+
+	if(update_system_memory_data(&sysmemtotal, &sysmemused) < 0)
+	{
+		LOGE("Failed to update system memory data\n");
+		return -1;
+	}
+
+	// prepare calculate
+	elapsed = (current_time.tv_sec - old_time.tv_sec) +
+		((float)(current_time.tv_usec - old_time.tv_usec) / 1000000.0f);
+	old_time.tv_sec = current_time.tv_sec;
+	old_time.tv_usec = current_time.tv_usec;
+	curtime = ((unsigned long)current_time.tv_sec * 10000) +
+			((unsigned long)current_time.tv_usec / 100);
+
+	factor = 100.0f / ((float)Hertz * elapsed * num_of_cpu);
+
+	//update cpus information
+	if (update_cpus_info(event_num, elapsed) < 0)
+	{
+		LOGE("Failed to update cpus info\n");
+		return -1;
+	}
+
+	// calculate process load, memory, app_cpu_usage
+	if (fill_system_processes_info(factor, sys_info) < 0)
+	{
+		LOGE("Failed to fill processes info\n");
+		return -1;
+	}
+	// calculate thread load
+
+	if (fill_system_threads_info(factor, sys_info) < 0)
+	{
+		LOGE("Failed to fill threads info\n");
+	}
+
+	if (fill_system_cpu_info(sys_info) < 0)
+	{
+		LOGE("Failed to fill threads info\n");
+	}
+
+	// Fill result strutcture
+	LOGI("fill result structure\n");
+
+	sys_info->energy = 0; // not implemented
+	sys_info->wifi_status = get_wifi_status();
+	sys_info->bt_status = get_bt_status();
+	sys_info->gps_status = get_gps_status();
+	sys_info->brightness_status = get_brightness_status();
+	sys_info->camera_status = get_camera_status();
+	sys_info->sound_status = get_sound_status();
+	sys_info->audio_status = get_audio_status();
+	sys_info->vibration_status = get_vibration_status();
+	sys_info->voltage_status = get_voltage_status();
+	sys_info->rssi_status = get_rssi_status();
+	sys_info->video_status = get_video_status();
+	sys_info->call_status = get_call_status();
+	sys_info->dnet_status = get_dnet_status();
+
+	sys_info->total_alloc_size = get_total_alloc_size();
+
+	sys_info->system_memory_total = sysmemtotal;
+	sys_info->system_memory_used = sysmemused;
+	sys_info->total_used_drive = get_total_used_drive();
+	sys_info->disk_read_size = 0; // TODO
+	sys_info->disk_write_size = 0; // TODO
+	sys_info->network_send_size = 0; // TODO
+	sys_info->network_receive_size = 0; // TODO
+
+#else /* LOCALTEST */
+
+	static float freq[4] = {1.1, 2.2, 3.3, 4.4};
+	static struct thread_info_t th_load[1] = {{0x111, 10.6}};
+	static struct process_info_t pr_load[1] = {{0x222, 20.7}};
+
+	sys_info->energy = 1;
+	sys_info->wifi_status = 2;
+	sys_info->bt_status = 3;
+	sys_info->gps_status = 4;
+	sys_info->brightness_status = 5;
+	sys_info->camera_status = 6;
+	sys_info->sound_status = 7;
+	sys_info->audio_status = 8;
+	sys_info->vibration_status = 9;
+	sys_info->voltage_status = 0xa;
+	sys_info->rssi_status = 0xb;
+	sys_info->video_status = 0xc;
+	sys_info->call_status = 0xd;
+	sys_info->dnet_status = 0xe;
+
+	sys_info->cpu_frequency = malloc(num_of_cpu * sizeof(float));
+	if (!sys_info->cpu_frequency) {
+		LOGE("Cannot alloc cpu freq\n");
+		return 1;
+	}
+	get_cpu_frequency(sys_info->cpu_frequency);
+
+	sys_info->app_cpu_usage = 10.0;
+	sys_info->cpu_load = freq;
+	sys_info->virtual_memory = 0x12;
+	sys_info->resident_memory = 0x13;
+	sys_info->shared_memory = 0x14;
+	sys_info->pss_memory = 0x15;
+	sys_info->total_alloc_size = 0x16;
+
+	uint64_t sysmemtotal = 0;
+	uint64_t sysmemused = 0;
+	if (update_system_memory_data(&sysmemtotal, &sysmemused) < 0) {
+		LOGE("Failed to update system memory data\n");
+		return 1;
+	}
+	sys_info->system_memory_total = sysmemtotal;
+	sys_info->system_memory_used = sysmemused;
+	sys_info->total_used_drive = 0x19;
+
+	sys_info->count_of_threads = 0x1;
+	sys_info->thread_load = th_load;
+
+	sys_info->count_of_processes = 0x1;
+	sys_info->process_load = pr_load;
+
+	sys_info->disk_read_size = 0x20;
+	sys_info->disk_write_size = 0x21;
+	sys_info->network_send_size = 0x22;
+	sys_info->network_receive_size = 0x23;
+#endif /* LOCALTEST */
+
+//	memset(sys_info, 0, sizeof(*sys_info));
+	//LOGI("get_resource_info result : %s", buffer);
+	print_sys_info(sys_info);
 	event_num++;
 	return res;
 }
@@ -2047,123 +2224,6 @@ int fill_target_info(struct target_info_t *target_info)
 	return 0;
 }
 
-//DATA SOCKET FUNCTIONS
-float freq[4] = {1.1, 2.2, 3.3, 4.4};
-struct thread_info_t th_load[1] = {{0x111, 10.6}};
-struct process_info_t pr_load[1] = {{0x222, 20.7}};
-int get_system_info(struct system_info_t *sys_info)
-{
-#ifndef LOCALTEST
-	sys_info->energy = 0; // not implemented
-	sys_info->wifi_status = get_wifi_status();
-	sys_info->bt_status = get_bt_status();
-	sys_info->gps_status = get_gps_status();
-	sys_info->brightness_status = get_brightness_status();
-	sys_info->camera_status = get_camera_status();
-	sys_info->sound_status = get_sound_status();
-	sys_info->audio_status = get_audio_status();
-	sys_info->vibration_status = get_vibration_status();
-	sys_info->voltage_status = get_voltage_status();
-	sys_info->rssi_status = get_rssi_status();
-	sys_info->video_status = get_video_status();
-	sys_info->call_status = get_call_status();
-	sys_info->dnet_status = get_dnet_status();
-
-	sys_info->cpu_frequency = malloc(num_of_cpu * sizeof(float));
-	if (!sys_info->cpu_frequency) {
-		LOGE("Cannot alloc cpu freq\n");
-		return 1;
-	}
-	get_cpu_frequency(sys_info->cpu_frequency);
-
-	sys_info->app_cpu_usage = .0; // TODO: app_cpu_usage in get_resource_info()
-
-	sys_info->cpu_load = malloc(num_of_cpu * sizeof(float));
-	if (!sys_info->cpu_load) {
-		LOGE("Cannot alloc cpu freq\n");
-		return 1;
-	}
-	// TODO:
-//	sys_info->CPU_load	cpuload in get_resource_info()
-
-	sys_info->virtual_memory = 0;//virtual in get_resource_info()
-	sys_info->resident_memory = 0;//resident in get_resource_info()
-	sys_info->shared_memory = 0;//shared in get_resource_info()
-	sys_info->pss_memory = 0;//pss in get_resource_info()
-	sys_info->total_alloc_size = get_total_alloc_size();
-
-	uint64_t sysmemtotal = 0;
-	uint64_t sysmemused = 0;
-	if (update_system_memory_data(&sysmemtotal, &sysmemused) < 0) {
-		LOGE("Failed to update system memory data\n");
-		return 1;
-	}
-	sys_info->system_memory_total = sysmemtotal;
-	sys_info->system_memory_used = sysmemused;
-	sys_info->total_used_drive = get_total_used_drive();
-	sys_info->count_of_threads = 0;//thread in get_resource_info()
-	/* sys_info->thread_load = thread_load in get_resource_info() */
-	sys_info->count_of_processes = 0;//procNode* proc in get_resource_info() but no count
-	sys_info->disk_read_size = 0; // TODO
-	sys_info->disk_write_size = 0; // TODO
-	sys_info->network_send_size = 0; // TODO
-	sys_info->network_receive_size = 0; // TODO
-#else /* LOCALTEST */
-	sys_info->energy = 1;
-	sys_info->wifi_status = 2;
-	sys_info->bt_status = 3;
-	sys_info->gps_status = 4;
-	sys_info->brightness_status = 5;
-	sys_info->camera_status = 6;
-	sys_info->sound_status = 7;
-	sys_info->audio_status = 8;
-	sys_info->vibration_status = 9;
-	sys_info->voltage_status = 0xa;
-	sys_info->rssi_status = 0xb;
-	sys_info->video_status = 0xc;
-	sys_info->call_status = 0xd;
-	sys_info->dnet_status = 0xe;
-
-	sys_info->cpu_frequency = malloc(num_of_cpu * sizeof(float));
-	if (!sys_info->cpu_frequency) {
-		LOGE("Cannot alloc cpu freq\n");
-		return 1;
-	}
-	get_cpu_frequency(sys_info->cpu_frequency);
-
-	sys_info->app_cpu_usage = 10.0;
-	sys_info->cpu_load = freq;
-	sys_info->virtual_memory = 0x12;
-	sys_info->resident_memory = 0x13;
-	sys_info->shared_memory = 0x14;
-	sys_info->pss_memory = 0x15;
-	sys_info->total_alloc_size = 0x16;
-
-	uint64_t sysmemtotal = 0;
-	uint64_t sysmemused = 0;
-	if (update_system_memory_data(&sysmemtotal, &sysmemused) < 0) {
-		LOGE("Failed to update system memory data\n");
-		return 1;
-	}
-	sys_info->system_memory_total = sysmemtotal;
-	sys_info->system_memory_used = sysmemused;
-	sys_info->total_used_drive = 0x19;
-
-	sys_info->count_of_threads = 0x1;
-	sys_info->thread_load = th_load;
-
-	sys_info->count_of_processes = 0x1;
-	sys_info->process_load = pr_load;
-
-	sys_info->disk_read_size = 0x20;
-	sys_info->disk_write_size = 0x21;
-	sys_info->network_send_size = 0x22;
-	sys_info->network_receive_size = 0x23;
-#endif /* LOCALTEST */
-
-	return 0;
-};
-
 struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 {
 	struct msg_data_t *msg = NULL;
@@ -2237,7 +2297,7 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	pack_int(p, sys_info->count_of_threads);
 	for (i = 0; i < sys_info->count_of_threads; i++)
 	{
-		pack_int(p, sys_info->thread_load[i].id); //FIXME wrong pack float define
+		pack_int(p, sys_info->thread_load[i].pid); //FIXME wrong pack float define
 		pack_float(p, sys_info->thread_load[i].load); //FIXME wrong pack float define
 	}
 

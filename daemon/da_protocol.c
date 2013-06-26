@@ -59,10 +59,15 @@ void inline free_msg_payload(struct msg_t *msg)
 
 void free_sys_info(struct system_info_t *sys_info)
 {
-	free(sys_info->cpu_frequency);
-	/* free(sys_info->cpu_load); */
-	/* free(sys_info->thread_load); */
-	/* free(sys_info->process_load); */
+	if (sys_info->cpu_frequency)
+		free(sys_info->cpu_frequency);
+	if (sys_info->cpu_load)
+		free(sys_info->cpu_load);
+	if (sys_info->thread_load)
+		free(sys_info->thread_load);
+	if (sys_info->process_load)
+		free(sys_info->process_load);
+	memset(sys_info, 0, sizeof(*sys_info));
 }
 
 /*

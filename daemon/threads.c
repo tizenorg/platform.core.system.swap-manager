@@ -223,12 +223,13 @@ void* samplingThread(void* data)
 			pidcount = 0;
 			for(i = 0; i < MAX_TARGET_COUNT; i++)
 			{
+				//LOGI("#%d: sock=%d; pid=%d;\n",i, manager.target[i].socket , manager.target[i].pid );
 				if(manager.target[i].socket != -1 && manager.target[i].pid != -1)
 					pidarr[pidcount++] = manager.target[i].pid;
 			}
 
 			struct system_info_t sys_info;
-			if (get_system_info(&sys_info) == -1) {
+			if (get_system_info(&sys_info, pidarr, pidcount) == -1) {
 				LOGE("Cannot get system info\n");
 			}
 
@@ -242,8 +243,8 @@ void* samplingThread(void* data)
 			}
 
 			free_msg_data(msg);
-			free_sys_info(&sys_info);
-			//res = get_resource_info_new(&log.payload, DA_MSG_MAX, pidarr, pidcount);
+			free_sys_info(&sys_info); //TODO make function free_sys_info
+
 			/* res = gen_message_sytem_info(&log, DA_MSG_MAX, pidarr, pidcount); */
 			/* if(res > 0) */
 			/* { */
@@ -252,7 +253,7 @@ void* samplingThread(void* data)
 			/* 	//sendDataToHost(&log); */
 			/* 	pseudoSendDataToHost(&log); */
 			/* } */
-			/* break; */
+/* 			break; //FOR DEBUG ONLY */
 		}
 		else if(signo == SIGUSR1)
 		{

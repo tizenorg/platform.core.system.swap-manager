@@ -1,4 +1,5 @@
 #include "da_protocol.h"
+#include "daemon.h"
 #include "da_data.h"
 #include <sys/time.h>
 /*
@@ -40,6 +41,168 @@ int fill_message_system(struct msg_system_t ** sys){
 };
 */
 
+int print_sys_info(struct system_info_t * sys_info)
+{
+	int i = 0;
+	/* //FOR DEBUG
+	sys_info->energy=0x1;
+	sys_info->wifi_status=0x2;
+	sys_info->bt_status=0x3;
+	sys_info->gps_status=0x4;
+	sys_info->brightness_status=0x5;
+
+	sys_info->camera_status=0x6;
+	sys_info->sound_status=0x7;
+	sys_info->audio_status=0x8;
+	sys_info->vibration_status=0x9;
+	sys_info->voltage_status=0x10;
+
+	sys_info->rssi_status=0x11;
+	sys_info->video_status=0x12;
+	sys_info->call_status=0x13;
+	sys_info->dnet_status=0x14;
+	sys_info->cpu_frequency=0x15;
+
+	sys_info->app_cpu_usage=0.0;
+	sys_info->cpu_load=0x17;
+	sys_info->virtual_memory=0x18;
+	sys_info->resident_memory=0x19;
+	sys_info->shared_memory=0x20;
+
+	sys_info->pss_memory=0x21;
+	sys_info->total_alloc_size=(uint32_t)0x22;
+	sys_info->system_memory_total=(uint64_t)0x23;
+	sys_info->system_memory_used=(uint64_t)0x24;
+	sys_info->total_used_drive=0x25;
+
+	sys_info->count_of_threads=0x26;
+	sys_info->thread_load=0x27;
+	sys_info->count_of_processes=0x28;
+	sys_info->process_load=0x29;
+	sys_info->disk_read_size=0x30;
+
+	sys_info->disk_write_size=0x31;
+	sys_info->network_send_size=0x32;
+	sys_info->network_receive_size=0x33;
+	*/
+
+	LOGI("isysinfo:\n\
+\
+	energy = 0x%X\n\
+	wifi_status = 0x%X\n\
+	bt_status = 0x%X\n\
+	gps_status = 0x%X\n\
+	brightness_status = 0x%X\n\
+\
+	camera_status = 0x%X\n\
+	sound_status = 0x%X\n\
+	audio_status = 0x%X\n\
+	vibration_status = 0x%X\n\
+	voltage_status = 0x%X\n\
+\
+	rssi_status = 0x%X\n\
+	video_status = 0x%X\n\
+	call_status = 0x%X\n\
+	dnet_status = 0x%X\n\
+	cpu_frequency = 0x%X\n\
+\
+	app_cpu_usage = %f\n\
+	cpu_load = 0x%X\n\
+	virtual_memory = 0x%X\n\
+	resident_memory = 0x%X\n\
+	shared_memory = 0x%X\n\
+\
+	pss_memory = 0x%X\n\
+	total_alloc_size = 0x%X\n\
+	system_memory_total = %llu\n\
+	system_memory_used = %llu\n\
+	total_used_drive = %lu\n\
+\
+	count_of_threads = %u\n\
+	thread_load = 0x%X\n\
+	count_of_processes = %u\n\
+	process_load = 0x%X\n\
+	disk_read_size = 0x%X\n\
+\
+	disk_write_size = 0x%X\n\
+	network_send_size = 0x%X\n\
+	network_receive_size = 0x%X\n",
+
+	sys_info->energy,
+	sys_info->wifi_status,
+	sys_info->bt_status,
+	sys_info->gps_status,
+	sys_info->brightness_status,
+
+	sys_info->camera_status,
+	sys_info->sound_status,
+	sys_info->audio_status,
+	sys_info->vibration_status,
+	sys_info->voltage_status,
+
+	sys_info->rssi_status,
+	sys_info->video_status,
+	sys_info->call_status,
+	sys_info->dnet_status,
+	sys_info->cpu_frequency,
+
+	sys_info->app_cpu_usage,
+	sys_info->cpu_load,
+	sys_info->virtual_memory,
+	sys_info->resident_memory,
+	sys_info->shared_memory,
+
+	sys_info->pss_memory,
+	sys_info->total_alloc_size,
+	sys_info->system_memory_total,
+	sys_info->system_memory_used,
+	sys_info->total_used_drive,
+
+	sys_info->count_of_threads,
+	sys_info->thread_load,
+	sys_info->count_of_processes,
+	sys_info->process_load,
+	sys_info->disk_read_size,
+
+	sys_info->disk_write_size,
+	sys_info->network_send_size,
+	sys_info->network_receive_size
+	);
+	LOGI_("->\n");
+	for ( i=0; i<sys_info->count_of_processes; i++)
+	{
+		LOGI_("\tpr %016X : %f\n",
+		sys_info->process_load[i].id,
+		sys_info->process_load[i].load
+		);
+	}
+	for ( i=0; i<sys_info->count_of_threads; i++)
+	{
+		LOGI_("\tth %016X : %f\n",
+		sys_info->thread_load[i].pid,
+		sys_info->thread_load[i].load
+		);
+	}
+
+	// FIXME CPU core num hardcoded
+	for ( i=0; i<4; i++)
+	{
+		LOGI_("\tCPU load #%d : %f\n",
+		i,
+		sys_info->cpu_load[i]
+		);
+	}
+	// FIXME CPU core num hardcoded
+	for ( i=0; i<4; i++)
+	{
+		LOGI_("\tCPU freq #%d : %f\n",
+		i,
+		sys_info->cpu_frequency[i]
+		);
+	}
+//	char *p = sys_info;
+	printBuf(sys_info,sizeof(*sys_info));
+}
 
 int fill_data_msg_head (struct msg_data_t *data, uint32_t msgid, uint32_t seq, uint32_t len)
 {
