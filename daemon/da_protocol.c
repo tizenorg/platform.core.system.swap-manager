@@ -891,7 +891,7 @@ static struct msg_t *gen_binary_info_reply(struct app_info_t *app_info)
 		return NULL;
 	}
 
-	msg = malloc(sizeof(msg));
+	msg = malloc(sizeof(*msg));
 	if (!msg) {
 		LOGE("Cannot alloc bin info msg\n");
 		return NULL;
