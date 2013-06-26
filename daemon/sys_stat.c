@@ -593,20 +593,46 @@ static void get_cpu_frequency(float *freqs)
 	char filename[MIDDLE_BUFFER];
 	char freq_str[SMALL_BUFFER];
 	FILE *f;
-	int i = 0;
+	int cpu_n = 0;
 
+	//clean data array
+	for (cpu_n = 0; cpu_n < num_of_cpu; cpu_n++)
+		freqs[cpu_n] = 0.0;
+
+	cpu_n = 0;
 	while (1) {
+		//is CPU present
 		snprintf(filename, MIDDLE_BUFFER,
-			 "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq", i);
+			 "/sys/devices/system/cpu/cpu%d/online", cpu_n);
+
+		f = fopen(filename, "r");
+		if (!f){
+			LOGI("file not found <%s\n>", filename);
+			break;
+		}
+		fclose(f);
+
+		//get CPU freq
+		snprintf(filename, MIDDLE_BUFFER,
+			 "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_cur_freq", cpu_n);
 		f = fopen(filename, "r");
 		if (!f)
-			break;
-		fscanf(f, "%s", freq_str);
-		freqs[i] = atof(freq_str);
-		i++;
+		{
+			//core is disabled
+			LOGI("core #%d diasabled\n", cpu_n);
+			freqs[cpu_n] = 0.0;
+		} else {
+			//core enabled, get frequency
+			fscanf(f, "%s", freq_str);
+			freqs[cpu_n] = atof(freq_str);
+			LOGI("core #%d freq = %.0f\n", freqs[cpu_n]);
+			fclose(f);
+		}
+
+		//next core
+		cpu_n++;
+
 	}
-	for (; i < num_of_cpu; i++)
-		freqs[i] = 0.0;
 }
 
 // ========================================================================
