@@ -2210,6 +2210,9 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	pack_int(p, sys_info->call_status);
 	pack_int(p, sys_info->dnet_status);
 
+	pack_int(p, sys_info->disk_read_size);
+	pack_int(p, sys_info->disk_write_size);
+
 	// CPU
 	for (i = 0; i < 4/* num_of_cpu */; i++) {
 		pack_float(p, sys_info->cpu_frequency[i]); //FIXME wrong pack float define
@@ -2246,8 +2249,6 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 		pack_float(p, sys_info->process_load[i].load); //FIXME wrong pack float define
 	}
 
-	pack_int(p, sys_info->disk_read_size);
-	pack_int(p, sys_info->disk_write_size);
 	pack_int(p, sys_info->network_send_size);
 	pack_int(p, sys_info->network_receive_size);
 
