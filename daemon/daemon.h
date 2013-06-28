@@ -37,6 +37,21 @@
 extern "C" {
 #endif
 
+/*
+ * DEBUG DEFINES
+ */
+#define DEB_PRINTBUF
+
+#ifndef DEB_PRINTBUF
+	#define printBuf() do {} while(0)
+#endif
+
+/*
+ * END DEBUG DEFINES
+ */
+
+
+
 #define PROTOCOL_VERSION			"2.1"
 
 #define RUN_APP_LOADER
@@ -45,6 +60,20 @@ extern "C" {
 #define MAX_TARGET_COUNT			8
 #define DA_MSG_MAX					4096
 #define RECV_BUF_MAX				4104	// = sizeof(msg_t)
+
+#define MAX_DEVICE				10
+#define MAX_FILENAME			128
+
+#define INPUT_ID_TOUCH			0
+#define INPUT_ID_KEY			1
+#define STR_TOUCH				"TOUCH"
+#define STR_KEY					"KEY"
+#define INPUT_ID_STR_KEY		"ID_INPUT_KEY=1"
+#define INPUT_ID_STR_TOUCH		"ID_INPUT_TOUCHSCREEN=1"
+#define INPUT_ID_STR_KEYBOARD	"ID_INPUT_KEYBOARD=1"
+#define INPUT_ID_STR_TABLET		"ID_INPUT_TABLET=1"
+
+
 /*
 enum ErrorCode
 {
@@ -132,9 +161,11 @@ enum DAState
 #endif
 
 #if DEBUG
-	//#define LOGI(...)	do{ fprintf(stderr, "[INF] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); usleep(1000000);} while(0)
+//	#define LOGI(...)	do{ fprintf(stderr, "[INF] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); usleep(100000);} while(0)
 	#define LOGI(...)	do{ fprintf(stderr, "[INF] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
+//	#define LOGI(...)	do{} while(0)
 	#define LOGI_(...)	do{ fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
+	//#define LOGI_(...)	do{} while(0)
 	#define LOGE(...)	do{ fprintf(stderr, "[ERR] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
 	#define LOGW(...)	do{ fprintf(stderr, "[WRN] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
 #else
@@ -186,6 +217,16 @@ typedef struct
 	__da_target_info	target[MAX_TARGET_COUNT];
 	char				appPath[128];				// application executable path
 } __da_manager;
+
+
+typedef struct _input_dev
+{
+	int fd;
+	char fileName[MAX_FILENAME];
+} input_dev;
+
+extern input_dev g_key_dev[MAX_DEVICE];
+extern input_dev g_touch_dev[MAX_DEVICE];
 
 extern __da_manager manager;
 

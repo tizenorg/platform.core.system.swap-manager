@@ -15,6 +15,9 @@
 #include "daemon.h"
 #include "sys_stat.h"
 #include "elf.h"
+
+
+#define SYSTEM_INFO_DEBUG
 #define parse_deb_on
 
 
@@ -1066,6 +1069,7 @@ int hostMessageHandle(struct msg_t *msg)
 		// TODO: get build option (via pseudo readelf)
 
 		// TODO: apply_prof_session()
+
 		if (0) {
 			sendACKCodeToHost(MSG_NOTOK, ERR_CANNOT_START_PROFILING);
 			return -1;
@@ -1078,6 +1082,9 @@ int hostMessageHandle(struct msg_t *msg)
 		// TODO: exec app
 
 		// TODO: start app launch timer
+
+		//start replay events
+		replay_thread(&prof_session.replay_event_seq);
 
 		// success
 		sendACKToHost(ID,ERR_NO,0,0);
@@ -1302,10 +1309,27 @@ static void print_us_inst(struct us_inst_t *us_inst)
 	}
 }
 
-static void print_replay_event( struct replay_event_seq_t *event_seq)
+//static
+void print_replay_event( struct replay_event_t *ev, uint32_t num, char *tab)
+{
+	LOGW("%s\t#%04d:time=0x%08X %08X, "
+		" id=0x%08X,"
+		" type=0x%08X,"
+		" code=0x%08X,"
+		" value=0x%08X\n",
+		tab,num,
+		ev->ev.time.tv_sec,//timeval
+		ev->ev.time.tv_usec,//timeval
+		ev->id,
+		ev->ev.type,//u16
+		ev->ev.code,//u16
+		ev->ev.value//s32
+		);
+}
+
+void print_replay_event_seq( struct replay_event_seq_t *event_seq)
 {
 	uint32_t i = 0;
-	struct replay_event_t *ev;
 	char *tab="\t";
 
 	LOGI( "%senabled=0x%08X; "\
@@ -1315,22 +1339,7 @@ static void print_replay_event( struct replay_event_seq_t *event_seq)
 		event_seq->tv.tv_sec,event_seq->tv.tv_usec,
 		event_seq->event_num);
 	for (i=0;i<event_seq->event_num;i++)
-	{
-		ev=&event_seq->events[i];
-		LOGI("%s\t#%04d:time=0x%08X %08X, "
-			" id=0x%08X,"
-			" type=0x%08X,"
-			" code=0x%08X,"
-			" value=0x%08X\n",
-			tab,i+1,
-			ev->ev.time.tv_sec,//timeval
-			ev->ev.time.tv_usec,//timeval
-			ev->id,
-			ev->ev.type,//u16
-			ev->ev.code,//u16
-			ev->ev.value//s32
-			);
-	}
+		print_replay_event(&event_seq->events[i], i+1, tab);
 
 }
 
@@ -1340,7 +1349,7 @@ static void print_prof_session(struct prof_session_t *prof_session)
 	print_app_info(&prof_session->app_info);
 	print_conf(&prof_session->conf);
 	print_user_space_inst(&prof_session->user_space_inst);
-	print_replay_event(&prof_session->replay_event_seq);
+	print_replay_event_seq(&prof_session->replay_event_seq);
 
 //	print_log_interval(prof_session->log_interval);
 //	print_app_inst(&prof_session->app_inst);

@@ -297,12 +297,76 @@ void* samplingThread(void* data)
 	return NULL;
 }
 
+//NEW CODE
+useconds_t time_diff_us(struct timeval *tv1, struct timeval *tv2)
+{
+	return (tv1->tv_sec - tv2->tv_sec) * 1000000 +
+		((int)tv1->tv_usec - (int)tv2->tv_usec);
+}
+
+/* TODO: find a way to stop the thread
+   before it playbacks all the events */
+void *replay_thread(void *arg)
+{
+	struct replay_event_seq_t *event_seq = (struct replay_event_seq_t *)arg;
+	int i = 0;
+	useconds_t ms;
+	useconds_t prev_event_offset = 0;
+
+	struct replay_event_t * pevent = NULL;
+
+	LOGW("replay events thread started\n");
+	if (event_seq->event_num != 0)
+	{
+		pevent = event_seq->events;
+	}
+
+	for (i = 0; i < event_seq->event_num; i++) {
+		useconds_t event_offset = time_diff_us(&pevent->ev.time, &event_seq->tv);
+		if (event_offset >= prev_event_offset)
+			ms = event_offset - prev_event_offset;
+		else
+			ms = 0;
+
+		print_replay_event(pevent, i + 1, "\t");
+		LOGW("%d) sleep %d\n",i, ms);
+		usleep(ms);
+
+		/* filter touch and key events here
+		   and process them separately */
+		switch (pevent->id)
+		{
+		case INPUT_ID_TOUCH:
+			LOGI("event -> %s\n",INPUT_ID_STR_KEY);
+			_device_write(g_touch_dev, &pevent->ev);
+			break;
+
+		case INPUT_ID_KEY:
+			LOGI("event -> %s\n",INPUT_ID_STR_TOUCH);
+			_device_write(g_key_dev, &pevent->ev);
+			break;
+		default:
+			LOGE("event -> UNKNOWN INPUT ID");
+		}
+
+		prev_event_offset = event_offset;
+
+		pevent++;
+	}
+
+	LOGW("replay events thread finished\n");
+
+	return arg;
+}
+// END NEW CODE
+
 
 // return 0 if normal case
 // return minus value if critical error
 // return plus value if non-critical error
 int samplingStart()
 {
+	return 0; // debug only
 	struct itimerval timerval;
 
 	if(manager.sampling_thread != -1)	// already started

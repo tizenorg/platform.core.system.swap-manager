@@ -60,25 +60,10 @@
 #define MAX_CONNECT_SIZE		12
 #define MAX_APP_LAUNCH_TIME		6
 
-#define INPUT_ID_TOUCH			0
-#define INPUT_ID_KEY			1	
-#define STR_TOUCH				"TOUCH"
-#define STR_KEY					"KEY"
-#define INPUT_ID_STR_KEY		"ID_INPUT_KEY=1"
-#define INPUT_ID_STR_TOUCH		"ID_INPUT_TOUCHSCREEN=1"
-#define INPUT_ID_STR_KEYBOARD	"ID_INPUT_KEYBOARD=1"
-#define INPUT_ID_STR_TABLET		"ID_INPUT_TABLET=1"
-
 #define MAX_DEVICE				10
 #define MAX_FILENAME			128
 #define BUF_SIZE				1024
 #define ARRAY_END				(-11)
-
-typedef struct _input_dev
-{
-	int fd;
-	char fileName[MAX_FILENAME];
-} input_dev;
 
 input_dev g_key_dev[MAX_DEVICE];
 input_dev g_touch_dev[MAX_DEVICE];
@@ -194,13 +179,17 @@ static void _get_fds(input_dev *dev, int input_id)
 	dev[count].fd = ARRAY_END;	// end of input_dev array
 }
 
-static void _device_write(input_dev *dev, struct input_event* in_ev)
+//static
+void _device_write(input_dev *dev, struct input_event* in_ev)
 {
 	int i;
 	for(i = 0; dev[i].fd != ARRAY_END; i++)
 	{
 		if(dev[i].fd >= 0)
+		{
 			write(dev[i].fd, in_ev, sizeof(struct input_event));
+			LOGI("write(%d, %d, %d)\n",dev[i].fd, in_ev, sizeof(struct input_event));
+		}
 	}
 }
 
@@ -253,27 +242,11 @@ static void setEmptyTargetSlot(int index)
 
 int pseudoSendDataToHost(struct msg_data_t* log)
 {
-	struct timeval time;
-	uint32_t total_len = MSG_DATA_HDR_LEN;
 
-/*	char *buf = malloc(total_len+log->len);
-	char *p = buf;
-	memset(p,0,total_len);
+	printBuf(log, MSG_DATA_HDR_LEN + log->len);
+/* 	LOGI("try send to <%d><%s>\n", dev->fd, dev->fileName); */
 
-	pack_int(p,log->id);
-	pack_int(p,log->seq_num);
-	pack_int(p,log->sec);
-	pack_int(p,log->usec);
-
-	pack_int(p,log->len);
-
-	memcpy(p,log->payload,log->len);
-	*/
-	printBuf(log,total_len+log->len);
-	if (event_fd >0){
-		write(event_fd, log, total_len+log->len);
-	}
-/*	free(buf);*/
+	write_to_buf(log);
 
 	return 0;
 }
@@ -704,6 +677,7 @@ static int _hostMessageHandler(int efd,struct msg_t* log)
 // return 0 if normal case
 // return plus value if non critical error occur
 // return minus value if critical error occur
+ /*
 static int deviceEventHandler(input_dev* dev, int input_type)
 {
 	int ret = 0;
@@ -738,9 +712,10 @@ static int deviceEventHandler(input_dev* dev, int input_type)
 
 	return ret;
 }
+*/
 
 #define MAX_EVENTS_NUM 10
-static int deviceEventHandlerNew(input_dev* dev, int input_type)
+static int deviceEventHandler(input_dev* dev, int input_type)
 {
 	int ret = 0;
 	ssize_t size = 0;
@@ -760,7 +735,7 @@ static int deviceEventHandlerNew(input_dev* dev, int input_type)
 
 		if(count != 0){
 			LOGI("readed %d %s events\n", count, input_type==INPUT_ID_KEY?STR_KEY:STR_TOUCH);
-			log = gen_message_event(in_ev,count,input_type);
+			log = gen_message_event(in_ev, count, input_type);
 			pseudoSendDataToHost(log);
 			reset_data_msg(log);
 		}
@@ -770,23 +745,6 @@ static int deviceEventHandlerNew(input_dev* dev, int input_type)
 		LOGW("unknown input_type\n");
 		ret = 1;
 	}
-/*
-	if(input_type == INPUT_ID_TOUCH || input_type == INPUT_ID_KEY)
-	{
-
-		if (size = read(dev->fd, &in_ev, sizeof(in_ev) ) !=0 )
-		{
-			LOGI("readed %d touch events\n,", 1);
-			gen_message_event(&log,&in_ev,1,input_type);
-			pseudoSendDataToHost(&log);
-		}
-	}
-	else
-	{
-		LOGW("unknown input_type\n");
-		ret = 1;
-	}
-*/
 	return ret;
 }
 
@@ -1023,10 +981,11 @@ static int hostServerHandler(int efd)
 	}
 }
 
-
+#ifdef DEB_PRINTBUF
 //TODO del it or move to debug section
 void printBuf (char * buf, int len)
 {
+
 	int i,j;
 	char local_buf[3*16 + 2*16 + 1];
 	char * p1, * p2;
@@ -1054,7 +1013,9 @@ void printBuf (char * buf, int len)
 		LOGI("%s\n",local_buf);
 	}
 }
+#else
 
+#endif
 // return 0 if normal case
 // return plus value if non critical error occur
 // return minus value if critical error occur
@@ -1211,7 +1172,7 @@ int daemonLoop()
 				if(g_touch_dev[k].fd >= 0 && 
 						events[i].data.fd == g_touch_dev[k].fd)
 				{
-					if(deviceEventHandlerNew(&g_touch_dev[k], INPUT_ID_TOUCH) < 0)
+					if(deviceEventHandler(&g_touch_dev[k], INPUT_ID_TOUCH) < 0)
 					{
 						terminate_error("Internal DA framework error, Please re-run the profiling.", 1);
 						ret = -1;
@@ -1229,7 +1190,7 @@ int daemonLoop()
 				if(g_key_dev[k].fd >= 0 && 
 						events[i].data.fd == g_key_dev[k].fd)
 				{
-					if(deviceEventHandlerNew(&g_key_dev[k], INPUT_ID_KEY) < 0)
+					if(deviceEventHandler(&g_key_dev[k], INPUT_ID_KEY) < 0)
 					{
 						terminate_error("Internal DA framework error, Please re-run the profiling.", 1);
 						ret = -1;

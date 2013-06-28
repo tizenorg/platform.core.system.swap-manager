@@ -96,6 +96,13 @@ enum feature_code{
 	FL_NETWORK_API_PROBING					=0x20000,//network API (glibc, OSP, libsoap, openssl)
 	FL_OPENGL_API_PROBING					=0x40000 //openGL API
 };
+
+enum app_type{
+	AT_TIZEN	=0x01,
+	AT_LAUNCHED	=0x02,
+	AT_COMMON	=0x03
+};
+
 #define MAX_FILENAME 128
 
 #define MSG_DATA_HDR_LEN 20
@@ -317,9 +324,6 @@ static  char *pack_timestamp(char *to)
 */
 
 
-//event file descriptor
-int event_fd;
-
 struct msg_data_t *pack_system_info(struct system_info_t *sys_info);
 int write_to_buf(struct msg_data_t *msg);
 void free_msg_data(struct msg_data_t *msg);
@@ -328,4 +332,6 @@ int open_buf(void);
 void close_buf(void);
 void free_sys_info(struct system_info_t *sys_info);
 
+//debugs
+void print_replay_event( struct replay_event_t *ev,  uint32_t num, char *tab);
 #endif /* _DA_PROTOCOL_ */
