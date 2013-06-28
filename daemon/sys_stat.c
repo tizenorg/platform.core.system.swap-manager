@@ -625,7 +625,7 @@ static void get_cpu_frequency(float *freqs)
 			//core enabled, get frequency
 			fscanf(f, "%s", freq_str);
 			freqs[cpu_n] = atof(freq_str);
-			LOGI("core #%d freq = %.0f\n", freqs[cpu_n]);
+			LOGI("core #%d freq = %.0f\n", cpu_n, freqs[cpu_n]);
 			fclose(f);
 		}
 
@@ -1166,10 +1166,10 @@ static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 	int i, num;
 	char buf[BUFFER_MAX];
 	static const mem_t mem_table[] = {
-		{"Buffers",		&mem_slot_array[MEM_SLOT_BUFFER]},
-		{"Cached",		&mem_slot_array[MEM_SLOT_CACHED]},
-		{"MemFree",		&mem_slot_array[MEM_SLOT_FREE]},
-		{"MemTotal",	&mem_slot_array[MEM_SLOT_TOTAL]},
+		{"Buffers",		(unsigned long *)&mem_slot_array[MEM_SLOT_BUFFER]},
+		{"Cached",		(unsigned long *)&mem_slot_array[MEM_SLOT_CACHED]},
+		{"MemFree",		(unsigned long *)&mem_slot_array[MEM_SLOT_FREE]},
+		{"MemTotal",	(unsigned long *)&mem_slot_array[MEM_SLOT_TOTAL]},
 	};
 	const int mem_table_size = sizeof(mem_table) / sizeof(mem_t);
 
@@ -1780,7 +1780,7 @@ int fill_system_processes_info(float factor, struct system_info_t * sys_info)
 	uint64_t ticks = 0;
 	float app_cpu_usage = 0.0;
 
-	LOGI("prochead = %X\n",prochead);
+	LOGI("prochead = %X\n", (unsigned int)prochead);
 	for(proc = prochead; proc != NULL; proc = proc->next)
 	{
 		//increment process count
@@ -1795,8 +1795,8 @@ int fill_system_processes_info(float factor, struct system_info_t * sys_info)
 	{
 		LOGI ("proc#%d (%d %d),(%d %d) (%d) %f\n",
 				i,
-				proc->proc_data.utime , proc->proc_data.stime ,
-				proc->saved_utime , proc->saved_stime,
+				(unsigned int)proc->proc_data.utime, (unsigned int)proc->proc_data.stime ,
+				(unsigned int)proc->saved_utime, (unsigned int)proc->saved_stime,
 				(int)(proc->proc_data.utime + proc->proc_data.stime - proc->saved_utime - proc->saved_stime),
 				(float)(
 					proc->saved_utime + proc->saved_stime -
@@ -1846,7 +1846,6 @@ int fill_system_threads_info(float factor, struct system_info_t * sys_info)
 {
 	procNode* proc;
 	float thread_load;
-	int i;
 
 	for(proc = thread_prochead; proc != NULL; proc = proc->next)
 		//increment thread count
@@ -1877,6 +1876,8 @@ int fill_system_threads_info(float factor, struct system_info_t * sys_info)
 		proc->saved_utime = proc->proc_data.utime;
 		proc->saved_stime = proc->proc_data.stime;
 	}
+
+	return 0;
 }
 
 //fill system cpu information
@@ -1911,6 +1912,8 @@ int fill_system_cpu_info(struct system_info_t *sys_info)
 		return 1;
 	}
 	get_cpu_frequency(sys_info->cpu_frequency);
+
+	return 0;
 }
 
 
@@ -2249,7 +2252,7 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	msg->sec = sec;
 	msg->usec = usec;
 	msg->len = len;
-	p = &msg->payload;
+	p = msg->payload;
 	
 	pack_int(p, sys_info->energy);
 	pack_int(p, sys_info->wifi_status);

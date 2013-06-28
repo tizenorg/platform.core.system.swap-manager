@@ -40,6 +40,8 @@
 #include <sys/timerfd.h>	// for timerfd
 #include <unistd.h>			// for access, sleep
 
+#include <ctype.h>
+
 #ifndef LOCALTEST
 #include <attr/xattr.h>		// for fsetxattr
 #include <sys/smack.h>
@@ -52,6 +54,8 @@
 #include "sys_stat.h"
 #include "utils.h"
 #include "da_protocol.h"
+#include "da_data.h"
+
 #define DA_WORK_DIR				"/home/developer/sdk_tools/da/"
 #define DA_READELF_PATH			"/home/developer/sdk_tools/da/readelf"
 #define SCREENSHOT_DIR			"/tmp/da"
@@ -188,7 +192,7 @@ void _device_write(input_dev *dev, struct input_event* in_ev)
 		if(dev[i].fd >= 0)
 		{
 			write(dev[i].fd, in_ev, sizeof(struct input_event));
-			LOGI("write(%d, %d, %d)\n",dev[i].fd, in_ev, sizeof(struct input_event));
+			LOGI("write(%d, %d, %d)\n",dev[i].fd, (int)in_ev, sizeof(struct input_event));
 		}
 	}
 }
@@ -243,7 +247,7 @@ static void setEmptyTargetSlot(int index)
 int pseudoSendDataToHost(struct msg_data_t* log)
 {
 
-	printBuf(log, MSG_DATA_HDR_LEN + log->len);
+	printBuf((char *)log, MSG_DATA_HDR_LEN + log->len);
 /* 	LOGI("try send to <%d><%s>\n", dev->fd, dev->fileName); */
 
 	write_to_buf(log);
@@ -275,6 +279,7 @@ int sendDataToHost(msg_t* log)
 }
 
 // msgstr can be NULL
+/*
 static int sendACKStrToHost(enum HostMessageType resp, char* msgstr)
 {
 	if (manager.host.control_socket != -1)
@@ -293,10 +298,11 @@ static int sendACKStrToHost(enum HostMessageType resp, char* msgstr)
 	else
 		return 1;
 }
+*/
 
 
-
-static int sendACKCodeToHost(enum HostMessageType resp, int msgcode)
+//static
+int sendACKCodeToHost(enum HostMessageType resp, int msgcode)
 {
 	// FIXME:
 	//disabled string protocol
@@ -443,7 +449,7 @@ static void terminate_error(char* errstr, int sendtohost)
 // ===========================================================================================
 // message parsing and handling functions
 // ===========================================================================================
-
+/*
 static int parseDeviceMessage(msg_t* log)
 {
 	char eventType[MAX_FILENAME];
@@ -504,12 +510,13 @@ static int parseDeviceMessage(msg_t* log)
 
 	return 0;
 }
+*/
 
 // return 0 if normal case
 // return plus value if non critical error occur
 // return minus value if critical error occur
-static int _hostMessageHandler(int efd,struct msg_t* log)
-{
+/* static int _hostMessageHandler(int efd,struct msg_t* log) */
+/* { */
 /* 	int ret = 0; */
 	
 /* 	long flag = 0; */
@@ -680,7 +687,7 @@ static int _hostMessageHandler(int efd,struct msg_t* log)
 /* 		break; */
 /* 	} */
 /* 	return ret; */
-}
+/* } */
 
 // ========================================================================================
 // socket and event_fd handling functions
@@ -966,7 +973,7 @@ static int controlSocketHandler(int efd)
 {
 	ssize_t recvLen;
 	char recvBuf[DA_MSG_MAX];
-	msg_t log;
+	struct msg_t log;
 
 	// host log format xxx|length|str
 	recvLen = recv(manager.host.control_socket, recvBuf, DA_MSG_MAX, 0);

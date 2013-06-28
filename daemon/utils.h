@@ -71,6 +71,8 @@ int is_app_built_pie(void);
 int get_app_base_address(int *baseAddress);
 int is_same_app_process(char* appPath, int pid);
 
+int exec_app_tizen(const char *app_id, const char *exec_path);
+int exec_app_common(const char* exec_path);
 #ifdef __cplusplus
 }
 #endif

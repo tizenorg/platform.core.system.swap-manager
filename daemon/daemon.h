@@ -33,6 +33,8 @@
 #include <stdint.h>		// for uint64_t, int64_t
 #include <pthread.h>	// for pthread_mutex_t
 
+#include "da_protocol.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -238,6 +240,19 @@ void unlink_portfile(void);
 int makeRecvThread(int index);
 int samplingStart();
 int samplingStop();
+
+
+
+
+// TODO maybe need move to other file
+int startProfiling(long launchflag);
+int sendACKCodeToHost(enum HostMessageType resp, int msgcode);
+void terminate_all();
+int pseudoSendDataToHost(struct msg_data_t* log);
+void _device_write(input_dev *dev, struct input_event* in_ev);
+
+// DEBUGS
+void printBuf (char * buf, int len);
 
 #ifdef __cplusplus
 }

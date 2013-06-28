@@ -90,9 +90,9 @@ static void print_us_func_inst(struct us_func_inst_t * func_inst, int count,char
 static void print_us_lib_inst(struct us_lib_inst_t * lib_inst,int num,char * tab);
 static void print_user_space_app_inst(struct app_inst_t * app_inst, int num, char * tab);
 static void print_user_space_inst(struct user_space_inst_t * user_space_inst);
-static void print_log_interval(log_interval_t log_interval);
-static void print_probe(struct probe_t *probe);
-static void print_us_inst(struct us_inst_t *us_inst);
+//static void print_log_interval(log_interval_t log_interval);
+//static void print_probe(struct probe_t *probe);
+//static void print_us_inst(struct us_inst_t *us_inst);
 static void print_prof_session(struct prof_session_t *prof_session);
 
 //DEBUG FUNCTIONS
@@ -312,7 +312,7 @@ static char *parse_int64(char *buf, uint64_t *val)
 {
 	*val = *(uint64_t *)buf;
 
-	parse_deb("<%d><0x%016X>\n",*val,*val);
+	parse_deb("<%llu><0x%016llX>\n",*val,*val);
 	return buf + sizeof(uint64_t);
 }
 
@@ -368,14 +368,15 @@ static char * parse_conf(char *buf, struct conf_t *conf)
 	return buf + sizeof(*conf);
 }
 
-
+/*
 static char *parse_log_interval(char *buf, log_interval_t *log_interval)
 {
 	*log_interval = *(log_interval_t *)buf;
 
 	return buf + sizeof(*log_interval);
 }
-
+*/
+/*
 static char *parse_probe(char *buf, struct probe_t *probe)
 {
 	char *p = buf;
@@ -403,7 +404,9 @@ static char *parse_probe(char *buf, struct probe_t *probe)
 
 	return p;
 }
+*/
 
+/*
 static char *parse_us_inst(char *buf, struct us_inst_t *us_inst)
 {
 	char *p = buf;
@@ -437,6 +440,7 @@ static char *parse_us_inst(char *buf, struct us_inst_t *us_inst)
 
 	return p;
 }
+*/
 
 static char *parse_us_inst_func( char * buf, struct us_func_inst_t * dest)
 {
@@ -839,11 +843,12 @@ static void reset_conf(struct conf_t *conf)
 {
 	memset(conf, 0, sizeof(*conf));
 }
-
+/*
 static void reset_log_interval(log_interval_t *log_interval)
 {
 	memset(log_interval, 0, sizeof(*log_interval));
 }
+*/
 
 static void reset_probe(struct probe_t *probe)
 {
@@ -879,12 +884,18 @@ static void reset_app_inst(struct app_inst_t *app_inst)
 	*/
 }
 
+static void reset_user_space_inst(struct user_space_inst_t *us)
+{
+
+}
+
 static void reset_prof_session(struct prof_session_t *prof_session)
 {
 	reset_app_info(&prof_session->app_info);
 	reset_conf(&prof_session->conf);
 	//reset_log_interval(&prof_session->log_interval);
-	//reset_app_inst(&prof_session->app_inst);
+	// TODO make reset_app_inst
+	reset_user_space_inst(&prof_session->user_space_inst);
 }
 
 static struct msg_t *gen_binary_info_reply(struct app_info_t *app_info)
@@ -963,14 +974,13 @@ static int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 {
 	if (manager.host.control_socket != -1)
 	{
-		struct msg_t *msg; 
+		struct _msg_t *msg; 
 		uint32_t err = err_code;
 		int loglen = sizeof(*msg) - sizeof(msg->payload) +
 					 sizeof(err) + //return ID
 					 payload_size;
-		char *logstr = malloc(loglen);
-		msg = (struct msg_t *)logstr;
-		char *p = &(msg->payload);
+		msg = (struct _msg_t *)malloc(loglen);
+		char *p = msg->payload;
 
 		//get ack message ID
 		switch (resp) {
@@ -1000,7 +1010,7 @@ static int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 				break;
 			default:
 				//TODO report error
-				free(logstr);
+				free(msg);
 				return 1;
 		}
 
@@ -1009,15 +1019,17 @@ static int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 		//set payload lenth
 		msg->len = payload_size + sizeof(err);
 		//set return id
-		*(uint32_t *)p = err; p+=sizeof(err);
+		//*(uint32_t *)p = err; p+=sizeof(err);
+		pack_int(p, err)
 		//copy payload data
 		memcpy(p, payload, payload_size);
 
-		LOGI("ACK (%s) payload=%d; size=%d\n",msg_ID_str(resp),payload,payload_size);
-		printBuf(logstr, loglen);
+		LOGI("ACK (%s) errcode<%s> payload=%d; size=%d\n", msg_ID_str(resp),
+				msgErrStr(err_code), (int)payload, payload_size);
+		printBuf((char *)msg, loglen);
 
-		send(manager.host.control_socket, logstr, loglen, MSG_NOSIGNAL);
-		free(logstr);
+		send(manager.host.control_socket, msg, loglen, MSG_NOSIGNAL);
+		free(msg);
 		return 0;
 	}
 	else
@@ -1029,7 +1041,7 @@ int hostMessageHandle(struct msg_t *msg)
 	char * answer = 0;
 	uint32_t answer_len = 0;
 	uint32_t ID = msg->id;
-	struct user_space_inst_t user_space_inst;
+	//struct user_space_inst_t user_space_inst;
 	struct app_info_t app_info;
 	struct msg_t *msg_reply;
 
@@ -1085,6 +1097,7 @@ int hostMessageHandle(struct msg_t *msg)
 		// TODO: start app launch timer
 
 		//start replay events
+		// TODO make start and stop functions for replay thread
 		replay_thread(&prof_session.replay_event_seq);
 
 		// success
@@ -1167,11 +1180,12 @@ int hostMessageHandle(struct msg_t *msg)
 	return 0;
 }
 
+/*
 static void dispose_payload(struct msg_t *msg)
 {
 	free(msg->payload);
 }
-
+*/
 
 // use sequence:
 /* receive_msg_header */
@@ -1283,15 +1297,18 @@ static void print_user_space_inst(struct user_space_inst_t * user_space_inst)
 	}
 }
 
+/*
 static void print_log_interval(log_interval_t log_interval)
 {
 	printf("log_interval = %x\n", log_interval);
 }
+*/
 
+/*
 static void print_probe(struct probe_t *probe)
 {
 	printf("probe:\n");
-	printf("addr = %lx\n", probe->addr);
+	printf("addr = %0llX\n", probe->addr);
 	printf("arg_num = %d\n", probe->arg_num);
 	int i;
 	for (i = 0; i < probe->arg_num; i++) {
@@ -1299,7 +1316,9 @@ static void print_probe(struct probe_t *probe)
 	}
 	printf("\n");
 }
+*/
 
+/*
 static void print_us_inst(struct us_inst_t *us_inst)
 {
 	printf("us inst:\n");
@@ -1310,6 +1329,7 @@ static void print_us_inst(struct us_inst_t *us_inst)
 		print_probe(&us_inst->probes[i]);
 	}
 }
+*/
 
 //static
 void print_replay_event( struct replay_event_t *ev, uint32_t num, char *tab)
@@ -1320,8 +1340,8 @@ void print_replay_event( struct replay_event_t *ev, uint32_t num, char *tab)
 		" code=0x%08X,"
 		" value=0x%08X\n",
 		tab,num,
-		ev->ev.time.tv_sec,//timeval
-		ev->ev.time.tv_usec,//timeval
+		(unsigned int)ev->ev.time.tv_sec,//timeval
+		(unsigned int)ev->ev.time.tv_usec,//timeval
 		ev->id,
 		ev->ev.type,//u16
 		ev->ev.code,//u16
@@ -1338,7 +1358,8 @@ void print_replay_event_seq( struct replay_event_seq_t *event_seq)
 		"time_start=0x%08X %08X; "\
 		"count=0x%08X\n",
 		tab,event_seq->enabled,
-		event_seq->tv.tv_sec,event_seq->tv.tv_usec,
+		(unsigned int)event_seq->tv.tv_sec,
+		(unsigned int)event_seq->tv.tv_usec,
 		event_seq->event_num);
 	for (i=0;i<event_seq->event_num;i++)
 		print_replay_event(&event_seq->events[i], i+1, tab);

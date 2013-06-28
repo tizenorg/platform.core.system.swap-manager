@@ -344,8 +344,8 @@ int get_manifest_path(const char* exec_path, char* buf, int buflen)
 int exec_app_tizen(const char *app_id, const char *exec_path)
 {
 	pid_t pid;
-	char command[PATH_MAX];
-	char appid[PATH_MAX];
+	//char command[PATH_MAX];
+	//char appid[PATH_MAX];
 
 	if (exec_path == NULL || !strlen(exec_path)) {
 		LOGE("Executable path is not correct\n");

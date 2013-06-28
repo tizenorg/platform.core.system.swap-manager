@@ -4,7 +4,11 @@ int fill_data_msg_head (struct msg_data_t *data, uint32_t msgid, uint32_t seq, u
 //allocate memory, need free!!!
 struct msg_data_t *gen_message_terminate(uint32_t id);
 
-//allocate memory, need free!!!
+//allocatr memory, need free!!!
+struct msg_data_t *gen_message_event(
+		      struct input_event *events,
+		      uint32_t events_count,
+		      uint32_t id);
 
 
 struct msg_data_t *gen_message_error(const char * err_msg);
@@ -15,4 +19,7 @@ struct msg_data_t *gen_message_event(
 		      uint32_t id);
 
 int reset_data_msg(struct msg_data_t *data);
+
+//DEBUGS
+int print_sys_info(struct system_info_t * sys_info);
 #endif //#ifndef _DA_DATA_H_

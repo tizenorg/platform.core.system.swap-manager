@@ -196,7 +196,6 @@ int makeRecvThread(int index)
 void* samplingThread(void* data)
 {
 	int err, signo, i;
-	uint32_t res;
 	//debug only
 #ifdef DEBUG_GSI
 	int pidarr[1] = {656};//{3619}; //DEBUG ONLY
@@ -206,7 +205,6 @@ void* samplingThread(void* data)
 	int pidcount;
 #endif
 	sigset_t waitsigmask;
-	struct msg_data_t log;
 
 	LOGI("sampling thread started\n");
 
@@ -250,7 +248,7 @@ void* samplingThread(void* data)
 				LOGE("Cannot get system info\n");
 			}
 
-			struct msg_t *msg;
+			struct msg_data_t *msg;
 			msg = pack_system_info(&sys_info);
 			if (!msg) {
 				LOGE("Cannot pack system info\n");

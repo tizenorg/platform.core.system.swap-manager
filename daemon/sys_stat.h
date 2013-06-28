@@ -74,6 +74,7 @@ extern "C" {
 #define MAXNAMESIZE 16
 
 #include <stdint.h>
+#include "da_protocol.h"
 
 typedef unsigned long long tic_t;
 

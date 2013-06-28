@@ -122,6 +122,12 @@ struct msg_t {
 	char *payload;
 };
 
+struct _msg_t {
+	uint32_t id;
+	uint32_t len;
+	char payload[0];
+};
+
 enum app_type_t {
 	APP_TYPE_TIZEN = 1,
 	APP_TYPE_RUNNING = 2,

@@ -104,10 +104,10 @@ int print_sys_info(struct system_info_t * sys_info)
 	video_status = 0x%X\n\
 	call_status = 0x%X\n\
 	dnet_status = 0x%X\n\
-	cpu_frequency = 0x%X\n\
+	cpu_frequency (pointer)= 0x%X\n\
 \
 	app_cpu_usage = %f\n\
-	cpu_load = 0x%X\n\
+	cpu_load (pointer)= 0x%X\n\
 	virtual_memory = 0x%X\n\
 	resident_memory = 0x%X\n\
 	shared_memory = 0x%X\n\
@@ -116,10 +116,10 @@ int print_sys_info(struct system_info_t * sys_info)
 	total_alloc_size = 0x%X\n\
 	system_memory_total = %llu\n\
 	system_memory_used = %llu\n\
-	total_used_drive = %lu\n\
+	total_used_drive = %d\n\
 \
 	count_of_threads = %u\n\
-	thread_load = 0x%X\n\
+	thread_load (pointer)= 0x%X\n\
 	count_of_processes = %u\n\
 	process_load = 0x%X\n\
 	disk_read_size = 0x%X\n\
@@ -144,10 +144,10 @@ int print_sys_info(struct system_info_t * sys_info)
 	sys_info->video_status,
 	sys_info->call_status,
 	sys_info->dnet_status,
-	sys_info->cpu_frequency,
+	(unsigned int)sys_info->cpu_frequency,
 
 	sys_info->app_cpu_usage,
-	sys_info->cpu_load,
+	(unsigned int)sys_info->cpu_load,
 	sys_info->virtual_memory,
 	sys_info->resident_memory,
 	sys_info->shared_memory,
@@ -159,9 +159,9 @@ int print_sys_info(struct system_info_t * sys_info)
 	sys_info->total_used_drive,
 
 	sys_info->count_of_threads,
-	sys_info->thread_load,
+	(unsigned int)sys_info->thread_load,
 	sys_info->count_of_processes,
-	sys_info->process_load,
+	(unsigned int)sys_info->process_load,
 	sys_info->disk_read_size,
 
 	sys_info->disk_write_size,
@@ -201,7 +201,9 @@ int print_sys_info(struct system_info_t * sys_info)
 		);
 	}
 //	char *p = sys_info;
-	printBuf(sys_info,sizeof(*sys_info));
+	printBuf((char*)sys_info, sizeof(*sys_info));
+
+	return 0;
 }
 
 int fill_data_msg_head (struct msg_data_t *data, uint32_t msgid, uint32_t seq, uint32_t len)
