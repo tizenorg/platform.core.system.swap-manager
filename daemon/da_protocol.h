@@ -122,6 +122,11 @@ struct msg_t {
 	char *payload;
 };
 
+enum app_type_t {
+	APP_TYPE_TIZEN = 1,
+	APP_TYPE_RUNNING = 2,
+	APP_TYPE_COMMON = 3,
+};
 struct app_info_t {
 	uint32_t app_type;
 	char *app_id;
@@ -332,6 +337,9 @@ int open_buf(void);
 void close_buf(void);
 void free_sys_info(struct system_info_t *sys_info);
 
+extern struct prof_session_t prof_session;
+
 //debugs
 void print_replay_event( struct replay_event_t *ev,  uint32_t num, char *tab);
+
 #endif /* _DA_PROTOCOL_ */

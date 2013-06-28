@@ -51,12 +51,6 @@ extern "C" {
 #define DA_BUILD_OPTION		"/home/developer/sdk_tools/da/da_build_option"
 #define DA_BASE_ADDRESS		"/home/developer/sdk_tools/da/da_base_address"
 
-enum ApplicationType
-{
-	APP_TYPE_TIZEN = 0,
-	APP_TYPE_OSP = 1
-};
-
 uint64_t	str_to_uint64(char* str);
 int64_t		str_to_int64(char* str);
 

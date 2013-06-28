@@ -55,7 +55,6 @@ extern "C" {
 #define PROTOCOL_VERSION			"2.1"
 
 #define RUN_APP_LOADER
-#define USE_LAUNCH_PAD
 
 #define MAX_TARGET_COUNT			8
 #define DA_MSG_MAX					4096

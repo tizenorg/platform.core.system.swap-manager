@@ -321,9 +321,9 @@ static int sendACKCodeToHost(enum HostMessageType resp, int msgcode)
 // start and terminate control functions
 // ========================================================================================
 
-static int startProfiling(long launchflag)
+int startProfiling(long launchflag)
 {
-	char execPath[PATH_MAX];
+	const struct app_info_t *app_info = &prof_session.app_info;
 
 	// remove previous screen capture files
 	remove_indir(SCREENSHOT_DIR);
@@ -333,21 +333,33 @@ static int startProfiling(long launchflag)
 #endif
 	manager.config_flag = launchflag;
 
-#ifdef RUN_APP_LOADER
-	strcpy(execPath, manager.appPath);
-#else
-	get_executable(manager.appPath, execPath, PATH_MAX);
-#endif
-	if(samplingStart() < 0)
+	if (samplingStart() < 0)
 		return -1;
 
-	if(exec_app(execPath, get_app_type(manager.appPath)) == 0)
-	{
+	switch (app_info->app_type) {
+	case APP_TYPE_TIZEN:
+		if (exec_app_tizen(app_info->app_id, app_info->exe_path)) {
+			LOGE("Cannot exec tizen app %s\n", app_info->app_id);
+			samplingStop();
+			return -1;
+		}
+		break;
+	case APP_TYPE_RUNNING:
+		// TODO: nothing, it's running
+		break;
+	case APP_TYPE_COMMON:
+		if (exec_app_common(app_info->exe_path)) {
+			LOGE("Cannot exec common app %s\n", app_info->exe_path);
+			samplingStop();
+			return -1;
+		}
+		break;
+	default:
+		LOGE("Unknown app type %d\n", app_info->app_type);
 		samplingStop();
 		return -1;
+		break;
 	}
-
-	LOGI("Timer Started\n");
 
 	return 0;
 }
@@ -396,7 +408,7 @@ static void terminate_all_target()
 }
 
 // terminate all target and wait for threads
-static void terminate_all()
+void terminate_all()
 {
 	int i;
 	terminate_all_target();
@@ -754,73 +766,8 @@ static int deviceEventHandler(input_dev* dev, int input_type)
 // return -11 if all target process closed
 static int targetEventHandler(int epollfd, int index, uint64_t msg)
 {
-	msg_t log;
-
 	if(msg & EVENT_PID)
 	{
-		if(index == 0)		// assume index 0 is main application process
-		{
-			int base_address;
-			char tempBuff[DA_MSG_MAX];
-			char tempBuff2[DA_MSG_MAX];
-			char tempPath[PATH_MAX];
-
-			get_executable(manager.appPath, tempPath, PATH_MAX);
-			if(realpath(tempPath, tempBuff) == NULL)
-			{
-				LOGW("Failed to get realpath of app\n");
-				strcpy(tempBuff, tempPath);
-			}
-
-			sprintf(tempPath, "/proc/%d/maps", manager.target[index].pid);
-			sprintf(tempBuff2, "cat %s | grep %s | cut -d\"-\" -f1 > %s",
-					tempPath, tempBuff, DA_BASE_ADDRESS);
-			LOGI("base address command is %s\n", tempBuff2);
-
-			do {
-				if(access(tempPath, F_OK) != 0)
-					return -1;
-				if(is_same_app_process(manager.appPath, manager.target[index].pid) == 0)
-					return -1;
-
-				system(tempBuff2);
-				if(get_app_base_address(&base_address) == 1)
-					break;
-				sleep(0);
-			} while(1);
-
-			tempPath[0] = '\0';
-			get_app_install_path(tempPath, PATH_MAX);
-
-#ifndef LOCALTEST
-			get_device_info(tempBuff, DA_MSG_MAX);
-#endif
-
-			log.type = MSG_DEVICE;
-			if (strlen(tempPath) > 0)
-			{
-				get_executable(manager.appPath, tempBuff2, DA_MSG_MAX);
-				log.length = sprintf(log.data, "%s`,%d`,%Lu`,%d`,%u`,%d`,%s/%s", tempBuff,
-						manager.target[index].pid, manager.target[index].starttime,
-						is_app_built_pie(), base_address, get_app_type(manager.appPath),
-						tempPath, get_app_name(tempBuff2));
-			}
-			else
-			{
-				log.length = sprintf(log.data, "%s`,%d`,%Lu`,%d`,%u`,%d`,", tempBuff,
-						manager.target[index].pid, manager.target[index].starttime,
-						is_app_built_pie(), base_address, get_app_type(manager.appPath));
-			}
-
-			LOGI("%s\n", log.data);
-		}
-		else
-		{
-			log.type = MSG_PID;
-			log.length = sprintf(log.data, "%d`,%Lu", manager.target[index].pid, manager.target[index].starttime);
-		}
-
-		sendDataToHost(&log);
 		manager.target[index].initial_log = 1;
 	}
 
@@ -832,14 +779,8 @@ static int targetEventHandler(int epollfd, int index, uint64_t msg)
 		terminate_target(index);
 		epoll_ctl(epollfd, EPOLL_CTL_DEL, manager.target[index].event_fd, NULL);
 		setEmptyTargetSlot(index);
-		if (0 == __sync_sub_and_fetch(&manager.target_count, 1))	// all target client are closed
-		{
-			log.type = MSG_TERMINATE;
-			log.length = 0;
-			log.data[0] = '\0';
-			sendDataToHost(&log);
+		if (0 == __sync_sub_and_fetch(&manager.target_count, 1)) // all target client are closed
 			return -11;
-		}
 	}
 
 	return 0;
