@@ -341,126 +341,126 @@ int get_manifest_path(const char* exec_path, char* buf, int buflen)
 // execute applcation with executable binary path
 // return 0 to fail to execute
 // return 1 to succeed to execute
-#ifdef USE_LAUNCH_PAD
-int exec_app(const char* exec_path, int app_type)
+int exec_app_tizen(const char *app_id, const char *exec_path)
 {
 	pid_t pid;
 	char command[PATH_MAX];
 	char appid[PATH_MAX];
 
-	if (exec_path == NULL || strlen(exec_path) <= 0) 
-	{
+	if (exec_path == NULL || !strlen(exec_path)) {
 		LOGE("Executable path is not correct\n");
 		return 0;
 	}
 
-	if (( pid = fork()) < 0)	// fork error
-    	return 0;
-    else if(pid > 0)
-    	return 1;		// exit parent process with successness
-
-	if(get_appid(exec_path, appid, PATH_MAX) < 0)
-	{
-		LOGE("failed to get appid\n");
-		return 0;
-	}
-	else
-	{
-		LOGI("launch app path is %s, executable path is %s\n", LAUNCH_APP_PATH, exec_path);
-		execl(LAUNCH_APP_PATH, LAUNCH_APP_NAME, appid, LAUNCH_APP_SDK, DA_PRELOAD_EXEC, NULL);
+	pid = fork();
+	if (pid == -1)
 		return 1;
-	}
+	else if (pid > 0)
+		return 0; // exit parent process with success
+
+	LOGI("launch app path is %s, executable path is %s\n",
+	     LAUNCH_APP_PATH, exec_path);
+	execl(LAUNCH_APP_PATH, LAUNCH_APP_NAME, app_id, LAUNCH_APP_SDK,
+	      DA_PRELOAD_EXEC, NULL);
+
+	return 0;
 }
-#else
-int exec_app(const char* exec_path, int app_type)
+
+int exec_app_common(const char* exec_path)
 {
-	pid_t   pid;
-	int isHwAcc = 0;
+	pid_t pid;
+	int hw_acc = 0;
 	char manifest[PATH_MAX];
 	char command[PATH_MAX];
 #ifndef LOCALTEST
 	char appid[SMACK_LABEL_LEN];
 #endif
-	if (exec_path == NULL || strlen(exec_path) <= 0) 
-	{
+	if (exec_path == NULL || !strlen(exec_path))  {
 		LOGE("Executable path is not correct\n");
-		return 0;
+		return 1;
 	}
 
-	if (( pid = fork()) < 0)	// fork error
-    	return 0;
+	pid = fork();
+	if (pid == -1)
+		return 1;
+	else if (pid > 0)
+		return 0; // exit parent process with success
 
-    else if(pid > 0)
-    	return 1;		// exit parent process with successness
-
-	if(get_manifest_path(exec_path, manifest, PATH_MAX) == 0)
-	{
+	if (get_manifest_path(exec_path, manifest, PATH_MAX) == 0) {
 		FILE* fp;
 		char buffer[BUFFER_MAX];
 		char* res;
 
 		// grep for manifest
-		sprintf(command, "grep \"HwAcceleration=\\\"On\\\"\" %s", manifest);
+		sprintf(command, "grep \"HwAcceleration=\\\"On\\\"\" %s",
+			manifest);
 		fp = popen(command, "r");
-		if(fp != NULL)
-		{
+		if (fp != NULL) {
 			buffer[0] = '\0';
 			res = fgets(buffer, BUFFER_MAX, fp);
-			if(res != NULL && strlen(buffer) != 0)
-			{
-				isHwAcc = 1;
+			if (res != NULL && strlen(buffer) != 0) {
+				hw_acc = 1;
 			}
 			pclose(fp);
 		}
 	}
 
+	// FIXME: I think the followin does not make sense
+/* #ifndef LOCALTEST */
+/* 	if (get_smack_label(exec_path, appid, SMACK_LABEL_LEN - 1) < 0) { */
+/* 		LOGE("failed to get smack label\n"); */
+/* 		return 1; */
+/* 	} else */
+/* #endif */
+/* 	{ */
+/* #ifndef LOCALTEST */
+/* 		LOGI("smack lable is %s\n", appid); */
+/* 		if(smack_set_label_for_self(appid) < 0) { */
+/* 			LOGE("failed to set label for self\n"); */
+/* 		} */
+/* #endif */
+/* 		set_appuser_groups(); */
+/* 		if (setgid(SID_APP) < 0) { */
+/* 			LOGE("failed to setgid\n"); */
+/* 		} */
+/* 		if (setuid(SID_APP) < 0) { */
+/* 			LOGE("failed to setuid\n"); */
+/* 		} */
+
+/* 		pid = getpid(); */
+/* 		if (setpgid(pid, pid) < 0) { */
+/* 			LOGE("failed to setpgid\n"); */
+/* 		} */
+
+/* 		if (hw_acc != 0) { */
+/* 			sprintf(command, "HWACC=USE %s %s", DA_PRELOAD(app_type), exec_path); */
+/* 		} else { */
+/* 			sprintf(command, "%s %s", DA_PRELOAD(app_type), exec_path); */
+/* 		} */
+
+/* 		LOGI("launch app path is %s, executable path is %s\n", LAUNCH_APP_PATH, exec_path); */
+/* 		execl(SHELL_CMD, SHELL_CMD, "-c", command, NULL); */
+/* 		return 0; */
+/* 	} */
+	// TODO:
+	/* if (hw_acc) */
+	/* 	sprintf(command, "HWACC=USE %s %s", */
+	/* 		DA_PRELOAD(app_type), exec_path); */
+	/* else */
+	/* 	sprintf(command, "%s %s", */
+	/* 		DA_PRELOAD(app_type), exec_path); */
 #ifndef LOCALTEST
-	if(get_smack_label(exec_path, appid, SMACK_LABEL_LEN - 1) < 0)
-	{
-		LOGE("failed to get smack label\n");
-		return 0;
-	}
-	else
-#endif
-	{
-#ifndef LOCALTEST
-		LOGI("smack lable is %s\n", appid);
-		if(smack_set_label_for_self(appid) < 0)
-		{
-			LOGE("failed to set label for self\n");
-		}
-#endif
-		set_appuser_groups();
-		if(setgid(SID_APP) < 0)
-		{
-			LOGE("failed to setgid\n");
-		}
-		if(setuid(SID_APP) < 0)
-		{
-			LOGE("failed to setuid\n");
-		}
+	sprintf(command, "%s %s",
+		DA_PRELOAD_OSP, exec_path);
+#else /* LOCALTEST */
+	sprintf(command, "%s", exec_path);
+#endif /* LOCALTEST */
 
-		pid = getpid();
-		if(setpgid(pid, pid) < 0)
-		{
-			LOGE("failed to setpgid\n");
-		}
+	LOGI("launching commmon app, command: %s\n", command);
+	execl(SHELL_CMD, SHELL_CMD, "-c", command, NULL);
 
-		if(isHwAcc != 0)
-		{
-			sprintf(command, "HWACC=USE %s %s", DA_PRELOAD(app_type), exec_path);
-		}
-		else
-		{
-			sprintf(command, "%s %s", DA_PRELOAD(app_type), exec_path);
-		}
-
-		LOGI("launch app path is %s, executable path is %s\n", LAUNCH_APP_PATH, exec_path);
-		execl(SHELL_CMD, SHELL_CMD, "-c", command, NULL);
-		return 1;
-	}
+	return 0;
 }
-#endif
 
 // find process id from executable binary path
 pid_t find_pid_from_path(const char* path)
@@ -508,24 +508,6 @@ void kill_app(const char* binary_path)
 	{
 		sprintf(command, "kill -9 %d", pkg_pid);
 		system(command);
-	}
-}
-
-int get_app_type(char* appPath)
-{
-	int fd;
-	char buf[BUFFER_MAX];
-
-	sprintf(buf, "%s.exe", appPath);
-	fd = open(buf, O_RDONLY);
-	if(fd != -1)
-	{
-		close(fd);
-		return APP_TYPE_OSP;
-	}
-	else
-	{
-		return APP_TYPE_TIZEN;
 	}
 }
 

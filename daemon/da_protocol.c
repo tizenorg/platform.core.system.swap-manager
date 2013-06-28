@@ -79,7 +79,7 @@ struct app_inst_t app_inst;
 struct prof_session_t prof_session;
 */
 
-static struct prof_session_t prof_session;
+struct prof_session_t prof_session;
 
 static void print_app_info( struct app_info_t *app_info);
 static void print_conf(struct conf_t * conf);
@@ -1071,9 +1071,10 @@ int hostMessageHandle(struct msg_t *msg)
 			return -1;
 		}
 
-		// TODO: start_sampling_thread()
-		if (samplingStart() < 0)
+		if (startProfiling(prof_session.conf.use_features) < 0) {
+			sendACKToHost(ID, ERR_CANNOT_START_PROFILING, 0, 0);
 			return -1;
+		}
 
 		// TODO: exec app
 
@@ -1083,6 +1084,7 @@ int hostMessageHandle(struct msg_t *msg)
 		sendACKToHost(ID,ERR_NO,0,0);
 		break;
 	case NMSG_STOP:
+		terminate_all();
 		sendACKToHost(ID,ERR_NO,0,0);
 		// TODO: remove_prof_session()
 		close_buf();

@@ -172,9 +172,6 @@ static void* recvThread(void* data)
 			}
 		}
 		pass = 1;
-
-		if(manager.target[index].pid != -1)
-			sendDataToHost(&log);
 	}
 
 	manager.target[index].recv_thread = -1;
