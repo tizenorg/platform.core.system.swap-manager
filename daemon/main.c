@@ -43,6 +43,7 @@
 #include "daemon.h"
 #include "da_protocol.h"
 #include "sys_stat.h"
+#include "buffer.h"
 
 #define SINGLETON_LOCKFILE			"/tmp/lockfile.da"
 #define PORTFILE					"/tmp/port.da"
@@ -239,6 +240,11 @@ static int initializeManager()
 	int i;
 	sigset_t newsigmask;
 
+	if (init_buf() != 0) {
+		LOGE("Cannot init buffer\n");
+		return -1;
+	}
+
 	atexit(_close_server_socket);
 	if(initialize_system_info() < 0)
 	{
@@ -307,6 +313,8 @@ static int finalizeManager()
 		close(manager.host.control_socket);
 	if(manager.host.data_socket != -1)
 		close(manager.host.data_socket);
+
+	exit_buf();
 
 	return 0;
 }

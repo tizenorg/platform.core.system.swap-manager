@@ -1005,13 +1005,6 @@ int host_message_handler(struct msg_t *msg)
 			return 1;
 		}
 
-		// prepare buffer to write
-		if (open_buf() != 0) {
-			LOGE("Cannot open buffer\n");
-			sendACKToHost(msg->id, ERR_UNKNOWN, 0, 0);
-			return 1;
-		}
-
 		// TODO: launch translator thread
 
 		// TODO: kill app
@@ -1042,7 +1035,6 @@ int host_message_handler(struct msg_t *msg)
 	case NMSG_STOP:
 		terminate_all();
 		sendACKToHost(msg->id,ERR_NO, 0, 0);
-		close_buf();
 		reset_prof_session(&prof_session);
 		break;
 	case NMSG_CONFIG:

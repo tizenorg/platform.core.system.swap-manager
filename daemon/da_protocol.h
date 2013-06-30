@@ -337,8 +337,6 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info);
 int write_to_buf(struct msg_data_t *msg);
 void free_msg_data(struct msg_data_t *msg);
 void free_msg_payload(struct msg_t *msg);
-int open_buf(void);
-void close_buf(void);
 void free_sys_info(struct system_info_t *sys_info);
 int start_replay();
 void reset_msg(struct msg_t *msg);
