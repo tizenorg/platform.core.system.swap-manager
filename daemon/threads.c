@@ -399,3 +399,21 @@ int samplingStop()
 
 	return 0;
 }
+
+int start_replay()
+{
+	if (manager.replay_thread != -1) // already started
+		return 1;
+
+	// TODO: non-joinable thread
+	if(pthread_create(&(manager.replay_thread),
+			  NULL,
+			  replay_thread,
+			  &prof_session.replay_event_seq) < 0)
+	{
+		LOGE("Failed to create replay thread\n");
+		return 1;
+	}
+
+	return 0;
+}

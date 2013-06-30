@@ -367,6 +367,11 @@ int startProfiling(long launchflag)
 		break;
 	}
 
+	if (start_replay() != 0) {
+		LOGE("Cannot start replay thread\n");
+		return -1;
+	}
+
 	return 0;
 }
 

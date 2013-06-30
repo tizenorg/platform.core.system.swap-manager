@@ -1096,10 +1096,6 @@ int hostMessageHandle(struct msg_t *msg)
 
 		// TODO: start app launch timer
 
-		//start replay events
-		// TODO make start and stop functions for replay thread
-		replay_thread(&prof_session.replay_event_seq);
-
 		// success
 		sendACKToHost(ID,ERR_NO,0,0);
 		break;

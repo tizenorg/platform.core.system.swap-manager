@@ -342,6 +342,7 @@ void free_msg_payload(struct msg_t *msg);
 int open_buf(void);
 void close_buf(void);
 void free_sys_info(struct system_info_t *sys_info);
+int start_replay();
 
 extern struct prof_session_t prof_session;
 
