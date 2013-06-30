@@ -292,8 +292,7 @@ void* samplingThread(void* data)
 	return NULL;
 }
 
-//NEW CODE
-useconds_t time_diff_us(struct timeval *tv1, struct timeval *tv2)
+static useconds_t time_diff_us(struct timeval *tv1, struct timeval *tv2)
 {
 	return (tv1->tv_sec - tv2->tv_sec) * 1000000 +
 		((int)tv1->tv_usec - (int)tv2->tv_usec);
@@ -353,15 +352,12 @@ void *replay_thread(void *arg)
 
 	return arg;
 }
-// END NEW CODE
-
 
 // return 0 if normal case
 // return minus value if critical error
 // return plus value if non-critical error
 int samplingStart()
 {
-	return 0; // debug only
 	struct itimerval timerval;
 
 	if(manager.sampling_thread != -1)	// already started
