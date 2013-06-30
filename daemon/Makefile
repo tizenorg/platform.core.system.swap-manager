@@ -30,7 +30,8 @@ DAEMON_SRCS :=	\
 	utils.c		\
 	sys_stat.c	\
 	elf.c		\
-	buffer.c
+	buffer.c	\
+	transfer_thread.c
 
 DAEMON_SRCS_HOST :=	\
 	main.c		\

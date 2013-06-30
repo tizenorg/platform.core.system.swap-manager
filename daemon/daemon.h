@@ -207,17 +207,19 @@ typedef struct
 
 typedef struct
 {
-	FILE*				portfile;
-	int					host_server_socket;
-	int					target_server_socket;
-	int					target_count;
-	unsigned int		config_flag;
-	int					app_launch_timerfd;
-	pthread_t			sampling_thread;
-	pthread_t			replay_thread;
-	__da_host_info		host;
-	__da_target_info	target[MAX_TARGET_COUNT];
-	char				appPath[128];				// application executable path
+	FILE *portfile;
+	int host_server_socket;
+	int target_server_socket;
+	int target_count;
+	unsigned int config_flag;
+	int app_launch_timerfd;
+	pthread_t sampling_thread;
+	pthread_t replay_thread;
+	pthread_t transfer_thread;
+	int buf_fd;
+	__da_host_info host;
+	__da_target_info target[MAX_TARGET_COUNT];
+	char appPath // application executable path
 } __da_manager;
 
 

@@ -922,6 +922,10 @@ static int hostServerHandler(int efd)
 		{
 			manager.host.data_socket = csocket;
 			LOGI("host data socket connected = %d\n", csocket);
+			if (start_transfer() != 0) {
+				LOGE("Cannot start transfer\n");
+				return -1;
+			}
 		}
 
 		hostserverorder++;
@@ -1208,6 +1212,7 @@ int daemonLoop()
 					epoll_ctl(efd, EPOLL_CTL_DEL, manager.host.data_socket, NULL);
 					close(manager.host.data_socket);
 					manager.host.data_socket = -1;
+					// TODO: finish transfer thread
 				}
 	
 				LOGW("host message from data socket %d\n", recvLen);

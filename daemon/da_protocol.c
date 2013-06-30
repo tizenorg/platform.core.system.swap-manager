@@ -1034,8 +1034,9 @@ int host_message_handler(struct msg_t *msg)
 		break;
 	case NMSG_STOP:
 		terminate_all();
-		sendACKToHost(msg->id,ERR_NO, 0, 0);
 		reset_prof_session(&prof_session);
+		stop_transfer();
+		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
 	case NMSG_CONFIG:
 		if (!parse_msg_config(msg->payload, &prof_session.conf)) {

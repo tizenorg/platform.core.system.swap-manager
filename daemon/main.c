@@ -56,15 +56,18 @@
 // initialize global variable
 __da_manager manager =
 {
-	NULL, -1, -1,							// portfile pointer, host / target server socket
-	0,										// target count
-	0,										// config_flag
-	-1,										// app launch timerfd
-	-1,										// sampling_thread handle
-	-1,
-	{-1, -1, PTHREAD_MUTEX_INITIALIZER},	// host
-	{{0L, }, },								// target
-	{0, }									// appPath
+	// TODO: rewrite this with . notation
+	NULL, -1, -1, // portfile pointer, host / target server socket
+	0, // target count
+	0, // config_flag
+	-1, // app launch timerfd
+	-1, // sampling_thread handle
+	-1, // replay_thread
+	-1, // transfer_thread
+	-1, // buf_fd
+	{-1, -1, PTHREAD_MUTEX_INITIALIZER}, // host
+	{{0L, }, }, // target
+	{0, } // appPath
 };
 
 // ==============================================================================
