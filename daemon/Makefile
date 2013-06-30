@@ -29,7 +29,8 @@ DAEMON_SRCS :=	\
 	da_data.c	\
 	utils.c		\
 	sys_stat.c	\
-	elf.c
+	elf.c		\
+	buffer.c
 
 DAEMON_SRCS_HOST :=	\
 	main.c		\
