@@ -61,6 +61,7 @@ __da_manager manager =
 	0,										// config_flag
 	-1,										// app launch timerfd
 	-1,										// sampling_thread handle
+	-1,
 	{-1, -1, PTHREAD_MUTEX_INITIALIZER},	// host
 	{{0L, }, },								// target
 	{0, }									// appPath
