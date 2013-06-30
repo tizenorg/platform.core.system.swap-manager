@@ -976,32 +976,35 @@ void printBuf (char * buf, int len)
 
 static int controlSocketHandler(int efd)
 {
-	ssize_t recvLen;
-	char recvBuf[DA_MSG_MAX];
-	struct msg_t log;
+	ssize_t recv_len;
+	struct msg_t msg;
+	int res = 0;
 
-	// host log format xxx|length|str
-	recvLen = recv(manager.host.control_socket, recvBuf, DA_MSG_MAX, 0);
-
-	if (recvLen > 0)
-	{
-		recvBuf[recvLen] = '\0';
-		printBuf(recvBuf,recvLen);
-		LOGI("host sent control msg str(%s)\n", recvBuf);
-		if(parseHostMessage(&log, recvBuf) < 0)
-		{
-			// error to parse host message
-			sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_FORMAT);
-			return 1;
-		}
-
-		// host msg command handling
-		return hostMessageHandle(&log);
-	}
-	else	// close request from HOST
-	{
+	// Receive header
+	recv_len = recv(manager.host.control_socket,
+		       &msg,
+		       MSG_CMD_HDR_LEN, 0);
+	// error or close request from host
+	if (recv_len == -1 || recv_len == 0)
 		return -11;
+	else {
+		if (msg.len > 0) {
+			msg.payload = malloc(msg.len);
+			if (!msg.payload) {
+				LOGE("Cannot alloc msg payload\n");
+				sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_FORMAT);
+				return 1;
+			}
+			// Receive payload (if exists)
+			recv_len = recv(manager.host.control_socket,
+					msg.payload,
+					msg.len, MSG_WAITALL);
+		}
+		res = host_message_handler(&msg);
+		reset_msg(&msg);
 	}
+
+	return res;
 }
 
 // return 0 for normal case

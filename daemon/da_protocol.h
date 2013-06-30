@@ -209,10 +209,8 @@ struct prof_session_t {
 	struct replay_event_seq_t replay_event_seq;
 };
 
-//int hostMessageHandle(struct msg_t *msg);
 int parseHostMessage(struct msg_t *log, char* msg);
-
-int hostMessageHandle(struct msg_t *msg);
+int host_message_handler(struct msg_t *msg);
 
 //static void dispose_payload(struct msg_t *msg);
 
@@ -343,6 +341,7 @@ int open_buf(void);
 void close_buf(void);
 void free_sys_info(struct system_info_t *sys_info);
 int start_replay();
+void reset_msg(struct msg_t *msg);
 
 extern struct prof_session_t prof_session;
 

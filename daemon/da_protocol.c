@@ -828,7 +828,7 @@ static char *parse_msg_binary_info(char * msg_payload,
 	return p;
 }
 
-static void reset_msg(struct msg_t *msg)
+void reset_msg(struct msg_t *msg)
 {
 	free(msg->payload);
 }
@@ -933,25 +933,6 @@ static struct msg_t *gen_binary_info_reply(struct app_info_t *app_info)
 	return msg;
 }
 
-// return 0 for normal case
-// return negative value for error case
-int parseHostMessage(struct msg_t* log, char* msg)
-{
-	int ret = 0;	// parsing success
-	memcpy( log, msg, 8);//message ID, length
-	log->payload = malloc( log->len);
-	if ( log->payload != 0 )
-	{
-		memcpy( log->payload, msg+8, log->len);
-	}
-	else
-	{
-		LOGE("cannot malloc\n");
-		ret = -1;
-	}
-	return ret;
-}
-
 static int send_reply(struct msg_t *msg)
 {
 	if (send(manager.host.control_socket,
@@ -1036,38 +1017,34 @@ static int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 		return 1;
 }
 
-int hostMessageHandle(struct msg_t *msg)
+int host_message_handler(struct msg_t *msg)
 {
-	char * answer = 0;
+	char *answer = 0;
 	uint32_t answer_len = 0;
-	uint32_t ID = msg->id;
-	//struct user_space_inst_t user_space_inst;
 	struct app_info_t app_info;
 	struct msg_t *msg_reply;
 
-	LOGI("MY HANDLE %s (%X)\n",msg_ID_str(msg->id),msg->id);
-	switch (ID) {
+	LOGI("MY HANDLE %s (%X)\n", msg_ID_str(msg->id), msg->id);
+
+	switch (msg->id) {
 	case NMSG_KEEP_ALIVE:
-		sendACKToHost(ID,ERR_NO,0,0);
+		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
 	case NMSG_START:
 		if (!parse_prof_session(msg->payload, &prof_session)) {
 			LOGE("prof session parsing error\n");
-			sendACKToHost(ID,ERR_WRONG_MESSAGE_FORMAT,0,0);
+			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
 			return 1;
 		}
 
 		// prepare buffer to write
 		if (open_buf() != 0) {
 			LOGE("Cannot open buffer\n");
+			sendACKToHost(msg->id, ERR_UNKNOWN, 0, 0);
 			return 1;
 		}
 
 		// TODO: launch translator thread
-
-		// TODO: get app path
-		/* get_executable(manager.appPath, execPath, PATH_MAX); // get exact app executable file name */
-		/* LOGI("executable app path %s\n", manager.appPath); */
 
 		// TODO: kill app
 /* #ifdef RUN_APP_LOADER */
@@ -1076,19 +1053,14 @@ int hostMessageHandle(struct msg_t *msg)
 /* 		kill_app(execPath); */
 /* #endif */
 
-		// TODO: get install path (via pseudo readelf)
-
-		// TODO: get build option (via pseudo readelf)
-
 		// TODO: apply_prof_session()
-
 		if (0) {
 			sendACKCodeToHost(MSG_NOTOK, ERR_CANNOT_START_PROFILING);
 			return -1;
 		}
 
 		if (startProfiling(prof_session.conf.use_features) < 0) {
-			sendACKToHost(ID, ERR_CANNOT_START_PROFILING, 0, 0);
+			sendACKToHost(msg->id, ERR_CANNOT_START_PROFILING, 0, 0);
 			return -1;
 		}
 
@@ -1097,35 +1069,32 @@ int hostMessageHandle(struct msg_t *msg)
 		// TODO: start app launch timer
 
 		// success
-		sendACKToHost(ID,ERR_NO,0,0);
+		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
 	case NMSG_STOP:
 		terminate_all();
-		sendACKToHost(ID,ERR_NO,0,0);
-		// TODO: remove_prof_session()
+		sendACKToHost(msg->id,ERR_NO, 0, 0);
 		close_buf();
 		reset_prof_session(&prof_session);
 		break;
 	case NMSG_CONFIG:
 		if (!parse_msg_config(msg->payload, &prof_session.conf)) {
 			LOGE("config parsing error\n");
-			LOGE("parse error <%s>\n",msg_ID_str(msg->id));
-			sendACKToHost(ID,ERR_WRONG_MESSAGE_FORMAT,0,0);
-			return 0;
+			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
+			return 1;
 		}
-
-		sendACKToHost(ID,ERR_NO,0,0);
+		sendACKToHost(msg->id,ERR_NO,0,0);
 		break;
 	case NMSG_BINARY_INFO:
 		if (!parse_msg_binary_info(msg->payload, &app_info)) {
 			LOGE("binary info parsing error\n");
-			sendACKToHost(ID, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
-			return 0;
+			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
+			return 1;
 		}
 		msg_reply = gen_binary_info_reply(&app_info);
 		if (!msg_reply) {
-			sendACKToHost(ID, ERR_UNKNOWN, 0, 0);
-			return 0;
+			sendACKToHost(msg->id, ERR_UNKNOWN, 0, 0);
+			return 1;
 		}
 
 		if (send_reply(msg_reply) != 0) {
@@ -1137,42 +1106,43 @@ int hostMessageHandle(struct msg_t *msg)
 		free(msg_reply);
 		break;
 	case NMSG_SWAP_INST_ADD:
-		if (!parse_user_space_inst(msg->payload, &prof_session.user_space_inst)){
+		if (!parse_user_space_inst(msg->payload,
+					   &prof_session.user_space_inst)) {
 			LOGE("user space inst parsing error\n");
-			return 0;
-		}
-		sendACKToHost(ID,ERR_NO,0,0);
-		break;
-	case NMSG_SWAP_INST_REMOVE:
-		if (!parse_user_space_inst(msg->payload, &prof_session.user_space_inst)){
-			LOGE("user space inst parsing error\n");
-			return 0;
-		}
-		sendACKToHost(ID,ERR_NO,0,0);
-		break;
-	case NMSG_GET_TARGET_INFO:
-		LOGI("GET_TARGET_INFO case\n");
-		if (!parse_target_info(msg->payload, &answer, &answer_len)) {
-			LOGE("target info parsing error\n");
-			sendACKToHost(ID,ERR_WRONG_MESSAGE_FORMAT,
-					answer,answer_len);
+			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
 			return 1;
 		}
 		// TODO: apply_prof_session()
-		sendACKToHost(ID,ERR_NO,answer,answer_len);
+		sendACKToHost(msg->id, ERR_NO, 0, 0);
+		break;
+	case NMSG_SWAP_INST_REMOVE:
+		if (!parse_user_space_inst(msg->payload,
+					   &prof_session.user_space_inst)){
+			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
+			LOGE("user space inst parsing error\n");
+			return 1;
+		}
+		// TODO: apply_prof_session()
+		sendACKToHost(msg->id, ERR_NO, 0, 0);
+		break;
+	case NMSG_GET_TARGET_INFO:
+		if (!parse_target_info(msg->payload, &answer, &answer_len)) {
+			LOGE("target info parsing error\n");
+			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT,
+					answer, answer_len);
+			return 1;
+		}
+		sendACKToHost(msg->id, ERR_NO, answer, answer_len);
 		break;
 
 	default:
-		LOGE("unknown message %d <0x%08X>\n",ID,ID);
+		LOGE("unknown message %d <0x%08X>\n", msg->id, msg->id);
 	}
-
-	//
-	// TODO free memory in profsession_data after use
-	//
 	
-	//free allocated memory
+	// TODO: fix this
 	if (!answer)
 		free(answer);
+
 	return 0;
 }
 
