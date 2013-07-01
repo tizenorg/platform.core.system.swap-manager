@@ -11,7 +11,6 @@
 static void *transfer_thread(void *arg)
 {
 	(void)arg;
-	char buf[BUF_SIZE];
 	int fd_pipe[2];
 	ssize_t n;
 
@@ -27,15 +26,15 @@ static void *transfer_thread(void *arg)
 				break;
 			}
 			LOGE("Cannot splice read: %s\n", strerror(errno));
-			return 1;
+			return NULL;
 		}
-		printf("splice read: %ld\n", n);
+		LOGI("splice read: %ld\n", n);
 
 		n = splice(fd_pipe[0], NULL,
 			   manager.host.data_socket, NULL, n, 0);
 		if (n == -1) {
 			LOGE("Cannot splice write: %s\n", strerror(errno));
-			return 1;
+			return NULL;
 		}
 		LOGI("splice written: %ld\n", n);
 	}
@@ -44,7 +43,7 @@ static void *transfer_thread(void *arg)
 
 	LOGI("transfer thread finished\n");
 
-	return 0;
+	return NULL;
 }
 
 int start_transfer()
@@ -74,6 +73,7 @@ void stop_transfer()
 	saved_flags = fcntl(manager.buf_fd, F_GETFL);
 	fcntl(manager.buf_fd, F_SETFL, saved_flags | O_NONBLOCK);
 	pthread_join(manager.transfer_thread, NULL);
+	manager.transfer_thread = -1;
 
 	LOGI("transfer thread joined\n");
 }
