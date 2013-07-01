@@ -219,7 +219,7 @@ typedef struct
 	int buf_fd;
 	__da_host_info host;
 	__da_target_info target[MAX_TARGET_COUNT];
-	char appPath // application executable path
+	char appPath[128]; // application executable path
 } __da_manager;
 
 
