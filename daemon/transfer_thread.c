@@ -48,8 +48,15 @@ static void *transfer_thread(void *arg)
 
 int start_transfer()
 {
-	if (manager.transfer_thread != -1) // already started
+	int saved_flags;
+
+	if (manager.transfer_thread != -1) { // already started
+		LOGI("KAIN: transfer already running\n");
 		return 1;
+	}
+
+	saved_flags = fcntl(manager.buf_fd, F_GETFL);
+	fcntl(manager.buf_fd, F_SETFL, saved_flags & ~O_NONBLOCK);
 
 	if(pthread_create(&(manager.transfer_thread),
 			  NULL,

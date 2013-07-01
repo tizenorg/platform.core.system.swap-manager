@@ -1005,6 +1005,11 @@ int host_message_handler(struct msg_t *msg)
 			return 1;
 		}
 
+		if (start_transfer() != 0) {
+			LOGE("Cannot start transfer\n");
+			return -1;
+		}
+
 		// TODO: launch translator thread
 
 		// TODO: kill app

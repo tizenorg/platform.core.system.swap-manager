@@ -422,8 +422,8 @@ static void terminate_all_target()
 void terminate_all()
 {
 	int i;
-	terminate_all_target();
 	samplingStop();
+	terminate_all_target();
 
 	// wait for all other thread exit
 	for(i = 0; i < MAX_TARGET_COUNT; i++)
@@ -788,7 +788,6 @@ static int targetEventHandler(int epollfd, int index, uint64_t msg)
 		LOGI("target close, socket(%d), pid(%d) : (remaining %d target)\n",
 				manager.target[index].socket, manager.target[index].pid, manager.target_count - 1);
 
-		terminate_target(index);
 		epoll_ctl(epollfd, EPOLL_CTL_DEL, manager.target[index].event_fd, NULL);
 		setEmptyTargetSlot(index);
 		if (0 == __sync_sub_and_fetch(&manager.target_count, 1)) // all target client are closed
@@ -922,10 +921,6 @@ static int hostServerHandler(int efd)
 		{
 			manager.host.data_socket = csocket;
 			LOGI("host data socket connected = %d\n", csocket);
-			if (start_transfer() != 0) {
-				LOGE("Cannot start transfer\n");
-				return -1;
-			}
 		}
 
 		hostserverorder++;
@@ -1114,9 +1109,7 @@ int daemonLoop()
 						if(-11 == targetEventHandler(efd, k, u))
 						{
 							LOGI("all target process is closed\n");
-							terminate_all();
-							ret = 0;
-							goto END_EFD;
+							continue;
 						}
 					}
 					break;
@@ -1192,7 +1185,6 @@ int daemonLoop()
 				{
 					// close target and host socket and quit
 					LOGI("host close = %d\n", manager.host.control_socket);
-					terminate_all();
 					ret = 0;
 					goto END_EFD;
 				}
