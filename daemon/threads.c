@@ -102,12 +102,7 @@ static void* recvThread(void* data)
 				barloc = strchr(log.data, '|');
 				if(barloc == NULL)
 				{
-					// MSG_PID parsing error
-					// send error message to host
-					log.type = MSG_ERROR;
-					log.length = sprintf(log.data, "Process id information of target application is not correct.");
-					sendDataToHost(&log);
-
+					// TODO: complain to host about wrong pid message
 					// send stop message to main thread
 					event = EVENT_STOP;
 					write(manager.target[index].event_fd, &event, sizeof(uint64_t));
