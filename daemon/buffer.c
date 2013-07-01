@@ -38,8 +38,8 @@ static int insert_buf_modules(void)
 
 static void remove_buf_modules(void)
 {
-	system("rmmod /opt/swap/sdk/swap_driver.ko");
-	system("rmmod /opt/swap/sdk/swap_buffer.ko");
+	system("rmmod swap_driver");
+	system("rmmod swap_buffer");
 }
 
 int init_buf(void)
