@@ -348,6 +348,8 @@ void *replay_thread(void *arg)
 		pevent++;
 	}
 
+	// TODO: move this to stop_replay
+	manager.replay_thread = -1;
 	LOGW("replay events thread finished\n");
 
 	return arg;
