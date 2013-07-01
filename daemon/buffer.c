@@ -8,7 +8,7 @@
 #include "buffer.h"
 #include "ioctl_commands.h"
 
-#define SUBBUF_SIZE 4096
+#define SUBBUF_SIZE 32768
 #define SUBBUF_NUM 16
 
 static int open_buf(void)
