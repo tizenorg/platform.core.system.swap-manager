@@ -1161,7 +1161,7 @@ static int update_system_cpu_data(int cur_index)
 // return negative value for error
 static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 {
-	static int meminfo_fd = -1;
+	int meminfo_fd = -1;
 	char *head, *tail;
 	int i, num;
 	char buf[BUFFER_MAX];
@@ -1173,15 +1173,16 @@ static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 	};
 	const int mem_table_size = sizeof(mem_table) / sizeof(mem_t);
 
-	if(meminfo_fd == -1 && (meminfo_fd = open(PROCMEMINFO, O_RDONLY)) == -1)
+	if((meminfo_fd = open(PROCMEMINFO, O_RDONLY)) == -1)
 	{
 		LOGE("Failed to open " PROCMEMINFO "\n");
 		return -1;
 	}
-	lseek(meminfo_fd, 0L, SEEK_SET);
+	/* lseek(meminfo_fd, 0L, SEEK_SET); */
 	if((num = read(meminfo_fd, buf, BUFFER_MAX)) < 0)
 	{
 		LOGE("Failed to read from " PROCMEMINFO "\n");
+		close(meminfo_fd);
 		return -1;
 	}
 	buf[num] = '\0';
@@ -1227,11 +1228,13 @@ static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 
 		*memtotal *= 1024;	// change to Byte
 		*memused *= 1024;	// change to Byte
+		close(meminfo_fd);
 		return 0;
 	}
 	else
 	{
 		LOGE("Cannot find all neccessary element in meminfo\n");
+		close(meminfo_fd);
 		return -1;
 	}
 }
