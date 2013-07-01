@@ -85,7 +85,6 @@ void flush_buf(void)
 
 int write_to_buf(struct msg_data_t *msg)
 {
-	LOGI("file descr: %d\n", manager.buf_fd);
 	if (write(manager.buf_fd, msg, MSG_DATA_HDR_LEN + msg->len) == -1) {
 		LOGE("write to buf: %s\n", strerror(errno));
 		return 1;
