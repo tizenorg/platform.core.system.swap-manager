@@ -1002,7 +1002,7 @@ int host_message_handler(struct msg_t *msg)
 		if (!parse_prof_session(msg->payload, &prof_session)) {
 			LOGE("prof session parsing error\n");
 			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
-			return 1;
+			return -1;
 		}
 
 		if (start_transfer() != 0) {
@@ -1047,7 +1047,7 @@ int host_message_handler(struct msg_t *msg)
 		if (!parse_msg_config(msg->payload, &prof_session.conf)) {
 			LOGE("config parsing error\n");
 			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
-			return 1;
+			return -1;
 		}
 		sendACKToHost(msg->id,ERR_NO,0,0);
 		break;
@@ -1055,12 +1055,12 @@ int host_message_handler(struct msg_t *msg)
 		if (!parse_msg_binary_info(msg->payload, &app_info)) {
 			LOGE("binary info parsing error\n");
 			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
-			return 1;
+			return -1;
 		}
 		msg_reply = gen_binary_info_reply(&app_info);
 		if (!msg_reply) {
 			sendACKToHost(msg->id, ERR_UNKNOWN, 0, 0);
-			return 1;
+			return -1;
 		}
 
 		if (send_reply(msg_reply) != 0) {
@@ -1076,7 +1076,7 @@ int host_message_handler(struct msg_t *msg)
 					   &prof_session.user_space_inst)) {
 			LOGE("user space inst parsing error\n");
 			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
-			return 1;
+			return -1;
 		}
 		// TODO: apply_prof_session()
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
@@ -1086,7 +1086,7 @@ int host_message_handler(struct msg_t *msg)
 					   &prof_session.user_space_inst)){
 			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
 			LOGE("user space inst parsing error\n");
-			return 1;
+			return -1;
 		}
 		// TODO: apply_prof_session()
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
@@ -1096,7 +1096,7 @@ int host_message_handler(struct msg_t *msg)
 			LOGE("target info parsing error\n");
 			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT,
 					answer, answer_len);
-			return 1;
+			return -1;
 		}
 		sendACKToHost(msg->id, ERR_NO, answer, answer_len);
 		break;

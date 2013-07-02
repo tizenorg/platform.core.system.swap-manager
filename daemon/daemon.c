@@ -992,7 +992,7 @@ static int controlSocketHandler(int efd)
 			if (!msg.payload) {
 				LOGE("Cannot alloc msg payload\n");
 				sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_FORMAT);
-				return 1;
+				return -1;
 			}
 			// Receive payload (if exists)
 			recv_len = recv(manager.host.control_socket,
