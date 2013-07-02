@@ -2231,13 +2231,6 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	struct msg_data_t *msg = NULL;
 	char *p = NULL;
 	int i = 0;
-	struct timeval tv;
-
-	uint32_t id = NMSG_SYSTEM;
-	uint32_t seq_num = 0; // TODO
-	gettimeofday(&tv, NULL);
-	uint32_t sec = tv.tv_sec;
-	uint32_t usec = tv.tv_usec;
 	uint32_t len = sizeof(*sys_info) -
 		(sizeof(sys_info->thread_load) +
 		 sizeof(sys_info->process_load)) +
@@ -2250,11 +2243,8 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 		LOGE("Cannot alloc message: %d bytes\n", len);
 		return NULL;
 	}
-	msg->id = id;
-	msg->seq_num = seq_num;
-	msg->sec = sec;
-	msg->usec = usec;
-	msg->len = len;
+
+	fill_data_msg_head(msg, NMSG_SYSTEM, 0, len);
 	p = msg->payload;
 	
 	pack_int(p, sys_info->energy);

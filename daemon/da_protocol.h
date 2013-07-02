@@ -110,7 +110,7 @@ struct msg_data_t {
 	uint32_t id;
 	uint32_t seq_num;
 	uint32_t sec;
-	uint32_t usec;
+	uint32_t nsec;
 	uint32_t len;
 	char payload[0];
 };
