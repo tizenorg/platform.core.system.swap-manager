@@ -124,6 +124,17 @@ static void* recvThread(void* data)
 			// send stop message to main thread
 			event = EVENT_STOP;
 			write(manager.target[index].event_fd, &event, sizeof(uint64_t));
+
+			struct timeval tv;
+			gettimeofday(&tv, NULL);
+			struct msg_data_t msg = {
+				.id = NMSG_TERMINATE,
+				.seq_num = 0,
+				.sec = tv.tv_sec,
+				.nsec = tv.tv_usec * 1000,
+				.len = 0
+			};
+			write_to_buf(&msg);
 			break;
 		}
 		else if(log.type == MSG_MSG)
