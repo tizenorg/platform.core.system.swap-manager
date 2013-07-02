@@ -12,6 +12,7 @@
 #include "da_protocol.h"
 #include "daemon.h"
 #include "sys_stat.h"
+#include "transfer_thread.h"
 #include "elf.h"
 
 
@@ -1009,8 +1010,6 @@ int host_message_handler(struct msg_t *msg)
 			LOGE("Cannot start transfer\n");
 			return -1;
 		}
-
-		// TODO: launch translator thread
 
 		// TODO: kill app
 /* #ifdef RUN_APP_LOADER */

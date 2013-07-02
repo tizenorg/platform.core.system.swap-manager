@@ -51,7 +51,7 @@ int start_transfer()
 	int saved_flags;
 
 	if (manager.transfer_thread != -1) { // already started
-		LOGI("KAIN: transfer already running\n");
+		LOGI("transfer already running\n");
 		return 1;
 	}
 
@@ -74,6 +74,10 @@ void stop_transfer()
 {
 	int saved_flags;
 
+	if (manager.transfer_thread == -1) {
+		LOGI("transfer thread not running\n");
+		return;
+	}
 	LOGI("stopping transfer\n");
 
 	flush_buf();
