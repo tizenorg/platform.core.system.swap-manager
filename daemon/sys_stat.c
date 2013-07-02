@@ -2217,7 +2217,6 @@ int fill_target_info(struct target_info_t *target_info)
 				   &target_info->wifi_supp);
 	system_info_get_value_int(SYSTEM_INFO_KEY_CAMERA_COUNT,
 				  &target_info->camera_count);
-	// FIXME: network type is a string
 	system_info_get_value_string(SYSTEM_INFO_KEY_NETWORK_TYPE,
 				     &target_info->network_type);
 #endif /* LOCALTEST */

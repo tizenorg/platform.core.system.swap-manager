@@ -670,6 +670,11 @@ static void reset_app_info(struct app_info_t *app_info)
 	free(app_info->exe_path);
 }
 
+static void reset_target_info(struct target_info_t *target_info)
+{
+	free(target_info->network_type);
+}
+
 static void reset_conf(struct conf_t *conf)
 {
 	memset(conf, 0, sizeof(*conf));
@@ -770,6 +775,47 @@ static struct msg_t *gen_binary_info_reply(struct app_info_t *app_info)
 	return msg;
 }
 
+static struct msg_t *gen_target_info_reply(struct target_info_t *target_info)
+{
+	struct msg_t *msg;
+	char *p = NULL;
+	uint32_t ret_id = ERR_NO;
+
+	msg = malloc(sizeof(*msg));
+	if (!msg) {
+		LOGE("Cannot alloc target info msg\n");
+		return NULL;
+	}
+
+	msg->payload = malloc(sizeof(ret_id) +
+			      sizeof(*target_info) -
+			      sizeof(target_info->network_type) +
+			      strlen(target_info->network_type) + 1);
+	if (!msg->payload) {
+		LOGE("Cannot alloc target info msg payload\n");
+		free(msg);
+		return NULL;
+	}
+
+	msg->id = NMSG_GET_TARGET_INFO_ACK;
+	p = msg->payload;
+
+	pack_int(p, ret_id);
+	pack_int(p, target_info->sys_mem_size);
+	pack_int(p, target_info->storage_size);
+	pack_int(p, target_info->bluetooth_supp);
+	pack_int(p, target_info->gps_supp);
+	pack_int(p, target_info->wifi_supp);
+	pack_int(p, target_info->camera_count);
+	pack_str(p, target_info->network_type);
+	pack_int(p, target_info->max_brightness);
+	pack_int(p, target_info->cpu_core_count);
+
+	msg->len = p - msg->payload;
+
+	return msg;
+}
+
 static int send_reply(struct msg_t *msg)
 {
 	if (send(manager.host.control_socket,
@@ -856,9 +902,8 @@ static int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 
 int host_message_handler(struct msg_t *msg)
 {
-	char *answer = 0;
-	uint32_t answer_len = 0;
 	struct app_info_t app_info;
+	struct target_info_t target_info;
 	struct msg_t *msg_reply;
 
 	LOGI("MY HANDLE %s (%X)\n", msg_ID_str(msg->id), msg->id);
@@ -957,22 +1002,22 @@ int host_message_handler(struct msg_t *msg)
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
 	case NMSG_GET_TARGET_INFO:
-		if (!parse_target_info(msg->payload, &answer, &answer_len)) {
-			LOGE("target info parsing error\n");
-			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT,
-					answer, answer_len);
+		fill_target_info(&target_info);
+		msg_reply = gen_target_info_reply(&target_info);
+		if (!msg_reply) {
+			sendACKToHost(msg->id, ERR_UNKNOWN, 0, 0);
 			return -1;
 		}
-		sendACKToHost(msg->id, ERR_NO, answer, answer_len);
+		if (send_reply(msg_reply) != 0) {
+			LOGE("Cannot send reply\n");
+		}
+		free(msg_reply);
+		reset_target_info(&target_info);
 		break;
 
 	default:
 		LOGE("unknown message %d <0x%08X>\n", msg->id, msg->id);
 	}
-	
-	// TODO: fix this
-	if (!answer)
-		free(answer);
 
 	return 0;
 }

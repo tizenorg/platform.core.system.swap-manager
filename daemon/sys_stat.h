@@ -132,13 +132,13 @@ typedef struct _mem_t {
 } mem_t;
 
 struct target_info_t {
-	uint32_t sys_mem_size;
-	uint32_t storage_size;
+	uint64_t sys_mem_size;
+	uint64_t storage_size;
 	uint32_t bluetooth_supp;
 	uint32_t gps_supp;
 	uint32_t wifi_supp;
 	uint32_t camera_count;
-	uint32_t network_type;
+	char *network_type;
 	uint32_t max_brightness;
 	uint32_t cpu_core_count;
 };
