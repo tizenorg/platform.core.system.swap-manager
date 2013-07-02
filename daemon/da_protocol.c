@@ -42,15 +42,6 @@ void free_sys_info(struct system_info_t *sys_info)
 	memset(sys_info, 0, sizeof(*sys_info));
 }
 
-/*
-struct msg_t msg;
-struct app_info_t app_info;
-struct probe_t probe;
-struct us_inst_t us_inst;
-struct app_inst_t app_inst;
-struct prof_session_t prof_session;
-*/
-
 struct prof_session_t prof_session;
 
 static void print_app_info( struct app_info_t *app_info);
@@ -59,9 +50,6 @@ static void print_us_func_inst(struct us_func_inst_t * func_inst, int count,char
 static void print_us_lib_inst(struct us_lib_inst_t * lib_inst,int num,char * tab);
 static void print_user_space_app_inst(struct app_inst_t * app_inst, int num, char * tab);
 static void print_user_space_inst(struct user_space_inst_t * user_space_inst);
-//static void print_log_interval(log_interval_t log_interval);
-//static void print_probe(struct probe_t *probe);
-//static void print_us_inst(struct us_inst_t *us_inst);
 static void print_prof_session(struct prof_session_t *prof_session);
 
 //DEBUG FUNCTIONS
@@ -134,26 +122,6 @@ char* msg_ID_str ( enum HostMessageT ID)
 		NMSG_PROBE_SYNC
 	) else
 	return "HZ";
-/*
- *
-	if	(
-		( (ID >= NMSG_KEEP_ALIVE) &&  ( ID <= NMSG_GET_TARGET_INFO) ) 
-		||
-		( (ID >= NMSG_KEEP_ALIVE_ACK) &&  ( ID <= NMSG_GET_TARGET_INFO_ACK) )
-		)
-	{
-		if (ID & NMSG_ACK_FLAG){
-			ID &= ~ NMSG_ACK_FLAG;
-			ID+=9;
-		} 
-	}
-	else
-	{
-		ID = 0;
-	}
-
-	return MSG_to_str_arr[ID];
-	*/
 }
 
 
@@ -235,24 +203,7 @@ void feature_code_str(uint32_t feature, char * to)
 #endif /*parse_on*/
 
 //PARSE FUNCTIONS
-static int receive_msg_header(struct msg_t *msg)
-{
-	// TODO: cycle until m_id and m_len
-	return 0;
-}
-
-static int receive_msg_payload(struct msg_t *msg)
-{
-	msg->payload = (char *)malloc(msg->len);
-	if (!msg->payload) {
-		// TODO: report error
-		return 1;
-	}
-	// TODO: cycle until
-	return 0;
-}
-
-static char * parse_string(char *buf, char **str)
+static char *parse_string(char *buf, char **str)
 {
 	int len = strlen(buf);
 	*str = strdup(buf);
@@ -337,80 +288,6 @@ static char * parse_conf(char *buf, struct conf_t *conf)
 	return buf + sizeof(*conf);
 }
 
-/*
-static char *parse_log_interval(char *buf, log_interval_t *log_interval)
-{
-	*log_interval = *(log_interval_t *)buf;
-
-	return buf + sizeof(*log_interval);
-}
-*/
-/*
-static char *parse_probe(char *buf, struct probe_t *probe)
-{
-	char *p = buf;
-
-	p = parse_int64(p, &probe->addr);
-	if (!p) {
-		LOGE("probe addr parsing error\n");
-		return 0;
-	}
-
-	p = parse_int32(p, &probe->arg_num);
-	if (!p) {
-		LOGE("arg num parsing error\n");
-		return 0;
-	}
-
-	probe->arg_fmt = (char *)malloc(probe->arg_num);
-	if (!probe->arg_fmt) {
-		LOGE("args alloc error\n");
-		return 0;
-	}
-
-	memcpy(probe->arg_fmt, p, probe->arg_num);
-	p += probe->arg_num;
-
-	return p;
-}
-*/
-
-/*
-static char *parse_us_inst(char *buf, struct us_inst_t *us_inst)
-{
-	char *p = buf;
-	int i = 0;
-
-	p = parse_string(p, &us_inst->path);
-	if (!p) {
-		LOGE("app path parsing error\n");
-		return 0;
-	}
-	p = parse_int32(p, &us_inst->probe_num);
-	if (!p) {
-		LOGE("probe num parsing error\n");
-		return 0;
-	}
-
-	us_inst->probes = (struct probe_t *)malloc(us_inst->probe_num *
-						 sizeof(*us_inst->probes));
-
-	if (!us_inst->probes) {
-		LOGE("probes alloc error\n");
-		return 0;
-	}
-	for (i = 0; i < us_inst->probe_num; i++) {
-		p = parse_probe(p, &us_inst->probes[i]);
-		if (!p) {
-			LOGE("probe parsing error\n");
-			return 0;
-		}
-	}
-
-	return p;
-}
-*/
-
 static char *parse_us_inst_func( char * buf, struct us_func_inst_t * dest)
 {
 	char *p = buf;
@@ -489,7 +366,6 @@ static char * parse_lib_inst_list(char *buf,
 		return 0;
 	}
 
-	//parse user space lib list
 	LOGI("lib_list size = %d\n", (*num) * (int)sizeof(**us_lib_inst_list) );
 	*us_lib_inst_list = 
 		(struct us_lib_inst_t *) 
@@ -504,7 +380,7 @@ static char * parse_lib_inst_list(char *buf,
 	return p;
 }
 
-static char * parse_app_inst(char *buf,
+static char *parse_app_inst(char *buf,
 			    struct app_inst_t *app_inst)
 {
 	char *p = buf;
@@ -530,9 +406,9 @@ static char * parse_app_inst(char *buf,
 		LOGE("funcs parsing error\n");
 		return 0;
 	}
-	//parse user space function list
 	
-	LOGI(">=%04X : %s, %s, %d\n", app_inst->app_type, app_inst->app_id, app_inst->exec_path , num);
+	LOGI(">=%04X : %s, %s, %d\n",
+	     app_inst->app_type, app_inst->app_id, app_inst->exec_path , num);
 
 	p = parse_lib_inst_list( p, &app_inst->lib_num , &app_inst->us_lib_inst_list);
 	if (!p) {
@@ -543,7 +419,8 @@ static char * parse_app_inst(char *buf,
 	return p;
 }
 
-char * parse_user_space_inst(char * buf, struct user_space_inst_t * user_space_inst) 
+char *parse_user_space_inst(char *buf,
+			    struct user_space_inst_t *user_space_inst) 
 {
 	char *p = buf;
 	uint32_t num = 0 , i = 0;
@@ -556,14 +433,10 @@ char * parse_user_space_inst(char * buf, struct user_space_inst_t * user_space_i
 	}
 
 	LOGI("%d * %d\n ",(int) sizeof(*(user_space_inst->app_inst_list)), num);
-	//parse app list
 	if ( num != 0 ) {
 		list = (struct app_inst_t *) malloc ( 
-					sizeof(*(user_space_inst->app_inst_list))
-					*
-					num
-					);
-		if ( !list ){
+			sizeof(*(user_space_inst->app_inst_list)) * num);
+		if ( !list ) {
 			LOGE("apps alloc error\n");
 			return 0;
 		};
@@ -710,39 +583,28 @@ static int parse_prof_session(char *msg_payload,
 	p = parse_app_info(p, &prof_session->app_info);
 	if (!p) {
 		LOGE("app info parsing error\n");
-		return 0;
+		return 1;
 	}
 	p = parse_conf(p, &prof_session->conf);
 	if (!p) {
 		LOGE("conf parsing error\n");
-		return 0;
+		return 1;
 	}
 
 	p = parse_user_space_inst(p, &prof_session->user_space_inst);
 	if (!p) {
 		LOGE("user space inst parsing error\n");
-		return 0;
+		return 1;
 	}
 
 	p = parse_replay_event_seq(p, &prof_session->replay_event_seq);
 	if (!p) {
 		LOGE("replay parsing error\n");
-		return 0;
+		return 1;
 	}
 
-/*	p = parse_log_interval(p, &prof_session->log_interval);
-	if (!p) {
-		LOGE("app type parsing error\n");
-		return 1;
-	}
-	p = parse_app_inst(p, &prof_session->app_inst);
-	if (!p) {
-		LOGE("app type parsing error\n");
-		return 1;
-	}
-*/
 	print_prof_session(prof_session);
-	return 1;
+	return 0;
 }
 
 int get_sys_mem_size(uint32_t *sys_mem_size){
@@ -751,8 +613,6 @@ int get_sys_mem_size(uint32_t *sys_mem_size){
 	*sys_mem_size = info.totalram;
 	return 0;
 }
-//int sysinfo(struct sysinfo *info);
-
 
 //warning allocate memory
 //need free after call
@@ -814,31 +674,6 @@ static void reset_conf(struct conf_t *conf)
 {
 	memset(conf, 0, sizeof(*conf));
 }
-/*
-static void reset_log_interval(log_interval_t *log_interval)
-{
-	memset(log_interval, 0, sizeof(*log_interval));
-}
-*/
-
-static void reset_probe(struct probe_t *probe)
-{
-	probe->addr = 0;
-	probe->arg_num = 0;
-	free(probe->arg_fmt);
-}
-
-static void reset_us_inst(struct us_inst_t *us_inst)
-{
-	int i = 0;
-
-	us_inst->path[0] = '\0';
-	for (i = 0; i < us_inst->probe_num; i++) {
-		reset_probe(&us_inst->probes[i]);
-	}
-	free(us_inst->probes);
-	us_inst->probe_num = 0;
-}
 
 static void reset_func_inst_list(uint32_t func_num,
 				 struct us_func_inst_t *funcs)
@@ -890,8 +725,6 @@ static void reset_prof_session(struct prof_session_t *prof_session)
 {
 	reset_app_info(&prof_session->app_info);
 	reset_conf(&prof_session->conf);
-	//reset_log_interval(&prof_session->log_interval);
-	// TODO make reset_app_inst
 	reset_user_space_inst(&prof_session->user_space_inst);
 }
 
@@ -1030,7 +863,7 @@ int host_message_handler(struct msg_t *msg)
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
 	case NMSG_START:
-		if (!parse_prof_session(msg->payload, &prof_session)) {
+		if (parse_prof_session(msg->payload, &prof_session) != 0) {
 			LOGE("prof session parsing error\n");
 			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
 			return -1;
@@ -1139,19 +972,6 @@ int host_message_handler(struct msg_t *msg)
 	return 0;
 }
 
-/*
-static void dispose_payload(struct msg_t *msg)
-{
-	free(msg->payload);
-}
-*/
-
-// use sequence:
-/* receive_msg_header */
-/* receive_msg_payload */
-/* handle_msg */
-/* dispose_payload */
-
 // testing
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -1254,40 +1074,6 @@ static void print_user_space_inst(struct user_space_inst_t * user_space_inst)
 	}
 }
 
-/*
-static void print_log_interval(log_interval_t log_interval)
-{
-	printf("log_interval = %x\n", log_interval);
-}
-*/
-
-/*
-static void print_probe(struct probe_t *probe)
-{
-	printf("probe:\n");
-	printf("addr = %0llX\n", probe->addr);
-	printf("arg_num = %d\n", probe->arg_num);
-	int i;
-	for (i = 0; i < probe->arg_num; i++) {
-		printf("%c", probe->arg_fmt[i]);
-	}
-	printf("\n");
-}
-*/
-
-/*
-static void print_us_inst(struct us_inst_t *us_inst)
-{
-	printf("us inst:\n");
-	printf("path = %s\n", us_inst->path);
-	printf("probe num = %d\n", us_inst->probe_num);
-	int i;
-	for (i = 0; i < us_inst->probe_num; i++) {
-		print_probe(&us_inst->probes[i]);
-	}
-}
-*/
-
 //static
 void print_replay_event( struct replay_event_t *ev, uint32_t num, char *tab)
 {
@@ -1330,9 +1116,6 @@ static void print_prof_session(struct prof_session_t *prof_session)
 	print_conf(&prof_session->conf);
 	print_user_space_inst(&prof_session->user_space_inst);
 	print_replay_event_seq(&prof_session->replay_event_seq);
-
-//	print_log_interval(prof_session->log_interval);
-//	print_app_inst(&prof_session->app_inst);
 }
 
 
