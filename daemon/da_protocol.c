@@ -415,19 +415,13 @@ static char *parse_us_inst_func( char * buf, struct us_func_inst_t * dest)
 {
 	char *p = buf;
 
-	p = parse_int64( p, &(dest->func_addr));
+	p = parse_int64(p, &(dest->func_addr));
 	if (!p) {
 		LOGE("func addr parsing error\n");
 		return 0;
 	}
 
-	p = parse_int32( p, &(dest->args_num));
-	if (!p) {
-		LOGE("args num parsing error\n");
-		return 0;
-	}
-
-	p = parse_chars( p, dest->args_num, &(dest->args));
+	p = parse_string(p, &dest->args);
 	if (!p) {
 		LOGE("args format parsing error\n");
 		return 0;
@@ -1169,11 +1163,9 @@ static void print_us_func_inst(struct us_func_inst_t * func_inst, int count,char
 {
 	LOGI("%s#%02d "
 		"func_addr = <%Lu>/<0x%08LX>\t"
-		"args_num = %d\t"
 		"args = <%s>\n",
 		tab,count,
 		func_inst->func_addr,func_inst->func_addr,
-		func_inst->args_num,
 		func_inst->args
 		);
 }

@@ -163,8 +163,7 @@ struct us_inst_t {
 
 struct us_func_inst_t {
 	uint64_t func_addr;
-	uint32_t args_num;
-	char * args;
+	char *args;
 };
 
 struct us_lib_inst_t {
