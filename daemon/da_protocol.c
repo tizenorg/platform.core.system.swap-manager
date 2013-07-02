@@ -1029,8 +1029,6 @@ int host_message_handler(struct msg_t *msg)
 			return -1;
 		}
 
-		// TODO: exec app
-
 		// TODO: start app launch timer
 
 		// success
