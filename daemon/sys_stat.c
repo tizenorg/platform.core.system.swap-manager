@@ -2207,7 +2207,8 @@ int fill_target_info(struct target_info_t *target_info)
 	target_info->network_type = 0;
 
 	target_info->sys_mem_size = get_system_total_memory();
-	target_info->storage_size = stat_get_storageinfo(FSINFO_TYPE_TOTAL);
+	target_info->storage_size = stat_get_storageinfo(FSINFO_TYPE_TOTAL) *
+		1024 * 1024;
 #ifndef LOCALTEST
 	system_info_get_value_bool(SYSTEM_INFO_KEY_BLUETOOTH_SUPPORTED,
 				   &target_info->bluetooth_supp);
