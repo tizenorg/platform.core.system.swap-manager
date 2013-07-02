@@ -840,24 +840,50 @@ static void reset_us_inst(struct us_inst_t *us_inst)
 	us_inst->probe_num = 0;
 }
 
-static void reset_app_inst(struct app_inst_t *app_inst)
+static void reset_func_inst_list(uint32_t func_num,
+				 struct us_func_inst_t *funcs)
 {
-	/*
 	int i = 0;
 
-	reset_us_inst(&app_inst->app);
-
-	for (i = 0; i < app_inst->lib_num; i++) {
-		reset_us_inst(&app_inst->libs[i]);
+	for (i = 0; i < func_num; i++) {
+		funcs[i].func_addr = 0;
+		free(funcs[i].args);
 	}
-	free(app_inst->libs);
+}
+
+static void reset_lib_inst_list(uint32_t lib_num, struct us_lib_inst_t *libs)
+{
+	int i = 0;
+
+	for (i = 0; i < lib_num; i++) {
+		free(libs[i].bin_path);
+		reset_func_inst_list(libs[i].func_num,
+				     libs[i].us_func_inst_list);
+	}
+}
+
+static void reset_app_inst(struct app_inst_t *app_inst)
+{
+	app_inst->app_type = 0;
+	free(app_inst->app_id);
+	free(app_inst->exec_path);
+	reset_func_inst_list(app_inst->func_num,
+			     app_inst->us_func_inst_list);
+	app_inst->func_num = 0;
+	free(app_inst->us_func_inst_list);
+	reset_lib_inst_list(app_inst->lib_num, app_inst->us_lib_inst_list);
 	app_inst->lib_num = 0;
-	*/
+	free(app_inst->us_lib_inst_list);
 }
 
 static void reset_user_space_inst(struct user_space_inst_t *us)
 {
+	int i = 0;
 
+	for (i = 0; i < us->app_num; i++)
+		reset_app_inst(&us->app_inst_list[i]);
+	free(us->app_inst_list);
+	us->app_num = 0;
 }
 
 static void reset_prof_session(struct prof_session_t *prof_session)
