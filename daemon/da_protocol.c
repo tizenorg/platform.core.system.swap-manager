@@ -878,9 +878,11 @@ static void reset_prof_session(struct prof_session_t *prof_session)
 static struct msg_t *gen_binary_info_reply(struct app_info_t *app_info)
 {
 	uint32_t binary_type = get_binary_type(app_info->exe_path);
-	char binary_path[] = "unknown path";
+	char binary_path[PATH_MAX];
 	struct msg_t *msg;
 	char *p = NULL;
+
+	get_build_dir(binary_path, app_info->exe_path);
 
 	if (binary_type == BINARY_TYPE_UNKNOWN) {
 		LOGE("Binary is neither relocatable, nor executable\n");
