@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
@@ -86,6 +87,15 @@ uint32_t get_binary_type(const char *path)
 	}
 }
 
+static int is_like_absolute_path(const char *str)
+{
+	if (*str == '/')
+		return 1;
+	if (isupper(*str) && str[1] == ':' && str[2] == '\\')
+		return 1;
+	return 0;
+}
+
 void get_build_dir(char builddir[PATH_MAX], const char *filename)
 {
 	size_t len;
@@ -95,12 +105,17 @@ void get_build_dir(char builddir[PATH_MAX], const char *filename)
 		if (debug_header) {
 			const char *debug_section =
 			    filemem + debug_header->sh_offset;
+			const char *debug_section_end =
+			    debug_section + debug_header->sh_size;
 			const char *p = debug_section;
-			for (; p != debug_section + debug_header->sh_size; ++p)
-				if (*p == '/') {
+			/* `is_like_absolute_path' checks three chars forward. */
+			while (p < debug_section_end - 3) {
+				if (is_like_absolute_path(p)) {
 					snprintf(builddir, PATH_MAX, "%s", p);
 					return;
 				}
+				p = 1 + memchr(p, '\0', debug_section_end - p);
+			}
 		}
 		munmap(filemem, len);
 	}
