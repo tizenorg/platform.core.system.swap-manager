@@ -645,6 +645,14 @@ static char *parse_replay_event(char *buf,
 	return p;
 }
 
+void reset_replay_event_seq(struct replay_event_seq_t *res)
+{
+	res->enabled = 0;
+	res->tv = (struct timeval){0, 0};
+	res->event_num = 0;
+	free(res->events);
+}
+
 static char *parse_replay_event_seq(char *buf,
 				    struct replay_event_seq_t *res)
 {

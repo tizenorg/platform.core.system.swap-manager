@@ -287,15 +287,60 @@ void* samplingThread(void* data)
 	return NULL;
 }
 
+// return 0 if normal case
+// return minus value if critical error
+// return plus value if non-critical error
+int samplingStart()
+{
+	struct itimerval timerval;
+
+	if(manager.sampling_thread != -1)	// already started
+		return 1;
+
+	if(pthread_create(&(manager.sampling_thread), NULL, samplingThread, NULL) < 0)
+	{
+		LOGE("Failed to create sampling thread\n");
+		return -1;
+	}
+
+	timerval.it_interval.tv_sec = TIMER_INTERVAL_SEC;
+	timerval.it_interval.tv_usec = TIMER_INTERVAL_USEC;
+	timerval.it_value.tv_sec = TIMER_INTERVAL_SEC;
+	timerval.it_value.tv_usec = TIMER_INTERVAL_USEC;
+	setitimer(ITIMER_REAL, &timerval, NULL);
+
+	return 0;
+}
+
+int samplingStop()
+{
+	if(manager.sampling_thread != -1)
+	{
+		struct itimerval stopval;
+
+		// stop timer
+		stopval.it_interval.tv_sec = 0;
+		stopval.it_interval.tv_usec = 0;
+		stopval.it_value.tv_sec = 0;
+		stopval.it_value.tv_usec = 0;
+		setitimer(ITIMER_REAL, &stopval, NULL);
+
+		pthread_kill(manager.sampling_thread, SIGUSR1);
+		pthread_join(manager.sampling_thread, NULL);
+
+		manager.sampling_thread = -1;
+	}
+
+	return 0;
+}
+
 static useconds_t time_diff_us(struct timeval *tv1, struct timeval *tv2)
 {
 	return (tv1->tv_sec - tv2->tv_sec) * 1000000 +
 		((int)tv1->tv_usec - (int)tv2->tv_usec);
 }
 
-/* TODO: find a way to stop the thread
-   before it playbacks all the events */
-void *replay_thread(void *arg)
+static void *replay_thread(void *arg)
 {
 	struct replay_event_seq_t *event_seq = (struct replay_event_seq_t *)arg;
 	int i = 0;
@@ -350,67 +395,32 @@ void *replay_thread(void *arg)
 	return arg;
 }
 
-// return 0 if normal case
-// return minus value if critical error
-// return plus value if non-critical error
-int samplingStart()
-{
-	struct itimerval timerval;
-
-	if(manager.sampling_thread != -1)	// already started
-		return 1;
-
-	if(pthread_create(&(manager.sampling_thread), NULL, samplingThread, NULL) < 0)
-	{
-		LOGE("Failed to create sampling thread\n");
-		return -1;
-	}
-
-	timerval.it_interval.tv_sec = TIMER_INTERVAL_SEC;
-	timerval.it_interval.tv_usec = TIMER_INTERVAL_USEC;
-	timerval.it_value.tv_sec = TIMER_INTERVAL_SEC;
-	timerval.it_value.tv_usec = TIMER_INTERVAL_USEC;
-	setitimer(ITIMER_REAL, &timerval, NULL);
-
-	return 0;
-}
-
-int samplingStop()
-{
-	if(manager.sampling_thread != -1)
-	{
-		struct itimerval stopval;
-
-		// stop timer
-		stopval.it_interval.tv_sec = 0;
-		stopval.it_interval.tv_usec = 0;
-		stopval.it_value.tv_sec = 0;
-		stopval.it_value.tv_usec = 0;
-		setitimer(ITIMER_REAL, &stopval, NULL);
-
-		pthread_kill(manager.sampling_thread, SIGUSR1);
-		pthread_join(manager.sampling_thread, NULL);
-
-		manager.sampling_thread = -1;
-	}
-
-	return 0;
-}
-
 int start_replay()
 {
 	if (manager.replay_thread != -1) // already started
 		return 1;
 
-	// TODO: non-joinable thread
-	if(pthread_create(&(manager.replay_thread),
-			  NULL,
-			  replay_thread,
-			  &prof_session.replay_event_seq) < 0)
+	if (pthread_create(&(manager.replay_thread),
+			   NULL,
+			   replay_thread,
+			   &prof_session.replay_event_seq) < 0)
 	{
 		LOGE("Failed to create replay thread\n");
 		return 1;
 	}
 
 	return 0;
+}
+
+void stop_replay()
+{
+	if (manager.replay_thread == -1) {
+		LOGI("replay thread not running\n");
+		return;
+	}
+	LOGI("stopping replay thread\n");
+	pthread_cancel(manager.replay_thread);
+	pthread_join(manager.replay_thread, NULL);
+	reset_replay_event_seq(&prof_session.replay_event_seq);
+	LOGI("replay thread joined\n");
 }

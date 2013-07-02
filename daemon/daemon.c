@@ -367,11 +367,6 @@ int startProfiling(long launchflag)
 		break;
 	}
 
-	if (start_replay() != 0) {
-		LOGE("Cannot start replay thread\n");
-		return -1;
-	}
-
 	return 0;
 }
 
@@ -780,14 +775,24 @@ static int targetEventHandler(int epollfd, int index, uint64_t msg)
 {
 	if(msg & EVENT_PID)
 	{
+		if (index == 0) { // main application
+			if (start_replay() != 0) {
+				LOGE("Cannot start replay thread\n");
+				return -1;
+			}
+		}
 		manager.target[index].initial_log = 1;
 	}
 
 	if(msg & EVENT_STOP || msg & EVENT_ERROR)
 	{
 		LOGI("target close, socket(%d), pid(%d) : (remaining %d target)\n",
-				manager.target[index].socket, manager.target[index].pid, manager.target_count - 1);
-
+		     manager.target[index].socket,
+		     manager.target[index].pid,
+		     manager.target_count - 1);
+		if (index == 0) { // main application
+			stop_replay();
+		}
 		epoll_ctl(epollfd, EPOLL_CTL_DEL, manager.target[index].event_fd, NULL);
 		setEmptyTargetSlot(index);
 		if (0 == __sync_sub_and_fetch(&manager.target_count, 1)) // all target client are closed
