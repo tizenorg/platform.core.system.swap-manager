@@ -734,6 +734,7 @@ static struct msg_t *gen_binary_info_reply(struct app_info_t *app_info)
 	char binary_path[PATH_MAX];
 	struct msg_t *msg;
 	char *p = NULL;
+	uint32_t ret_id = ERR_NO;
 
 	get_build_dir(binary_path, app_info->exe_path);
 
@@ -748,15 +749,19 @@ static struct msg_t *gen_binary_info_reply(struct app_info_t *app_info)
 		return NULL;
 	}
 
-	msg->payload = malloc(sizeof(binary_type) + strlen(binary_path) + 1);
-	if (!msg) {
+	msg->payload = malloc(sizeof(ret_id) +
+			      sizeof(binary_type) +
+			      strlen(binary_path) + 1);
+	if (!msg->payload) {
 		LOGE("Cannot alloc bin info msg payload\n");
+		free(msg);
 		return NULL;
 	}
 
 	msg->id = NMSG_BINARY_INFO_ACK;
 	p = msg->payload;
 
+	pack_int(p, ret_id);
 	pack_int(p, binary_type);
 	pack_str(p, binary_path);
 
