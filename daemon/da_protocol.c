@@ -924,13 +924,6 @@ int host_message_handler(struct msg_t *msg)
 			return -1;
 		}
 
-		// TODO: kill app
-/* #ifdef RUN_APP_LOADER */
-/* 		kill_app(manager.appPath); */
-/* #else */
-/* 		kill_app(execPath); */
-/* #endif */
-
 		// TODO: apply_prof_session()
 		if (0) {
 			sendACKCodeToHost(MSG_NOTOK, ERR_CANNOT_START_PROFILING);

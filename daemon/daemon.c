@@ -344,6 +344,7 @@ int startProfiling(long launchflag)
 
 	switch (app_info->app_type) {
 	case APP_TYPE_TIZEN:
+		kill_app(app_info->exe_path);
 		if (exec_app_tizen(app_info->app_id, app_info->exe_path)) {
 			LOGE("Cannot exec tizen app %s\n", app_info->app_id);
 			samplingStop();
@@ -354,6 +355,7 @@ int startProfiling(long launchflag)
 		// TODO: nothing, it's running
 		break;
 	case APP_TYPE_COMMON:
+		kill_app(app_info->exe_path);
 		if (exec_app_common(app_info->exe_path)) {
 			LOGE("Cannot exec common app %s\n", app_info->exe_path);
 			samplingStop();
