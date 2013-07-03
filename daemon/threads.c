@@ -257,11 +257,8 @@ void* samplingThread(void* data)
 			if (!msg) {
 				LOGE("Cannot pack system info\n");
 			}
-			if (write_to_buf(msg) == -1) {
-				LOGE("Cannot write system info to buffer\n");
-			}
-			printBuf((char *)msg, MSG_DATA_HDR_LEN + msg->len);
 			write_to_buf(msg);
+			printBuf((char *)msg, MSG_DATA_HDR_LEN + msg->len);
 			free_msg_data(msg);
 			free_sys_info(&sys_info); //TODO make function free_sys_info
 
