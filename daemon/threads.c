@@ -45,8 +45,6 @@
 #include "debug.h"
 
 //#define DEBUG_GSI
-#define TIMER_INTERVAL_SEC			1
-#define TIMER_INTERVAL_USEC			0
 
 static void* recvThread(void* data)
 {
@@ -54,7 +52,7 @@ static void* recvThread(void* data)
 	int pass = 0;
 	uint64_t event;
 	ssize_t recvLen;
-	msg_t log;
+	msg_target_t log;
 
 	// initialize target variable
 	manager.target[index].pid = -1;
@@ -125,6 +123,17 @@ static void* recvThread(void* data)
 			// send stop message to main thread
 			event = EVENT_STOP;
 			write(manager.target[index].event_fd, &event, sizeof(uint64_t));
+
+			struct timeval tv;
+			gettimeofday(&tv, NULL);
+			struct msg_data_t msg = {
+				.id = NMSG_TERMINATE,
+				.seq_num = 0,
+				.sec = tv.tv_sec,
+				.nsec = tv.tv_usec * 1000,
+				.len = 0
+			};
+			write_to_buf(&msg);
 			break;
 		}
 		else if(log.type == MSG_MSG)
@@ -249,22 +258,10 @@ void* samplingThread(void* data)
 			if (!msg) {
 				LOGE("Cannot pack system info\n");
 			}
-			if (write_to_buf(msg) == -1) {
-				LOGE("Cannot write system info to buffer\n");
-			}
-			pseudoSendDataToHost(msg);
-
+			write_to_buf(msg);
+			printBuf((char *)msg, MSG_DATA_HDR_LEN + msg->len);
 			free_msg_data(msg);
 			free_sys_info(&sys_info); //TODO make function free_sys_info
-
-			/* res = gen_message_sytem_info(&log, DA_MSG_MAX, pidarr, pidcount); */
-			/* if(res > 0) */
-			/* { */
-			/* 	LOGI("payload_len=%d\n",log.len); */
-			/* 	LOGI("sizeof(float) = %d\n", sizeof(float)); */
-			/* 	//sendDataToHost(&log); */
-			/* 	pseudoSendDataToHost(&log); */
-			/* } */
 
 #ifdef DEBUG_GSI
 			break; //FOR DEBUG ONLY
@@ -288,15 +285,63 @@ void* samplingThread(void* data)
 	return NULL;
 }
 
+// return 0 if normal case
+// return minus value if critical error
+// return plus value if non-critical error
+int samplingStart()
+{
+	struct itimerval timerval;
+	time_t sec = prof_session.conf.system_trace_period / 1000;
+	suseconds_t usec = prof_session.conf.system_trace_period * 1000 %
+		1000000;
+
+	if(manager.sampling_thread != -1)	// already started
+		return 1;
+
+	if(pthread_create(&(manager.sampling_thread), NULL, samplingThread, NULL) < 0)
+	{
+		LOGE("Failed to create sampling thread\n");
+		return -1;
+	}
+
+	timerval.it_interval.tv_sec = sec;
+	timerval.it_interval.tv_usec = usec;
+	timerval.it_value.tv_sec = sec;
+	timerval.it_value.tv_usec = usec;
+	setitimer(ITIMER_REAL, &timerval, NULL);
+
+	return 0;
+}
+
+int samplingStop()
+{
+	if(manager.sampling_thread != -1)
+	{
+		struct itimerval stopval;
+
+		// stop timer
+		stopval.it_interval.tv_sec = 0;
+		stopval.it_interval.tv_usec = 0;
+		stopval.it_value.tv_sec = 0;
+		stopval.it_value.tv_usec = 0;
+		setitimer(ITIMER_REAL, &stopval, NULL);
+
+		pthread_kill(manager.sampling_thread, SIGUSR1);
+		pthread_join(manager.sampling_thread, NULL);
+
+		manager.sampling_thread = -1;
+	}
+
+	return 0;
+}
+
 static useconds_t time_diff_us(struct timeval *tv1, struct timeval *tv2)
 {
 	return (tv1->tv_sec - tv2->tv_sec) * 1000000 +
 		((int)tv1->tv_usec - (int)tv2->tv_usec);
 }
 
-/* TODO: find a way to stop the thread
-   before it playbacks all the events */
-void *replay_thread(void *arg)
+static void *replay_thread(void *arg)
 {
 	struct replay_event_seq_t *event_seq = (struct replay_event_seq_t *)arg;
 	int i = 0;
@@ -344,58 +389,9 @@ void *replay_thread(void *arg)
 		pevent++;
 	}
 
-	// TODO: move this to stop_replay
-	manager.replay_thread = -1;
 	LOGW("replay events thread finished\n");
 
 	return arg;
-}
-
-// return 0 if normal case
-// return minus value if critical error
-// return plus value if non-critical error
-int samplingStart()
-{
-	struct itimerval timerval;
-
-	if(manager.sampling_thread != -1)	// already started
-		return 1;
-
-	if(pthread_create(&(manager.sampling_thread), NULL, samplingThread, NULL) < 0)
-	{
-		LOGE("Failed to create sampling thread\n");
-		return -1;
-	}
-
-	timerval.it_interval.tv_sec = TIMER_INTERVAL_SEC;
-	timerval.it_interval.tv_usec = TIMER_INTERVAL_USEC;
-	timerval.it_value.tv_sec = TIMER_INTERVAL_SEC;
-	timerval.it_value.tv_usec = TIMER_INTERVAL_USEC;
-	setitimer(ITIMER_REAL, &timerval, NULL);
-
-	return 0;
-}
-
-int samplingStop()
-{
-	if(manager.sampling_thread != -1)
-	{
-		struct itimerval stopval;
-
-		// stop timer
-		stopval.it_interval.tv_sec = 0;
-		stopval.it_interval.tv_usec = 0;
-		stopval.it_value.tv_sec = 0;
-		stopval.it_value.tv_usec = 0;
-		setitimer(ITIMER_REAL, &stopval, NULL);
-
-		pthread_kill(manager.sampling_thread, SIGUSR1);
-		pthread_join(manager.sampling_thread, NULL);
-
-		manager.sampling_thread = -1;
-	}
-
-	return 0;
 }
 
 int start_replay()
@@ -403,15 +399,28 @@ int start_replay()
 	if (manager.replay_thread != -1) // already started
 		return 1;
 
-	// TODO: non-joinable thread
-	if(pthread_create(&(manager.replay_thread),
-			  NULL,
-			  replay_thread,
-			  &prof_session.replay_event_seq) < 0)
+	if (pthread_create(&(manager.replay_thread),
+			   NULL,
+			   replay_thread,
+			   &prof_session.replay_event_seq) < 0)
 	{
 		LOGE("Failed to create replay thread\n");
 		return 1;
 	}
 
 	return 0;
+}
+
+void stop_replay()
+{
+	if (manager.replay_thread == -1) {
+		LOGI("replay thread not running\n");
+		return;
+	}
+	LOGI("stopping replay thread\n");
+	pthread_cancel(manager.replay_thread);
+	pthread_join(manager.replay_thread, NULL);
+	manager.replay_thread = -1;
+	reset_replay_event_seq(&prof_session.replay_event_seq);
+	LOGI("replay thread joined\n");
 }

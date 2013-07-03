@@ -374,7 +374,8 @@ int exec_app_common(const char* exec_path)
 	char manifest[PATH_MAX];
 	char command[PATH_MAX];
 #ifndef LOCALTEST
-	char appid[SMACK_LABEL_LEN];
+	// TODO: check if this makes sense
+	/* char appid[SMACK_LABEL_LEN]; */
 #endif
 	if (exec_path == NULL || !strlen(exec_path))  {
 		LOGE("Executable path is not correct\n");

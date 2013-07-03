@@ -34,6 +34,7 @@ static int insert_buf_modules(void)
 {
 	system("insmod /opt/swap/sdk/swap_buffer.ko");
 	system("insmod /opt/swap/sdk/swap_driver.ko");
+	// TODO: check if modules really inserted
 
 	return 0;
 }
@@ -42,6 +43,7 @@ static void remove_buf_modules(void)
 {
 	system("rmmod swap_driver");
 	system("rmmod swap_buffer");
+	// TODO: check if modules really removed
 }
 
 int init_buf(void)

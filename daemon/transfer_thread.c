@@ -7,6 +7,7 @@
 #include "daemon.h"
 #include "buffer.h"
 #include "debug.h"
+#include "transfer_thread.h"
 
 #define BUF_SIZE 4096
 
@@ -30,7 +31,7 @@ static void *transfer_thread(void *arg)
 			LOGE("Cannot splice read: %s\n", strerror(errno));
 			return NULL;
 		}
-		LOGI("splice read: %ld\n", n);
+		LOGI("splice read: %d\n", n);
 
 		n = splice(fd_pipe[0], NULL,
 			   manager.host.data_socket, NULL, n, 0);
@@ -38,7 +39,7 @@ static void *transfer_thread(void *arg)
 			LOGE("Cannot splice write: %s\n", strerror(errno));
 			return NULL;
 		}
-		LOGI("splice written: %ld\n", n);
+		LOGI("splice written: %d\n", n);
 	}
 	close(fd_pipe[0]);
 	close(fd_pipe[1]);
@@ -52,9 +53,14 @@ int start_transfer()
 {
 	int saved_flags;
 
+	if (manager.host.data_socket == -1) {
+		LOGW("won't start transfer thread: data socket isn't open\n");
+		return 0;
+	}
+
 	if (manager.transfer_thread != -1) { // already started
-		LOGI("KAIN: transfer already running\n");
-		return 1;
+		LOGW("transfer already running\n");
+		stop_transfer();
 	}
 
 	saved_flags = fcntl(manager.buf_fd, F_GETFL);
@@ -66,7 +72,7 @@ int start_transfer()
 			  NULL) < 0)
 	{
 		LOGE("Failed to create transfer thread\n");
-		return 1;
+		return -1;
 	}
 
 	return 0;
@@ -76,6 +82,10 @@ void stop_transfer()
 {
 	int saved_flags;
 
+	if (manager.transfer_thread == -1) {
+		LOGI("transfer thread not running\n");
+		return;
+	}
 	LOGI("stopping transfer\n");
 
 	flush_buf();

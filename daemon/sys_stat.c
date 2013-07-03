@@ -2208,17 +2208,17 @@ int fill_target_info(struct target_info_t *target_info)
 	target_info->network_type = 0;
 
 	target_info->sys_mem_size = get_system_total_memory();
-	target_info->storage_size = stat_get_storageinfo(FSINFO_TYPE_TOTAL);
+	target_info->storage_size = stat_get_storageinfo(FSINFO_TYPE_TOTAL) *
+		1024 * 1024;
 #ifndef LOCALTEST
 	system_info_get_value_bool(SYSTEM_INFO_KEY_BLUETOOTH_SUPPORTED,
-				   &target_info->bluetooth_supp);
+				   (_Bool *)&target_info->bluetooth_supp);
 	system_info_get_value_bool(SYSTEM_INFO_KEY_GPS_SUPPORTED,
-				   &target_info->gps_supp);
+				   (_Bool *)&target_info->gps_supp);
 	system_info_get_value_bool(SYSTEM_INFO_KEY_WIFI_SUPPORTED,
-				   &target_info->wifi_supp);
+				   (_Bool *)&target_info->wifi_supp);
 	system_info_get_value_int(SYSTEM_INFO_KEY_CAMERA_COUNT,
-				  &target_info->camera_count);
-	// FIXME: network type is a string
+				  (int *)&target_info->camera_count);
 	system_info_get_value_string(SYSTEM_INFO_KEY_NETWORK_TYPE,
 				     &target_info->network_type);
 #endif /* LOCALTEST */
@@ -2232,13 +2232,6 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	struct msg_data_t *msg = NULL;
 	char *p = NULL;
 	int i = 0;
-	struct timeval tv;
-
-	uint32_t id = NMSG_SYSTEM;
-	uint32_t seq_num = 0; // TODO
-	gettimeofday(&tv, NULL);
-	uint32_t sec = tv.tv_sec;
-	uint32_t usec = tv.tv_usec;
 	uint32_t len = sizeof(*sys_info) -
 		(sizeof(sys_info->thread_load) +
 		 sizeof(sys_info->process_load)) +
@@ -2251,11 +2244,8 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 		LOGE("Cannot alloc message: %d bytes\n", len);
 		return NULL;
 	}
-	msg->id = id;
-	msg->seq_num = seq_num;
-	msg->sec = sec;
-	msg->usec = usec;
-	msg->len = len;
+
+	fill_data_msg_head(msg, NMSG_SYSTEM, 0, len);
 	p = msg->payload;
 	
 	pack_int(p, sys_info->energy);

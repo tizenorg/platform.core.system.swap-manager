@@ -170,7 +170,7 @@ typedef struct
 	unsigned int	type;
 	unsigned int	length;
 	char			data[DA_MSG_MAX];
-} msg_t;
+} msg_target_t;
 
 typedef struct
 {
@@ -202,6 +202,7 @@ typedef struct
 	pthread_t replay_thread;
 	pthread_t transfer_thread;
 	int buf_fd;
+	int efd;
 	__da_host_info host;
 	__da_target_info target[MAX_TARGET_COUNT];
 	char appPath[128]; // application executable path
@@ -221,7 +222,6 @@ extern __da_manager manager;
 
 void initialize_log();
 int daemonLoop();
-int sendDataToHost(msg_t* log);
 long long get_total_alloc_size();
 void unlink_portfile(void);
 
@@ -233,10 +233,11 @@ int samplingStop();
 
 
 // TODO maybe need move to other file
-int startProfiling(long launchflag);
+int start_profiling();
+void stop_profiling();
+int reconfigure();
 int sendACKCodeToHost(enum HostMessageType resp, int msgcode);
 void terminate_all();
-int pseudoSendDataToHost(struct msg_data_t* log);
 void _device_write(input_dev *dev, struct input_event* in_ev);
 
 // DEBUGS

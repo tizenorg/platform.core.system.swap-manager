@@ -215,7 +215,7 @@ int fill_data_msg_head (struct msg_data_t *data, uint32_t msgid, uint32_t seq, u
 	data->seq_num = seq; // TODO fill good value
 	gettimeofday(&time, NULL);
 	data->sec = time.tv_sec;
-	data->usec = time.tv_usec;
+	data->nsec = time.tv_usec * 1000;
 	data->len = len;
 	return 0;
 }
