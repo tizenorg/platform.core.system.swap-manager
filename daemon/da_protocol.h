@@ -122,7 +122,7 @@ struct msg_t {
 	char *payload;
 };
 
-struct _msg_t {
+struct msg_reply_t {
 	uint32_t id;
 	uint32_t len;
 	char payload[0];

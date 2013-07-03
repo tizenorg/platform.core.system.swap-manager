@@ -320,7 +320,7 @@ static void terminate_all_target()
 {
 	int i;
 	ssize_t sendlen;
-	msg_t sendlog;
+	msg_target_t sendlog;
 
 	sendlog.type = MSG_STOP;
 	sendlog.length = 0;
@@ -438,7 +438,7 @@ static int targetEventHandler(int epollfd, int index, uint64_t msg)
 // return minus value if critical error occur
 static int targetServerHandler(int efd)
 {
-	msg_t log;
+	msg_target_t log;
 	struct epoll_event ev;
 
 	int index = getEmptyTargetSlot();

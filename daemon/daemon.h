@@ -185,7 +185,7 @@ typedef struct
 	unsigned int	type;
 	unsigned int	length;
 	char			data[DA_MSG_MAX];
-} msg_t;
+} msg_target_t;
 
 typedef struct
 {

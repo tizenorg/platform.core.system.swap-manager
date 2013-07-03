@@ -53,7 +53,7 @@ static void* recvThread(void* data)
 	int pass = 0;
 	uint64_t event;
 	ssize_t recvLen;
-	msg_t log;
+	msg_target_t log;
 
 	// initialize target variable
 	manager.target[index].pid = -1;

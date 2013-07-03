@@ -814,12 +814,12 @@ static int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 {
 	if (manager.host.control_socket != -1)
 	{
-		struct _msg_t *msg; 
+		struct msg_reply_t *msg;
 		uint32_t err = err_code;
 		int loglen = sizeof(*msg) - sizeof(msg->payload) +
 					 sizeof(err) + //return ID
 					 payload_size;
-		msg = (struct _msg_t *)malloc(loglen);
+		msg = (struct msg_reply_t *)malloc(loglen);
 		char *p = msg->payload;
 
 		//get ack message ID
