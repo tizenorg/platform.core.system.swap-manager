@@ -419,8 +419,9 @@ static void terminate_all_target()
 void terminate_all()
 {
 	int i;
-	samplingStop();
+
 	terminate_all_target();
+	samplingStop();
 
 	// wait for all other thread exit
 	for(i = 0; i < MAX_TARGET_COUNT; i++)
