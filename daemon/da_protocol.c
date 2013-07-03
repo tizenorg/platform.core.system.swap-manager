@@ -869,7 +869,12 @@ static int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 				msgErrStr(err_code), (int)payload, payload_size);
 		printBuf((char *)msg, loglen);
 
-		send(manager.host.control_socket, msg, loglen, MSG_NOSIGNAL);
+		if (send(manager.host.control_socket, msg,
+			 loglen, MSG_NOSIGNAL) == -1) {
+			LOGE("Cannot send reply: %s\n", strerror(errno));
+			free(msg);
+			return 1;
+		}
 		free(msg);
 		return 0;
 	}
