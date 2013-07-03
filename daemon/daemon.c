@@ -301,9 +301,13 @@ static int exec_app(const struct app_info_t *app_info)
 	return res;
 }
 
+static void epoll_add_input_events();
+static void epoll_del_input_events();
+
 int startProfiling(long launchflag)
 {
 	const struct app_info_t *app_info = &prof_session.app_info;
+	int res = 0;
 
 	// remove previous screen capture files
 	remove_indir(SCREENSHOT_DIR);
@@ -313,16 +317,43 @@ int startProfiling(long launchflag)
 #endif
 	manager.config_flag = launchflag;
 
-	if (samplingStart() < 0)
-		return -1;
+	if (IS_OPT_SET(FL_CPU | FL_MEMORY)) {
+		if (samplingStart() < 0) {
+			LOGE("Cannot start sampling\n");
+			res = -1;
+			goto exit;
+		}
+	}
+
+	if (IS_OPT_SET(FL_RECORDING))
+		epoll_add_input_events();
 
 	if (exec_app(app_info)) {
 		LOGE("Cannot exec app\n");
-		samplingStop();
-		return -1;
+		res = -1;
+		goto recording_stop;
 	}
 
-	return 0;
+	goto exit;
+
+recording_stop:
+	if (IS_OPT_SET(FL_RECORDING))
+		epoll_del_input_events();
+
+sampling_stop:
+	if (IS_OPT_SET(FL_CPU | FL_MEMORY))
+		samplingStop();
+
+exit:
+	return res;
+}
+
+void stop_profiling(void)
+{
+	if (IS_OPT_SET(FL_RECORDING))
+		epoll_del_input_events();
+	if (IS_OPT_SET(FL_CPU | FL_MEMORY))
+		samplingStop();
 }
 
 // just send stop message to all target process
@@ -354,7 +385,6 @@ void terminate_all()
 	int i;
 
 	terminate_all_target();
-	samplingStop();
 
 	// wait for all other thread exit
 	for(i = 0; i < MAX_TARGET_COUNT; i++)
@@ -652,6 +682,55 @@ static int controlSocketHandler(int efd)
 	return res;
 }
 
+static void epoll_add_input_events()
+{
+	struct epoll_event ev;
+	int i;
+
+	// add device fds to epoll event pool
+	ev.events = EPOLLIN;
+	for (i = 0; g_key_dev[i].fd != ARRAY_END; i++) {
+		if (g_key_dev[i].fd >= 0) {
+			ev.data.fd = g_key_dev[i].fd;
+			if (epoll_ctl(manager.efd,
+				      EPOLL_CTL_ADD,
+				      g_key_dev[i].fd, &ev) < 0)
+				LOGE("keyboard device file epoll_ctl error\n");
+		}
+	}
+
+	ev.events = EPOLLIN;
+	for (i = 0; g_touch_dev[i].fd != ARRAY_END; i++) {
+		if (g_touch_dev[i].fd >= 0) {
+			ev.data.fd = g_touch_dev[i].fd;
+			if (epoll_ctl(manager.efd,
+				      EPOLL_CTL_ADD,
+				      g_touch_dev[i].fd, &ev) < 0)
+				LOGE("touch device file epoll_ctl error\n");
+		}
+	}
+}
+
+static void epoll_del_input_events()
+{
+	int i;
+
+	// remove device fds from epoll event pool
+	for (i = 0; g_key_dev[i].fd != ARRAY_END; i++)
+		if (g_key_dev[i].fd >= 0)
+			if (epoll_ctl(manager.efd,
+				      EPOLL_CTL_DEL,
+				      g_key_dev[i].fd, NULL) < 0)
+				LOGE("keyboard device file epoll_ctl error\n");
+
+	for (i = 0; g_touch_dev[i].fd != ARRAY_END; i++)
+		if (g_touch_dev[i].fd >= 0)
+			if (epoll_ctl(manager.efd,
+				      EPOLL_CTL_DEL,
+				      g_touch_dev[i].fd, NULL) < 0)
+				LOGE("touch device file epoll_ctl error\n");
+}
+
 // return 0 for normal case
 int daemonLoop()
 {
@@ -660,7 +739,6 @@ int daemonLoop()
 	ssize_t		recvLen;
 
 	struct epoll_event ev, *events;
-	int efd;		// epoll fd
 	int numevent;	// number of occured events
 
 	_get_fds(g_key_dev, INPUT_ID_KEY);
@@ -674,7 +752,7 @@ int daemonLoop()
 		ret = -1;
 		goto END_RETURN;
 	}
-	if((efd = epoll_create(MAX_CONNECT_SIZE)) < 0)
+	if((manager.efd = epoll_create(MAX_CONNECT_SIZE)) < 0)
 	{
 		LOGE("epoll creation error\n");
 		ret = -1;
@@ -684,7 +762,8 @@ int daemonLoop()
 	// add server sockets to epoll event pool
 	ev.events = EPOLLIN;
 	ev.data.fd = manager.host_server_socket;
-	if(epoll_ctl(efd, EPOLL_CTL_ADD, manager.host_server_socket, &ev) < 0)
+	if (epoll_ctl(manager.efd, EPOLL_CTL_ADD,
+		     manager.host_server_socket, &ev) < 0)
 	{
 		LOGE("Host server socket epoll_ctl error\n");
 		ret = -1;
@@ -692,44 +771,18 @@ int daemonLoop()
 	}
 	ev.events = EPOLLIN;
 	ev.data.fd = manager.target_server_socket;
-	if(epoll_ctl(efd, EPOLL_CTL_ADD, manager.target_server_socket, &ev) < 0)
+	if (epoll_ctl(manager.efd, EPOLL_CTL_ADD,
+		      manager.target_server_socket, &ev) < 0)
 	{
 		LOGE("Target server socket epoll_ctl error\n");
 		ret = -1;
 		goto END_EFD;
 	}
 
-	// add device fds to epoll event pool
-	ev.events = EPOLLIN;
-	for(i = 0; g_key_dev[i].fd != ARRAY_END; i++)
-	{
-		if(g_key_dev[i].fd >= 0)
-		{
-			ev.data.fd = g_key_dev[i].fd;
-			if(epoll_ctl(efd, EPOLL_CTL_ADD, g_key_dev[i].fd, &ev) < 0)
-			{
-				LOGE("keyboard device file epoll_ctl error\n");
-			}
-		}
-	}
-
-	ev.events = EPOLLIN;
-	for(i = 0; g_touch_dev[i].fd != ARRAY_END; i++)
-	{
-		if(g_touch_dev[i].fd >= 0)
-		{
-			ev.data.fd = g_touch_dev[i].fd;
-			if(epoll_ctl(efd, EPOLL_CTL_ADD, g_touch_dev[i].fd, &ev) < 0)
-			{
-				LOGE("touch device file epoll_ctl error\n");
-			}
-		}
-	}
-
 	// handler loop
 	while (1)
 	{
-		numevent = epoll_wait(efd, events, EPOLL_SIZE, -1);
+		numevent = epoll_wait(manager.efd, events, EPOLL_SIZE, -1);
 		if(numevent <= 0)
 		{
 			LOGE("Failed to epoll_wait : num of event(%d), errno(%d)\n", numevent, errno);
@@ -752,7 +805,7 @@ int daemonLoop()
 					}
 					else
 					{
-						if(-11 == targetEventHandler(efd, k, u))
+						if(-11 == targetEventHandler(manager.efd, k, u))
 						{
 							LOGI("all target process is closed\n");
 							continue;
@@ -805,7 +858,7 @@ int daemonLoop()
 			// connect request from target
 			if(events[i].data.fd == manager.target_server_socket)
 			{
-				if(targetServerHandler(efd) < 0)	// critical error
+				if(targetServerHandler(manager.efd) < 0)	// critical error
 				{
 					terminate_error("Internal DA framework error, Please re-run the profiling.", 1);
 					ret = -1;
@@ -815,7 +868,7 @@ int daemonLoop()
 			// connect request from host
 			else if(events[i].data.fd == manager.host_server_socket)
 			{
-				int result = hostServerHandler(efd);
+				int result = hostServerHandler(manager.efd);
 				if(result < 0)
 				{
 					terminate_error("Internal DA framework error, Please re-run the profiling.", 1);
@@ -826,7 +879,7 @@ int daemonLoop()
 			// control message from host
 			else if(events[i].data.fd == manager.host.control_socket)
 			{
-				int result = controlSocketHandler(efd);
+				int result = controlSocketHandler(manager.efd);
 				if(result == -11)	// socket close
 				{
 					// close target and host socket and quit
@@ -847,7 +900,9 @@ int daemonLoop()
 				recvLen = recv(manager.host.data_socket, recvBuf, 32, MSG_DONTWAIT);
 				if(recvLen == 0)
 				{	// close data socket
-					epoll_ctl(efd, EPOLL_CTL_DEL, manager.host.data_socket, NULL);
+					epoll_ctl(manager.efd, EPOLL_CTL_DEL,
+						  manager.host.data_socket,
+						  NULL);
 					close(manager.host.data_socket);
 					manager.host.data_socket = -1;
 					// TODO: finish transfer thread
@@ -860,7 +915,8 @@ int daemonLoop()
 			{
 				// send to host timeout error message for launching application
 				terminate_error("Failed to launch application", 1);
-				epoll_ctl(efd, EPOLL_CTL_DEL, manager.app_launch_timerfd, NULL);
+				epoll_ctl(manager.efd, EPOLL_CTL_DEL,
+					  manager.app_launch_timerfd, NULL);
 				close(manager.app_launch_timerfd);
 				manager.app_launch_timerfd = -1;
 				ret = -1;
@@ -876,7 +932,7 @@ int daemonLoop()
 	}
 
 END_EFD:
-	close(efd);
+	close(manager.efd);
 END_EVENT:
 	free(events);
 END_RETURN:

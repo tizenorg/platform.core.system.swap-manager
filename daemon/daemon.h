@@ -217,6 +217,7 @@ typedef struct
 	pthread_t replay_thread;
 	pthread_t transfer_thread;
 	int buf_fd;
+	int efd;
 	__da_host_info host;
 	__da_target_info target[MAX_TARGET_COUNT];
 	char appPath[128]; // application executable path
@@ -248,6 +249,7 @@ int samplingStop();
 
 // TODO maybe need move to other file
 int startProfiling(long launchflag);
+void stop_profiling();
 int sendACKCodeToHost(enum HostMessageType resp, int msgcode);
 void terminate_all();
 void _device_write(input_dev *dev, struct input_event* in_ev);

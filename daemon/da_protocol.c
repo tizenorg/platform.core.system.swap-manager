@@ -924,6 +924,7 @@ int host_message_handler(struct msg_t *msg)
 		break;
 	case NMSG_STOP:
 		terminate_all();
+		stop_profiling();
 		reset_prof_session(&prof_session);
 		stop_transfer();
 		sendACKToHost(msg->id, ERR_NO, 0, 0);

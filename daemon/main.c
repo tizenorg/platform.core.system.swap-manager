@@ -65,6 +65,7 @@ __da_manager manager =
 	-1, // replay_thread
 	-1, // transfer_thread
 	-1, // buf_fd
+	-1, // epoll fd
 	{-1, -1, PTHREAD_MUTEX_INITIALIZER}, // host
 	{{0L, }, }, // target
 	{0, } // appPath
