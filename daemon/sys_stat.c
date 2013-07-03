@@ -2211,13 +2211,13 @@ int fill_target_info(struct target_info_t *target_info)
 		1024 * 1024;
 #ifndef LOCALTEST
 	system_info_get_value_bool(SYSTEM_INFO_KEY_BLUETOOTH_SUPPORTED,
-				   &target_info->bluetooth_supp);
+				   (_Bool *)&target_info->bluetooth_supp);
 	system_info_get_value_bool(SYSTEM_INFO_KEY_GPS_SUPPORTED,
-				   &target_info->gps_supp);
+				   (_Bool *)&target_info->gps_supp);
 	system_info_get_value_bool(SYSTEM_INFO_KEY_WIFI_SUPPORTED,
-				   &target_info->wifi_supp);
+				   (_Bool *)&target_info->wifi_supp);
 	system_info_get_value_int(SYSTEM_INFO_KEY_CAMERA_COUNT,
-				  &target_info->camera_count);
+				  (int *)&target_info->camera_count);
 	system_info_get_value_string(SYSTEM_INFO_KEY_NETWORK_TYPE,
 				     &target_info->network_type);
 #endif /* LOCALTEST */
