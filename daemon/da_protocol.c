@@ -637,7 +637,8 @@ static char *parse_msg_binary_info(char * msg_payload,
 
 void reset_msg(struct msg_t *msg)
 {
-	free(msg->payload);
+	if (msg->len)
+		free(msg->payload);
 }
 
 static void reset_app_info(struct app_info_t *app_info)
