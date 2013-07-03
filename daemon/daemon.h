@@ -248,8 +248,9 @@ int samplingStop();
 
 
 // TODO maybe need move to other file
-int startProfiling(long launchflag);
+int start_profiling();
 void stop_profiling();
+int reconfigure();
 int sendACKCodeToHost(enum HostMessageType resp, int msgcode);
 void terminate_all();
 void _device_write(input_dev *dev, struct input_event* in_ev);

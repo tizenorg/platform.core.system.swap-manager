@@ -887,6 +887,7 @@ int host_message_handler(struct msg_t *msg)
 	struct app_info_t app_info;
 	struct target_info_t target_info;
 	struct msg_t *msg_reply;
+	struct conf_t conf;
 
 	LOGI("MY HANDLE %s (%X)\n", msg_ID_str(msg->id), msg->id);
 
@@ -912,7 +913,7 @@ int host_message_handler(struct msg_t *msg)
 			return -1;
 		}
 
-		if (startProfiling(prof_session.conf.use_features) < 0) {
+		if (start_profiling() < 0) {
 			sendACKToHost(msg->id, ERR_CANNOT_START_PROFILING, 0, 0);
 			return -1;
 		}
@@ -930,9 +931,13 @@ int host_message_handler(struct msg_t *msg)
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
 	case NMSG_CONFIG:
-		if (!parse_msg_config(msg->payload, &prof_session.conf)) {
+		if (!parse_msg_config(msg->payload, &conf)) {
 			LOGE("config parsing error\n");
 			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
+			return -1;
+		}
+		if (!reconfigure(conf)) {
+			LOGE("Cannot change configuration\n");
 			return -1;
 		}
 		sendACKToHost(msg->id,ERR_NO,0,0);

@@ -96,7 +96,8 @@ enum feature_code{
 	FL_NETWORK_API_PROBING					=0x20000,//network API (glibc, OSP, libsoap, openssl)
 	FL_OPENGL_API_PROBING					=0x40000 //openGL API
 };
-#define IS_OPT_SET(OPT) (prof_session.conf.use_features & (OPT))
+#define IS_OPT_SET_IN(OPT, reg) (reg & (OPT))
+#define IS_OPT_SET(OPT) IS_OPT_SET_IN((OPT), prof_session.conf.use_features)
 
 enum app_type{
 	AT_TIZEN	=0x01,
@@ -140,7 +141,6 @@ struct app_info_t {
 	char *exe_path;
 };
 
-//typedef uint32_t conf_t;
 struct conf_t {
 	uint64_t use_features;
 	uint32_t system_trace_period;

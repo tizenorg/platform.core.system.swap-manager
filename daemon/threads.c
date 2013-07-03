@@ -44,8 +44,6 @@
 #include "da_data.h"
 
 //#define DEBUG_GSI
-#define TIMER_INTERVAL_SEC			1
-#define TIMER_INTERVAL_USEC			0
 
 static void* recvThread(void* data)
 {
@@ -295,6 +293,9 @@ void* samplingThread(void* data)
 int samplingStart()
 {
 	struct itimerval timerval;
+	time_t sec = prof_session.conf.system_trace_period / 1000;
+	suseconds_t usec = prof_session.conf.system_trace_period * 1000 %
+		1000000;
 
 	if(manager.sampling_thread != -1)	// already started
 		return 1;
@@ -305,10 +306,10 @@ int samplingStart()
 		return -1;
 	}
 
-	timerval.it_interval.tv_sec = TIMER_INTERVAL_SEC;
-	timerval.it_interval.tv_usec = TIMER_INTERVAL_USEC;
-	timerval.it_value.tv_sec = TIMER_INTERVAL_SEC;
-	timerval.it_value.tv_usec = TIMER_INTERVAL_USEC;
+	timerval.it_interval.tv_sec = sec;
+	timerval.it_interval.tv_usec = usec;
+	timerval.it_value.tv_sec = sec;
+	timerval.it_value.tv_usec = usec;
 	setitimer(ITIMER_REAL, &timerval, NULL);
 
 	return 0;

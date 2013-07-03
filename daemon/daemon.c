@@ -304,7 +304,7 @@ static int exec_app(const struct app_info_t *app_info)
 static void epoll_add_input_events();
 static void epoll_del_input_events();
 
-int startProfiling(long launchflag)
+int start_profiling()
 {
 	const struct app_info_t *app_info = &prof_session.app_info;
 	int res = 0;
@@ -315,7 +315,6 @@ int startProfiling(long launchflag)
 #ifndef LOCALTEST
 	smack_lsetlabel(SCREENSHOT_DIR, "*", SMACK_LABEL_ACCESS);
 #endif
-	manager.config_flag = launchflag;
 
 	if (IS_OPT_SET(FL_CPU | FL_MEMORY)) {
 		if (samplingStart() < 0) {
@@ -339,8 +338,6 @@ int startProfiling(long launchflag)
 recording_stop:
 	if (IS_OPT_SET(FL_RECORDING))
 		epoll_del_input_events();
-
-sampling_stop:
 	if (IS_OPT_SET(FL_CPU | FL_MEMORY))
 		samplingStop();
 
@@ -354,6 +351,64 @@ void stop_profiling(void)
 		epoll_del_input_events();
 	if (IS_OPT_SET(FL_CPU | FL_MEMORY))
 		samplingStop();
+}
+
+static void reconfigure_recording(struct conf_t conf)
+{
+	uint64_t old_features = prof_session.conf.use_features;
+	uint64_t new_features = conf.use_features;
+	uint64_t to_enable = (new_features ^ old_features) & new_features;
+	uint64_t to_disable = (new_features ^ old_features) & old_features;
+
+	if (IS_OPT_SET_IN(FL_RECORDING, to_disable)) {
+		epoll_del_input_events();
+		prof_session.conf.use_features &= ~FL_RECORDING;
+	}
+
+	if (IS_OPT_SET_IN(FL_RECORDING, to_enable)) {
+		epoll_add_input_events();
+		prof_session.conf.use_features |= FL_RECORDING;
+	}
+
+}
+
+static int reconfigure_cpu_and_memory(struct conf_t conf)
+{
+	uint64_t old_features = prof_session.conf.use_features;
+	uint64_t new_features = conf.use_features;
+	uint64_t to_enable = (new_features ^ old_features) & new_features;
+	uint64_t to_disable = (new_features ^ old_features) & old_features;
+
+	prof_session.conf.system_trace_period = conf.system_trace_period;
+
+	if (IS_OPT_SET(FL_CPU | FL_MEMORY))
+		samplingStop();
+
+	if (IS_OPT_SET_IN(FL_CPU | FL_MEMORY, to_disable)) {
+		prof_session.conf.use_features &= ~(FL_CPU | FL_MEMORY);
+		return 0;
+	}
+
+	if (IS_OPT_SET_IN(FL_CPU | FL_MEMORY, to_enable)) {
+		if (samplingStart() < 0) {
+			LOGE("Cannot start sampling\n");
+			return -1;
+		}
+		prof_session.conf.use_features |= (FL_CPU | FL_MEMORY);
+	}
+
+	return 0;
+}
+
+int reconfigure(struct conf_t conf)
+{
+	reconfigure_recording(conf);
+	if (reconfigure_cpu_and_memory(conf)) {
+		LOGE("Cannot reconf cpu and memory\n");
+		return -1;
+	}
+
+	return 0;
 }
 
 // just send stop message to all target process
@@ -500,8 +555,11 @@ static int targetServerHandler(int efd)
 
 		// send config message to target process
 		log.type = MSG_OPTION;
-		log.length = sprintf(log.data, "%u", manager.config_flag);
-		send(manager.target[index].socket, &log, sizeof(log.type) + sizeof(log.length) + log.length, MSG_NOSIGNAL);
+		log.length = sprintf(log.data, "%u",
+				     prof_session.conf.use_features);
+		send(manager.target[index].socket, &log,
+		     sizeof(log.type) + sizeof(log.length) + log.length,
+		     MSG_NOSIGNAL);
 
 		// make event fd
 		manager.target[index].event_fd = eventfd(0, EFD_NONBLOCK);
