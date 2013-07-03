@@ -5,6 +5,7 @@
 #include <string.h>
 #include "daemon.h"
 #include "buffer.h"
+#include "transfer_thread.h"
 
 #define BUF_SIZE 4096
 
@@ -28,7 +29,7 @@ static void *transfer_thread(void *arg)
 			LOGE("Cannot splice read: %s\n", strerror(errno));
 			return NULL;
 		}
-		LOGI("splice read: %ld\n", n);
+		LOGI("splice read: %d\n", n);
 
 		n = splice(fd_pipe[0], NULL,
 			   manager.host.data_socket, NULL, n, 0);
@@ -36,7 +37,7 @@ static void *transfer_thread(void *arg)
 			LOGE("Cannot splice write: %s\n", strerror(errno));
 			return NULL;
 		}
-		LOGI("splice written: %ld\n", n);
+		LOGI("splice written: %d\n", n);
 	}
 	close(fd_pipe[0]);
 	close(fd_pipe[1]);
