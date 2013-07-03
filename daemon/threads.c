@@ -390,8 +390,6 @@ static void *replay_thread(void *arg)
 		pevent++;
 	}
 
-	// TODO: move this to stop_replay
-	manager.replay_thread = -1;
 	LOGW("replay events thread finished\n");
 
 	return arg;
@@ -423,6 +421,7 @@ void stop_replay()
 	LOGI("stopping replay thread\n");
 	pthread_cancel(manager.replay_thread);
 	pthread_join(manager.replay_thread, NULL);
+	manager.replay_thread = -1;
 	reset_replay_event_seq(&prof_session.replay_event_seq);
 	LOGI("replay thread joined\n");
 }
