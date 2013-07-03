@@ -270,6 +270,37 @@ int sendACKCodeToHost(enum HostMessageType resp, int msgcode)
 // start and terminate control functions
 // ========================================================================================
 
+static int exec_app(const struct app_info_t *app_info)
+{
+	int res = 0;
+
+	switch (app_info->app_type) {
+	case APP_TYPE_TIZEN:
+		kill_app(app_info->exe_path);
+		if (exec_app_tizen(app_info->app_id, app_info->exe_path)) {
+			LOGE("Cannot exec tizen app %s\n", app_info->app_id);
+			res = -1;
+		}
+		break;
+	case APP_TYPE_RUNNING:
+		// TODO: nothing, it's running
+		break;
+	case APP_TYPE_COMMON:
+		kill_app(app_info->exe_path);
+		if (exec_app_common(app_info->exe_path)) {
+			LOGE("Cannot exec common app %s\n", app_info->exe_path);
+			res = -1;
+		}
+		break;
+	default:
+		LOGE("Unknown app type %d\n", app_info->app_type);
+		res = -1;
+		break;
+	}
+
+	return res;
+}
+
 int startProfiling(long launchflag)
 {
 	const struct app_info_t *app_info = &prof_session.app_info;
@@ -285,31 +316,10 @@ int startProfiling(long launchflag)
 	if (samplingStart() < 0)
 		return -1;
 
-	switch (app_info->app_type) {
-	case APP_TYPE_TIZEN:
-		kill_app(app_info->exe_path);
-		if (exec_app_tizen(app_info->app_id, app_info->exe_path)) {
-			LOGE("Cannot exec tizen app %s\n", app_info->app_id);
-			samplingStop();
-			return -1;
-		}
-		break;
-	case APP_TYPE_RUNNING:
-		// TODO: nothing, it's running
-		break;
-	case APP_TYPE_COMMON:
-		kill_app(app_info->exe_path);
-		if (exec_app_common(app_info->exe_path)) {
-			LOGE("Cannot exec common app %s\n", app_info->exe_path);
-			samplingStop();
-			return -1;
-		}
-		break;
-	default:
-		LOGE("Unknown app type %d\n", app_info->app_type);
+	if (exec_app(app_info)) {
+		LOGE("Cannot exec app\n");
 		samplingStop();
 		return -1;
-		break;
 	}
 
 	return 0;

@@ -58,8 +58,6 @@ int remove_indir(const char *dirname);
 
 char* get_app_name(char* binary_path);
 
-int exec_app(const char* exec_path, int app_type);
-
 void kill_app(const char* binary_path);
 
 pid_t find_pid_from_path(const char* path);
