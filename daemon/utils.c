@@ -43,6 +43,7 @@
 #endif
 #include "daemon.h"
 #include "utils.h"
+#include "debug.h"
 
 #define BUFFER_MAX			1024
 #define APP_GROUPS_MAX		100

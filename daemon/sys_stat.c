@@ -60,6 +60,7 @@
 
 #include "sys_stat.h"
 #include "daemon.h"
+#include "debug.h"
 
 // defines for runtime environment
 #define FOR_EACH_CPU

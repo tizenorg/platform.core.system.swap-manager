@@ -42,6 +42,7 @@
 
 #include "da_protocol.h"
 #include "da_data.h"
+#include "debug.h"
 
 //#define DEBUG_GSI
 #define TIMER_INTERVAL_SEC			1

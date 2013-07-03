@@ -185,7 +185,7 @@ struct app_inst_t {
 
 struct user_space_inst_t {
 	uint32_t app_num;
-	struct app_inst_t * app_inst_list;
+	struct app_inst_t *app_inst_list;
 };
 
 struct replay_event_t {

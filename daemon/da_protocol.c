@@ -13,7 +13,12 @@
 #include "daemon.h"
 #include "sys_stat.h"
 #include "elf.h"
+#include "ioctl_commands.h"
+#include "debug.h"
 
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #define SYSTEM_INFO_DEBUG
 #define parse_deb_on
@@ -41,14 +46,6 @@ void free_sys_info(struct system_info_t *sys_info)
 	memset(sys_info, 0, sizeof(*sys_info));
 }
 
-/*
-struct msg_t msg;
-struct app_info_t app_info;
-struct probe_t probe;
-struct us_inst_t us_inst;
-struct app_inst_t app_inst;
-struct prof_session_t prof_session;
-*/
 
 struct prof_session_t prof_session;
 
@@ -58,9 +55,6 @@ static void print_us_func_inst(struct us_func_inst_t * func_inst, int count,char
 static void print_us_lib_inst(struct us_lib_inst_t * lib_inst,int num,char * tab);
 static void print_user_space_app_inst(struct app_inst_t * app_inst, int num, char * tab);
 static void print_user_space_inst(struct user_space_inst_t * user_space_inst);
-//static void print_log_interval(log_interval_t log_interval);
-//static void print_probe(struct probe_t *probe);
-//static void print_us_inst(struct us_inst_t *us_inst);
 static void print_prof_session(struct prof_session_t *prof_session);
 
 //DEBUG FUNCTIONS
@@ -335,80 +329,6 @@ static char * parse_conf(char *buf, struct conf_t *conf)
 	//print_conf(conf);
 	return buf + sizeof(*conf);
 }
-
-/*
-static char *parse_log_interval(char *buf, log_interval_t *log_interval)
-{
-	*log_interval = *(log_interval_t *)buf;
-
-	return buf + sizeof(*log_interval);
-}
-*/
-/*
-static char *parse_probe(char *buf, struct probe_t *probe)
-{
-	char *p = buf;
-
-	p = parse_int64(p, &probe->addr);
-	if (!p) {
-		LOGE("probe addr parsing error\n");
-		return 0;
-	}
-
-	p = parse_int32(p, &probe->arg_num);
-	if (!p) {
-		LOGE("arg num parsing error\n");
-		return 0;
-	}
-
-	probe->arg_fmt = (char *)malloc(probe->arg_num);
-	if (!probe->arg_fmt) {
-		LOGE("args alloc error\n");
-		return 0;
-	}
-
-	memcpy(probe->arg_fmt, p, probe->arg_num);
-	p += probe->arg_num;
-
-	return p;
-}
-*/
-
-/*
-static char *parse_us_inst(char *buf, struct us_inst_t *us_inst)
-{
-	char *p = buf;
-	int i = 0;
-
-	p = parse_string(p, &us_inst->path);
-	if (!p) {
-		LOGE("app path parsing error\n");
-		return 0;
-	}
-	p = parse_int32(p, &us_inst->probe_num);
-	if (!p) {
-		LOGE("probe num parsing error\n");
-		return 0;
-	}
-
-	us_inst->probes = (struct probe_t *)malloc(us_inst->probe_num *
-						 sizeof(*us_inst->probes));
-
-	if (!us_inst->probes) {
-		LOGE("probes alloc error\n");
-		return 0;
-	}
-	for (i = 0; i < us_inst->probe_num; i++) {
-		p = parse_probe(p, &us_inst->probes[i]);
-		if (!p) {
-			LOGE("probe parsing error\n");
-			return 0;
-		}
-	}
-
-	return p;
-}
-*/
 
 static char *parse_us_inst_func( char * buf, struct us_func_inst_t * dest)
 {
@@ -796,6 +716,37 @@ static char *parse_msg_binary_info(char * msg_payload,
 	return p;
 }
 
+
+//This function concat 2 user space lists
+// this function clean "from" pointer
+static void concat_add_user_space_inst(struct user_space_inst_t *from,
+								struct user_space_inst_t *to)
+{
+	struct app_inst_t *new_app_inst_list = NULL;
+	uint32_t size;
+	char *p;
+
+	if (from->app_num == 0)
+		return;
+
+	new_app_inst_list = malloc((from->app_num + to->app_num) * sizeof(*new_app_inst_list));
+	p = new_app_inst_list;
+
+	size = from->app_num * sizeof(*new_app_inst_list);
+	memcpy(p, from->app_inst_list, size);
+	p +=size;
+
+	size = to->app_num * sizeof(*new_app_inst_list);
+	memcpy(p, to->app_inst_list, size);
+	p +=size;
+
+	free(to->app_inst_list);
+	to->app_inst_list = new_app_inst_list;
+
+	to->app_num += from->app_num;
+	return;
+}
+
 void reset_msg(struct msg_t *msg)
 {
 	free(msg->payload);
@@ -811,12 +762,6 @@ static void reset_conf(struct conf_t *conf)
 {
 	memset(conf, 0, sizeof(*conf));
 }
-/*
-static void reset_log_interval(log_interval_t *log_interval)
-{
-	memset(log_interval, 0, sizeof(*log_interval));
-}
-*/
 
 static void reset_probe(struct probe_t *probe)
 {
@@ -991,6 +936,7 @@ int host_message_handler(struct msg_t *msg)
 	uint32_t answer_len = 0;
 	struct app_info_t app_info;
 	struct msg_t *msg_reply;
+	struct user_space_inst_t user_space_inst;
 
 	LOGI("MY HANDLE %s (%X)\n", msg_ID_str(msg->id), msg->id);
 
@@ -1005,12 +951,12 @@ int host_message_handler(struct msg_t *msg)
 			return 1;
 		}
 
+		// TODO: launch translator thread
 		if (start_transfer() != 0) {
 			LOGE("Cannot start transfer\n");
 			return -1;
 		}
 
-		// TODO: launch translator thread
 
 		// TODO: kill app
 /* #ifdef RUN_APP_LOADER */
@@ -1034,6 +980,9 @@ int host_message_handler(struct msg_t *msg)
 
 		// TODO: start app launch timer
 
+		//write to device
+		//ioctl_send_msg(msg);
+
 		// success
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
@@ -1041,6 +990,9 @@ int host_message_handler(struct msg_t *msg)
 		terminate_all();
 		reset_prof_session(&prof_session);
 		stop_transfer();
+		//write to device
+		ioctl_send_msg(msg);
+		//send ack to host
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
 	case NMSG_CONFIG:
@@ -1049,6 +1001,9 @@ int host_message_handler(struct msg_t *msg)
 			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
 			return 1;
 		}
+		//write to device
+		ioctl_send_msg(msg);
+		//send ack to host
 		sendACKToHost(msg->id,ERR_NO,0,0);
 		break;
 	case NMSG_BINARY_INFO:
@@ -1073,13 +1028,20 @@ int host_message_handler(struct msg_t *msg)
 		break;
 	case NMSG_SWAP_INST_ADD:
 		if (!parse_user_space_inst(msg->payload,
-					   &prof_session.user_space_inst)) {
+					   &user_space_inst)) {
 			LOGE("user space inst parsing error\n");
 			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
 			return 1;
 		}
 		// TODO: apply_prof_session()
+		// warning concat_add_user_space_inst free user_space_inst
+		// so, data will not be availible
+		concat_add_user_space_inst(&user_space_inst, &prof_session.user_space_inst);
+		//write to device
+		ioctl_send_msg(msg);
+		//send ack to host
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
+		// TODO release user_space_inst
 		break;
 	case NMSG_SWAP_INST_REMOVE:
 		if (!parse_user_space_inst(msg->payload,
@@ -1112,13 +1074,6 @@ int host_message_handler(struct msg_t *msg)
 	return 0;
 }
 
-/*
-static void dispose_payload(struct msg_t *msg)
-{
-	free(msg->payload);
-}
-*/
-
 // use sequence:
 /* receive_msg_header */
 /* receive_msg_payload */
@@ -1126,9 +1081,7 @@ static void dispose_payload(struct msg_t *msg)
 /* dispose_payload */
 
 // testing
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
+
 static void print_app_info( struct app_info_t *app_info)
 {
 	LOGI("application info=\n");
@@ -1306,8 +1259,6 @@ static void print_prof_session(struct prof_session_t *prof_session)
 	print_user_space_inst(&prof_session->user_space_inst);
 	print_replay_event_seq(&prof_session->replay_event_seq);
 
-//	print_log_interval(prof_session->log_interval);
-//	print_app_inst(&prof_session->app_inst);
 }
 
 

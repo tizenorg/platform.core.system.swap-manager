@@ -44,6 +44,7 @@
 #include "da_protocol.h"
 #include "sys_stat.h"
 #include "buffer.h"
+#include "debug.h"
 
 #define SINGLETON_LOCKFILE			"/tmp/lockfile.da"
 #define PORTFILE					"/tmp/port.da"

@@ -4,9 +4,11 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
+
 #include "daemon.h"
 #include "buffer.h"
 #include "ioctl_commands.h"
+#include "debug.h"
 
 #define SUBBUF_SIZE 32768
 #define SUBBUF_NUM 16
@@ -91,3 +93,4 @@ int write_to_buf(struct msg_data_t *msg)
 	}
 	return 0;
 }
+

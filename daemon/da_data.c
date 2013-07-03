@@ -1,6 +1,8 @@
 #include "da_protocol.h"
 #include "daemon.h"
 #include "da_data.h"
+#include "debug.h"
+
 #include <sys/time.h>
 /*
 struct msg_system_t msg_system;

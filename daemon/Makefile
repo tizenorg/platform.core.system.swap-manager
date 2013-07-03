@@ -24,6 +24,7 @@ DAEMON_SRCS :=	\
 	main.c		\
 	daemon.c	\
 	da_protocol.c	\
+	debug.c	\
 	threads.c	\
 	da_debug.c	\
 	da_data.c	\
@@ -31,18 +32,21 @@ DAEMON_SRCS :=	\
 	sys_stat.c	\
 	elf.c		\
 	buffer.c	\
-	transfer_thread.c
+	transfer_thread.c\
+	ioctl_commands.c
 
 DAEMON_SRCS_HOST :=	\
 	main.c		\
 	daemon.c	\
 	da_protocol.c	\
+	debug.c	\
 	threads.c	\
 	da_debug.c	\
 	da_data.c	\
 	utils.c		\
 	sys_stat.c	\
-	elf.c
+	elf.c	\
+	ioctl_commands.c
 
 
 LDLIBS_PATH := -L/usr/lib -L./lib/
