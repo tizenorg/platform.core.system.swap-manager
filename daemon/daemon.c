@@ -244,63 +244,6 @@ static void setEmptyTargetSlot(int index)
 // send functions to host
 // ======================================================================================
 
-int pseudoSendDataToHost(struct msg_data_t* log)
-{
-
-	printBuf((char *)log, MSG_DATA_HDR_LEN + log->len);
-/* 	LOGI("try send to <%d><%s>\n", dev->fd, dev->fileName); */
-
-	write_to_buf(log);
-
-	return 0;
-}
-
-int sendDataToHost(msg_t* log)
-{
-	if (manager.host.data_socket != -1)
-	{
-		char logstr[DA_MSG_MAX];
-		int loglen;
-
-		if(log->length != 0)
-			loglen = sprintf(logstr, "%d|%d|%s\n", log->type, log->length + 1, log->data);
-		else
-			loglen = sprintf(logstr, "%d|%d|\n", log->type, log->length + 1);
-
-//		loglen = sprintf(logstr, "%d|%s\n", log->type, log->data);
-
-		pthread_mutex_lock(&(manager.host.data_socket_mutex));
-		send(manager.host.data_socket, logstr, loglen, MSG_NOSIGNAL);
-		pthread_mutex_unlock(&(manager.host.data_socket_mutex));
-		return 0;
-	}
-	else
-		return 1;
-}
-
-// msgstr can be NULL
-/*
-static int sendACKStrToHost(enum HostMessageType resp, char* msgstr)
-{
-	if (manager.host.control_socket != -1)
-	{
-		char logstr[DA_MSG_MAX];
-		int loglen;
-
-		if(msgstr != NULL)
-			loglen = sprintf(logstr, "%d|%d|%s", (int)resp, strlen(msgstr), msgstr);
-		else
-			loglen = sprintf(logstr, "%d|0|", (int)resp);
-
-		send(manager.host.control_socket, logstr, loglen, MSG_NOSIGNAL);
-		return 0;
-	}
-	else
-		return 1;
-}
-*/
-
-
 //static
 int sendACKCodeToHost(enum HostMessageType resp, int msgcode)
 {
@@ -372,26 +315,6 @@ int startProfiling(long launchflag)
 	return 0;
 }
 
-// terminate single target
-// just send stop message to target process
-static void terminate_target(int index)
-{
-	ssize_t sendlen;
-	msg_t sendlog;
-	sendlog.type = MSG_STOP;
-	sendlog.length = 0;
-
-	if(manager.target[index].socket != -1)
-	{
-		// result of sending to disconnected socket is not expected
-		sendlen = send(manager.target[index].socket, &sendlog, sizeof(sendlog.type) + sizeof(sendlog.length), MSG_NOSIGNAL);
-		if(sendlen != -1)
-		{
-			LOGI("TERMINATE send exit msg (socket %d) by terminate_target()\n", manager.target[index].socket);
-		}
-	}
-}
-
 // just send stop message to all target process
 static void terminate_all_target()
 {
@@ -434,307 +357,11 @@ void terminate_all()
 }
 
 // terminate all profiling by critical error
+// TODO: don't send data to host
 static void terminate_error(char* errstr, int sendtohost)
 {
-	msg_t log;
-
-	LOGE("TERMINATE ERROR: %s\n", errstr);
-	if(sendtohost)
-	{
-		log.type = MSG_ERROR;
-		log.length = sprintf(log.data, "%s", errstr);
-		sendDataToHost(&log);
-	}
-
 	terminate_all();
 }
-
-// ===========================================================================================
-// message parsing and handling functions
-// ===========================================================================================
-/*
-static int parseDeviceMessage(msg_t* log)
-{
-	char eventType[MAX_FILENAME];
-	struct input_event in_ev;
-	int i, index;
-
-	if(log == NULL)
-		return -1;
-
-	eventType[0] = '\0';
-	in_ev.type = 0;
-	in_ev.code = 0;
-	in_ev.value = 0;
-
-	index = 0;
-	for(i = 0; i < log->length; i++)
-	{
-		if(log->data[i] == '\n')
-			break;
-
-		if(log->data[i] == '`')	// meet separate
-		{
-			i++;
-			index++;
-			continue;
-		}
-
-		if(index == 0)		// parse eventType
-		{
-			eventType[i] = log->data[i];
-			eventType[i+1] = '\0';
-		}
-		else if(index == 1)	// parse in_ev.type
-		{
-			in_ev.type = in_ev.type * 10 + (log->data[i] - '0');
-		}
-		else if(index == 2)	// parse in_ev.code
-		{
-			in_ev.code = in_ev.code * 10 + (log->data[i] - '0');
-		}
-		else if(index == 3)	// parse in_ev.value
-		{
-			in_ev.value = in_ev.value * 10 + (log->data[i] - '0');
-		}
-	}
-
-	if(index != 3)
-		return -1;	// parse error
-
-	if(0 == strncmp(eventType, STR_TOUCH, strlen(STR_TOUCH)))
-	{
-		_device_write(g_touch_dev, &in_ev);
-	}
-	else if(0 == strncmp(eventType, STR_KEY, strlen(STR_KEY)))
-	{
-		_device_write(g_key_dev, &in_ev);
-	}
-
-	return 0;
-}
-*/
-
-// return 0 if normal case
-// return plus value if non critical error occur
-// return minus value if critical error occur
-/* static int _hostMessageHandler(int efd,struct msg_t* log) */
-/* { */
-/* 	int ret = 0; */
-	
-/* 	long flag = 0; */
-/* 	char *barloc, *tmploc; */
-/* 	char execPath[PATH_MAX]; */
-
-/* 	if (log == NULL) */
-/* 		return 1; */
-
-/* 	switch (log->type) */
-/* 	{ */
-/* 	case MSG_REPLAY: */
-/* 		sendACKStrToHost(MSG_OK, NULL); */
-/* 		parseDeviceMessage(log); */
-/* 		break; */
-/* 	case MSG_VERSION: */
-/* 		if(strcmp(PROTOCOL_VERSION, log->data) != 0) */
-/* 		{ */
-/* 			sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_PROTOCOL_VERSION); */
-/* 		} */
-/* 		else */
-/* 		{ */
-/* 			sendACKStrToHost(MSG_OK, NULL); */
-/* 		} */
-/* 		break; */
-/* 	case MSG_START: */
-/* 		LOGI("MSG_START handling : %s\n", log->data); */
-/* 		if(log->length == 0) */
-/* 		{ */
-/* 			sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_DATA); */
-/* 			return -1;		// wrong message format */
-/* 		} */
-
-/* 		// parsing for host start status */
-/* 		tmploc  = log->data; */
-/* 		barloc = strchr(tmploc, '|'); */
-/* 		if(barloc == NULL) */
-/* 		{ */
-/* 			sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_FORMAT); */
-/* 			return -1;		// wrong message format */
-/* 		} */
-
-/* 		// parsing for target launch option flag */
-/* 		tmploc = barloc + 1; */
-/* 		barloc = strchr(tmploc, '|'); */
-/* 		if(barloc != NULL) */
-/* 		{ */
-/* 			while(tmploc < barloc) */
-/* 			{ */
-/* 				flag = (flag * 10) + (*tmploc - '0'); */
-/* 				tmploc++; */
-/* 			} */
-/* 		} */
-/* 		else */
-/* 		{ */
-/* 			sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_FORMAT); */
-/* 			return -1;	// wrong message format */
-/* 		} */
-/* 		LOGI("launch flag : %lx\n", flag); */
-
-/* 		// parsing for application package name */
-/* 		tmploc = barloc + 1; */
-/* 		strcpy(manager.appPath, tmploc); */
-
-/* 		get_executable(manager.appPath, execPath, PATH_MAX); // get exact app executable file name */
-/* 		LOGI("executable app path %s\n", manager.appPath); */
-
-/* #ifdef RUN_APP_LOADER */
-/* 		kill_app(manager.appPath); */
-/* #else */
-/* 		kill_app(execPath); */
-/* #endif */
-
-/* 		{ */
-/* 			char command[PATH_MAX]; */
-/* 			struct epoll_event ev; */
-
-/* 			//save app install path */
-/* 			mkdir(DA_WORK_DIR, 0775); */
-/* 			sprintf(command, */
-/* 					"%s -Wwi %s | grep DW_AT_comp_dir > %s", DA_READELF_PATH, */
-/* 					execPath, DA_INSTALL_PATH); */
-/* 			LOGI("appInstallCommand %s\n", command); */
-/* 			system(command); */
-
-/* 			sprintf(command, */
-/* 					"%s -h %s | grep Type | cut -d\" \" -f33 > %s", DA_READELF_PATH, */
-/* 					execPath, DA_BUILD_OPTION); */
-/* 			LOGI("appInstallCommand %s\n", command); */
-/* 			system(command); */
-
-/* 			if(startProfiling(flag) < 0) */
-/* 			{ */
-/* 				sendACKCodeToHost(MSG_NOTOK, ERR_CANNOT_START_PROFILING); */
-/* 				return -1; */
-/* 			} */
-
-/* 			manager.app_launch_timerfd = timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC); */
-/* 			if(manager.app_launch_timerfd > 0) */
-/* 			{ */
-/* 				struct itimerspec ctime; */
-/* 				ctime.it_value.tv_sec = MAX_APP_LAUNCH_TIME; */
-/* 				ctime.it_value.tv_nsec = 0; */
-/* 				ctime.it_interval.tv_sec = 0; */
-/* 				ctime.it_interval.tv_nsec = 0; */
-/* 				if(0 > timerfd_settime(manager.app_launch_timerfd, 0, &ctime, NULL)) */
-/* 				{ */
-/* 					LOGE("fail to set app launch timer\n"); */
-/* 					close(manager.app_launch_timerfd); */
-/* 					manager.app_launch_timerfd = -1; */
-/* 				} */
-/* 				else */
-/* 				{ */
-/* 					// add event fd to epoll list */
-/* 					ev.events = EPOLLIN; */
-/* 					ev.data.fd = manager.app_launch_timerfd; */
-/* 					if(epoll_ctl(efd, EPOLL_CTL_ADD, manager.app_launch_timerfd, &ev) < 0) */
-/* 					{ */
-/* 						// fail to add event fd */
-/* 						LOGE("fail to add app launch timer fd to epoll list\n"); */
-/* 						close(manager.app_launch_timerfd); */
-/* 						manager.app_launch_timerfd = -1; */
-/* 					} */
-/* 				} */
-/* 			} */
-/* 		} */
-/* 		sendACKStrToHost(MSG_OK, NULL); */
-/* 		break; */
-/* 	case MSG_STOP: */
-/* 		LOGI("MSG_STOP handling\n"); */
-/* 		sendACKStrToHost(MSG_OK, NULL); */
-/* 		terminate_all(); */
-/* 		break; */
-/* 	case MSG_OPTION: */
-/* 		if(log->length > 0) */
-/* 		{ */
-/* 			int i; */
-/* 			msg_t sendlog; */
-/* 			manager.config_flag = atoi(log->data); */
-/* 			sendACKStrToHost(MSG_OK, NULL); */
-
-/* 			LOGI("MSG_OPTION : str(%s), flag(%x)\n", log->data, manager.config_flag); */
-
-/* 			sendlog.type = MSG_OPTION; */
-/* 			sendlog.length = sprintf(sendlog.data, "%u", manager.config_flag); */
-
-/* 			for(i = 0; i < MAX_TARGET_COUNT; i++) */
-/* 			{ */
-/* 				if(manager.target[i].socket != -1) */
-/* 				{ */
-/* 					send(manager.target[i].socket, &sendlog, sizeof(sendlog.type) + sizeof(sendlog.length) + sendlog.length, MSG_NOSIGNAL); */
-/* 				} */
-/* 			} */
-/* 		} */
-/* 		else */
-/* 		{ */
-/* 			sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_DATA); */
-/* 			ret = 1; */
-/* 		} */
-/* 		break; */
-/* 	case MSG_ISALIVE: */
-/* 		sendACKStrToHost(MSG_OK, NULL); */
-/* 		break; */
-/* 	default: */
-/* 		LOGW("Unknown msg\n"); */
-/* 		sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_TYPE); */
-/* 		ret = 1; */
-/* 		break; */
-/* 	} */
-/* 	return ret; */
-/* } */
-
-// ========================================================================================
-// socket and event_fd handling functions
-// ========================================================================================
-
-// return 0 if normal case
-// return plus value if non critical error occur
-// return minus value if critical error occur
- /*
-static int deviceEventHandler(input_dev* dev, int input_type)
-{
-	int ret = 0;
-	struct input_event in_ev;
-	msg_t log;
-
-	if(input_type == INPUT_ID_TOUCH)
-	{
-		//touch read
-		read(dev->fd, &in_ev, sizeof(struct input_event));
-		log.type = MSG_RECORD;
-		log.length = sprintf(log.data, "%s`,%s`,%ld`,%ld`,%hu`,%hu`,%u",
-				STR_TOUCH, dev->fileName, in_ev.time.tv_sec,
-				in_ev.time.tv_usec, in_ev.type, in_ev.code, in_ev.value);
-		sendDataToHost(&log);
-	}
-	else if(input_type == INPUT_ID_KEY)
-	{
-		//key read
-		read(dev->fd, &in_ev, sizeof(struct input_event));
-		log.type = MSG_RECORD;
-		log.length = sprintf(log.data, "%s`,%s`,%ld`,%ld`,%hu`,%hu`,%u",
-				STR_KEY, dev->fileName, in_ev.time.tv_sec,
-				in_ev.time.tv_usec, in_ev.type, in_ev.code, in_ev.value);
-		sendDataToHost(&log);
-	}
-	else
-	{
-		LOGW("unknown input_type\n");
-		ret = 1;
-	}
-
-	return ret;
-}
-*/
 
 #define MAX_EVENTS_NUM 10
 static int deviceEventHandler(input_dev* dev, int input_type)
@@ -748,17 +375,18 @@ static int deviceEventHandler(input_dev* dev, int input_type)
 	if(input_type == INPUT_ID_TOUCH || input_type == INPUT_ID_KEY)
 	{
 		do {
-//			LOGI(">read %s events\n,", input_type==INPUT_ID_KEY?STR_KEY:STR_TOUCH);
 			size = read(dev->fd, &in_ev[count], sizeof(*in_ev) );
-//			LOGI("<read %s events : size = %d\n,", input_type==INPUT_ID_KEY?STR_KEY:STR_TOUCH,size);
 			if (size >0)
 				count++;
 		} while (count < MAX_EVENTS_NUM && size > 0);
 
-		if(count != 0){
-			LOGI("readed %d %s events\n", count, input_type==INPUT_ID_KEY?STR_KEY:STR_TOUCH);
+		if (count) {
+			LOGI("read %d %s events\n",
+			     count,
+			     input_type == INPUT_ID_KEY ? STR_KEY : STR_TOUCH);
 			log = gen_message_event(in_ev, count, input_type);
-			pseudoSendDataToHost(log);
+			printBuf((char *)log, MSG_DATA_HDR_LEN + log->len);
+			write_to_buf(log);
 			reset_data_msg(log);
 		}
 	}

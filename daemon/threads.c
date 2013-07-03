@@ -262,19 +262,10 @@ void* samplingThread(void* data)
 			if (write_to_buf(msg) == -1) {
 				LOGE("Cannot write system info to buffer\n");
 			}
-			pseudoSendDataToHost(msg);
-
+			printBuf((char *)msg, MSG_DATA_HDR_LEN + msg->len);
+			write_to_buf(msg);
 			free_msg_data(msg);
 			free_sys_info(&sys_info); //TODO make function free_sys_info
-
-			/* res = gen_message_sytem_info(&log, DA_MSG_MAX, pidarr, pidcount); */
-			/* if(res > 0) */
-			/* { */
-			/* 	LOGI("payload_len=%d\n",log.len); */
-			/* 	LOGI("sizeof(float) = %d\n", sizeof(float)); */
-			/* 	//sendDataToHost(&log); */
-			/* 	pseudoSendDataToHost(&log); */
-			/* } */
 
 #ifdef DEBUG_GSI
 			break; //FOR DEBUG ONLY

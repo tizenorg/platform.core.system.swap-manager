@@ -236,7 +236,6 @@ extern __da_manager manager;
 
 void initialize_log();
 int daemonLoop();
-int sendDataToHost(msg_t* log);
 long long get_total_alloc_size();
 void unlink_portfile(void);
 
@@ -251,7 +250,6 @@ int samplingStop();
 int startProfiling(long launchflag);
 int sendACKCodeToHost(enum HostMessageType resp, int msgcode);
 void terminate_all();
-int pseudoSendDataToHost(struct msg_data_t* log);
 void _device_write(input_dev *dev, struct input_event* in_ev);
 
 // DEBUGS

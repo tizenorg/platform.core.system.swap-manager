@@ -211,15 +211,6 @@ static char *parse_string(char *buf, char **str)
 	return buf + (len + 1);
 }
 
-static char *parse_chars(char *buf, uint32_t count, char **str)
-{
-	*str = (char *) malloc( (count+1) * (sizeof(char) ));
-	memcpy(*str, buf, count);
-	(*str)[count] = 0;
-	parse_deb("<%s>\n",*str);
-	return buf + (count);
-}
-
 static char *parse_int32(char *buf, uint32_t *val)
 {
 	*val = *(uint32_t *)buf;
@@ -612,21 +603,6 @@ int get_sys_mem_size(uint32_t *sys_mem_size){
 	sysinfo(&info);
 	*sys_mem_size = info.totalram;
 	return 0;
-}
-
-//warning allocate memory
-//need free after call
-static char *parse_target_info(char *msg_payload,char ** buf, uint32_t *len)
-{
-	struct target_info_t *target_info;
-	char *p = msg_payload;
-	*len = sizeof(*target_info);
-
-	*buf = malloc(*len);
-	target_info = (struct target_info_t *) *buf;
-	fill_target_info(target_info);
-
-	return p;
 }
 
 static char *parse_msg_config(char * msg_payload, 

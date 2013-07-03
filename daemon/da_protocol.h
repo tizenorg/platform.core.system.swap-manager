@@ -202,8 +202,6 @@ struct replay_event_seq_t {
 struct prof_session_t {
 	struct app_info_t app_info;
 	struct conf_t conf;
-//	log_interval_t log_interval;
-//	struct app_inst_t app_inst;
 	struct user_space_inst_t user_space_inst;
 	struct replay_event_seq_t replay_event_seq;
 };
@@ -211,31 +209,12 @@ struct prof_session_t {
 int parseHostMessage(struct msg_t *log, char* msg);
 int host_message_handler(struct msg_t *msg);
 
-//static void dispose_payload(struct msg_t *msg);
-
-
 char* msg_ID_str ( enum HostMessageT ID);
-//static char* msgErrStr (enum ErrorCode err);
-// use sequence:
-/* receive_msg_header */
-/* receive_msg_payload */
-/* handle_msg */
-/* dispose_payload */
 
 // testing
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-/*
-static void print_app_info(struct app_info_t *app_info);
-static void print_conf(struct conf_t *conf);
-static void print_log_interval(log_interval_t log_interval);
-static void print_probe(struct probe_t *probe);
-static void print_us_inst(struct us_inst_t *us_inst);
-static void print_app_inst(struct app_inst_t *app_inst);
-static void print_prof_session(struct prof_session_t *prof_session);
-*/
-
 
 //data protocol
 struct thread_info_t{
@@ -294,43 +273,8 @@ struct recorded_event_t{
 #define pack_int64(to,n) { *(uint64_t *) to = n; to += sizeof(uint64_t);} 
 #define pack_int32(to,n) { *(uint32_t *) to = n; to += sizeof(uint32_t);} 
 #define pack_time(to,n) {pack_int32(to,n.tv_sec); pack_int32(to,n.tv_usec);} 
-//#define pack_float(to,n) { *(float *) to = n; to += sizeof(float);} 
-//#define pack_float(to,n) pack_int32(to,n) 
 #define pack_float(to,n) { memcpy(to,&n,sizeof(float)); to += sizeof(float);} 
 #define pack_str(to,n) { memcpy(to,n,strlen(n)+1); to += strlen(n)+1;} 
-/*
-static  char *pack_int32(char *to, uint32_t val)
-{
-		*(uint32_t *)to = val;
-			return to + sizeof(uint32_t);
-}
-
-static  char *pack_int64(char *to, uint64_t val)
-{
-		*(uint64_t *)to = val;
-			return to + sizeof(uint64_t);
-}
-
-static  char *pack_string(char *to, const char *str)
-{
-		size_t len = strlen(str) + 1;
-			strncpy(to, str, len);
-				return to + len;
-}
-
-static  char *pack_timestamp(char *to)
-{
-		struct timeval tv;
-
-			gettimeofday(&tv, NULL);
-				to = pack_int32(to, tv.tv_sec);
-					to = pack_int32(to, tv.tv_usec * 1000);
-
-						return to;
-}
-
-*/
-
 
 struct msg_data_t *pack_system_info(struct system_info_t *sys_info);
 int write_to_buf(struct msg_data_t *msg);
