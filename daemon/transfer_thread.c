@@ -50,9 +50,14 @@ int start_transfer()
 {
 	int saved_flags;
 
+	if (manager.host.data_socket == -1) {
+		LOGW("won't start transfer thread: data socket isn't open\n");
+		return 0;
+	}
+
 	if (manager.transfer_thread != -1) { // already started
-		LOGI("transfer already running\n");
-		return 1;
+		LOGW("transfer already running\n");
+		stop_transfer();
 	}
 
 	saved_flags = fcntl(manager.buf_fd, F_GETFL);
@@ -64,7 +69,7 @@ int start_transfer()
 			  NULL) < 0)
 	{
 		LOGE("Failed to create transfer thread\n");
-		return 1;
+		return -1;
 	}
 
 	return 0;
