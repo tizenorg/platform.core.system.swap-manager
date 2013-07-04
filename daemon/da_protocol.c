@@ -29,11 +29,6 @@ void inline free_msg_data(struct msg_data_t *msg)
 	free(msg);
 }
 
-void inline free_msg_payload(struct msg_t *msg)
-{
-	free(msg->payload);
-}
-
 void free_sys_info(struct system_info_t *sys_info)
 {
 	if (sys_info->cpu_frequency)
@@ -671,11 +666,6 @@ static void concat_add_user_space_inst(struct user_space_inst_t *from,
 	return;
 }
 
-void reset_msg(struct msg_t *msg)
-{
-	if (msg->len)
-		free(msg->payload);
-}
 
 static void reset_app_info(struct app_info_t *app_info)
 {
@@ -739,6 +729,21 @@ static void reset_user_space_inst(struct user_space_inst_t *us)
 	us->app_num = 0;
 }
 
+void reset_system_info(struct system_info_t *sys_info)
+{
+	LOGI("clean\n");
+
+	if (sys_info->thread_load)
+		free(sys_info->thread_load);
+	if (sys_info->process_load)
+		free(sys_info->process_load);
+	if (sys_info->cpu_frequency)
+		free(sys_info->cpu_frequency);
+	if (sys_info->cpu_load)
+		free(sys_info->cpu_load);
+	memset(sys_info, 0, sizeof(*sys_info));
+}
+
 static void reset_prof_session(struct prof_session_t *prof_session)
 {
 	reset_app_info(&prof_session->app_info);
@@ -761,18 +766,12 @@ static struct msg_t *gen_binary_info_reply(struct app_info_t *app_info)
 		return NULL;
 	}
 
-	msg = malloc(sizeof(*msg));
-	if (!msg) {
-		LOGE("Cannot alloc bin info msg\n");
-		return NULL;
-	}
-
-	msg->payload = malloc(sizeof(ret_id) +
+	msg = malloc(sizeof(*msg) +
+			      sizeof(ret_id) +
 			      sizeof(binary_type) +
 			      strlen(binary_path) + 1);
-	if (!msg->payload) {
-		LOGE("Cannot alloc bin info msg payload\n");
-		free(msg);
+	if (!msg) {
+		LOGE("Cannot alloc bin info msg\n");
 		return NULL;
 	}
 
@@ -794,18 +793,13 @@ static struct msg_t *gen_target_info_reply(struct target_info_t *target_info)
 	char *p = NULL;
 	uint32_t ret_id = ERR_NO;
 
-	msg = malloc(sizeof(*msg));
-	if (!msg) {
-		LOGE("Cannot alloc target info msg\n");
-		return NULL;
-	}
-
-	msg->payload = malloc(sizeof(ret_id) +
+	msg = malloc(sizeof(*msg) +
+			      sizeof(ret_id) +
 			      sizeof(*target_info) -
 			      sizeof(target_info->network_type) +
 			      strlen(target_info->network_type) + 1);
-	if (!msg->payload) {
-		LOGE("Cannot alloc target info msg payload\n");
+	if (!msg) {
+		LOGE("Cannot alloc target info msg\n");
 		free(msg);
 		return NULL;
 	}
@@ -832,14 +826,8 @@ static struct msg_t *gen_target_info_reply(struct target_info_t *target_info)
 static int send_reply(struct msg_t *msg)
 {
 	if (send(manager.host.control_socket,
-		 msg, MSG_CMD_HDR_LEN, MSG_NOSIGNAL) == -1) {
-		LOGE("Cannot send reply header: %s\n", strerror(errno));
-		return 1;
-	}
-
-	if (send(manager.host.control_socket,
-		 msg->payload, msg->len, MSG_NOSIGNAL) == -1) {
-		LOGE("Cannot send reply payload: %s\n", strerror(errno));
+		 msg, MSG_CMD_HDR_LEN + msg->len, MSG_NOSIGNAL) == -1) {
+		LOGE("Cannot send reply : %s\n", strerror(errno));
 		return 1;
 	}
 
@@ -851,7 +839,7 @@ static int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 {
 	if (manager.host.control_socket != -1)
 	{
-		struct msg_reply_t *msg;
+		struct msg_t *msg;
 		uint32_t err = err_code;
 		int loglen = sizeof(*msg) - sizeof(msg->payload) +
 					 sizeof(err) + //return ID
@@ -960,7 +948,7 @@ int host_message_handler(struct msg_t *msg)
 		// TODO: start app launch timer
 
 		//write to device
-		//ioctl_send_msg(msg);
+		// ioctl_send_msg(msg);
 
 		// success
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
@@ -1007,7 +995,6 @@ int host_message_handler(struct msg_t *msg)
 		}
 
 		reset_app_info(&app_info);
-		reset_msg(msg_reply);
 		free(msg_reply);
 		break;
 	case NMSG_SWAP_INST_ADD:

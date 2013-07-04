@@ -139,7 +139,7 @@ static void* recvThread(void* data)
 		else if(log.type == MSG_MSG)
 		{
 			// don't send to host
-			LOGI("EXTRA MSG %d|%d|%s\n", log.type, log.length, log.data);
+			LOGI("EXTRA MSG type=%d;len=%d;data='%s'\n", log.type, log.length, log.data);
 			continue;
 		}
 #ifdef PRINT_TARGET_LOG

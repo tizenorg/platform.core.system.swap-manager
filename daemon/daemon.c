@@ -677,31 +677,34 @@ static int hostServerHandler(int efd)
 static int controlSocketHandler(int efd)
 {
 	ssize_t recv_len;
-	struct msg_t msg;
+	struct msg_t msg_head;
+	struct msg_t *msg;
 	int res = 0;
 
 	// Receive header
 	recv_len = recv(manager.host.control_socket,
-		       &msg,
+		       &msg_head,
 		       MSG_CMD_HDR_LEN, 0);
 	// error or close request from host
 	if (recv_len == -1 || recv_len == 0)
 		return -11;
 	else {
-		if (msg.len > 0) {
-			msg.payload = malloc(msg.len);
-			if (!msg.payload) {
-				LOGE("Cannot alloc msg payload\n");
-				sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_FORMAT);
-				return -1;
-			}
+		msg = malloc(MSG_CMD_HDR_LEN + msg_head.len);
+		if (!msg) {
+			LOGE("Cannot alloc msg\n");
+			sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_FORMAT);
+			return -1;
+		}
+		msg->id = msg_head.id;
+		msg->len = msg_head.len;
+		if (msg->len > 0) {
 			// Receive payload (if exists)
 			recv_len = recv(manager.host.control_socket,
-					msg.payload,
-					msg.len, MSG_WAITALL);
+					msg->payload,
+					msg->len, MSG_WAITALL);
 		}
-		res = host_message_handler(&msg);
-		reset_msg(&msg);
+		res = host_message_handler(msg);
+		free(msg);
 	}
 
 	return res;
