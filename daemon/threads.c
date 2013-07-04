@@ -251,12 +251,16 @@ void* samplingThread(void* data)
 			struct system_info_t sys_info;
 			if (get_system_info(&sys_info, pidarr, pidcount) == -1) {
 				LOGE("Cannot get system info\n");
+				//do not send sys_info because
+				//it is corrupted
+				continue;
 			}
 
 			struct msg_data_t *msg;
 			msg = pack_system_info(&sys_info);
 			if (!msg) {
 				LOGE("Cannot pack system info\n");
+				continue;
 			}
 			write_to_buf(msg);
 			printBuf((char *)msg, MSG_DATA_HDR_LEN + msg->len);

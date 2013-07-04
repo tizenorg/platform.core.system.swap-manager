@@ -2144,13 +2144,12 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 	sys_info->network_receive_size = 0x23;
 #endif /* LOCALTEST */
 
-//	memset(sys_info, 0, sizeof(*sys_info));
-	//LOGI("get_resource_info result : %s", buffer);
 	print_sys_info(sys_info);
 	event_num++;
 	return res;
 
 fail_exit:
+	//some data corrupted
 	//free allocated data
 	reset_system_info(sys_info);
 	return -1;
