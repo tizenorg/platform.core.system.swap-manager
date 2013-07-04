@@ -1389,6 +1389,7 @@ static int update_thread_data(int pid)
 
 	if(!(taskdir = opendir(path)))
 	{
+		LOGE("task not found '%s'\n", path);
 		return -1;
 	}
 
@@ -2006,7 +2007,7 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 	if (update_process_data(pidarray, pidcount, PROCDATA_STAT) < 0)
 	{
 		LOGE("Failed to update process stat data\n");
-		return -1;
+		goto fail_exit;
 	}
 
 	// this position is optimized position of timestamp.
@@ -2017,7 +2018,7 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 	if (update_system_cpu_data(event_num) < 0)
 	{
 		LOGE("Failed to update system cpu data\n");
-		return -1;
+		goto fail_exit;
 	}
 
 	// update cpu freq
@@ -2028,20 +2029,20 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 	if (update_process_data(pidarray, pidcount, PROCDATA_SMAPS) < 0)
 	{
 		LOGE("Failed to update process smaps data\n");
-		return -1;
+		goto fail_exit;
 	}
 
 	if (pidcount > 0)
 		if (update_thread_data(pidarray[0]) < 0)
 		{
 			LOGE("Failed to update thread stat data\n");
-			return -1;
+			goto fail_exit;
 		}
 
 	if(update_system_memory_data(&sysmemtotal, &sysmemused) < 0)
 	{
 		LOGE("Failed to update system memory data\n");
-		return -1;
+		goto fail_exit;
 	}
 
 	// prepare calculate
@@ -2058,25 +2059,27 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 	if (update_cpus_info(event_num, elapsed) < 0)
 	{
 		LOGE("Failed to update cpus info\n");
-		return -1;
+		goto fail_exit;
 	}
 
 	// calculate process load, memory, app_cpu_usage
 	if (fill_system_processes_info(factor, sys_info) < 0)
 	{
 		LOGE("Failed to fill processes info\n");
-		return -1;
+		goto fail_exit;
 	}
 	// calculate thread load
 
 	if (fill_system_threads_info(factor, sys_info) < 0)
 	{
 		LOGE("Failed to fill threads info\n");
+		goto fail_exit;
 	}
 
 	if (fill_system_cpu_info(sys_info) < 0)
 	{
 		LOGE("Failed to fill threads info\n");
+		goto fail_exit;
 	}
 
 #ifndef LOCALTEST
@@ -2146,6 +2149,11 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 	print_sys_info(sys_info);
 	event_num++;
 	return res;
+
+fail_exit:
+	//free allocated data
+	reset_system_info(sys_info);
+	return -1;
 }
 
 int initialize_system_info()
@@ -2229,13 +2237,15 @@ int fill_target_info(struct target_info_t *target_info)
 
 struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 {
+	LOGI("start\n");
+
 	struct msg_data_t *msg = NULL;
 	char *p = NULL;
 	int i = 0;
 	uint32_t len = sizeof(*sys_info) -
 		(sizeof(sys_info->thread_load) +
 		 sizeof(sys_info->process_load)) +
-		2 * 4 * sizeof(float) +
+		2 * num_of_cpu * sizeof(float) +
 		sys_info->count_of_threads * sizeof(*sys_info->thread_load) +
 		sys_info->count_of_processes * sizeof(*sys_info->process_load);
 
@@ -2267,13 +2277,13 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	pack_int(p, sys_info->disk_write_size);
 
 	// CPU
-	for (i = 0; i < 4/* num_of_cpu */; i++) {
+	for (i = 0; i < num_of_cpu; i++) {
 		pack_float(p, sys_info->cpu_frequency[i]); //FIXME wrong pack float define
 	}
 
 	pack_float(p, sys_info->app_cpu_usage);
 
-	for (i = 0; i < 4/* num_of_cpu */; i++) {
+	for (i = 0; i < num_of_cpu; i++) {
 		pack_float(p, sys_info->cpu_load[i]); //FIXME wrong pack float define
 	}
 
@@ -2305,5 +2315,6 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	pack_int(p, sys_info->network_send_size);
 	pack_int(p, sys_info->network_receive_size);
 
+	LOGI("end\n");
 	return msg;
 }
