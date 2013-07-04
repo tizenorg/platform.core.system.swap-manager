@@ -8,15 +8,17 @@
 void printBuf (char * buf, int len)
 {
 	int i,j;
-	char local_buf[3*16 + 2*16 + 1];
+	char local_buf[3*16 + 2*16 + 1 + 8];
 	char * p1, * p2;
 
-	LOGI("BUFFER:\n");
+	LOGI("BUFFER [%d]:\n", len);
 	for ( i = 0; i < len/16 + 1; i++)
 	{
-		memset(local_buf, ' ', 5*16);
-		p1 = local_buf;
-		p2 = local_buf + 3*17;
+		memset(local_buf, ' ', 5*16 + 8);
+
+		sprintf(local_buf, "0x%04X: ", i);
+		p1 = local_buf + 8;
+		p2 = local_buf + 8 + 3*17;
 		for ( j = 0; j < 16; j++)
 			if (i*16+j < len )
 			{

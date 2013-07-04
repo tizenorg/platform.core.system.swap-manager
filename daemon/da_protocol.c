@@ -22,7 +22,7 @@
 #include <unistd.h>
 
 #define SYSTEM_INFO_DEBUG
-#define parse_deb_on
+//#define parse_deb_on
 
 void inline free_msg_data(struct msg_data_t *msg)
 {
@@ -42,6 +42,8 @@ void free_sys_info(struct system_info_t *sys_info)
 	memset(sys_info, 0, sizeof(*sys_info));
 }
 
+static uint32_t msg_size_with_out_replays = 0;
+
 struct prof_session_t prof_session;
 
 static void print_app_info( struct app_info_t *app_info);
@@ -51,7 +53,6 @@ static void print_us_lib_inst(struct us_lib_inst_t * lib_inst,int num,char * tab
 static void print_user_space_app_inst(struct app_inst_t * app_inst, int num, char * tab);
 static void print_user_space_inst(struct user_space_inst_t * user_space_inst);
 static void print_prof_session(struct prof_session_t *prof_session);
-
 //DEBUG FUNCTIONS
 #define dstr(x) #x
 
@@ -193,7 +194,9 @@ void feature_code_str(uint32_t feature, char * to)
 	print_feature_a(FL_OPENGL_API_PROBING);
 
 }
+
 #ifdef parse_deb_on
+
 #define parse_deb(...) do{\
 							LOGI("%s->\t",__FUNCTION__);\
 							LOGI(__VA_ARGS__);\
@@ -588,13 +591,14 @@ static int parse_prof_session(char *msg_payload,
 		return 1;
 	}
 
+	msg_size_with_out_replays = p - msg_payload;
 	p = parse_replay_event_seq(p, &prof_session->replay_event_seq);
 	if (!p) {
 		LOGE("replay parsing error\n");
 		return 1;
 	}
 
-	print_prof_session(prof_session);
+	//print_prof_session(prof_session);
 	return 0;
 }
 
@@ -666,6 +670,12 @@ static void concat_add_user_space_inst(struct user_space_inst_t *from,
 	return;
 }
 
+static void cat_replay_events(struct msg_t *msg){
+
+	LOGI("msg_size_with_out_replays = %d \n",msg_size_with_out_replays);
+	msg->len = msg_size_with_out_replays;
+
+}
 
 static void reset_app_info(struct app_info_t *app_info)
 {
@@ -913,6 +923,7 @@ int host_message_handler(struct msg_t *msg)
 	struct msg_t *msg_reply;
 	struct user_space_inst_t user_space_inst;
 	struct conf_t conf;
+	enum ErrorCode error_code;
 
 	LOGI("MY HANDLE %s (%X)\n", msg_ID_str(msg->id), msg->id);
 
@@ -935,7 +946,9 @@ int host_message_handler(struct msg_t *msg)
 
 
 		// TODO: apply_prof_session()
-		if (0) {
+		cat_replay_events(msg);
+		if (ioctl_send_msg(msg) != 0){
+			LOGE("cannot send message to device\n");
 			sendACKCodeToHost(MSG_NOTOK, ERR_CANNOT_START_PROFILING);
 			return -1;
 		}
@@ -948,35 +961,41 @@ int host_message_handler(struct msg_t *msg)
 		// TODO: start app launch timer
 
 		//write to device
-		// ioctl_send_msg(msg);
 
 		// success
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
 	case NMSG_STOP:
+		error_code=ERR_NO;
 		terminate_all();
 		stop_profiling();
+		if (ioctl_send_msg(msg) != 0){
+			LOGE("ioctl send filed\n");
+			error_code = ERR_UNKNOWN;
+		}
 		reset_prof_session(&prof_session);
 		stop_transfer();
-		//write to device
-		ioctl_send_msg(msg);
 		//send ack to host
-		sendACKToHost(msg->id, ERR_NO, 0, 0);
+		sendACKToHost(msg->id, error_code, 0, 0);
 		break;
 	case NMSG_CONFIG:
+		error_code=ERR_NO;
 		if (!parse_msg_config(msg->payload, &conf)) {
 			LOGE("config parsing error\n");
 			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
 			return -1;
 		}
-		if (!reconfigure(conf)) {
+		if (reconfigure(conf) != 0) {
 			LOGE("Cannot change configuration\n");
 			return -1;
 		}
 		//write to device
-		ioctl_send_msg(msg);
+		if (ioctl_send_msg(msg) != 0){
+			sendACKToHost(msg->id, ERR_UNKNOWN, 0, 0);
+			return -1;
+		}
 		//send ack to host
-		sendACKToHost(msg->id,ERR_NO,0,0);
+		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
 	case NMSG_BINARY_INFO:
 		if (!parse_msg_binary_info(msg->payload, &app_info)) {
@@ -1009,7 +1028,10 @@ int host_message_handler(struct msg_t *msg)
 		// so, data will not be availible
 		concat_add_user_space_inst(&user_space_inst, &prof_session.user_space_inst);
 		//write to device
-		ioctl_send_msg(msg);
+		if (ioctl_send_msg(msg) != 0){
+			sendACKToHost(msg->id, ERR_UNKNOWN, 0, 0);
+			return -1;
+		}
 		//send ack to host
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		// TODO release user_space_inst
@@ -1019,6 +1041,10 @@ int host_message_handler(struct msg_t *msg)
 					   &prof_session.user_space_inst)){
 			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
 			LOGE("user space inst parsing error\n");
+			return -1;
+		}
+		if (ioctl_send_msg(msg) != 0){
+			sendACKToHost(msg->id, ERR_UNKNOWN, 0, 0);
 			return -1;
 		}
 		// TODO: apply_prof_session()
