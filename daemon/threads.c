@@ -278,6 +278,7 @@ void* samplingThread(void* data)
 			msg = pack_system_info(&sys_info);
 			if (!msg) {
 				LOGE("Cannot pack system info\n");
+				reset_system_info(&sys_info);
 				continue;
 			}
 			write_to_buf(msg);
