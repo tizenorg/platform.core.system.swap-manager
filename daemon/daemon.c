@@ -702,6 +702,8 @@ static int controlSocketHandler(int efd)
 			recv_len = recv(manager.host.control_socket,
 					msg->payload,
 					msg->len, MSG_WAITALL);
+			if (recv_len == -1)
+				return -11;
 		}
 		res = host_message_handler(msg);
 		free(msg);
