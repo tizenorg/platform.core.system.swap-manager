@@ -284,8 +284,7 @@ void* samplingThread(void* data)
 			write_to_buf(msg);
 			printBuf((char *)msg, MSG_DATA_HDR_LEN + msg->len);
 			free_msg_data(msg);
-			free_sys_info(&sys_info); //TODO make function free_sys_info
-
+			reset_system_info(&sys_info);
 #ifdef DEBUG_GSI
 			break; //FOR DEBUG ONLY
 #endif

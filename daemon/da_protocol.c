@@ -29,19 +29,6 @@ void inline free_msg_data(struct msg_data_t *msg)
 	free(msg);
 }
 
-void free_sys_info(struct system_info_t *sys_info)
-{
-	if (sys_info->cpu_frequency)
-		free(sys_info->cpu_frequency);
-	if (sys_info->cpu_load)
-		free(sys_info->cpu_load);
-	if (sys_info->thread_load)
-		free(sys_info->thread_load);
-	if (sys_info->process_load)
-		free(sys_info->process_load);
-	memset(sys_info, 0, sizeof(*sys_info));
-}
-
 static uint32_t msg_size_with_out_replays = 0;
 
 struct prof_session_t prof_session;
