@@ -70,6 +70,24 @@ static void* recvThread(void* data)
 			write(manager.target[index].event_fd, &event, sizeof(uint64_t));
 			break;
 		}
+		if (IS_PROBE_MSG(log.type)) {
+			struct msg_data_t tmp_msg;
+			int offs = sizeof(log.type) + sizeof(log.length);
+			recvLen = recv(manager.target[index].socket,
+				       (char *)&log + offs,
+				       MSG_DATA_HDR_LEN - offs,
+				       MSG_WAITALL);
+			memcpy(&tmp_msg, &log, MSG_DATA_HDR_LEN);
+			struct msg_data_t *msg = malloc(MSG_DATA_HDR_LEN +
+							tmp_msg.len);
+			memcpy(msg, &tmp_msg, MSG_DATA_HDR_LEN);
+			recvLen = recv(manager.target[index].socket,
+				       (char *)msg + MSG_DATA_HDR_LEN,
+				       msg->len, MSG_WAITALL);
+			write_to_buf(msg);
+			free(msg);
+			continue;
+		}
 
 		// send to host
 		if (likely(log.length > 0))
