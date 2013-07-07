@@ -13,15 +13,16 @@ static void *transfer_thread(void *arg)
 {
 	(void)arg;
 	int fd_pipe[2];
-	ssize_t n;
+	ssize_t nrd, nwr;
 
 	LOGI("transfer thread started\n");
 
 	pipe(fd_pipe);
 	while (1) {
-		LOGI("going to splice read\n");
-		n = splice(manager.buf_fd, NULL, fd_pipe[1], NULL, BUF_SIZE, 0);
-		if (n == -1) {
+		nrd = splice(manager.buf_fd, NULL,
+			     fd_pipe[1], NULL,
+			     BUF_SIZE, 0);
+		if (nrd == -1) {
 			if (errno == EAGAIN) {
 				LOGI("No more data to read\n");
 				break;
@@ -29,15 +30,17 @@ static void *transfer_thread(void *arg)
 			LOGE("Cannot splice read: %s\n", strerror(errno));
 			return NULL;
 		}
-		LOGI("splice read: %d\n", n);
 
-		n = splice(fd_pipe[0], NULL,
-			   manager.host.data_socket, NULL, n, 0);
-		if (n == -1) {
+		nwr = splice(fd_pipe[0], NULL,
+			     manager.host.data_socket, NULL,
+			     nrd, 0);
+		if (nwr == -1) {
 			LOGE("Cannot splice write: %s\n", strerror(errno));
 			return NULL;
 		}
-		LOGI("splice written: %d\n", n);
+		if (nwr != nrd) {
+			LOGW("nrd - nwr = %d\n", nrd - nwr);
+		}
 	}
 	close(fd_pipe[0]);
 	close(fd_pipe[1]);
