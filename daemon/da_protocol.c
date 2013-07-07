@@ -728,8 +728,6 @@ static void reset_user_space_inst(struct user_space_inst_t *us)
 
 void reset_system_info(struct system_info_t *sys_info)
 {
-	LOGI("clean\n");
-
 	if (sys_info->thread_load)
 		free(sys_info->thread_load);
 	if (sys_info->process_load)

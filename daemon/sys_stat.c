@@ -2236,8 +2236,6 @@ int fill_target_info(struct target_info_t *target_info)
 
 struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 {
-	LOGI("start\n");
-
 	struct msg_data_t *msg = NULL;
 	char *p = NULL;
 	int i = 0;
@@ -2314,6 +2312,5 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	pack_int(p, sys_info->network_send_size);
 	pack_int(p, sys_info->network_receive_size);
 
-	LOGI("end\n");
 	return msg;
 }
