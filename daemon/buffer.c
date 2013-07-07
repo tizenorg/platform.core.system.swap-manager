@@ -4,9 +4,11 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
+
 #include "daemon.h"
 #include "buffer.h"
 #include "ioctl_commands.h"
+#include "debug.h"
 
 #define SUBBUF_SIZE 32768
 #define SUBBUF_NUM 16
@@ -32,6 +34,7 @@ static int insert_buf_modules(void)
 {
 	system("insmod /opt/swap/sdk/swap_buffer.ko");
 	system("insmod /opt/swap/sdk/swap_driver.ko");
+	system("insmod /opt/swap/sdk/swap_message_parser.ko");
 	// TODO: check if modules really inserted
 
 	return 0;
@@ -41,6 +44,7 @@ static void remove_buf_modules(void)
 {
 	system("rmmod swap_driver");
 	system("rmmod swap_buffer");
+	system("rmmod swap_message_parser");
 	// TODO: check if modules really removed
 }
 
@@ -93,3 +97,4 @@ int write_to_buf(struct msg_data_t *msg)
 	}
 	return 0;
 }
+

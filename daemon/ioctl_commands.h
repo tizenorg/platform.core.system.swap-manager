@@ -1,5 +1,7 @@
 /* SWAP Device ioctl commands */
 
+#include "da_protocol.h"
+
 #include <linux/ioctl.h>
 
 #ifndef __SWAP_DRIVER_IOCTL_COMMANDS__
@@ -28,5 +30,6 @@ struct buffer_initialize {
                                                  void *)
 #define SWAP_DRIVER_MSG_SWAP_INST_REMOVE    _IOW(SWAP_DRIVER_IOC_MAGIC, 9,\
                                                  void *)
+extern int ioctl_send_msg(struct msg_data_t *msg);
 
 #endif /* __SWAP_DRIVER_IOCTL_COMMANDS__ */

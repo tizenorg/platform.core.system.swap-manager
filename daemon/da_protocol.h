@@ -121,14 +121,9 @@ struct msg_data_t {
 struct msg_t {
 	uint32_t id;
 	uint32_t len;
-	char *payload;
-};
-
-struct msg_reply_t {
-	uint32_t id;
-	uint32_t len;
 	char payload[0];
 };
+
 
 enum app_type_t {
 	APP_TYPE_TIZEN = 1,
@@ -185,7 +180,7 @@ struct app_inst_t {
 
 struct user_space_inst_t {
 	uint32_t app_num;
-	struct app_inst_t * app_inst_list;
+	struct app_inst_t *app_inst_list;
 };
 
 struct replay_event_t {
@@ -287,6 +282,7 @@ void stop_replay();
 
 void reset_msg(struct msg_t *msg);
 void reset_replay_event_seq(struct replay_event_seq_t *res);
+void reset_system_info(struct system_info_t *sys);
 
 extern struct prof_session_t prof_session;
 

@@ -162,21 +162,6 @@ enum DAState
 #define unlikely(x)	__builtin_expect((x), 0)
 #endif
 
-#if DEBUG
-//	#define LOGI(...)	do{ fprintf(stderr, "[INF] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); usleep(100000);} while(0)
-	#define LOGI(...)	do{ fprintf(stderr, "[INF] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
-//	#define LOGI(...)	do{} while(0)
-	#define LOGI_(...)	do{ fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
-	//#define LOGI_(...)	do{} while(0)
-	#define LOGE(...)	do{ fprintf(stderr, "[ERR] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
-	#define LOGW(...)	do{ fprintf(stderr, "[WRN] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
-#else
-	#define LOGI(...)	do{} while(0)
-	#define LOGI_(...)	do{} while(0)
-	#define LOGE(...)	do{} while(0)
-	#define LOGW(...)	do{} while(0)
-#endif
-
 #define EVENT_STOP		0x00000001
 #define EVENT_PID		0x00000002
 #define EVENT_ERROR		0x00000004

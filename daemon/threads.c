@@ -42,6 +42,7 @@
 
 #include "da_protocol.h"
 #include "da_data.h"
+#include "debug.h"
 
 //#define DEBUG_GSI
 
@@ -156,7 +157,7 @@ static void* recvThread(void* data)
 		else if(log.type == MSG_MSG)
 		{
 			// don't send to host
-			LOGI("EXTRA MSG %d|%d|%s\n", log.type, log.length, log.data);
+			LOGI("EXTRA MSG type=%d;len=%d;data='%s'\n", log.type, log.length, log.data);
 			continue;
 		}
 #ifdef PRINT_TARGET_LOG
@@ -268,12 +269,16 @@ void* samplingThread(void* data)
 			struct system_info_t sys_info;
 			if (get_system_info(&sys_info, pidarr, pidcount) == -1) {
 				LOGE("Cannot get system info\n");
+				//do not send sys_info because
+				//it is corrupted
+				continue;
 			}
 
 			struct msg_data_t *msg;
 			msg = pack_system_info(&sys_info);
 			if (!msg) {
 				LOGE("Cannot pack system info\n");
+				continue;
 			}
 			write_to_buf(msg);
 			printBuf((char *)msg, MSG_DATA_HDR_LEN + msg->len);

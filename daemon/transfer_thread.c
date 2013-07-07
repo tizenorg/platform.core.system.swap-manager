@@ -3,8 +3,10 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
+
 #include "daemon.h"
 #include "buffer.h"
+#include "debug.h"
 #include "transfer_thread.h"
 
 #define BUF_SIZE 4096
