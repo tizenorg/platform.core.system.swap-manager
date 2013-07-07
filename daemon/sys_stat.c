@@ -2022,7 +2022,10 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 	}
 
 	// update cpu freq
-	update_system_cpu_frequency(event_num);
+	if (update_system_cpu_frequency(event_num) < 0) {
+		LOGE("Failed to update system cpu freq data\n");
+		goto fail_exit;
+	}
 
 	// memory data is changed slowly and variance is not remarkable
 	// so memory data is less related with timestamp then cpu data
