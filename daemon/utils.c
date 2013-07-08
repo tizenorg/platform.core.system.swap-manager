@@ -344,6 +344,7 @@ int get_manifest_path(const char* exec_path, char* buf, int buflen)
 // return 1 to succeed to execute
 int exec_app_tizen(const char *app_id, const char *exec_path)
 {
+	LOGI("exec %s\n", exec_path);
 	pid_t pid;
 	//char command[PATH_MAX];
 	//char appid[PATH_MAX];
@@ -369,6 +370,8 @@ int exec_app_tizen(const char *app_id, const char *exec_path)
 
 int exec_app_common(const char* exec_path)
 {
+	LOGI("kill %s\n", exec_path);
+
 	pid_t pid;
 	int hw_acc = 0;
 	char manifest[PATH_MAX];
@@ -458,7 +461,7 @@ int exec_app_common(const char* exec_path)
 	sprintf(command, "%s", exec_path);
 #endif /* LOCALTEST */
 
-	LOGI("launching commmon app, command: %s\n", command);
+	LOGI("cmd: %s\n", command);
 	execl(SHELL_CMD, SHELL_CMD, "-c", command, NULL);
 
 	return 0;
@@ -502,6 +505,8 @@ pid_t find_pid_from_path(const char* path)
 
 void kill_app(const char* binary_path)
 {
+	LOGI("kill %s\n", binary_path);
+
 	pid_t pkg_pid;
 	char command[PATH_MAX];
 

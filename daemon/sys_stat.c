@@ -608,7 +608,7 @@ static void get_cpu_frequency(float *freqs)
 
 		f = fopen(filename, "r");
 		if (!f){
-			LOGI("file not found <%s\n>", filename);
+			LOGI_th_samp("file not found <%s\n>", filename);
 			break;
 		}
 		fclose(f);
@@ -620,13 +620,13 @@ static void get_cpu_frequency(float *freqs)
 		if (!f)
 		{
 			//core is disabled
-			LOGI("core #%d diasabled\n", cpu_n);
+			LOGI_th_samp("core #%d diasabled\n", cpu_n);
 			freqs[cpu_n] = 0.0;
 		} else {
 			//core enabled, get frequency
 			fscanf(f, "%s", freq_str);
 			freqs[cpu_n] = atof(freq_str);
-			LOGI("core #%d freq = %.0f\n", cpu_n, freqs[cpu_n]);
+			LOGI_th_samp("core #%d freq = %.0f\n", cpu_n, freqs[cpu_n]);
 			fclose(f);
 		}
 
@@ -1133,7 +1133,7 @@ static int update_system_cpu_data(int cur_index)
 						&cpus[i].w, &cpus[i].x, &cpus[i].y, &cpus[i].z);
 				if(num > 4)
 				{
-					LOGI("Readed %d stats of %dth cpu\n", num, i);
+					LOGI_th_samp("Readed %d stats of %dth cpu\n", num, i);
 					cpus[i].cur_load_index = cur_index;
 				}
 				else	// buf is not cpu core tick information
@@ -1308,7 +1308,7 @@ static int get_fsinfo(const char* path, int type)
 	total = (int)((long long)(buf.f_bsize / 1024LL * buf.f_blocks) / 1024LL);
 	free = (int)((long long)(buf.f_bsize / 1024LL * buf.f_bavail) / 1024LL);
 
-	LOGI("File storage total(%d), free(%d)\n", total, free);
+/* 	LOGI("File storage total(%d), free(%d)\n", total, free); */
 	if (type == FSINFO_TYPE_TOTAL)
 	{
 		return total;
@@ -1362,14 +1362,14 @@ static int get_total_used_drive()
 
 	if (storage < 0 && card < 0)
 	{
-		LOGI("total_used_drive = -1\n");
+		LOGI_th_samp("total_used_drive = -1\n");
 		return -1;
 	}
 
 	free = storage + card;
 	total = get_total_drive() - free;
 
-	LOGI("total_used_drive = %d\n",total);
+	LOGI_th_samp("total_used_drive = %d\n", total);
 
 	return total;
 }
@@ -1668,7 +1668,7 @@ int update_cpus_info(int event_num, float elapsed)
 	for(i = num_of_cpu; i <= num_of_cpu; i++)
 #endif
 	{
-	LOGI("CPU #%d\n",i);
+	LOGI_th_samp("CPU #%d\n", i);
 		cpuptr = &(cpus[i]);
 
 		if(cpuptr->cur_load_index == event_num)
@@ -1701,7 +1701,7 @@ int update_cpus_info(int event_num, float elapsed)
 //					idle_tick_sum += cpuptr->idle_ticks;
 //					total_tick_sum += cpuptr->total_ticks;
 //				}
-				LOGI("System cpu usage log : %d, %Ld, %Ld\n", i, cpuptr->idle_ticks, cpuptr->total_ticks);
+				LOGI_th_samp("System cpu usage log : %d, %Ld, %Ld\n", i, cpuptr->idle_ticks, cpuptr->total_ticks);
 				if(unlikely(cpuptr->cpu_usage < 0))
 				{
 					cpuptr->cpu_usage = 0.0f;
@@ -1785,7 +1785,7 @@ int fill_system_processes_info(float factor, struct system_info_t * sys_info)
 	uint64_t ticks = 0;
 	float app_cpu_usage = 0.0;
 
-	LOGI("prochead = %X\n", (unsigned int)prochead);
+	LOGI_th_samp("prochead = %X\n", (unsigned int)prochead);
 	for(proc = prochead; proc != NULL; proc = proc->next)
 	{
 		//increment process count
@@ -1798,7 +1798,7 @@ int fill_system_processes_info(float factor, struct system_info_t * sys_info)
 	i = 0;
 	for(proc = prochead; proc != NULL; proc = proc->next)
 	{
-		LOGI ("proc#%d (%d %d),(%d %d) (%d) %f\n",
+		LOGI_th_samp("proc#%d (%d %d),(%d %d) (%d) %f\n",
 				i,
 				(unsigned int)proc->proc_data.utime, (unsigned int)proc->proc_data.stime ,
 				(unsigned int)proc->saved_utime, (unsigned int)proc->saved_stime,
@@ -1856,7 +1856,7 @@ int fill_system_threads_info(float factor, struct system_info_t * sys_info)
 		//increment thread count
 		sys_info->count_of_threads++; //maybe wrong
 
-	LOGI("thread load\n");
+/* 	LOGI_th_samp("thread load\n"); */
 	struct thread_info_t *pthread;
 	if (sys_info->count_of_threads != 0)
 	{
@@ -1892,7 +1892,7 @@ int fill_system_cpu_info(struct system_info_t *sys_info)
 	int i = 0;
 
 	// calculate for whole cpu load by average all core load
-	LOGI("calculate for whole cpu load num_of_cpu=%d\n",num_of_cpu);
+	LOGI_th_samp("calculate for whole cpu load num_of_cpu=%d\n", num_of_cpu);
 	for(i = 0 ; i < num_of_cpu; i++)
 		sys_usage += cpus[i].cpu_usage;
 
@@ -1904,7 +1904,7 @@ int fill_system_cpu_info(struct system_info_t *sys_info)
 		pcpu_usage = sys_info->cpu_load;
 		for(i = 0; i < num_of_cpu; i++)
 		{
-			LOGI("cpu#%d : %.1f\n" , i,  cpus[i].cpu_usage);
+			LOGI_th_samp("cpu#%d : %.1f\n" , i,  cpus[i].cpu_usage);
 			*pcpu_usage = cpus[i].cpu_usage;
 			pcpu_usage++;
 		}
@@ -1983,7 +1983,7 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 {
 	static struct timeval old_time = {0, 0};
 	static int event_num = 0;
-	LOGI("start\n");
+	LOGI_th_samp("start\n");
 
 
 	struct timeval current_time;
@@ -2002,7 +2002,7 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 	memset(sys_info, 0, sizeof(*sys_info));
 
 
-	LOGI("PID count : %d\n", pidcount);
+	LOGI_th_samp("PID count : %d\n", pidcount);
 
 	if (update_process_data(pidarray, pidcount, PROCDATA_STAT) < 0)
 	{
@@ -2087,7 +2087,7 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 
 #ifndef LOCALTEST
 	// Fill result strutcture
-	LOGI("fill result structure\n");
+	LOGI_th_samp("fill result structure\n");
 
 	sys_info->energy = 0; // not implemented
 	sys_info->wifi_status = get_wifi_status();
@@ -2147,7 +2147,10 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 	sys_info->network_receive_size = 0x23;
 #endif /* LOCALTEST */
 
+#ifdef THREAD_SAMPLING_DEBUG
 	print_sys_info(sys_info);
+#endif
+
 	event_num++;
 	return res;
 

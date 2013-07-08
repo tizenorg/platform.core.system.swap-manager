@@ -931,6 +931,8 @@ int host_message_handler(struct msg_t *msg)
 
 
 		// TODO: apply_prof_session()
+
+		//write to device
 		cat_replay_events(msg);
 		if (ioctl_send_msg(msg) != 0){
 			LOGE("cannot send message to device\n");
@@ -939,13 +941,13 @@ int host_message_handler(struct msg_t *msg)
 		}
 
 		if (start_profiling() < 0) {
+			LOGE("cannot start profiling\n");
 			sendACKToHost(msg->id, ERR_CANNOT_START_PROFILING, 0, 0);
 			return -1;
 		}
 
 		// TODO: start app launch timer
 
-		//write to device
 
 		// success
 		sendACKToHost(msg->id, ERR_NO, 0, 0);

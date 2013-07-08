@@ -281,8 +281,13 @@ void* samplingThread(void* data)
 				reset_system_info(&sys_info);
 				continue;
 			}
+
 			write_to_buf(msg);
+
+#ifdef THREAD_SAMPLING_DEBUG
 			printBuf((char *)msg, MSG_DATA_HDR_LEN + msg->len);
+#endif
+
 			free_msg_data(msg);
 			reset_system_info(&sys_info);
 #ifdef DEBUG_GSI
@@ -372,7 +377,7 @@ static void *replay_thread(void *arg)
 
 	struct replay_event_t * pevent = NULL;
 
-	LOGW("replay events thread started\n");
+	LOGI_th_rep("replay events thread started\n");
 	if (event_seq->event_num != 0)
 	{
 		pevent = event_seq->events;
@@ -385,8 +390,10 @@ static void *replay_thread(void *arg)
 		else
 			ms = 0;
 
+#ifdef THREAD_REPLAY_DEBUG
 		print_replay_event(pevent, i + 1, "\t");
-		LOGW("%d) sleep %d\n",i, ms);
+#endif
+		LOGI_th_rep("%d) sleep %d\n", i, ms);
 		usleep(ms);
 
 		/* filter touch and key events here
@@ -394,12 +401,12 @@ static void *replay_thread(void *arg)
 		switch (pevent->id)
 		{
 		case INPUT_ID_TOUCH:
-			LOGI("event -> %s\n",INPUT_ID_STR_KEY);
+			LOGI_th_rep("event -> %s\n", INPUT_ID_STR_KEY);
 			_device_write(g_touch_dev, &pevent->ev);
 			break;
 
 		case INPUT_ID_KEY:
-			LOGI("event -> %s\n",INPUT_ID_STR_TOUCH);
+			LOGI_th_rep("event -> %s\n", INPUT_ID_STR_TOUCH);
 			_device_write(g_key_dev, &pevent->ev);
 			break;
 		default:
@@ -411,7 +418,7 @@ static void *replay_thread(void *arg)
 		pevent++;
 	}
 
-	LOGW("replay events thread finished\n");
+	LOGI("replay events thread finished\n");
 
 	return arg;
 }
