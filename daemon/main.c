@@ -367,6 +367,7 @@ int main()
 		//FIX ME remove samplingThread it is only for debug
 		//samplingThread(NULL);
 		daemonLoop();
+		LOGI("daemon loop finished\n");
 		stop_all();
 		finalizeManager();
 		return 0;

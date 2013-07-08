@@ -360,8 +360,10 @@ int exec_app_tizen(const char *app_id, const char *exec_path)
 	else if (pid > 0)
 		return 0; // exit parent process with success
 
-	LOGI("launch app path is %s, executable path is %s\n",
-	     LAUNCH_APP_PATH, exec_path);
+	LOGI("launch app path is %s, executable path is %s\n"
+	     "launch app name (%s), app_id (%s)\n",
+	     LAUNCH_APP_PATH, exec_path,
+	     LAUNCH_APP_NAME, app_id);
 	execl(LAUNCH_APP_PATH, LAUNCH_APP_NAME, app_id, LAUNCH_APP_SDK,
 	      DA_PRELOAD_EXEC, NULL);
 

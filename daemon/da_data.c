@@ -275,9 +275,8 @@ struct msg_data_t *gen_message_event(
 	return data;
 }
 
-int reset_data_msg(struct msg_data_t *data)
+void inline free_msg_data(struct msg_data_t *msg)
 {
-	free(data);
-	return 0;
-}
+	free(msg);
+};
 

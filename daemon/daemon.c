@@ -274,6 +274,8 @@ int sendACKCodeToHost(enum HostMessageType resp, int msgcode)
 static int exec_app(const struct app_info_t *app_info)
 {
 	int res = 0;
+	static struct epoll_event ev;
+
 
 	switch (app_info->app_type) {
 	case APP_TYPE_TIZEN:
@@ -285,6 +287,7 @@ static int exec_app(const struct app_info_t *app_info)
 		break;
 	case APP_TYPE_RUNNING:
 		// TODO: nothing, it's running
+		LOGI("already started\n");
 		break;
 	case APP_TYPE_COMMON:
 		kill_app(app_info->exe_path);
@@ -299,6 +302,42 @@ static int exec_app(const struct app_info_t *app_info)
 		break;
 	}
 
+	if (res == 0) {
+		manager.app_launch_timerfd = timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC);
+		if(manager.app_launch_timerfd > 0)
+		{
+			struct itimerspec ctime;
+			ctime.it_value.tv_sec = MAX_APP_LAUNCH_TIME;
+			ctime.it_value.tv_nsec = 0;
+			ctime.it_interval.tv_sec = 0;
+			ctime.it_interval.tv_nsec = 0;
+			if (timerfd_settime(manager.app_launch_timerfd, 0, &ctime, NULL) < 0)
+			{
+				LOGE("fail to set app launch timer\n");
+				close(manager.app_launch_timerfd);
+				manager.app_launch_timerfd = -1;
+			}
+			else
+			{
+				// add event fd to epoll list
+				ev.events = EPOLLIN;
+				ev.data.fd = manager.app_launch_timerfd;
+				if(epoll_ctl(manager.efd, EPOLL_CTL_ADD, manager.app_launch_timerfd, &ev) < 0)
+				{
+					// fail to add event fd
+					LOGE("fail to add app launch timer fd to epoll list\n");
+					close(manager.app_launch_timerfd);
+					manager.app_launch_timerfd = -1;
+				} else {
+					LOGI("application launch time started\n");
+				}
+			}
+		} else {
+			LOGE("cannot create launch timer\n");
+		}
+	}
+
+	LOGI("ret=%d\n", res);
 	return res;
 }
 
@@ -343,6 +382,7 @@ recording_stop:
 		samplingStop();
 
 exit:
+	LOGI("return %d\n", res);
 	return res;
 }
 
@@ -439,7 +479,6 @@ static void terminate_all_target()
 void terminate_all()
 {
 	int i;
-
 	terminate_all_target();
 
 	// wait for all other thread exit
@@ -454,8 +493,19 @@ void terminate_all()
 
 // terminate all profiling by critical error
 // TODO: don't send data to host
-static void terminate_error(char* errstr, int sendtohost)
+static void terminate_error(char* errstr, int send_to_host)
 {
+	LOGE("termination all with err '%s'\n", errstr);
+	struct msg_data_t *msg = NULL;
+	if (send_to_host != 0){
+		msg = gen_message_error(errstr);
+		if (msg) {
+			write_to_buf(msg);
+			free_msg_data(msg);
+		} else {
+			LOGI("cannot generate error message\n");
+		}
+	}
 	terminate_all();
 }
 
@@ -483,7 +533,7 @@ static int deviceEventHandler(input_dev* dev, int input_type)
 			log = gen_message_event(in_ev, count, input_type);
 			printBuf((char *)log, MSG_DATA_HDR_LEN + log->len);
 			write_to_buf(log);
-			reset_data_msg(log);
+			free_msg_data(log);
 		}
 	}
 	else
@@ -592,6 +642,7 @@ static int targetServerHandler(int efd)
 
 		if(manager.app_launch_timerfd >= 0)
 		{
+			LOGI("release launch timer\n");
 			epoll_ctl(efd, EPOLL_CTL_DEL, manager.app_launch_timerfd, NULL);
 			close(manager.app_launch_timerfd);
 			manager.app_launch_timerfd = -1;
@@ -937,8 +988,8 @@ int daemonLoop()
 					manager.host.data_socket = -1;
 					// TODO: finish transfer thread
 				}
-	
-				LOGW("host message from data socket %d\n", recvLen);
+
+				LOGI("host message from data socket %d\n", recvLen);
 			}
 			// check for application launch timerfd
 			else if(events[i].data.fd == manager.app_launch_timerfd)
@@ -962,6 +1013,7 @@ int daemonLoop()
 	}
 
 END_EFD:
+	LOGI("close efd\n");
 	close(manager.efd);
 END_EVENT:
 	free(events);

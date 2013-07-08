@@ -24,10 +24,7 @@
 #define SYSTEM_INFO_DEBUG
 //#define parse_deb_on
 
-void inline free_msg_data(struct msg_data_t *msg)
-{
-	free(msg);
-}
+
 void inline free_msg(struct msg_t *msg)
 {
 	free(msg);

@@ -49,8 +49,9 @@ extern "C" {
 //	#define LOGI(...)	do{} while(0)
 	#define LOGI_(...)	do{ fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
 	//#define LOGI_(...)	do{} while(0)
-	#define LOGE(...)	do{ fprintf(stderr, "[ERR] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
+
 //	#define LOGE(...)	do{ fprintf(stderr, "[ERR] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); usleep(1000000);} while(0)
+	#define LOGE(...)	do{ fprintf(stderr, "[ERR] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
 	#define LOGW(...)	do{ fprintf(stderr, "[WRN] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
 
 
