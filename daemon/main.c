@@ -309,19 +309,26 @@ static int initializeManager()
 
 static int finalizeManager()
 {
+	LOGI("Finalize daemon\n");
 #ifndef LOCALTEST
+	LOGI("finalize system info\n");
 	finalize_system_info();
 #endif
-	LOGI("Finalize daemon\n");
 
 	// close host client socket
-	if(manager.host.control_socket != -1)
+	if(manager.host.control_socket != -1){
+		LOGI("close host control socket (%d)\n", manager.host.control_socket);
 		close(manager.host.control_socket);
-	if(manager.host.data_socket != -1)
+	}
+	if(manager.host.data_socket != -1){
+		LOGI("close host data socket (%d)\n", manager.host.data_socket);
 		close(manager.host.data_socket);
+	}
 
+	LOGI("exit buf\n");
 	exit_buf();
 
+	LOGI("return\n");
 	return 0;
 }
 
@@ -360,7 +367,7 @@ int main()
 		//FIX ME remove samplingThread it is only for debug
 		//samplingThread(NULL);
 		daemonLoop();
-
+		stop_all();
 		finalizeManager();
 		return 0;
 	}

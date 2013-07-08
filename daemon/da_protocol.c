@@ -28,7 +28,10 @@ void inline free_msg_data(struct msg_data_t *msg)
 {
 	free(msg);
 }
-
+void inline free_msg(struct msg_t *msg)
+{
+	free(msg);
+}
 static uint32_t msg_size_with_out_replays = 0;
 
 struct prof_session_t prof_session;
@@ -666,8 +669,11 @@ static void cat_replay_events(struct msg_t *msg){
 
 static void reset_app_info(struct app_info_t *app_info)
 {
-	free(app_info->app_id);
-	free(app_info->exe_path);
+	if (app_info->app_id != NULL)
+		free(app_info->app_id);
+	if (app_info->exe_path != NULL)
+		free(app_info->exe_path);
+	memset(app_info, 0, sizeof(*app_info));
 }
 
 static void reset_target_info(struct target_info_t *target_info)
@@ -722,7 +728,10 @@ static void reset_user_space_inst(struct user_space_inst_t *us)
 
 	for (i = 0; i < us->app_num; i++)
 		reset_app_inst(&us->app_inst_list[i]);
-	free(us->app_inst_list);
+	if (us->app_inst_list != NULL){
+		free(us->app_inst_list);
+		us->app_inst_list = NULL;
+	}
 	us->app_num = 0;
 }
 
@@ -901,6 +910,39 @@ static int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 		return 1;
 }
 
+struct msg_t *gen_stop_msg(void){
+	struct msg_t *res = malloc(sizeof(*res));
+	memset(res, 0, sizeof(*res));
+	res->id = NMSG_STOP;
+	res->len = 0;
+	return res;
+}
+
+enum ErrorCode stop_all(void)
+{
+	enum ErrorCode error_code = ERR_NO;
+	struct msg_t *msg = gen_stop_msg();
+
+	terminate_all();
+	stop_profiling();
+
+	if (msg == NULL){
+		LOGE("cannot generate stop message\n");
+		return ERR_UNKNOWN;
+	} else {
+		if (ioctl_send_msg(msg) != 0){
+			LOGE("ioctl send filed\n");
+			error_code = ERR_UNKNOWN;
+		}
+		free_msg(msg);
+	}
+
+	reset_prof_session(&prof_session);
+	stop_transfer();
+
+	return error_code;
+}
+
 int host_message_handler(struct msg_t *msg)
 {
 	struct app_info_t app_info;
@@ -953,15 +995,7 @@ int host_message_handler(struct msg_t *msg)
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
 	case NMSG_STOP:
-		error_code=ERR_NO;
-		terminate_all();
-		stop_profiling();
-		if (ioctl_send_msg(msg) != 0){
-			LOGE("ioctl send filed\n");
-			error_code = ERR_UNKNOWN;
-		}
-		reset_prof_session(&prof_session);
-		stop_transfer();
+		error_code = stop_all();
 		//send ack to host
 		sendACKToHost(msg->id, error_code, 0, 0);
 		break;

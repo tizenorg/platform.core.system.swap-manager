@@ -27,6 +27,7 @@ static int open_buf(void)
 
 static void close_buf(void)
 {
+	LOGI("close buffer (%d)\n", manager.buf_fd);
 	close(manager.buf_fd);
 }
 
@@ -42,8 +43,11 @@ static int insert_buf_modules(void)
 
 static void remove_buf_modules(void)
 {
+	LOGI("rmmod driver");
 	system("rmmod swap_driver");
+	LOGI("rmmod buffer");
 	system("rmmod swap_buffer");
+	LOGI("rmmod parser");
 	system("rmmod swap_message_parser");
 	// TODO: check if modules really removed
 }
@@ -76,6 +80,7 @@ int init_buf(void)
 
 void exit_buf(void)
 {
+	LOGI("Uninit buffer (%d)\n", manager.buf_fd);
 	if (ioctl(manager.buf_fd, SWAP_DRIVER_BUFFER_UNINITIALIZE) == -1)
 		LOGW("Cannot uninit buffer: %s\n", strerror(errno));
 
