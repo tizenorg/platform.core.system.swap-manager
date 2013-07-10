@@ -117,7 +117,8 @@ int get_file_status(int* pfd, const char* filename)
 			*pfd = open(filename, O_RDONLY);
 			if(unlikely(*pfd == -1))
 			{
-				return -(errno);
+				/* This file may absent in the system */
+				return 0;
 			}
 		}
 		else
