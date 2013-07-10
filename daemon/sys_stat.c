@@ -1010,13 +1010,12 @@ static int update_system_cpu_frequency(int cur_index)
 		}
 		else
 		{
-			LOGW("Cannot open cpu0 frequency file\n");
-			return -11;
+			/* This file may absent in the system */
 		}
 
 		for(i = 0; i < num_of_cpu; i++)
 		{
-			if(cpus[i].pfreq == NULL)
+			if(cpus[i].pfreq == NULL && num_of_freq)
 			{
 				cpus[i].pfreq = (cpufreq_t*) calloc(num_of_freq, sizeof(cpufreq_t));
 			}
