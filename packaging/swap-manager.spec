@@ -1,6 +1,6 @@
-Name:       dynamic-analysis-manager
-Summary:    dynamic analyzer manager
-Version:    2.1.2
+Name:       swap-manager
+Summary:    SWAP manager
+Version:    3.0
 Release:    1
 Group:      System/Libraries
 License:	Apache License, Version 2
@@ -17,7 +17,7 @@ BuildRequires:  capi-telephony-call-devel
 Requires:	sdbd
 
 %description
-Dynamic analysis manager is for dynamic analyzer.
+SWAP manager is a part of data collection back-end for DA.
 This binary will be installed in target.
 
 %prep
@@ -33,7 +33,7 @@ cd daemon
 %make_install
 
 %files
-%manifest dynamic-analysis-manager.manifest
+%manifest swap-manager.manifest
 %defattr(-,root,root,-)
 %{_prefix}/bin/da_manager
 %{_prefix}/bin/da_command
