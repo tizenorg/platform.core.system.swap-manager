@@ -436,15 +436,17 @@ char *parse_user_space_inst(char *buf,
 static char *parse_timeval(char *buf, struct timeval *tv)
 {
 	char *p = buf;
+	uint32_t nsec = 0;
 
 	parse_deb("time\n");
 
 	// FIXME: is sec/usec order correct?
-	p = parse_int32(p, (uint32_t *)&tv->tv_usec);
+	p = parse_int32(p, &nsec);
 	if (!p) {
 		LOGE("usec parsing error\n");
 		return 0;
 	}
+	tv->tv_usec = nsec / 1000;
 
 	p = parse_int32(p, (uint32_t *)&tv->tv_sec);
 	if (!p) {
