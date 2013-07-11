@@ -544,6 +544,9 @@ static char *parse_replay_event_seq(char *buf,
 		return 0;
 	}
 
+	if(res->enabled == 0)
+		return p;
+
 	parse_deb("time main\n");
 	p = parse_timeval(p, &res->tv);
 	if (!p) {
