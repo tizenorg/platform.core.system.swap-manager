@@ -1,47 +1,37 @@
+/*
+ *  DA manager
+ *
+ * Copyright (c) 2000 - 2013 Samsung Electronics Co., Ltd. All rights reserved.
+ *
+ * Contact:
+ *
+ * Cherepanov Vitaliy <v.cherepanov@samsung.com>
+ * Nikita Kalyazin    <:wn.kalyazin@samsung.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Contributors:
+ * - Samsung RnD Institute Russia
+ *
+ */
+
+
 #include "da_protocol.h"
 #include "daemon.h"
 #include "da_data.h"
 #include "debug.h"
 
 #include <sys/time.h>
-/*
-struct msg_system_t msg_system;
-
-int fill_message_system(struct msg_system_t ** sys){
-
-	struct msg_system_t * psys = *sys;
-	psys->energy = 0;
-	psys->WiFi_status = get_wifi_status();
-	psys->BT_status = get_bt_status();
-	psys->GPS_status = get_gps_status();
-	psys->brightness_status = 	get_brightness_status();
-	psys->camera_status = get_camera_status();
-	psys->sound_status = get_sound_status();
-	psys->audio_status = get_audio_status();
-	psys->vibration_status = get_vibration_status();
-	psys->voltage_status = get_voltage_status();
-	psys->RSSI_status = get_rssi_status();
-	psys->video_status = get_video_status();
-	psys->call_status = get_call_status();
-	psys->DNet_status = get_dnet_status();
-//	psys->CPU_frequency = 	get_cpu_frequency(), freqbuf in get_resource_info()
-//	psys->app_CPU_usage = 	app_cpu_usage in get_resource_info()
-//	psys->CPU_load	cpuload in get_resource_info()
-//	psys->virtual_memory = virtual in get_resource_info()
-//	psys->resident_memory = resident in get_resource_info()
-//	psys->shared_memory = shared in get_resource_info()
-//	psys->PSS_memory = pss in get_resource_info()
-//	psys->total_alloc_size = get_total_alloc_size();
-//	psys->system_memory_total = get_system_total_memory(), sysmemtotal in get_resource_info();
-//	psys->system_memory_used = update_system_memory_data(), sysmemused in get_resource_info();
-	psys->total_used_drive = get_total_used_drive();
-//	psys->count_of_threads = thread in get_resource_info()
-//	psys->thread_load = thread_load in get_resource_info()
-//	psys->count_of_processes	 = procNode* proc in get_resource_info() but no count
-
-	return 0;
-};
-*/
 
 int print_sys_info(struct system_info_t * sys_info)
 {

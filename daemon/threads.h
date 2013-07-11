@@ -5,6 +5,9 @@
  *
  * Contact:
  *
+ * Jaewon Lim <jaewon81.lim@samsung.com>
+ * Woojin Jung <woojin2.jung@samsung.com>
+ * Juyoung Kim <j0.kim@samsung.com>
  * Cherepanov Vitaliy <v.cherepanov@samsung.com>
  * Nikita Kalyazin    <n.kalyazin@samsung.com>
  *
@@ -21,21 +24,23 @@
  * limitations under the License.
  *
  * Contributors:
+ * - S-Core Co., Ltd
  * - Samsung RnD Institute Russia
  *
  */
 
 
-#ifndef _BUFFER_
-#define _BUFFER_
+#ifndef _UTILS_H_
+#define _UTILS_H_
 
-#include "da_protocol.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#define BUF_FILENAME "/dev/swap_device"
 
-int init_buf(void);
-void exit_buf(void);
-void flush_buf(void);
-int write_to_buf(struct msg_data_t *msg);
 
-#endif /* _BUFFER_ */
+#ifdef __cplusplus
+}
+#endif
+
+#endif
