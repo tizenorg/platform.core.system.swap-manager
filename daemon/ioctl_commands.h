@@ -32,12 +32,10 @@
 
 #include <linux/ioctl.h>
 
-#ifndef __SWAP_IOCTL_H__
-#define __SWAP_IOCTL_H__
+#ifndef __SWAP_IOCTL_COMMANDS_H__
+#define __SWAP_IOCTL_COMMANDS_H__
 
 #define SWAP_DRIVER_IOC_MAGIC 0xAF
-
-// TODO Think about magic num
 
 struct buffer_initialize {
     size_t size;
