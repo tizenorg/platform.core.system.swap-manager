@@ -49,8 +49,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#define SYSTEM_INFO_DEBUG
-//#define parse_deb_on
 
 
 void inline free_msg(struct msg_t *msg)
@@ -210,126 +208,133 @@ void feature_code_str(uint32_t feature, char * to)
 
 }
 
-#ifdef parse_deb_on
-
-#define parse_deb(...) do{\
-							LOGI("%s->\t",__FUNCTION__);\
-							LOGI(__VA_ARGS__);\
-							}while(0)
-#else
-#define parse_deb(...) do{}while(0)
-#endif /*parse_on*/
 
 //PARSE FUNCTIONS
-static char *parse_string(char *buf, char **str)
+inline uint32_t get_avail_msg_size(struct msg_buf_t *msg)
 {
-	int len = strlen(buf);
-	*str = strdup(buf);
-	parse_deb("<%s>\n",*str);
-	return buf + (len + 1);
+	return (uint32_t)(msg->end - msg->cur_pos);
 }
 
-static char *parse_int32(char *buf, uint32_t *val)
+inline uint32_t get_msg_cur_size(struct msg_buf_t *msg)
 {
-	*val = *(uint32_t *)buf;
+	return (uint32_t) (msg->cur_pos - msg->payload);
+}
+
+static int parse_string(struct msg_buf_t *msg, char **str)
+{
+	parse_deb("size = %d\n", get_avail_msg_size(msg));
+	int len = strlen(msg->cur_pos) + 1;
+
+	if (get_avail_msg_size(msg) < len)
+		return 0;
+
+	*str = strdup(msg->cur_pos);
+	parse_deb("<%s>\n",*str);
+	msg->cur_pos += len;
+	return 1;
+}
+
+static int parse_int32(struct msg_buf_t *msg, uint32_t *val)
+{
+	parse_deb("size = %d\n", get_avail_msg_size(msg));
+	if (get_avail_msg_size(msg) < sizeof(*val))
+		return 0;
+	*val = *(uint32_t *)msg->cur_pos;
+	msg->cur_pos += sizeof(uint32_t);
+
 
 	parse_deb("<%d><0x%08X>\n",*val,*val);
-	return buf + sizeof(uint32_t);
+	return 1;
 }
 
-static char *parse_int64(char *buf, uint64_t *val)
+static int parse_int64(struct msg_buf_t *msg, uint64_t *val)
 {
-	*val = *(uint64_t *)buf;
+	parse_deb("size = %d\n", get_avail_msg_size(msg));
+	if (get_avail_msg_size(msg) < sizeof(*val))
+		return 0;
+
+	*val = *(uint64_t *)msg->cur_pos;
 
 	parse_deb("<%llu><0x%016llX>\n",*val,*val);
-	return buf + sizeof(uint64_t);
+	msg->cur_pos += sizeof(uint64_t);
+	return 1;
 }
 
-static char *parse_app_info(char *buf,
+static int parse_app_info(struct msg_buf_t *msg,
 			       struct app_info_t *app_info)
 {
-	char *p = buf;
 
-	p = parse_int32(p, &app_info->app_type);
-	if (!p) {
+	parse_deb("parse_app_info\n");
+	if (!parse_int32(msg, &app_info->app_type)){
 		LOGE("app type parsing error\n");
 		return 0;
 	}
 
-	p = parse_string(p, &app_info->app_id);
-	if (!p) {
+	if (!parse_string(msg, &app_info->app_id)){
 		LOGE("app id parsing error\n");
 		return 0;
 	}
-	p = parse_string(p, &app_info->exe_path);
-	if (!p) {
+
+	if (!parse_string(msg, &app_info->exe_path)) {
 		LOGE("app info parsing error\n");
 		return 0;
 	}
 
 //	print_app_info(app_info);
 
-	return p;
+	return 1;
 }
 
-static char * parse_conf(char *buf, struct conf_t *conf)
+static int parse_conf(struct msg_buf_t *msg, struct conf_t *conf)
 {
-	char *p = buf;
 
-	p = parse_int64( p, &conf->use_features);
- 	if (!p) {
+	parse_deb("parse_conf\n");
+	if (!parse_int64( msg, &conf->use_features)) {
 		LOGE("use features parsing error\n");
 		return 0;
 	}
 
-	p = parse_int32( p, &conf->system_trace_period);
-	if (!p) {
+	if (!parse_int32( msg, &conf->system_trace_period)) {
 		LOGE("system trace period parsing error\n");
 		return 0;
 	}
 
-	p = parse_int32( p, &conf->data_message_period);
-	if (!p) {
+	if (!parse_int32( msg, &conf->data_message_period)) {
 		LOGE("data message period parsing error\n");
 		return 0;
 	}
 	//print_conf(conf);
-	return buf + sizeof(*conf);
+	return 1;
 }
 
-static char *parse_us_inst_func( char * buf, struct us_func_inst_t * dest)
+static int parse_us_inst_func(struct msg_buf_t *msg , struct us_func_inst_t * dest)
 {
-	char *p = buf;
 
-	p = parse_int64(p, &(dest->func_addr));
-	if (!p) {
+	if (!parse_int64(msg, &(dest->func_addr))) {
 		LOGE("func addr parsing error\n");
 		return 0;
 	}
 
-	p = parse_string(p, &dest->args);
-	if (!p) {
+	if (!parse_string(msg, &dest->args)) {
 		LOGE("args format parsing error\n");
 		return 0;
 	}
-	return p;
+	return 1;
 
 }
 
-static char * parse_func_inst_list(char *buf,
+static int parse_func_inst_list(struct msg_buf_t *msg,
 			    uint32_t *num,
 			    struct us_func_inst_t ** us_func_inst_list)
 {
 	uint32_t i = 0;
-	char * p = buf;
-	p = parse_int32( p, num);
-	if (!p) {
+	if (!parse_int32( msg, num)) {
 		LOGE("func num parsing error\n");
 		return 0;
 	}
 	//parse user space function list
 
-	LOGI("us_func_inst_list size = %d * %d\n",(*num) , (int)sizeof(**us_func_inst_list) );
+	parse_deb("us_func_inst_list size = %d * %d\n",(*num) , (int)sizeof(**us_func_inst_list) );
 	*us_func_inst_list = 
 		(struct us_func_inst_t *) 
 		malloc( (*num) * sizeof(**us_func_inst_list) );
@@ -339,43 +344,42 @@ static char * parse_func_inst_list(char *buf,
 	};
 
 	for ( i = 0; i < *num; i++){
-		p = parse_us_inst_func( p, &((* us_func_inst_list)[i]));
+		if (!parse_us_inst_func( msg, &((* us_func_inst_list)[i]))){
+			LOGE("parse us inst func #%d failed\n", i + 1);
+			return 0;
+		}
 	}
-	return p;
+
+	return 1;
 }
 
-static char *parse_us_inst_lib( char * buf, struct us_lib_inst_t * dest)
+static int parse_us_inst_lib(struct msg_buf_t *msg, struct us_lib_inst_t * dest)
 {
-	char *p = buf;
 
-	p = parse_string( p, &(dest)->bin_path);
-	if (!p) {
+	if (!parse_string(msg, &(dest)->bin_path)) {
 		LOGE("bin path parsing error\n");
 		return 0;
 	}
 
-	p = parse_func_inst_list( p, &dest->func_num, &dest->us_func_inst_list);
-	if (!p) {
+	if (!parse_func_inst_list(msg, &dest->func_num, &dest->us_func_inst_list)) {
 		LOGE("funcs parsing error\n");
 		return 0;
 	}
-	return p;
+	return 1;
 
 }
 
-static char * parse_lib_inst_list(char *buf,
+static int parse_lib_inst_list(struct msg_buf_t *msg,
 			    uint32_t *num,
 			    struct us_lib_inst_t ** us_lib_inst_list)
 {
 	uint32_t i = 0;
-	char * p = buf;
-	p = parse_int32( p, num);
-	if (!p) {
+	if (!parse_int32( msg, num)) {
 		LOGE("lib num parsing error\n");
 		return 0;
 	}
 
-	LOGI("lib_list size = %d\n", (*num) * (int)sizeof(**us_lib_inst_list) );
+	parse_deb("lib_list size = %d\n", (*num) * (int)sizeof(**us_lib_inst_list) );
 	*us_lib_inst_list = 
 		(struct us_lib_inst_t *) 
 		malloc( (*num) * sizeof(**us_lib_inst_list) );
@@ -384,64 +388,60 @@ static char * parse_lib_inst_list(char *buf,
 		return 0;
 	};
 	for ( i = 0; i < *num; i++){
-		p = parse_us_inst_lib( p, &( (*us_lib_inst_list)[i] ) );
+		if (!parse_us_inst_lib( msg, &( (*us_lib_inst_list)[i] ) )){
+			LOGE("parse is inst lib #%d failed\n", i + 1);
+			return 0;
+		}
 	}
-	return p;
+	return 1;
 }
 
-static char *parse_app_inst(char *buf,
+static int parse_app_inst(struct msg_buf_t *msg,
 			    struct app_inst_t *app_inst)
 {
-	char *p = buf;
 	uint32_t num = 0;
 
-	p = parse_int32( p, &app_inst->app_type);
-	if (!p) {
+	if (!parse_int32( msg, &app_inst->app_type)) {
 		LOGE("app type parsing error\n");
 		return 0;
 	}
-	p = parse_string( p, &app_inst->app_id);
-	if (!p) {
+	if (!parse_string( msg, &app_inst->app_id)) {
 		LOGE("app id parsing error\n");
 		return 0;
 	}
-	p = parse_string( p, &app_inst->exec_path);
-	if (!p) {
+	if (!parse_string( msg, &app_inst->exec_path)) {
 		LOGE("exec path parsing error\n");
 		return 0;
 	}
-	p = parse_func_inst_list( p, &app_inst->func_num , &(app_inst->us_func_inst_list));
-	if (!p) {
+	if (!parse_func_inst_list( msg, &app_inst->func_num , &(app_inst->us_func_inst_list))) {
 		LOGE("funcs parsing error\n");
 		return 0;
 	}
 	
-	LOGI(">=%04X : %s, %s, %d\n",
+	parse_deb(">=%04X : %s, %s, %d\n",
 	     app_inst->app_type, app_inst->app_id, app_inst->exec_path , num);
 
-	p = parse_lib_inst_list( p, &app_inst->lib_num , &app_inst->us_lib_inst_list);
-	if (!p) {
+	if (!parse_lib_inst_list( msg, &app_inst->lib_num , &app_inst->us_lib_inst_list)) {
 		LOGE("libs parsing error\n");
 		return 0;
 	}
 
-	return p;
+	return 1;
 }
 
-char *parse_user_space_inst(char *buf,
+int parse_user_space_inst(struct msg_buf_t *msg,
 			    struct user_space_inst_t *user_space_inst) 
 {
-	char *p = buf;
+	parse_deb("parse_user_space_inst\n");
 	uint32_t num = 0 , i = 0;
 	struct app_inst_t * list = 0;
 
-	p = parse_int32 ( p, &num );
-	if (!p) {
+	if (!parse_int32 ( msg, &num )) {
 		LOGE("app num parsing error\n");
 		return 0;
 	}
 
-	LOGI("%d * %d\n ",(int) sizeof(*(user_space_inst->app_inst_list)), num);
+	parse_deb("%d * %d\n",(int) sizeof(*(user_space_inst->app_inst_list)), num);
 	if ( num != 0 ) {
 		list = (struct app_inst_t *) malloc ( 
 			sizeof(*(user_space_inst->app_inst_list)) * num);
@@ -451,76 +451,70 @@ char *parse_user_space_inst(char *buf,
 		};
 
 		for ( i = 0; i < num; i++){
-			p = parse_app_inst( p, &(list[i]) );
+			if (!parse_app_inst( msg, &(list[i]) )){
+				LOGE("parse app inst #%d failed\n", i + 1);
+				return 0;
+			}
 		};
 
 		user_space_inst->app_num = num;
 		user_space_inst->app_inst_list = list;
 	}
-	return p;
+	return 1;
 }
 
 //REPLAY EVENTS PARSE
-static char *parse_timeval(char *buf, struct timeval *tv)
+static int parse_timeval(struct msg_buf_t *msg, struct timeval *tv)
 {
-	char *p = buf;
 	uint32_t nsec = 0;
 
 	parse_deb("time\n");
 
 	// FIXME: is sec/usec order correct?
-	p = parse_int32(p, &nsec);
-	if (!p) {
+	if (!parse_int32(msg, &nsec)) {
 		LOGE("usec parsing error\n");
 		return 0;
 	}
 	tv->tv_usec = nsec / 1000;
 
-	p = parse_int32(p, (uint32_t *)&tv->tv_sec);
-	if (!p) {
+	if (!parse_int32(msg, (uint32_t *)&tv->tv_sec)) {
 		LOGE("sec parsing error\n");
 		return 0;
 	}
 
-	return p;
+	return 1;
 }
 
-static char *parse_replay_event(char *buf,
+static int parse_replay_event(struct msg_buf_t *msg,
 				    struct replay_event_t *re)
 {
-	char *p = buf;
 
-	p = parse_timeval(p, &re->ev.time);
-	if (!p) {
+	if (!parse_timeval(msg, &re->ev.time)) {
 		LOGE("time parsing error\n");
 		return 0;
 	}
 
-	p = parse_int32(p, &re->id);
-	if (!p) {
+	if (!parse_int32(msg, &re->id)) {
 		LOGE("id parsing error\n");
 		return 0;
 	}
 
-	p = parse_int32(p, (uint32_t *)&re->ev.type);
-	if (!p) {
+	if (!parse_int32(msg, (uint32_t *)&re->ev.type)) {
 		LOGE("type parsing error\n");
 		return 0;
 	}
 
-	p = parse_int32(p, (uint32_t *)&re->ev.code);
-	if (!p) {
+	if (!parse_int32(msg, (uint32_t *)&re->ev.code)) {
 		LOGE("code parsing error\n");
 		return 0;
 	}
 
-	p = parse_int32(p, (uint32_t *)&re->ev.value);
-	if (!p) {
+	if (!parse_int32(msg, (uint32_t *)&re->ev.value)) {
 		LOGE("value parsing error\n");
 		return 0;
 	}
 
-	return p;
+	return 1;
 }
 
 void reset_replay_event_seq(struct replay_event_seq_t *res)
@@ -531,32 +525,32 @@ void reset_replay_event_seq(struct replay_event_seq_t *res)
 	free(res->events);
 }
 
-static char *parse_replay_event_seq(char *buf,
+static char *parse_replay_event_seq(struct msg_buf_t *msg,
 				    struct replay_event_seq_t *res)
 {
-	char *p = buf;
+	LOGI("parse_replay_event_seq\n");
+
 	int i = 0;
 	parse_deb("REPLAY\n");
-	parse_deb("enable\n");
-	p = parse_int32(p, &res->enabled);
-	if (!p) {
+	if (!parse_int32(msg, &res->enabled)) {
 		LOGE("enabled parsing error\n");
 		return 0;
 	}
 
-	if(res->enabled == 0)
-		return p;
+	if(res->enabled == 0){
+		parse_deb("disable\n");
+		return 1;
+	}
 
 	parse_deb("time main\n");
-	p = parse_timeval(p, &res->tv);
-	if (!p) {
+	if (!parse_timeval(msg, &res->tv)) {
 		LOGE("time parsing error\n");
 		return 0;
 	}
 
 	parse_deb("count\n");
-	p = parse_int32(p, &res->event_num);
-	if (!p) {
+	LOGE("events num=%d\n", res->event_num);
+	if (!parse_int32(msg, &res->event_num)) {
 		LOGE("event num parsing error\n");
 		return 0;
 	}
@@ -570,50 +564,39 @@ static char *parse_replay_event_seq(char *buf,
 
 	for (i = 0; i < res->event_num; i++) {
 		parse_deb("sub_rep\n");
-		p = parse_replay_event(p, &res->events[i]);
-		if (!p) {
-			LOGE("event parsing error\n");
-			goto free_events;
+		if (!parse_replay_event(msg, &res->events[i])) {
+			LOGE("event #%d parsing error\n", i + 1);
+			free(res->events);
+			res->event_num = 0;
+			return 0;
 		}
 	}
 
-	goto end;
-
-free_events:
-	free(res->events);
-	res->event_num = 0;
-
-end:
-	return p;
+	return 1;
 }
 
 //*REPLAY EVENT PARSE
 
-static int parse_prof_session(char *msg_payload,
+static int parse_prof_session(struct msg_buf_t *msg,
 			      struct prof_session_t *prof_session)
 {
-	char *p = msg_payload;
-
-	p = parse_app_info(p, &prof_session->app_info);
-	if (!p) {
+	LOGI("parse_prof_session\n");
+	if (!parse_app_info(msg, &prof_session->app_info)) {
 		LOGE("app info parsing error\n");
 		return 1;
 	}
-	p = parse_conf(p, &prof_session->conf);
-	if (!p) {
+	if (!parse_conf(msg, &prof_session->conf)) {
 		LOGE("conf parsing error\n");
 		return 1;
 	}
 
-	p = parse_user_space_inst(p, &prof_session->user_space_inst);
-	if (!p) {
+	if (!parse_user_space_inst(msg, &prof_session->user_space_inst)) {
 		LOGE("user space inst parsing error\n");
 		return 1;
 	}
 
-	msg_size_with_out_replays = p - msg_payload;
-	p = parse_replay_event_seq(p, &prof_session->replay_event_seq);
-	if (!p) {
+	msg_size_with_out_replays = get_msg_cur_size(msg);
+	if (!parse_replay_event_seq(msg, &prof_session->replay_event_seq)) {
 		LOGE("replay parsing error\n");
 		return 1;
 	}
@@ -659,6 +642,15 @@ static char *parse_msg_binary_info(char * msg_payload,
 	return p;
 }
 
+static init_parse_control(struct msg_buf_t *buf, struct msg_t *msg)
+{
+	LOGI("init parse control\n");
+	buf->payload = msg->payload;
+	buf->len = msg->len;
+	buf->end = msg->payload + msg->len;
+	buf->cur_pos = msg->payload;
+	LOGI("init parse control done\n");
+}
 
 //This function concat 2 user space lists
 // this function clean "from" pointer
@@ -978,18 +970,20 @@ int host_message_handler(struct msg_t *msg)
 	struct app_info_t app_info;
 	struct target_info_t target_info;
 	struct msg_t *msg_reply;
+	struct msg_buf_t msg_control;
 	struct user_space_inst_t user_space_inst;
 	struct conf_t conf;
 	enum ErrorCode error_code;
 
 	LOGI("MY HANDLE %s (%X)\n", msg_ID_str(msg->id), msg->id);
+	init_parse_control(&msg_control, msg);
 
 	switch (msg->id) {
 	case NMSG_KEEP_ALIVE:
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
 	case NMSG_START:
-		if (parse_prof_session(msg->payload, &prof_session) != 0) {
+		if (parse_prof_session(&msg_control, &prof_session) != 0) {
 			LOGE("prof session parsing error\n");
 			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
 			return -1;
@@ -1031,7 +1025,7 @@ int host_message_handler(struct msg_t *msg)
 		break;
 	case NMSG_CONFIG:
 		error_code=ERR_NO;
-		if (!parse_msg_config(msg->payload, &conf)) {
+		if (!parse_msg_config(&msg_control, &conf)) {
 			LOGE("config parsing error\n");
 			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
 			return -1;
@@ -1049,7 +1043,7 @@ int host_message_handler(struct msg_t *msg)
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
 	case NMSG_BINARY_INFO:
-		if (!parse_msg_binary_info(msg->payload, &app_info)) {
+		if (!parse_msg_binary_info(&msg_control, &app_info)) {
 			LOGE("binary info parsing error\n");
 			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
 			return -1;
@@ -1068,7 +1062,7 @@ int host_message_handler(struct msg_t *msg)
 		free(msg_reply);
 		break;
 	case NMSG_SWAP_INST_ADD:
-		if (!parse_user_space_inst(msg->payload,
+		if (!parse_user_space_inst(&msg_control,
 					   &user_space_inst)) {
 			LOGE("user space inst parsing error\n");
 			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
@@ -1088,7 +1082,7 @@ int host_message_handler(struct msg_t *msg)
 		// TODO release user_space_inst
 		break;
 	case NMSG_SWAP_INST_REMOVE:
-		if (!parse_user_space_inst(msg->payload,
+		if (!parse_user_space_inst(&msg_control,
 					   &prof_session.user_space_inst)){
 			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
 			LOGE("user space inst parsing error\n");

@@ -146,6 +146,14 @@ struct msg_data_t {
 };
 
 #define MSG_CMD_HDR_LEN 8
+
+struct msg_buf_t{
+	char *payload;
+	char *cur_pos;
+	char *end;
+	uint32_t len;
+};
+
 struct msg_t {
 	uint32_t id;
 	uint32_t len;

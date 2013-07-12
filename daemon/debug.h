@@ -42,22 +42,32 @@ extern "C" {
  * DEBUG DEFINES
  */
 #define DEB_PRINTBUF
-
-#ifndef DEB_PRINTBUF
-	#define printBuf() do {} while(0)
-#endif
-
+//#define PARSE_DEBUG_ON
 //threads debug
 //#define THREAD_SAMPLING_DEBUG
 //#define THREAD_REPLAY_DEBUG
 
+
+//DEBUG ON PARSING
+#ifdef PARSE_DEBUG_ON
+#define parse_deb(...) LOGI(__VA_ARGS__)
+#else
+#define parse_deb(...) do{}while(0)
+#endif /*parse_on*/
+
+//PRINT BUFFER DEBUG
+#ifndef DEB_PRINTBUF
+	#define printBuf() do {} while(0)
+#endif
+
+//THREAD SAMPLING DEBUG
 #ifdef THREAD_SAMPLING_DEBUG
 	#define LOGI_th_samp LOGI
 #else
 	#define LOGI_th_samp(...)	do{} while(0)
 #endif
 
-
+//THREAD REPLAY DEBUG
 #ifdef THREAD_REPLAY_DEBUG
 	#define LOGI_th_rep LOGI
 #else
@@ -68,17 +78,17 @@ extern "C" {
 /*
  * END DEBUG DEFINES
  */
-//#define DEBUG
+#define DEBUG
 
 #ifdef DEBUG
-//	#define LOGI(...)	do{ fprintf(stderr, "[INF] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); usleep(1000000);} while(0)
+//	#define LOGI(...)	do{ fprintf(stderr, "[INF] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); usleep(100000);} while(0)
 	#define LOGI(...)	do{ fprintf(stderr, "[INF] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
 //	#define LOGI(...)	do{} while(0)
 	#define LOGI_(...)	do{ fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
 	//#define LOGI_(...)	do{} while(0)
 
-//	#define LOGE(...)	do{ fprintf(stderr, "[ERR] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); usleep(1000000);} while(0)
-	#define LOGE(...)	do{ fprintf(stderr, "[ERR] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
+	#define LOGE(...)	do{ fprintf(stderr, "[ERR] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); usleep(1000000);} while(0)
+//	#define LOGE(...)	do{ fprintf(stderr, "[ERR] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
 	#define LOGW(...)	do{ fprintf(stderr, "[WRN] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
 
 
