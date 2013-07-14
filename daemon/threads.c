@@ -47,6 +47,7 @@
 #include "da_protocol.h"
 #include "da_data.h"
 #include "debug.h"
+#include "process_info.h"
 
 //#define DEBUG_GSI
 
@@ -134,6 +135,9 @@ static void* recvThread(void* data)
 
 				manager.target[index].pid = atoi(log.data);
 				manager.target[index].starttime = str_to_uint64(barloc);
+
+				write_process_info(manager.target[index].pid,
+						   manager.target[index].starttime);
 
 				event = EVENT_PID;
 				write(manager.target[index].event_fd, &event, sizeof(uint64_t));
