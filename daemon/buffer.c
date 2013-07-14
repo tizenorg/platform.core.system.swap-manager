@@ -38,7 +38,7 @@
 #include "debug.h"
 
 #define SUBBUF_SIZE 64 * 1024
-#define SUBBUF_NUM 16
+#define SUBBUF_NUM 32 * 16
 
 static int open_buf(void)
 {
