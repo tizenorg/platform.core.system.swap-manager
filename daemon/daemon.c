@@ -59,6 +59,7 @@
 #include "da_protocol.h"
 #include "da_data.h"
 #include "debug.h"
+#include "process_info.h"
 
 #define DA_WORK_DIR				"/home/developer/sdk_tools/da/"
 #define DA_READELF_PATH			"/home/developer/sdk_tools/da/readelf"
@@ -291,6 +292,7 @@ static int exec_app(const struct app_info_t *app_info)
 	case APP_TYPE_RUNNING:
 		// TODO: nothing, it's running
 		LOGI("already started\n");
+		write_process_info(atoi(app_info->app_id), 0);
 		break;
 	case APP_TYPE_COMMON:
 		kill_app(app_info->exe_path);
@@ -305,7 +307,7 @@ static int exec_app(const struct app_info_t *app_info)
 		break;
 	}
 
-	if (res == 0) {
+	if (res == 0 && app_info->app_type != APP_TYPE_RUNNING) {
 		manager.app_launch_timerfd = timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC);
 		if(manager.app_launch_timerfd > 0)
 		{

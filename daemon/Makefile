@@ -33,7 +33,8 @@ DAEMON_SRCS :=	\
 	elf.c		\
 	buffer.c	\
 	transfer_thread.c\
-	ioctl_commands.c
+	ioctl_commands.c \
+	process_info.c
 
 DAEMON_SRCS_HOST :=	\
 	main.c		\
@@ -46,7 +47,8 @@ DAEMON_SRCS_HOST :=	\
 	utils.c		\
 	sys_stat.c	\
 	elf.c	\
-	ioctl_commands.c
+	ioctl_commands.c \
+	process_info.c
 
 
 LDLIBS_PATH := -L/usr/lib -L./lib/
