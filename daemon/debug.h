@@ -41,7 +41,7 @@ extern "C" {
 /*
  * DEBUG DEFINES
  */
-#define DEB_PRINTBUF
+//#define DEB_PRINTBUF
 //#define PARSE_DEBUG_ON
 //threads debug
 //#define THREAD_SAMPLING_DEBUG
@@ -92,8 +92,8 @@ extern "C" {
 	//#define LOGI_(...)	do{} while(0)
 #endif
 
-	#define LOGE(...)	do{ fprintf(stderr, "[ERR] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); usleep(1000000);} while(0)
-//	#define LOGE(...)	do{ fprintf(stderr, "[ERR] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
+//	#define LOGE(...)	do{ fprintf(stderr, "[ERR] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); usleep(1000000);} while(0)
+	#define LOGE(...)	do{ fprintf(stderr, "[ERR] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
 	#define LOGW(...)	do{ fprintf(stderr, "[WRN] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
 
 
