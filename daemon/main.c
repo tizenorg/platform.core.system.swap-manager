@@ -341,7 +341,7 @@ int main()
 	int result;
 	initialize_log();
 
-	LOGE("da_started\n");
+	LOGI("da_started\n");
 	atexit(_unlink_file);
 
 	manager.portfile = fopen(PORTFILE, "w");

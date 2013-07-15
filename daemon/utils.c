@@ -485,7 +485,7 @@ pid_t find_pid_from_path(const char* path)
 	FILE *fp = popen(command, "r");
 	if (!fp)
 	{
-		LOGE("Getting pidof %s is failed\n", path);
+		LOGW("Getting pidof %s is failed\n", path);
 		return status;
 	}
 
@@ -500,7 +500,8 @@ pid_t find_pid_from_path(const char* path)
 	{
 		if (sscanf(buffer,"%d\n", &status) != 1)
 		{
-			LOGE("Failed to read result buffer of 'pidof', status(%d)\n", status);
+			LOGW("Failed to read result buffer of 'pidof',"
+				 " status(%d) with cmd '%s'\n", status, command);
 			return -1;
 		}
 	}
@@ -520,6 +521,8 @@ void kill_app(const char* binary_path)
 	{
 		sprintf(command, "kill -9 %d", pkg_pid);
 		system(command);
+	} else {
+		LOGW("cannot kill '%s' task not found\n", binary_path);
 	}
 }
 
