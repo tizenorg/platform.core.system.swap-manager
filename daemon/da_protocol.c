@@ -549,11 +549,11 @@ static char *parse_replay_event_seq(struct msg_buf_t *msg,
 	}
 
 	parse_deb("count\n");
-	LOGE("events num=%d\n", res->event_num);
 	if (!parse_int32(msg, &res->event_num)) {
 		LOGE("event num parsing error\n");
 		return 0;
 	}
+	parse_deb("events num=%d\n", res->event_num);
 
 	res->events = (struct replay_event_t *)malloc(res->event_num *
 						      sizeof(*res->events));

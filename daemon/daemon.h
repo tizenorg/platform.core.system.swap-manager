@@ -42,20 +42,6 @@
 extern "C" {
 #endif
 
-/*
- * DEBUG DEFINES
- */
-#define DEB_PRINTBUF
-
-#ifndef DEB_PRINTBUF
-	#define printBuf() do {} while(0)
-#endif
-
-/*
- * END DEBUG DEFINES
- */
-
-
 
 #define PROTOCOL_VERSION			"2.1"
 
@@ -244,8 +230,6 @@ int sendACKCodeToHost(enum HostMessageType resp, int msgcode);
 void terminate_all();
 void _device_write(input_dev *dev, struct input_event* in_ev);
 
-// DEBUGS
-void printBuf (char * buf, int len);
 
 #ifdef __cplusplus
 }

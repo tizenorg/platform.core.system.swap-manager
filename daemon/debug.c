@@ -64,4 +64,8 @@ void printBuf (char * buf, int len)
 		LOGI("%s\n",local_buf);
 	}
 }
+#else
+inline void printBuf (char * buf, int len){
+	return;
+}
 #endif

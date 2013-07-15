@@ -50,15 +50,13 @@ extern "C" {
 
 //DEBUG ON PARSING
 #ifdef PARSE_DEBUG_ON
-#define parse_deb(...) LOGI(__VA_ARGS__)
+#define parse_deb LOGI
 #else
 #define parse_deb(...) do{}while(0)
 #endif /*parse_on*/
 
 //PRINT BUFFER DEBUG
-#ifndef DEB_PRINTBUF
-	#define printBuf() do {} while(0)
-#endif
+void printBuf (char * buf, int len);
 
 //THREAD SAMPLING DEBUG
 #ifdef THREAD_SAMPLING_DEBUG
@@ -104,8 +102,7 @@ extern "C" {
 	#define LOGW(...)	do{} while(0)
 #endif
 
-// DEBUGS
-void printBuf (char * buf, int len);
+
 
 #ifdef __cplusplus
 }

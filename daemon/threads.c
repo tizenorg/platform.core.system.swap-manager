@@ -292,9 +292,7 @@ void* samplingThread(void* data)
 
 			write_to_buf(msg);
 
-#ifdef THREAD_SAMPLING_DEBUG
 			printBuf((char *)msg, MSG_DATA_HDR_LEN + msg->len);
-#endif
 
 			free_msg_data(msg);
 			reset_system_info(&sys_info);
