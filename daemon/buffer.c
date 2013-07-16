@@ -60,18 +60,8 @@ static void close_buf(void)
 
 static int insert_buf_modules(void)
 {
-	if (system("insmod /opt/swap/sdk/swap_buffer.ko")) {
-		LOGE("Cannot insert swap buffer module\n");
-		return -1;
-	}
-
-	if (system("insmod /opt/swap/sdk/swap_driver.ko")) {
-		LOGE("Cannot insert swap driver module\n");
-		return -1;
-	}
-
-	if (system("insmod /opt/swap/sdk/swap_message_parser.ko")) {
-		LOGE("Cannot insert swap message parser module\n");
+	if (system("cd /opt/swap/sdk && ./start.sh")) {
+		LOGE("Cannot insert swap modules\n");
 		return -1;
 	}
 
@@ -80,19 +70,9 @@ static int insert_buf_modules(void)
 
 static void remove_buf_modules(void)
 {
-	LOGI("rmmod parser");
-	if (system("rmmod swap_message_parser")) {
-		LOGW("Cannot remove swap message parser module\n");
-	}
-
-	LOGI("rmmod driver");
-	if (system("rmmod swap_driver")) {
-		LOGW("Cannot remove swap driver module\n");
-	}
-
 	LOGI("rmmod buffer");
-	if (system("rmmod swap_buffer")) {
-		LOGW("Cannot remove swap buffer module\n");
+	if (system("cd /opt/swap/sdk && ./stop.sh")) {
+		LOGW("Cannot remove swap modules\n");
 	}
 }
 
