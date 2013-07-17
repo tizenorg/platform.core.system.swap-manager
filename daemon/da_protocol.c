@@ -682,7 +682,7 @@ static void concat_add_user_space_inst(struct user_space_inst_t *from,
 	return;
 }
 
-static void cat_replay_events(struct msg_t *msg){
+static void cut_replay_events(struct msg_t *msg){
 
 	LOGI("msg_size_with_out_replays = %d \n",msg_size_with_out_replays);
 	msg->len = msg_size_with_out_replays;
@@ -999,7 +999,7 @@ int host_message_handler(struct msg_t *msg)
 		// TODO: apply_prof_session()
 
 		//write to device
-		cat_replay_events(msg);
+		cut_replay_events(msg);
 		if (ioctl_send_msg(msg) != 0){
 			LOGE("cannot send message to device\n");
 			sendACKCodeToHost(MSG_NOTOK, ERR_CANNOT_START_PROFILING);

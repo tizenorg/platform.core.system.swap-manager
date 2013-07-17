@@ -33,22 +33,27 @@
 #include "debug.h"
 
 #define AWK_START "cat /proc/"
+#define AWK_END_TIME "/stat | awk '{print $22}'"
 #define AWK_END "/maps | grep 'r-x' | awk '{print $1, $6}' | grep ' /'"
 #define AWK_END_PROCESS "/maps | grep 'r-x' | awk '{print $1, $6}' | grep "
+#define AWK_SYSTEM_UP_TIME "cat /proc/uptime  | awk '{print $1}'"
 
 void write_process_info(int pid, uint64_t starttime)
 {
+	// TODO refactor this code
 	char buf[1024];
 	struct msg_data_t *msg = malloc(64 * 1024);
 	char *p = &msg->payload;
 	char *dep_count_p = NULL;
 	int dep_count = 0;
-	/* uint32_t sec = starttime / 10000; */
-	/* uint32_t nsec = starttime % 10000 * 100 * 1000; */
 	// TODO: add check for unknown type
 	uint32_t binary_type = get_binary_type(prof_session.app_info.exe_path);
 	char binary_path[PATH_MAX];
 	uint64_t start, end;
+	float process_up_time;
+	float sys_up_time;
+	uint32_t up_sec = 0;
+	uint32_t up_nsec = 0;
 	char path[256];
 	int fields;
 	FILE *f;
@@ -74,9 +79,61 @@ void write_process_info(int pid, uint64_t starttime)
 	}
 	pclose(f);
 
+	if (starttime != 0) {
+		up_sec = starttime / 100;
+		up_nsec = starttime % 100 * 1000 * 1000 * 10;
+	} else {
+		//get system uptime
+		sprintf(buf, "%s", AWK_SYSTEM_UP_TIME);
+		f = popen(buf, "r");
+		if (!f) {
+			LOGW("open uptime: %s\n", strerror(errno));
+			free(msg);
+			return;
+		}
+
+		fields = fscanf(f, "%f", &sys_up_time);
+		if (fields != 1) {
+			sys_up_time = 0;
+		}
+		pclose(f);
+
+		//get process uptime
+		sprintf(buf, "%s%d%s", AWK_START, pid, AWK_END_TIME);
+		f = popen(buf, "r");
+		if (!f) {
+			LOGW("open stat: %s\n", strerror(errno));
+			free(msg);
+			return;
+		}
+
+		fields = fscanf(f, "%f", &process_up_time);
+		if (fields != 1) {
+			process_up_time = 0;
+		} else {
+			process_up_time = process_up_time / sysconf(_SC_CLK_TCK) ;
+			process_up_time = sys_up_time - process_up_time;
+		}
+		pclose(f);
+
+		up_sec = (int) process_up_time;
+		up_nsec =  (int)( (process_up_time - (float) up_sec) * 1000000000 );
+
+		up_sec = msg->sec - up_sec;
+		if (msg->nsec < up_nsec){
+			up_nsec = (1000000000 + msg->nsec) - up_nsec;
+			up_sec--;
+		} else {
+			up_nsec = msg->nsec - up_nsec;
+		}
+	}
+
+	LOGI(" process_up_time =  %f\nsec = %d; usec = %d\n", process_up_time, up_sec, up_nsec);
+
+	//Pack message
 	pack_int(p, pid);
-	pack_int(p, msg->sec);
-	pack_int(p, msg->nsec);
+	pack_int(p, up_sec);
+	pack_int(p, up_nsec);
 
 	pack_int(p, start);
 	pack_int(p, end);
