@@ -677,12 +677,20 @@ int get_app_base_address(int *baseAddress)
 int is_same_app_process(char* appPath, int pid)
 {
 	int ret = 0;
+	int tlen;
 	FILE *fp;
 	char buf[BUFFER_MAX];
 	char cmdPath[PATH_MAX];
-	char execPath[PATH_MAX];
+	char tPath[PATH_MAX];
 
-	get_executable(appPath, execPath, PATH_MAX);
+	strcpy(tPath, appPath);
+	tlen = strlen(tPath);
+	if(strcmp(tPath + tlen - 4, ".exe") == 0)
+	{
+		// remove .exe from tPath
+		tPath[tlen - 4] = '\0';
+	}
+
 	sprintf(cmdPath, "/proc/%d/cmdline", pid);
 
 	if((fp = fopen(cmdPath, "r")) == NULL)
@@ -692,12 +700,14 @@ int is_same_app_process(char* appPath, int pid)
 
 	if(fgets(buf, BUFFER_MAX, fp) != NULL)
 	{
-#ifdef RUN_APP_LOADER
-		if(strcmp(buf, appPath) == 0)
-#else
-		// use execPath instead of manager.appPath
-		if(strcmp(buf, execPath) == 0)
-#endif
+		tlen = strlen(buf);
+		if(strcmp(buf + tlen - 4, ".exe") == 0)
+		{
+			// remove .exe from tPath
+			buf[tlen - 4] = '\0';
+		}
+
+		if(strcmp(buf, tPath) == 0)
 			ret = 1;
 		else
 			ret = 0;

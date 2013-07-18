@@ -558,6 +558,12 @@ static int targetEventHandler(int epollfd, int index, uint64_t msg)
 	if(msg & EVENT_PID)
 	{
 		if (index == 0) { // main application
+
+			if ( is_same_app_process(prof_session.app_info.exe_path, manager.target[index].pid) == 0 ) {
+				LOGE("is same error: '%s' is not %d\n", prof_session.app_info.exe_path, manager.target[index].pid);
+				return -1;
+			}
+
 			if (start_replay() != 0) {
 				LOGE("Cannot start replay thread\n");
 				return -1;
