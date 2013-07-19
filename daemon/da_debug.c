@@ -42,30 +42,22 @@
 #if DEBUG
 void initialize_log()
 {
-    int fd;
-
-    fd = open("/dev/null", O_RDONLY);
-	if(fd >= 0)
-	{
-		dup2(fd, 0);
+	int fd = open(DEBUG_LOGFILE, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+	if (fd > 0) {
+		dup2(fd, 1);
+		dup2(fd, 2);
 		close(fd);
+	} else {
+		close(1);
+		close(2);
 	}
+	fprintf(stderr, "--- daemon starting (pid %d) ---\n", getpid());
 
-    fd = open(DEBUG_LOGFILE, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-    if(fd < 0) {
-        fd = open("/dev/null", O_WRONLY);
-		if(fd < 0) 
-			return;
-	}
-    dup2(fd, 1);
-    dup2(fd, 2);
-
-    fprintf(stderr, "--- daemon starting (pid %d) ---\n", getpid());
-	close(fd);
+	close(0);
 }
+
 #else
 void initialize_log()
 {
 }
 #endif
-
