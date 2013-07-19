@@ -90,6 +90,8 @@
 #define CPUMHZ		"cpu MHz"
 #define DA_PROBE_TIZEN_SONAME		"da_probe_tizen.so"
 #define DA_PROBE_OSP_SONAME			"da_probe_osp.so"
+#define CAMCORDER_FILE		"/usr/etc/mmfw_camcorder.ini"
+#define CAMERA_COUNT_STR	"DeviceCount"
 
 enum PROCESS_DATA
 {
@@ -1594,6 +1596,70 @@ static void get_app_info(const char* binary_path, char* width,
 	close(fd);
 }
 */
+int get_camera_count()
+{
+	FILE* fp;
+	int count = 0;
+	int size;
+	char* tmp;
+	char buf[BUFFER_MAX];
+
+	fp = fopen(CAMCORDER_FILE, "r");
+	if(fp != NULL)
+	{
+		size = strlen(CAMERA_COUNT_STR);
+
+		while(fgets(buf, BUFFER_MAX, fp) != NULL)
+		{
+			if(strncmp(buf, CAMERA_COUNT_STR, size) == 0)
+			{
+				tmp = strchr(buf, '=');
+				if(tmp != NULL)
+				{
+					tmp++;
+					while(isspace(*tmp))
+						tmp++;
+
+					count = atoi(tmp);
+				}
+
+				break;
+			}
+		}
+
+		fclose(fp);
+	}
+
+	return count;
+}
+
+static int get_device_network_type(char* buf, int buflen)
+{
+	int len = 0;
+	bool bool_var;
+
+	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.cdma", &bool_var);
+	if(bool_var) len += sprintf(buf + len, "CDMA");
+	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.edge", &bool_var);
+	if(bool_var) len += sprintf(buf + len, ",EDGE");
+	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.gprs", &bool_var);
+	if(bool_var) len += sprintf(buf + len, ",GPRS");
+	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.gsm", &bool_var);
+	if(bool_var) len += sprintf(buf + len, ",GSM");
+	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.hsdpa", &bool_var);
+	if(bool_var) len += sprintf(buf + len, ",HSDPA");
+	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.hspa", &bool_var);
+	if(bool_var) len += sprintf(buf + len, ",HSPA");
+	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.hsupa", &bool_var);
+	if(bool_var) len += sprintf(buf + len, ",HSUPA");
+	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.umts", &bool_var);
+	if(bool_var) len += sprintf(buf + len, ",UMTS");
+	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.lte", &bool_var);
+	if(bool_var) len += sprintf(buf + len, ",LTE");
+
+	return len;
+}
+
 
 static int get_device_availability_info(char* buf, int buflen)
 {
@@ -1603,13 +1669,15 @@ static int get_device_availability_info(char* buf, int buflen)
 	bool wifi_support = false;
 	char* networktype = NULL;
 	int loglen = 0;
+	char network_type[128];
+	int network_len;
 
 #ifndef LOCALTEST
-	system_info_get_value_bool(SYSTEM_INFO_KEY_BLUETOOTH_SUPPORTED, &blue_support);
-	system_info_get_value_int(SYSTEM_INFO_KEY_CAMERA_COUNT, &camera_count);
-	system_info_get_value_bool(SYSTEM_INFO_KEY_GPS_SUPPORTED, &gps_support);
-	system_info_get_value_string(SYSTEM_INFO_KEY_NETWORK_TYPE, &networktype);
-	system_info_get_value_bool(SYSTEM_INFO_KEY_WIFI_SUPPORTED, &wifi_support);
+	system_info_get_platform_bool("tizen.org/feature/network.bluetooth", &blue_support);
+	camera_count = get_camera_count();
+	system_info_get_platform_bool("tizen.org/feature/location.gps", &gps_support);
+	network_len = get_device_network_type(networktype, 128);
+	system_info_get_platform_bool("tizen.org/feature/network.wifi", &wifi_support);
 #endif
 
 	loglen += sprintf(buf, "%d`,%d`,%d`,%d`,",
@@ -1618,15 +1686,16 @@ static int get_device_availability_info(char* buf, int buflen)
 			(int)wifi_support,
 			camera_count);
 
-	if(networktype != NULL)
-	{
-		loglen += sprintf(buf + loglen, "%s", networktype);
-		free(networktype);
-	}
-	else
-	{
-		// do nothing
-	}
+	if(network_type != NULL)
+		if(network_len > 0)
+		{
+			loglen += sprintf(buf + loglen, "%s", networktype);
+			free(networktype);
+		}
+		else
+		{
+			// do nothing
+		}
 
 	return loglen;
 }
@@ -2211,7 +2280,11 @@ int finalize_system_info()
 	}
 
 	return 0;
+
 }
+
+
+
 
 //CMD SOCKET FUNCTIONS
 int fill_target_info(struct target_info_t *target_info)
@@ -2228,16 +2301,21 @@ int fill_target_info(struct target_info_t *target_info)
 	target_info->storage_size = stat_get_storageinfo(FSINFO_TYPE_TOTAL) *
 		1024 * 1024;
 #ifndef LOCALTEST
-	system_info_get_value_bool(SYSTEM_INFO_KEY_BLUETOOTH_SUPPORTED,
-				   (_Bool *)&target_info->bluetooth_supp);
-	system_info_get_value_bool(SYSTEM_INFO_KEY_GPS_SUPPORTED,
+
+	system_info_get_platform_bool("tizen.org/feature/network.bluetooth",
+									(_Bool *)&target_info->bluetooth_supp));
+
+
+	system_info_get_platform_bool("tizen.org/feature/location.gps",
 				   (_Bool *)&target_info->gps_supp);
-	system_info_get_value_bool(SYSTEM_INFO_KEY_WIFI_SUPPORTED,
+
+	system_info_get_platform_bool("tizen.org/feature/network.wifi",
 				   (_Bool *)&target_info->wifi_supp);
-	system_info_get_value_int(SYSTEM_INFO_KEY_CAMERA_COUNT,
-				  (int *)&target_info->camera_count);
-	system_info_get_value_string(SYSTEM_INFO_KEY_NETWORK_TYPE,
-				     &target_info->network_type);
+
+	target_info->camera_count = get_camera_count();
+	get_device_network_type(target_info->network_type, 128);
+
+
 #endif /* LOCALTEST */
 	target_info->max_brightness = get_max_brightness();
 	target_info->cpu_core_count = sysconf(_SC_NPROCESSORS_CONF);
