@@ -2303,7 +2303,7 @@ int fill_target_info(struct target_info_t *target_info)
 #ifndef LOCALTEST
 
 	system_info_get_platform_bool("tizen.org/feature/network.bluetooth",
-									(_Bool *)&target_info->bluetooth_supp));
+									(_Bool *)&target_info->bluetooth_supp);
 
 
 	system_info_get_platform_bool("tizen.org/feature/location.gps",
