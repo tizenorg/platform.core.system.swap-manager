@@ -1619,18 +1619,8 @@ int get_camera_count()
 
 		while(fgets(buf, BUFFER_MAX, fp) != NULL)
 		{
-			if(strncmp(buf, CAMERA_COUNT_STR, size) == 0)
-			{
-				tmp = strchr(buf, '=');
-				if(tmp != NULL)
-				{
-					tmp++;
-					while(isspace(*tmp))
-						tmp++;
-
-					count = atoi(tmp);
-				}
-
+			if(strncmp(buf, CAMERA_COUNT_STR, size) == 0) {
+				sscanf(buf, CAMERA_COUNT_STR " = %d", &count);
 				break;
 			}
 		}
