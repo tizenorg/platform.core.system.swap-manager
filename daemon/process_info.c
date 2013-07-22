@@ -128,7 +128,8 @@ void write_process_info(int pid, uint64_t starttime)
 		}
 	}
 
-	LOGI(" process_up_time =  %f\nsec = %d; usec = %d\n", process_up_time, up_sec, up_nsec);
+	LOGI(" process_up_time =  %f\nsec = %d; usec = %d\n"
+			, process_up_time, up_sec, up_nsec);
 
 	//Pack message
 	pack_int(p, pid);

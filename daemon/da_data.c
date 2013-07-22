@@ -198,7 +198,8 @@ int print_sys_info(struct system_info_t * sys_info)
 	return 0;
 }
 
-int fill_data_msg_head (struct msg_data_t *data, uint32_t msgid, uint32_t seq, uint32_t len)
+int fill_data_msg_head (struct msg_data_t *data, uint32_t msgid,
+							uint32_t seq, uint32_t len)
 {
 	struct timeval time;
 	data->id = msgid;

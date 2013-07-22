@@ -98,7 +98,8 @@ static void* recvThread(void* data)
 		// send to host
 		if (likely(log.length > 0))
 		{
-			recvLen = recv(manager.target[index].socket, log.data, log.length, MSG_WAITALL);
+			recvLen = recv(manager.target[index].socket,
+							log.data, log.length, MSG_WAITALL);
 			if(unlikely(recvLen != log.length))	// consume as disconnect
 			{
 				event = EVENT_STOP;
@@ -211,12 +212,14 @@ static void* recvThread(void* data)
 
 int makeRecvThread(int index)
 {
-	if(manager.target[index].socket == -1)
+	if (manager.target[index].socket == -1)
 		return -1;
 
-	if(pthread_create(&(manager.target[index].recv_thread), NULL, recvThread, (void*)index) < 0)
+	if (pthread_create(&(manager.target[index].recv_thread),
+		NULL, recvThread, (void*)index) < 0)
 	{
-		LOGE("Failed to create recv thread for socket (%d)\n", manager.target[index].socket);
+		LOGE("Failed to create recv thread for socket (%d)\n",
+				manager.target[index].socket);
 		return -1;
 	}
 
@@ -269,7 +272,8 @@ void* samplingThread(void* data)
 			pidcount = 0;
 			for(i = 0; i < MAX_TARGET_COUNT; i++)
 			{
-				//LOGI("#%d: sock=%d; pid=%d;\n",i, manager.target[i].socket , manager.target[i].pid );
+				//LOGI("#%d: sock=%d; pid=%d;\n", i,
+				//		manager.target[i].socket , manager.target[i].pid );
 				if(manager.target[i].socket != -1 && manager.target[i].pid != -1)
 					pidarr[pidcount++] = manager.target[i].pid;
 			}

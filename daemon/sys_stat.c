@@ -147,9 +147,9 @@ int get_file_status(int* pfd, const char* filename)
 	return status;
 }
 
-// ==============================================================================
+// =============================================================================
 // device status information getter functions
-// ==============================================================================
+// =============================================================================
 static int get_wifi_status() 
 {
 	int wifi_status = 0;
@@ -263,15 +263,18 @@ static int get_brightness_status()
 		char fullpath[PATH_MAX];
 
 		dir_info = opendir(BRIGHTNESS_PARENT_DIR);
-		if(dir_info != NULL)
+		if (dir_info != NULL)
 		{
 			while((dir_entry = readdir(dir_info)) != NULL)
 			{
-				if(strcmp(dir_entry->d_name, ".") == 0 || strcmp(dir_entry->d_name, "..") == 0)
+				if (strcmp(dir_entry->d_name, ".") == 0 ||
+						strcmp(dir_entry->d_name, "..") == 0)
 					continue;
 				else	// first directory
 				{
-					sprintf(fullpath, BRIGHTNESS_PARENT_DIR "/%s/" BRIGHTNESS_FILENAME, dir_entry->d_name);
+					sprintf(fullpath,
+							BRIGHTNESS_PARENT_DIR "/%s/" BRIGHTNESS_FILENAME,
+							dir_entry->d_name);
 					brightness_status = get_file_status(&brightnessfd, fullpath);
 				}
 			}
@@ -307,11 +310,14 @@ static int get_max_brightness()
 		{
 			while((dir_entry = readdir(dir_info)) != NULL)
 			{
-				if(strcmp(dir_entry->d_name, ".") == 0 || strcmp(dir_entry->d_name, "..") == 0)
+				if (strcmp(dir_entry->d_name, ".") == 0 ||
+						strcmp(dir_entry->d_name, "..") == 0)
 					continue;
 				else	// first directory
 				{
-					sprintf(fullpath, BRIGHTNESS_PARENT_DIR "/%s/" MAX_BRIGHTNESS_FILENAME, dir_entry->d_name);
+					sprintf(fullpath,
+							BRIGHTNESS_PARENT_DIR "/%s/" MAX_BRIGHTNESS_FILENAME,
+							dir_entry->d_name);
 					max_brightness = get_file_status(&maxbrightnessfd, fullpath);
 				}
 			}
@@ -549,7 +555,7 @@ static int get_audio_status()
 		{
 			audio_state = 1;
 		} 
-		else if(ret == 2 && strncmp(dev,"Head",4) == 0 && strncmp(state, "On",2) == 0) 
+		else if(ret == 2 && strncmp(dev,"Head",4) == 0 && strncmp(state, "On",2) == 0)
 		{
 			audio_state = 2;
 			break;
@@ -859,11 +865,13 @@ static int parse_proc_smaps_file_bypid(char *path, proc_t* P)
 			}
 			else	// not Pss line
 			{
-				if(is_probe_so == 0 && strlen(buf) > MIN_SMAP_BLOCKLINE)	// first we find probe so section
+				if (is_probe_so == 0 && strlen(buf) > MIN_SMAP_BLOCKLINE)
 				{
-					if(strstr(buf, DA_PROBE_TIZEN_SONAME) != NULL || 
-							strstr(buf, DA_PROBE_OSP_SONAME) != NULL)	// found probe.so
+					// first we find probe so section
+					if(strstr(buf, DA_PROBE_TIZEN_SONAME) != NULL ||
+							strstr(buf, DA_PROBE_OSP_SONAME) != NULL)
 					{
+						// found probe.so
 						is_probe_so = 1;
 					}
 					else
@@ -1416,7 +1424,7 @@ static int update_thread_data(int pid)
 			if((procnode = find_node(thread_prochead, tid)) == NULL)
 			{
 				procnode = add_node(&thread_prochead, tid);
-				if(unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data))) < 0))
+				if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data))) < 0))
 				{
 					LOGE("Failed to get proc stat file by tid(%d)\n", tid);
 				}
@@ -1428,7 +1436,7 @@ static int update_thread_data(int pid)
 			}
 			else
 			{
-				if(unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data))) < 0))
+				if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data))) < 0))
 				{
 					LOGE("Failed to get proc stat file by tid(%d)\n", tid);
 				}
@@ -1767,14 +1775,16 @@ int update_cpus_info(int event_num, float elapsed)
 				}
 				else
 				{
-					cpuptr->cpu_usage = (1.0f - ((float)cpuptr->idle_ticks / (float)cpuptr->total_ticks)) * 100.0f;
+					cpuptr->cpu_usage = (1.0f - ((float)cpuptr->idle_ticks /
+								(float)cpuptr->total_ticks)) * 100.0f;
 				}
 //				if(i != num_of_cpu)
 //				{
 //					idle_tick_sum += cpuptr->idle_ticks;
 //					total_tick_sum += cpuptr->total_ticks;
 //				}
-				LOGI_th_samp("System cpu usage log : %d, %Ld, %Ld\n", i, cpuptr->idle_ticks, cpuptr->total_ticks);
+				LOGI_th_samp("System cpu usage log : %d, %Ld, %Ld\n",
+						i, cpuptr->idle_ticks, cpuptr->total_ticks);
 				if(unlikely(cpuptr->cpu_usage < 0))
 				{
 					cpuptr->cpu_usage = 0.0f;
@@ -1794,7 +1804,8 @@ int update_cpus_info(int event_num, float elapsed)
 				cpuptr->total_ticks = (long long)(Hertz * elapsed);
 				if(unlikely(cpuptr->total_ticks < 1))
 					cpuptr->total_ticks = 1;
-				cpuptr->cpu_usage = ((float)cpuptr->idle_ticks / (float)cpuptr->total_ticks) * 100.0f;
+				cpuptr->cpu_usage = ((float)cpuptr->idle_ticks /
+						(float)cpuptr->total_ticks) * 100.0f;
 				if(unlikely(cpuptr->cpu_usage > 100.0f))
 				{
 					cpuptr->cpu_usage = 100.0f;
@@ -1880,8 +1891,8 @@ int fill_system_processes_info(float factor, struct system_info_t * sys_info)
 					proc->saved_utime + proc->saved_stime -
 					proc->proc_data.utime - proc->proc_data.stime
 					) * factor);
-		thread_load = (float)(proc->proc_data.utime + proc->proc_data.stime - proc->saved_utime - proc->saved_stime)
-			* factor;
+		thread_load = (float)(proc->proc_data.utime + proc->proc_data.stime -
+								proc->saved_utime - proc->saved_stime) * factor;
 
 		if(thread_load > 100.0f)
 			thread_load = 100.0f;
@@ -1890,7 +1901,8 @@ int fill_system_processes_info(float factor, struct system_info_t * sys_info)
 		virtual += proc->proc_data.vir_mem;					// Byte
 		resident += (proc->proc_data.res_memblock * 4);		// KByte
 		pssmem += (proc->proc_data.pss);					// KByte
-		ticks += (proc->proc_data.utime + proc->proc_data.stime - proc->saved_utime - proc->saved_stime);
+		ticks += (proc->proc_data.utime + proc->proc_data.stime -
+					proc->saved_utime - proc->saved_stime);
 
 		proc->saved_utime = proc->proc_data.utime;
 		proc->saved_stime = proc->proc_data.stime;
@@ -1939,7 +1951,8 @@ int fill_system_threads_info(float factor, struct system_info_t * sys_info)
 
 	for(proc = thread_prochead; proc != NULL; proc = proc->next)
 	{
-		thread_load = (float)(proc->proc_data.utime + proc->proc_data.stime - proc->saved_utime - proc->saved_stime)
+		thread_load = (float)(proc->proc_data.utime + proc->proc_data.stime -
+								proc->saved_utime - proc->saved_stime)
 			* factor;
 		if(thread_load > 100.0f)
 			thread_load = 100.0f;

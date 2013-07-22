@@ -197,7 +197,8 @@ void _device_write(input_dev *dev, struct input_event* in_ev)
 		if(dev[i].fd >= 0)
 		{
 			write(dev[i].fd, in_ev, sizeof(struct input_event));
-			LOGI("write(%d, %d, %d)\n",dev[i].fd, (int)in_ev, sizeof(struct input_event));
+			LOGI("write(%d, %d, %d)\n",
+					dev[i].fd, (int)in_ev, sizeof(struct input_event));
 		}
 	}
 }
@@ -245,9 +246,9 @@ static void setEmptyTargetSlot(int index)
 	}
 }
 
-// ======================================================================================
+// =============================================================================
 // send functions to host
-// ======================================================================================
+// =============================================================================
 
 //static
 int sendACKCodeToHost(enum HostMessageType resp, int msgcode)
@@ -271,9 +272,9 @@ int sendACKCodeToHost(enum HostMessageType resp, int msgcode)
 		return 1;
 }
 
-// ========================================================================================
+// =============================================================================
 // start and terminate control functions
-// ========================================================================================
+// =============================================================================
 
 static int exec_app(const struct app_info_t *app_info)
 {
@@ -327,7 +328,8 @@ static int exec_app(const struct app_info_t *app_info)
 				// add event fd to epoll list
 				ev.events = EPOLLIN;
 				ev.data.fd = manager.app_launch_timerfd;
-				if(epoll_ctl(manager.efd, EPOLL_CTL_ADD, manager.app_launch_timerfd, &ev) < 0)
+				if (epoll_ctl(manager.efd, EPOLL_CTL_ADD,
+							manager.app_launch_timerfd, &ev) < 0)
 				{
 					// fail to add event fd
 					LOGE("fail to add app launch timer fd to epoll list\n");
@@ -471,10 +473,13 @@ static void terminate_all_target()
 	{
 		if(manager.target[i].socket != -1)
 		{
-			sendlen = send(manager.target[i].socket, &sendlog, sizeof(sendlog.type) + sizeof(sendlog.length), MSG_NOSIGNAL);
+			sendlen = send(manager.target[i].socket, &sendlog,
+							sizeof(sendlog.type) + sizeof(sendlog.length),
+							MSG_NOSIGNAL);
 			if(sendlen != -1)
 			{
-				LOGI("TERMINATE send exit msg (socket %d) by terminate_all_target()\n", manager.target[i].socket);
+				LOGI("TERMINATE send exit msg (socket %d) "
+						"by terminate_all_target()\n", manager.target[i].socket);
 			}
 		}
 	}
@@ -559,8 +564,11 @@ static int targetEventHandler(int epollfd, int index, uint64_t msg)
 	{
 		if (index == 0) { // main application
 
-			if ( is_same_app_process(prof_session.app_info.exe_path, manager.target[index].pid) == 0 ) {
-				LOGE("is same error: '%s' is not %d\n", prof_session.app_info.exe_path, manager.target[index].pid);
+			if ( is_same_app_process(prof_session.app_info.exe_path,
+						manager.target[index].pid) == 0 ) {
+				LOGE("is same error: '%s' is not %d\n",
+						prof_session.app_info.exe_path,
+						manager.target[index].pid);
 				return -1;
 			}
 
@@ -583,7 +591,8 @@ static int targetEventHandler(int epollfd, int index, uint64_t msg)
 		}
 		epoll_ctl(epollfd, EPOLL_CTL_DEL, manager.target[index].event_fd, NULL);
 		setEmptyTargetSlot(index);
-		if (0 == __sync_sub_and_fetch(&manager.target_count, 1)) // all target client are closed
+		// all target client are closed
+		if (0 == __sync_sub_and_fetch(&manager.target_count, 1))
 			return -11;
 	}
 
@@ -605,7 +614,8 @@ static int targetServerHandler(int efd)
 		return 1;
 	}
 
-	manager.target[index].socket = accept(manager.target_server_socket, NULL, NULL);
+	manager.target[index].socket =
+		accept(manager.target_server_socket, NULL, NULL);
 
 	if(manager.target[index].socket >= 0)	// accept succeed
 	{
@@ -628,7 +638,8 @@ static int targetServerHandler(int efd)
 		if(manager.target[index].event_fd == -1)
 		{
 			// fail to make event fd
-			LOGE("fail to make event fd for socket (%d)\n", manager.target[index].socket);
+			LOGE("fail to make event fd for socket (%d)\n",
+					manager.target[index].socket);
 			goto TARGET_CONNECT_FAIL;
 		}
 
@@ -638,7 +649,8 @@ static int targetServerHandler(int efd)
 		if(epoll_ctl(efd, EPOLL_CTL_ADD, manager.target[index].event_fd, &ev) < 0)
 		{
 			// fail to add event fd
-			LOGE("fail to add event fd to epoll list for socket (%d)\n", manager.target[index].socket);
+			LOGE("fail to add event fd to epoll list for socket (%d)\n",
+					manager.target[index].socket);
 			goto TARGET_CONNECT_FAIL;
 		}
 
@@ -646,7 +658,8 @@ static int targetServerHandler(int efd)
 		if(makeRecvThread(index) != 0)
 		{
 			// fail to make recv thread
-			LOGE("fail to make recv thread for socket (%d)\n", manager.target[index].socket);
+			LOGE("fail to make recv thread for socket (%d)\n",
+					manager.target[index].socket);
 			epoll_ctl(efd, EPOLL_CTL_DEL, manager.target[index].event_fd, NULL);
 			goto TARGET_CONNECT_FAIL;
 		}
@@ -675,8 +688,9 @@ TARGET_CONNECT_FAIL:
 	{
 		return -1;
 	}
-	else	// if this connection is not main connection then ignore process by error
+	else
 	{
+		// if this connection is not main connection then ignore process by error
 		setEmptyTargetSlot(index);
 		return 1;
 	}
@@ -877,7 +891,8 @@ int daemonLoop()
 		numevent = epoll_wait(manager.efd, events, EPOLL_SIZE, -1);
 		if(numevent <= 0)
 		{
-			LOGE("Failed to epoll_wait : num of event(%d), errno(%d)\n", numevent, errno);
+			LOGE("Failed to epoll_wait : "
+					"num of event(%d), errno(%d)\n", numevent, errno);
 			continue;
 		}
 
@@ -893,7 +908,8 @@ int daemonLoop()
 					recvLen = read(manager.target[k].event_fd, &u, sizeof(uint64_t));
 					if(recvLen != sizeof(uint64_t))
 					{
-						// maybe closed, but ignoring is more safe then removing fd from epoll list
+						// maybe closed, but ignoring is more safe then
+						// removing fd from epoll list
 					}
 					else
 					{
@@ -918,7 +934,8 @@ int daemonLoop()
 				{
 					if(deviceEventHandler(&g_touch_dev[k], INPUT_ID_TOUCH) < 0)
 					{
-						terminate_error("Internal DA framework error, Please re-run the profiling.", 1);
+						terminate_error("Internal DA framework error, "
+										"Please re-run the profiling.", 1);
 						ret = -1;
 						goto END_EFD;
 					}
@@ -936,7 +953,8 @@ int daemonLoop()
 				{
 					if(deviceEventHandler(&g_key_dev[k], INPUT_ID_KEY) < 0)
 					{
-						terminate_error("Internal DA framework error, Please re-run the profiling.", 1);
+						terminate_error("Internal DA framework error, "
+										"Please re-run the profiling.", 1);
 						ret = -1;
 						goto END_EFD;
 					}
@@ -952,7 +970,8 @@ int daemonLoop()
 			{
 				if(targetServerHandler(manager.efd) < 0)	// critical error
 				{
-					terminate_error("Internal DA framework error, Please re-run the profiling.", 1);
+					terminate_error("Internal DA framework error, "
+									"Please re-run the profiling.", 1);
 					ret = -1;
 					goto END_EFD;
 				}
@@ -963,7 +982,8 @@ int daemonLoop()
 				int result = hostServerHandler(manager.efd);
 				if(result < 0)
 				{
-					terminate_error("Internal DA framework error, Please re-run the profiling.", 1);
+					terminate_error("Internal DA framework error, "
+									"Please re-run the profiling.", 1);
 					ret = -1;
 					goto END_EFD;
 				}
@@ -981,7 +1001,8 @@ int daemonLoop()
 				}
 				else if(result < 0)
 				{
-					terminate_error("Internal DA framework error, Please re-run the profiling.", 1);
+					terminate_error("Internal DA framework error, "
+									"Please re-run the profiling.", 1);
 					ret = -1;
 					goto END_EFD;
 				}
