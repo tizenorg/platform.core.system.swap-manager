@@ -139,8 +139,6 @@ void write_process_info(int pid, uint64_t starttime)
 	pack_int(p, start);
 	pack_int(p, end);
 
-	pack_int(p, prof_session.app_info.app_type);
-
 	pack_int(p, binary_type);
 
 	pack_str(p, binary_path);
