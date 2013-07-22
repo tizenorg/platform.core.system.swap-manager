@@ -1,8 +1,8 @@
 #!/bin/bash
 
+VERSION="2.2"
 KILL=/usr/bin/killall
 MANAGER=/usr/bin/da_manager
-EVENT=/usr/bin/da_event
 FIND=/usr/bin/find
 GETAPPINSTALLPATH="/usr/bin/pkgcmd -a"
 PORTFILE=/tmp/port.da
@@ -14,8 +14,8 @@ print_usage()
 	echo "killmanager               terminate da_manager"
 #	echo "killapp apppath           terminate application"
 	echo "runmanager                execute da_manager"
-	echo "runevent record|play      execute da_event"
 	echo "findunittest              find unittest project"
+	echo "getversion				get version"
 }
 
 kill_manager()
@@ -35,25 +35,6 @@ run_manager()
 	$MANAGER
 }
 
-run_event()
-{
-	case "$EVENTOPTION" in
-		record)
-			EVENTMODE="-r"
-			;;
-		play)
-			EVENTMODE="-s"
-			;;
-		*)
-			echo "Invalid event option!"
-			print_usage
-			exit 1
-			;;
-	esac
-
-	$EVENT $EVENTMODE
-}
-
 find_unittest()
 {
 	$FIND `$GETAPPINSTALLPATH | awk '{if (FNR==1) printf $NF}'` -name *.unittest
@@ -64,6 +45,10 @@ process_list()
 	ps -eo pid,cmd
 }
 
+get_version()
+{
+	echo $VERSION
+}
 
 if test $# -gt 2 -o $# -lt 1; then
 	print_usage
@@ -72,9 +57,6 @@ fi
 
 if test -n "$2"; then
 	case "$1" in
-		runevent)
-			EVENTOPTION=$2
-			;;
 #		killapp)
 #			APPPATH=$2
 #			;;
@@ -95,14 +77,14 @@ case "$1" in
 	runmanager)
 		run_manager
 		;;
-	runevent)
-		run_event
-		;;
 	findunittest)
 		find_unittest
 		;;
 	process)
 		process_list
+		;;
+	getversion)
+		get_version
 		;;
 	*)
 		echo "Unknown option!"
