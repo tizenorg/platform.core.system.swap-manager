@@ -271,12 +271,21 @@ static bool initialize_pthread_sigmask()
 	return true;
 }
 
+static bool initialize_host_server_socket()
+{
+	int port = makeHostServerSocket();
+
+	if (port < 0) {
+		writeToPortfile(ERR_HOST_SERVER_SOCKET_CREATE_FAILED);
+		return false;
+	}
+	writeToPortfile(port);
+	return true;
+}
 
 // return 0 for normal case
 static int initializeManager()
 {
-	int i;
-
 	if (init_buf() != 0) {
 		LOGE("Cannot init buffer\n");
 		return -1;
@@ -296,22 +305,10 @@ static int initializeManager()
 		return -1;
 	}
 
-	i = makeHostServerSocket();
-	if(i < 0)
-	{
-		writeToPortfile(ERR_HOST_SERVER_SOCKET_CREATE_FAILED);
-		return -1;
-	}
-	else	// host server socket creation succeed
-	{
-		writeToPortfile(i);
-	}
-
-
+	if (!initialize_host_server_socket())
+	  return -1;
 
 	LOGI("SUCCESS to write port\n");
-
-	// initialize target client sockets
 
 	inititialize_manager_targets(&manager);
 	if (!initialize_pthread_sigmask())
