@@ -67,7 +67,7 @@
 #define SCREENSHOT_DIR			"/tmp/da"
 
 #define EPOLL_SIZE				10
-#define MAX_APP_LAUNCH_TIME		6
+#define MAX_APP_LAUNCH_TIME		60
 
 #define MAX_DEVICE				10
 #define MAX_FILENAME			128
