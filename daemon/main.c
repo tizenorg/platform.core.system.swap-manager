@@ -32,6 +32,7 @@
 #include <stdio.h>			// for fopen, fprintf
 #include <stdlib.h>			// for atexit
 #include <sys/types.h>		// for open
+#include <sys/file.h>
 #include <sys/stat.h>		// for open
 #include <sys/socket.h>		// for socket
 #include <sys/un.h>			// for sockaddr_un
@@ -40,6 +41,7 @@
 #include <signal.h>			// for signal
 #include <unistd.h>			// for unlink
 #include <fcntl.h>			// for open, fcntl
+#include <stdbool.h>
 #ifndef LOCALTEST
 #include <attr/xattr.h>		// for fsetxattr
 #endif
@@ -49,7 +51,7 @@
 #include "buffer.h"
 #include "debug.h"
 
-#define SINGLETON_LOCKFILE			"/tmp/lockfile.da"
+#define SINGLETON_LOCKFILE			"/tmp/da_manager.lock"
 #define PORTFILE					"/tmp/port.da"
 #define UDS_NAME					"/tmp/da.socket"
 
@@ -215,34 +217,29 @@ static int makeHostServerSocket()
 // initializing / finalizing functions
 // =============================================================================
 
-static int singleton(void)
+static bool ensure_singleton(const char *lockfile)
 {
-	struct flock fl;
-	int fd;
+	if (access(lockfile, F_OK) == 0)	/* File exists */
+		return false;
 
-	fd = open(SINGLETON_LOCKFILE, O_RDWR | O_CREAT, 0600);
-	if(fd < 0)
-	{
+	int lockfd = open(lockfile, O_WRONLY | O_CREAT, 0600);
+	if (lockfd < 0) {
 		writeToPortfile(ERR_LOCKFILE_CREATE_FAILED);
 		LOGE("singleton lock file creation failed");
-		return -1;
+		return false;
 	}
+	/* To prevent race condition, also check for lock availiability. */
+	bool locked = flock(lockfd, LOCK_EX | LOCK_NB) == 0;
 
-	fl.l_start = 0;
-	fl.l_len = 0;
-	fl.l_type = F_WRLCK;
-	fl.l_whence = SEEK_SET;
-	if(fcntl(fd, F_SETLK, &fl) < 0)
-	{
+	if (!locked) {
 		writeToPortfile(ERR_ALREADY_RUNNING);
 		LOGE("another instance of daemon is already running");
-		close(fd);
-		return -1;
 	}
-
-	close(fd);
-	return 0;
+	close(lockfd);
+	return locked;
 }
+
+
 
 // return 0 for normal case
 static int initializeManager()
@@ -339,22 +336,19 @@ static int finalizeManager()
 // main function
 int main()
 {
-	int result;
+	if (!ensure_singleton(SINGLETON_LOCKFILE))
+		return 1;
+
 	initialize_log();
 
 	LOGI("da_started\n");
 	atexit(_unlink_file);
 
 	manager.portfile = fopen(PORTFILE, "w");
-	if(manager.portfile == NULL)
-	{
+	if (manager.portfile == NULL) {
 		LOGE("cannot create portfile");
 		return 1;
 	}
-
-	if(singleton() < 0)
-		return 1;
-
 	//for terminal exit
 	signal(SIGHUP, SIG_IGN);
 	chdir("/");
@@ -363,21 +357,17 @@ int main()
 	setsid();
 
 	// initialize manager
-	result = initializeManager();
+	int err = initializeManager();
 	fclose(manager.portfile);
-	if(result == 0)
-	{
-		//daemon work
-		//FIX ME remove samplingThread it is only for debug
-		//samplingThread(NULL);
-		daemonLoop();
-		LOGI("daemon loop finished\n");
-		stop_all();
-		finalizeManager();
-		return 0;
-	}
-	else
-	{
+	if (err)
 		return 1;
-	}
+
+	//daemon work
+	//FIX ME remove samplingThread it is only for debug
+	//samplingThread(NULL);
+	daemonLoop();
+	LOGI("daemon loop finished\n");
+	stop_all();
+	finalizeManager();
+	return 0;
 }
