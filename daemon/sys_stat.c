@@ -150,7 +150,7 @@ int get_file_status(int* pfd, const char* filename)
 // =============================================================================
 // device status information getter functions
 // =============================================================================
-static int get_wifi_status() 
+static int get_wifi_status()
 {
 	int wifi_status = 0;
 
@@ -251,7 +251,7 @@ static int get_gps_status()
 	return gps_status;
 }
 
-static int get_brightness_status() 
+static int get_brightness_status()
 {
 	static int brightnessfd = -1;
 	int brightness_status = 0;
@@ -292,7 +292,7 @@ static int get_brightness_status()
 	return brightness_status;
 }
 
-static int get_max_brightness() 
+static int get_max_brightness()
 {
 	int maxbrightnessfd = -1;
 	static int max_brightness = -1;
@@ -505,7 +505,7 @@ static int get_camera_status()
 }
 
 // this means silent mode?
-static int get_sound_status() 
+static int get_sound_status()
 {
 	int sound_status = 0;
 
@@ -548,13 +548,13 @@ static int get_audio_status()
 	if(fp == NULL)
 		return -1;
 
-	while(ret != EOF) 
+	while(ret != EOF)
 	{
 		ret = fscanf(fp, "%[^:] %*c %[^\n] ", dev, state);
 		if(strncmp(dev,"SPKR",4) == 0 && strncmp(state, "On",2) == 0)
 		{
 			audio_state = 1;
-		} 
+		}
 		else if(ret == 2 && strncmp(dev,"Head",4) == 0 && strncmp(state, "On",2) == 0)
 		{
 			audio_state = 2;
@@ -570,7 +570,7 @@ static int get_audio_status()
 	return audio_state;
 }
 
-static int get_vibration_status() 
+static int get_vibration_status()
 {
 	int vibration_status = 0;
 
@@ -784,7 +784,7 @@ static int parse_proc_stat_file_bypid(char *path, proc_t* P)
 		return -1;
 
 	buf[num] = '\0';
-	
+
 	// scan from buffer
 	// copy command name
 	abuf = strchr(buf, '(') + 1;
@@ -819,7 +819,7 @@ static int parse_proc_stat_file_bypid(char *path, proc_t* P)
 		&P->start_time,
 		&P->vir_mem,
 		&P->res_memblock
-		);   
+		);
 
 	if(P->numofthread == 0)
 		P->numofthread = 1;
@@ -886,7 +886,7 @@ static int parse_proc_smaps_file_bypid(char *path, proc_t* P)
 			}
 		}
 	}
-	else	// we know about probe.so size already 
+	else	// we know about probe.so size already
 	{
 		while(fgets(buf, MIDDLE_BUFFER, fp) != NULL)
 		{
@@ -1257,7 +1257,7 @@ static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 
 // return 0 for error case
 // return system total memory in MB
-//static 
+//static
 unsigned long get_system_total_memory()
 {
 	int meminfo_fd = -1;
@@ -1301,7 +1301,7 @@ unsigned long get_system_total_memory()
 			break;
 		head = tail + 1;
 	}
-	
+
 	return (totalmem * 1024);
 }
 
@@ -1371,7 +1371,7 @@ static int get_total_used_drive()
 {
 	int total = 0;
 	int free = 0;
-	int storage = stat_get_storageinfo(FSINFO_TYPE_FREE); 
+	int storage = stat_get_storageinfo(FSINFO_TYPE_FREE);
 	int card = stat_get_cardinfo(FSINFO_TYPE_FREE);
 
 	if (storage < 0 && card < 0)
@@ -1410,7 +1410,7 @@ static int update_thread_data(int pid)
 	while((entry = readdir(taskdir)) != NULL)
 	{
 		if(*entry->d_name > '0' &&	*entry->d_name <= '9')
-		{	
+		{
 			tid = atoi(entry->d_name);
 			sprintf(buf, "/proc/%d/task/%d", pid, tid);
 
@@ -1457,9 +1457,9 @@ static int update_thread_data(int pid)
 
 // this code is not necessary anymore
 /*
-static void get_app_info(const char* binary_path, char* width, 
-		char* height, char* theme, char* version, 
-		char* scale, char* removable, 
+static void get_app_info(const char* binary_path, char* width,
+		char* height, char* theme, char* version,
+		char* scale, char* removable,
 		char* comment)
 {
 	int fd = 0;
@@ -1488,8 +1488,8 @@ static void get_app_info(const char* binary_path, char* width,
 		if (res == 0)
 		{
 			break;
-		} 
-		if (res < 0) 
+		}
+		if (res < 0)
 		{
 			if (errno == EINTR)
 				continue;
@@ -1498,7 +1498,7 @@ static void get_app_info(const char* binary_path, char* width,
 		}
 
 		LOGI("read buffer ===%s===\n", buffer);
-		for (i = 0; i < res; i++) 
+		for (i = 0; i < res; i++)
 		{
 			if (i < res - 22 && strncmp(&buffer[i], "X-SLP-BaseLayoutWidth=", 22) == 0)
 			{
@@ -2345,7 +2345,7 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 
 	fill_data_msg_head(msg, NMSG_SYSTEM, 0, len);
 	p = msg->payload;
-	
+
 	pack_int(p, sys_info->energy);
 	pack_int(p, sys_info->wifi_status);
 	pack_int(p, sys_info->bt_status);

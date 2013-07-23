@@ -66,7 +66,7 @@
 uint64_t str_to_uint64(char* str)
 {
 	uint64_t res = 0;
-	
+
 	if(str != NULL)
 	{
 		while(*str >= '0' && *str <= '9')
@@ -83,7 +83,7 @@ int64_t str_to_int64(char* str)
 {
 	int64_t res = 0;
 	int64_t factor = 1;
-	
+
 	if(str != NULL)
 	{
 		if(*str == '-')
