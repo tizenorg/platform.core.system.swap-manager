@@ -238,14 +238,44 @@ static bool ensure_singleton(const char *lockfile)
 	close(lockfd);
 	return locked;
 }
+static void inititialize_manager_targets(__da_manager * mng)
+{
+	int index;
+	__da_target_info target_init_value = {
+		.pid = -1,
+		.socket = -1,
+		.event_fd = -1,
+		.recv_thread = -1,
+		.initial_log = 0,
+		.allocmem = 0,
+		.starttime = 0
+	};
 
+	for (index = 0; index < MAX_TARGET_COUNT; index++)
+		mng->target[index] = target_init_value;
+
+	manager.target_count = 0;
+}
+
+static bool initialize_pthread_sigmask()
+{
+	sigset_t newsigmask;
+
+	sigemptyset(&newsigmask);
+	sigaddset(&newsigmask, SIGALRM);
+	sigaddset(&newsigmask, SIGUSR1);
+	if (pthread_sigmask(SIG_BLOCK, &newsigmask, NULL) != 0) {
+		writeToPortfile(ERR_SIGNAL_MASK_SETTING_FAILED);
+		return false;
+	}
+	return true;
+}
 
 
 // return 0 for normal case
 static int initializeManager()
 {
 	int i;
-	sigset_t newsigmask;
 
 	if (init_buf() != 0) {
 		LOGE("Cannot init buffer\n");
@@ -277,31 +307,15 @@ static int initializeManager()
 		writeToPortfile(i);
 	}
 
-	// initialize signal mask
-	sigemptyset(&newsigmask);
-	sigaddset(&newsigmask, SIGALRM);
-	sigaddset(&newsigmask, SIGUSR1);
-	if(pthread_sigmask(SIG_BLOCK, &newsigmask, NULL) != 0)
-	{
-		writeToPortfile(ERR_SIGNAL_MASK_SETTING_FAILED);
-		return -1;
-	}
+
 
 	LOGI("SUCCESS to write port\n");
 
 	// initialize target client sockets
-	for (i = 0; i < MAX_TARGET_COUNT; i++)
-	{
-		manager.target[i].pid = -1;
-		manager.target[i].socket = -1;
-		manager.target[i].event_fd = -1;
-		manager.target[i].recv_thread = -1;
-		manager.target[i].initial_log = 0;
-		manager.target[i].allocmem = 0;
-		manager.target[i].starttime = 0;
-	}
-	manager.target_count = 0;
 
+	inititialize_manager_targets(&manager);
+	if (!initialize_pthread_sigmask())
+	  return -1;
 	// initialize sendMutex
 	pthread_mutex_init(&(manager.host.data_socket_mutex), NULL);
 
