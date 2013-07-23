@@ -942,6 +942,7 @@ struct msg_t *gen_stop_msg(void){
 
 enum ErrorCode stop_all(void)
 {
+	LOGI("entry\n");
 	enum ErrorCode error_code = ERR_NO;
 	struct msg_t *msg = gen_stop_msg();
 
@@ -962,6 +963,7 @@ enum ErrorCode stop_all(void)
 	reset_prof_session(&prof_session);
 	stop_transfer();
 
+	LOGI("finished\n");
 	return error_code;
 }
 

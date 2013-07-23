@@ -60,21 +60,31 @@
 // initialize global variable
 __da_manager manager =
 {
-	// TODO: rewrite this with . notation
-	NULL, -1, -1, // portfile pointer, host / target server socket
-	0, // target count
-	0, // config_flag
-	-1, // app launch timerfd
-	-1, // sampling_thread handle
-	-1, // replay_thread
-	-1, // transfer_thread
-	-1, // buf_fd
-	-1, // epoll fd
-	{-1, -1, PTHREAD_MUTEX_INITIALIZER}, // host
-	{{0L, }, }, // target
-	{0, } // appPath
-};
+	.portfile = NULL,
+	.host_server_socket = -1,
+	.target_server_socket = -1,
+	.target_count = 0,
+	.config_flag = 0,
+	.app_launch_timerfd = -1,
+	.sampling_thread = -1,
+	.replay_thread = -1,
+	.transfer_thread = -1,
+	.buf_fd = -1,
+	.efd = -1,
 
+	.host = {
+		.control_socket = -1,
+		.data_socket = -1,
+		.data_socket_mutex = PTHREAD_MUTEX_INITIALIZER
+	},
+
+	.target = {
+		{0L, },
+	},
+
+	.appPath = {0, }
+
+	};
 // =============================================================================
 // util functions
 // =============================================================================
@@ -103,9 +113,10 @@ void _close_server_socket(void)
 
 static void _unlink_file(void)
 {
-	LOGI("unlink files\n");
+	LOGI("unlink files start\n");
 	unlink(PORTFILE);
 	unlink(SINGLETON_LOCKFILE);
+	LOGI("unlink files done\n");
 }
 
 void unlink_portfile(void)
@@ -336,6 +347,8 @@ static int finalizeManager()
 	return 0;
 }
 
+
+
 // main function
 int main()
 {
@@ -374,6 +387,7 @@ int main()
 		LOGI("daemon loop finished\n");
 		stop_all();
 		finalizeManager();
+		LOGI("main finished\n");
 		return 0;
 	}
 	else

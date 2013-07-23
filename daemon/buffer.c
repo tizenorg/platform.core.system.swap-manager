@@ -70,10 +70,11 @@ static int insert_buf_modules(void)
 
 static void remove_buf_modules(void)
 {
-	LOGI("rmmod buffer");
+	LOGI("rmmod buffer start\n");
 	if (system("cd /opt/swap/sdk && ./stop.sh")) {
 		LOGW("Cannot remove swap modules\n");
 	}
+	LOGI("rmmod buffer done\n");
 }
 
 int init_buf(void)

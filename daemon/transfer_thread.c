@@ -58,7 +58,7 @@ static void *transfer_thread(void *arg)
 				break;
 			}
 			LOGE("Cannot splice read: %s\n", strerror(errno));
-			return NULL;
+			goto thread_exit;
 		}
 
 		nwr = splice(fd_pipe[0], NULL,
@@ -66,12 +66,15 @@ static void *transfer_thread(void *arg)
 			     nrd, 0);
 		if (nwr == -1) {
 			LOGE("Cannot splice write: %s\n", strerror(errno));
-			return NULL;
+			goto thread_exit;
 		}
 		if (nwr != nrd) {
 			LOGW("nrd - nwr = %d\n", nrd - nwr);
 		}
 	}
+
+	thread_exit:
+
 	close(fd_pipe[0]);
 	close(fd_pipe[1]);
 
@@ -142,5 +145,5 @@ void stop_transfer()
 
 	manager.transfer_thread = -1;
 
-	LOGI("transfer thread joined\n");
+	LOGI("transfer thread stoped\n");
 }
