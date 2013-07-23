@@ -1609,7 +1609,6 @@ int get_camera_count()
 	FILE* fp;
 	int count = 0;
 	int size;
-	char* tmp;
 	char buf[BUFFER_MAX];
 
 	fp = fopen(CAMCORDER_FILE, "r");
@@ -1684,16 +1683,10 @@ static int get_device_availability_info(char* buf, int buflen)
 			(int)wifi_support,
 			camera_count);
 
-	if(network_type != NULL)
-		if(network_len > 0)
-		{
-			loglen += sprintf(buf + loglen, "%s", networktype);
-			free(networktype);
-		}
-		else
-		{
-			// do nothing
-		}
+	if(network_type != NULL && network_len > 0) {
+		loglen += sprintf(buf + loglen, "%s", networktype);
+		free(networktype);
+	}
 
 	return loglen;
 }
