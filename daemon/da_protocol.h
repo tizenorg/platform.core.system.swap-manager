@@ -58,7 +58,7 @@ NMSG_SWAP_INST_REMOVE_ACK	=0x1009,
 NMSG_PROCESS_INFO			=0x2002,	//	target process info
 NMSG_TERMINATE				=0x2004,	//terminate
 NMSG_ERROR					=0x2005,	//error message
-NMSG_SAMPLE					=0x2006,	//N	10ms	
+NMSG_SAMPLE					=0x2006,	//N	10ms
 NMSG_SYSTEM					=0x2007,	//N	10~1000ms	DaData, start sending immediately after start message from host, first system message time is tracing start time
 NMSG_IMAGE					=0x2008,	//N	irregular	image
 NMSG_RECORD					=0x2009,	//N	irregular	replay event
@@ -84,22 +84,22 @@ NMSG_PROBE_SYNC				=0X3010	//N	irregular	resource log
 #define MSG_MAX_NUM NMSG_SWAP_INST_REMOVE
 
 enum ErrorCode{
-	ERR_NO									=0,		//success	
-	ERR_LOCKFILE_CREATE_FAILED				=-101,	//lock file create failed	
-	ERR_ALREADY_RUNNING						=-102,	//already running	
-	ERR_INITIALIZE_SYSTEM_INFO_FAILED		=-103,	//initialize system info failed	
-	ERR_HOST_SERVER_SOCKET_CREATE_FAILED	=-104,	//host server socket create failed	
-	ERR_TARGET_SERVER_SOCKET_CREATE_FAILED	=-105,	//target server socket create failed	
+	ERR_NO									=0,		//success
+	ERR_LOCKFILE_CREATE_FAILED				=-101,	//lock file create failed
+	ERR_ALREADY_RUNNING						=-102,	//already running
+	ERR_INITIALIZE_SYSTEM_INFO_FAILED		=-103,	//initialize system info failed
+	ERR_HOST_SERVER_SOCKET_CREATE_FAILED	=-104,	//host server socket create failed
+	ERR_TARGET_SERVER_SOCKET_CREATE_FAILED	=-105,	//target server socket create failed
 
 	ERR_SIGNAL_MASK_SETTING_FAILED			=-106, //TODO del (old parametr)
 
-	ERR_WRONG_MESSAGE_FORMAT				=-201,	//wrong message format	
-	ERR_WRONG_MESSAGE_TYPE					=-202,	//wrong message type	
-	ERR_WRONG_MESSAGE_DATA					=-203,	//wrong message data	
-	ERR_CANNOT_START_PROFILING				=-204,	//cannot start profiling	
-	ERR_SERV_SOCK_CREATE					=-900,	//server socket creation failed (written in /tmp/da.port file)	
-	ERR_SERV_SOCK_BIND						=-901,	//server socket bind failed (written in /tmp/da.port file)	
-	ERR_SERV_SOCK_LISTEN					=-902,	//server socket listen failed (written in /tmp/da.port file)	
+	ERR_WRONG_MESSAGE_FORMAT				=-201,	//wrong message format
+	ERR_WRONG_MESSAGE_TYPE					=-202,	//wrong message type
+	ERR_WRONG_MESSAGE_DATA					=-203,	//wrong message data
+	ERR_CANNOT_START_PROFILING				=-204,	//cannot start profiling
+	ERR_SERV_SOCK_CREATE					=-900,	//server socket creation failed (written in /tmp/da.port file)
+	ERR_SERV_SOCK_BIND						=-901,	//server socket bind failed (written in /tmp/da.port file)
+	ERR_SERV_SOCK_LISTEN					=-902,	//server socket listen failed (written in /tmp/da.port file)
 	ERR_UNKNOWN							=-999	//unknown error
 };
 
@@ -302,20 +302,21 @@ struct recorded_event_t{
 	uint32_t code;
 	uint32_t value;
 };
-#define pack_int(to,n) { *(typeof(n) *) to = n; to += sizeof(typeof(n));} 
-#define pack_int64(to,n) { *(uint64_t *) to = n; to += sizeof(uint64_t);} 
-#define pack_int32(to,n) { *(uint32_t *) to = n; to += sizeof(uint32_t);} 
-#define pack_time(to,n) {pack_int32(to,n.tv_sec); pack_int32(to,n.tv_usec);} 
-#define pack_float(to,n) { memcpy(to,&n,sizeof(float)); to += sizeof(float);} 
-#define pack_str(to,n) { memcpy(to,n,strlen(n)+1); to += strlen(n)+1;} 
+#define pack_int(to,n) { *(typeof(n) *) to = n; to += sizeof(typeof(n));}
+#define pack_int64(to,n) { *(uint64_t *) to = n; to += sizeof(uint64_t);}
+#define pack_int32(to,n) { *(uint32_t *) to = n; to += sizeof(uint32_t);}
+#define pack_time(to,n) {pack_int32(to,n.tv_sec); pack_int32(to,n.tv_usec);}
+#define pack_float(to,n) { memcpy(to,&n,sizeof(float)); to += sizeof(float);}
+#define pack_str(to,n) { memcpy(to,n,strlen(n)+1); to += strlen(n)+1;}
 
 struct msg_data_t *pack_system_info(struct system_info_t *sys_info);
 int write_to_buf(struct msg_data_t *msg);
 void free_msg_data(struct msg_data_t *msg);
 void free_msg_payload(struct msg_t *msg);
 void free_sys_info(struct system_info_t *sys_info);
-int start_replay();
-void stop_replay();
+int start_replay(void);
+void stop_replay(void);
+enum ErrorCode stop_all(void);
 
 void reset_msg(struct msg_t *msg);
 void reset_replay_event_seq(struct replay_event_seq_t *res);

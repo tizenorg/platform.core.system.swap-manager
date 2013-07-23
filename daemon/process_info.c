@@ -29,6 +29,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include "da_protocol.h"
+#include "da_data.h"
 #include "elf.h"
 #include "debug.h"
 
@@ -43,7 +44,7 @@ void write_process_info(int pid, uint64_t starttime)
 	// TODO refactor this code
 	char buf[1024];
 	struct msg_data_t *msg = malloc(64 * 1024);
-	char *p = &msg->payload;
+	char *p = msg->payload;
 	char *dep_count_p = NULL;
 	int dep_count = 0;
 	// TODO: add check for unknown type

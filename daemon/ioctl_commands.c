@@ -36,7 +36,7 @@
 #include <errno.h>
 
 //send message to device
-int ioctl_send_msg(struct msg_data_t *msg)
+int ioctl_send_msg(struct msg_t *msg)
 {
 	LOGI("write to device\n");
 	if (ioctl(manager.buf_fd, SWAP_DRIVER_MSG, msg) == -1) {
@@ -45,5 +45,3 @@ int ioctl_send_msg(struct msg_data_t *msg)
 	}
 	return 0;
 }
-
-

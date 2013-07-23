@@ -76,7 +76,6 @@ void printBuf (char * buf, int len);
 /*
  * END DEBUG DEFINES
  */
-
 #ifdef DEBUG
 
 #ifdef NOLOGI

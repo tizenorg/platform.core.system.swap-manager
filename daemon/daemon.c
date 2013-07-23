@@ -28,11 +28,12 @@
  * - Samsung RnD Institute Russia
  *
  */
-
+#define __STDC_FORMAT_MACROS
 #include <stdio.h>
 #include <stdlib.h>			// for realpath
 #include <string.h>			// for strtok, strcpy, strncpy
 #include <limits.h>			// for realpath
+#include <inttypes.h>
 
 #include <errno.h>			// for errno
 #include <sys/types.h>		// for accept, mkdir, opendir, readdir
@@ -627,8 +628,8 @@ static int targetServerHandler(int efd)
 
 		// send config message to target process
 		log.type = MSG_OPTION;
-		log.length = sprintf(log.data, "%u",
-				     prof_session.conf.use_features0);
+		log.length = sprintf(log.data, "%lu",
+				     (unsigned long int) prof_session.conf.use_features0);
 		send(manager.target[index].socket, &log,
 		     sizeof(log.type) + sizeof(log.length) + log.length,
 		     MSG_NOSIGNAL);
@@ -929,7 +930,7 @@ int daemonLoop()
 			// check for request from device fd
 			for(k = 0; g_touch_dev[k].fd != ARRAY_END; k++)
 			{
-				if(g_touch_dev[k].fd >= 0 && 
+				if(g_touch_dev[k].fd >= 0 &&
 						events[i].data.fd == g_touch_dev[k].fd)
 				{
 					if(deviceEventHandler(&g_touch_dev[k], INPUT_ID_TOUCH) < 0)
@@ -948,7 +949,7 @@ int daemonLoop()
 
 			for(k = 0; g_key_dev[k].fd != ARRAY_END; k++)
 			{
-				if(g_key_dev[k].fd >= 0 && 
+				if(g_key_dev[k].fd >= 0 &&
 						events[i].data.fd == g_key_dev[k].fd)
 				{
 					if(deviceEventHandler(&g_key_dev[k], INPUT_ID_KEY) < 0)
