@@ -403,27 +403,27 @@ void stop_profiling(void)
 
 static void reconfigure_recording(struct conf_t conf)
 {
-	uint64_t old_features = prof_session.conf.use_features;
-	uint64_t new_features = conf.use_features;
+	uint64_t old_features = prof_session.conf.use_features0;
+	uint64_t new_features = conf.use_features0;
 	uint64_t to_enable = (new_features ^ old_features) & new_features;
 	uint64_t to_disable = (new_features ^ old_features) & old_features;
 
 	if (IS_OPT_SET_IN(FL_RECORDING, to_disable)) {
 		epoll_del_input_events();
-		prof_session.conf.use_features &= ~FL_RECORDING;
+		prof_session.conf.use_features0 &= ~FL_RECORDING;
 	}
 
 	if (IS_OPT_SET_IN(FL_RECORDING, to_enable)) {
 		epoll_add_input_events();
-		prof_session.conf.use_features |= FL_RECORDING;
+		prof_session.conf.use_features0 |= FL_RECORDING;
 	}
 
 }
 
 static int reconfigure_cpu_and_memory(struct conf_t conf)
 {
-	uint64_t old_features = prof_session.conf.use_features;
-	uint64_t new_features = conf.use_features;
+	uint64_t old_features = prof_session.conf.use_features0;
+	uint64_t new_features = conf.use_features0;
 	uint64_t to_enable = (new_features ^ old_features) & new_features;
 	uint64_t to_disable = (new_features ^ old_features) & old_features;
 
@@ -433,7 +433,7 @@ static int reconfigure_cpu_and_memory(struct conf_t conf)
 		samplingStop();
 
 	if (IS_OPT_SET_IN(FL_CPU | FL_MEMORY, to_disable)) {
-		prof_session.conf.use_features &= ~(FL_CPU | FL_MEMORY);
+		prof_session.conf.use_features0 &= ~(FL_CPU | FL_MEMORY);
 		return 0;
 	}
 
@@ -442,7 +442,7 @@ static int reconfigure_cpu_and_memory(struct conf_t conf)
 			LOGE("Cannot start sampling\n");
 			return -1;
 		}
-		prof_session.conf.use_features |= (FL_CPU | FL_MEMORY);
+		prof_session.conf.use_features0 |= (FL_CPU | FL_MEMORY);
 	}
 
 	return 0;
@@ -628,7 +628,7 @@ static int targetServerHandler(int efd)
 		// send config message to target process
 		log.type = MSG_OPTION;
 		log.length = sprintf(log.data, "%u",
-				     prof_session.conf.use_features);
+				     prof_session.conf.use_features0);
 		send(manager.target[index].socket, &log,
 		     sizeof(log.type) + sizeof(log.length) + log.length,
 		     MSG_NOSIGNAL);

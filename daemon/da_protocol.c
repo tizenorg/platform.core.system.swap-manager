@@ -289,7 +289,12 @@ static int parse_conf(struct msg_buf_t *msg, struct conf_t *conf)
 {
 
 	parse_deb("parse_conf\n");
-	if (!parse_int64( msg, &conf->use_features)) {
+	if (!parse_int64(msg, &conf->use_features0)) {
+		LOGE("use features parsing error\n");
+		return 0;
+	}
+
+	if (!parse_int64(msg, &conf->use_features1)) {
 		LOGE("use features parsing error\n");
 		return 0;
 	}
@@ -1137,10 +1142,10 @@ static void print_conf(struct conf_t * conf)
 {
 	char buf[1024];
 	memset(&buf[0],0,1024);
-	feature_code_str(conf->use_features,buf);
+	feature_code_str(conf->use_features0, buf);
 	LOGI("conf = \n");
-	LOGI("\tuse_features = 0x%016LX (%s)\n",
-		 conf->use_features,buf);
+	LOGI("\tuse_features0 = 0x%016LX (%s)\n", conf->use_features0, buf);
+	LOGI("\tuse_features1 = 0x%016LX (%s)\n", conf->use_features1, buf);
 	LOGI(
 		 "\tsystem_trace_period = %d ms\n"
 		 "\tdata message period = %d ms\n",

@@ -125,7 +125,7 @@ enum feature_code{
 	FL_OPENGL_API_PROBING					=0x40000 //openGL API
 };
 #define IS_OPT_SET_IN(OPT, reg) (reg & (OPT))
-#define IS_OPT_SET(OPT) IS_OPT_SET_IN((OPT), prof_session.conf.use_features)
+#define IS_OPT_SET(OPT) IS_OPT_SET_IN((OPT), prof_session.conf.use_features0)
 
 enum app_type{
 	AT_TIZEN	=0x01,
@@ -173,7 +173,8 @@ struct app_info_t {
 };
 
 struct conf_t {
-	uint64_t use_features;
+	uint64_t use_features0;
+	uint64_t use_features1;
 	uint32_t system_trace_period;
 	uint32_t data_message_period;
 };
