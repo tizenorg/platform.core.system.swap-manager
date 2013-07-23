@@ -43,6 +43,7 @@
 #include <sys/epoll.h>		// for epoll apis
 #include <sys/timerfd.h>	// for timerfd
 #include <unistd.h>			// for access, sleep
+#include <stdbool.h>
 
 #include <ctype.h>
 
@@ -836,33 +837,13 @@ static void epoll_del_input_events()
 				      g_touch_dev[i].fd, NULL) < 0)
 				LOGE("touch device file epoll_ctl error\n");
 }
-
-// return 0 for normal case
-int daemonLoop()
+static bool initialize_epoll_events(void)
 {
-	int			ret = 0;				// return value
-	int			i, k;
-	ssize_t		recvLen;
+	struct epoll_event ev;
 
-	struct epoll_event ev, *events;
-	int numevent;	// number of occured events
-
-	_get_fds(g_key_dev, INPUT_ID_KEY);
-	_get_fds(g_touch_dev, INPUT_ID_TOUCH);
-
-	// initialize epoll event pool
-	events = (struct epoll_event*) malloc(sizeof(struct epoll_event) * EPOLL_SIZE);
-	if(events == NULL)
-	{
-		LOGE("Out of memory when allocate epoll event pool\n");
-		ret = -1;
-		goto END_RETURN;
-	}
-	if((manager.efd = epoll_create(0)) < 0)
-	{
-		LOGE("epoll creation error\n");
-		ret = -1;
-		goto END_EVENT;
+	if ((manager.efd = epoll_create1(0)) < 0) {
+	  LOGE("epoll creation error\n");
+	  return false;
 	}
 
 	// add server sockets to epoll event pool
@@ -872,8 +853,7 @@ int daemonLoop()
 		     manager.host_server_socket, &ev) < 0)
 	{
 		LOGE("Host server socket epoll_ctl error\n");
-		ret = -1;
-		goto END_EFD;
+		return false;
 	}
 	ev.events = EPOLLIN;
 	ev.data.fd = manager.target_server_socket;
@@ -881,18 +861,38 @@ int daemonLoop()
 		      manager.target_server_socket, &ev) < 0)
 	{
 		LOGE("Target server socket epoll_ctl error\n");
-		ret = -1;
+		return false;
+	}
+	return true;
+}
+
+// return 0 for normal case
+int daemonLoop()
+{
+	int return_value = 0;
+	struct epoll_event *events = malloc(EPOLL_SIZE * sizeof(*events));
+
+	_get_fds(g_key_dev, INPUT_ID_KEY);
+	_get_fds(g_touch_dev, INPUT_ID_TOUCH);
+
+	if (!events) {
+		LOGE("Out of memory when allocate epoll event pool\n");
+		return_value = -1;
+		goto END_EVENT;
+	}
+	if (!initialize_epoll_events()) {
+		return_value = -1;
 		goto END_EFD;
 	}
 
 	// handler loop
-	while (1)
-	{
-		numevent = epoll_wait(manager.efd, events, EPOLL_SIZE, -1);
-		if(numevent <= 0)
-		{
-			LOGE("Failed to epoll_wait : "
-					"num of event(%d), errno(%d)\n", numevent, errno);
+	while (1) {
+		int i, k;
+		ssize_t recvLen;
+		// number of occured events
+		int numevent = epoll_wait(manager.efd, events, EPOLL_SIZE, -1);
+		if (numevent <= 0) {
+			LOGE("Failed to epoll_wait : num of event(%d), errno(%d)\n", numevent, errno);
 			continue;
 		}
 
@@ -936,7 +936,7 @@ int daemonLoop()
 					{
 						terminate_error("Internal DA framework error, "
 										"Please re-run the profiling.", 1);
-						ret = -1;
+						return_value = -1;
 						goto END_EFD;
 					}
 					break;
@@ -955,7 +955,7 @@ int daemonLoop()
 					{
 						terminate_error("Internal DA framework error, "
 										"Please re-run the profiling.", 1);
-						ret = -1;
+						return_value = -1;
 						goto END_EFD;
 					}
 					break;
@@ -972,7 +972,7 @@ int daemonLoop()
 				{
 					terminate_error("Internal DA framework error, "
 									"Please re-run the profiling.", 1);
-					ret = -1;
+					return_value = -1;
 					goto END_EFD;
 				}
 			}
@@ -984,7 +984,7 @@ int daemonLoop()
 				{
 					terminate_error("Internal DA framework error, "
 									"Please re-run the profiling.", 1);
-					ret = -1;
+					return_value = -1;
 					goto END_EFD;
 				}
 			}
@@ -996,14 +996,14 @@ int daemonLoop()
 				{
 					// close target and host socket and quit
 					LOGI("host close = %d\n", manager.host.control_socket);
-					ret = 0;
+					return_value = 0;
 					goto END_EFD;
 				}
 				else if(result < 0)
 				{
 					terminate_error("Internal DA framework error, "
 									"Please re-run the profiling.", 1);
-					ret = -1;
+					return_value = -1;
 					goto END_EFD;
 				}
 			}
@@ -1032,7 +1032,7 @@ int daemonLoop()
 					  manager.app_launch_timerfd, NULL);
 				close(manager.app_launch_timerfd);
 				manager.app_launch_timerfd = -1;
-				ret = -1;
+				return_value = -1;
 				goto END_EFD;
 			}
 			// unknown socket
@@ -1049,6 +1049,5 @@ END_EFD:
 	close(manager.efd);
 END_EVENT:
 	free(events);
-END_RETURN:
-	return ret;
+	return return_value;
 }
