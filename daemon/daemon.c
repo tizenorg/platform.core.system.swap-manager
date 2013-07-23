@@ -67,7 +67,6 @@
 #define SCREENSHOT_DIR			"/tmp/da"
 
 #define EPOLL_SIZE				10
-#define MAX_CONNECT_SIZE		12
 #define MAX_APP_LAUNCH_TIME		6
 
 #define MAX_DEVICE				10
@@ -859,7 +858,7 @@ int daemonLoop()
 		ret = -1;
 		goto END_RETURN;
 	}
-	if((manager.efd = epoll_create(MAX_CONNECT_SIZE)) < 0)
+	if((manager.efd = epoll_create(0)) < 0)
 	{
 		LOGE("epoll creation error\n");
 		ret = -1;
