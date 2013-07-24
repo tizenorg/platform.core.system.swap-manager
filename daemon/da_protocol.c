@@ -852,7 +852,7 @@ static int send_reply(struct msg_t *msg)
 	return 0;
 }
 
-static int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
+int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 			char *payload, int payload_size)
 {
 	if (manager.host.control_socket != -1)

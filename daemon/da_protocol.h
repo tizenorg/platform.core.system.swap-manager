@@ -327,4 +327,7 @@ extern struct prof_session_t prof_session;
 //debugs
 void print_replay_event( struct replay_event_t *ev,  uint32_t num, char *tab);
 
+int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
+			char *payload, int payload_size);
+
 #endif /* _DA_PROTOCOL_ */
