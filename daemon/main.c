@@ -68,6 +68,7 @@ __da_manager manager =
 	.target_count = 0,
 	.config_flag = 0,
 	.app_launch_timerfd = -1,
+	.connect_timeout_timerfd = -1,
 	.sampling_thread = -1,
 	.replay_thread = -1,
 	.transfer_thread = -1,
