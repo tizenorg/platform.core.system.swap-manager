@@ -248,32 +248,6 @@ static void setEmptyTargetSlot(int index)
 }
 
 // =============================================================================
-// send functions to host
-// =============================================================================
-
-//static
-int sendACKCodeToHost(enum HostMessageType resp, int msgcode)
-{
-	// FIXME:
-	//disabled string protocol
-	return 0;
-	if (manager.host.control_socket != -1)
-	{
-		char codestr[16];
-		char logstr[DA_MSG_MAX];
-		int loglen, codelen;
-
-		codelen = sprintf(codestr, "%d", msgcode);
-		loglen = sprintf(logstr, "%d|%d|%s", (int)resp, codelen, codestr);
-
-		send(manager.host.control_socket, logstr, loglen, MSG_NOSIGNAL);
-		return 0;
-	}
-	else
-		return 1;
-}
-
-// =============================================================================
 // start and terminate control functions
 // =============================================================================
 
@@ -821,7 +795,7 @@ static int controlSocketHandler(int efd)
 		msg = malloc(MSG_CMD_HDR_LEN + msg_head.len);
 		if (!msg) {
 			LOGE("Cannot alloc msg\n");
-			sendACKCodeToHost(MSG_NOTOK, ERR_WRONG_MESSAGE_FORMAT);
+			sendACKToHost(msg_head.id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
 			return -1;
 		}
 		msg->id = msg_head.id;
