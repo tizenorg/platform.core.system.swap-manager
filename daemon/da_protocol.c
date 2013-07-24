@@ -290,12 +290,12 @@ static int parse_conf(struct msg_buf_t *msg, struct conf_t *conf)
 
 	parse_deb("parse_conf\n");
 	if (!parse_int64(msg, &conf->use_features0)) {
-		LOGE("use features parsing error\n");
+		LOGE("use features0 parsing error\n");
 		return 0;
 	}
 
 	if (!parse_int64(msg, &conf->use_features1)) {
-		LOGE("use features parsing error\n");
+		LOGE("use features1 parsing error\n");
 		return 0;
 	}
 
@@ -1006,6 +1006,8 @@ int host_message_handler(struct msg_t *msg)
 		// TODO: apply_prof_session()
 
 		//write to device
+
+		//response to control sockete
 		cut_replay_events(msg);
 		if (ioctl_send_msg(msg) != 0){
 			LOGE("cannot send message to device\n");

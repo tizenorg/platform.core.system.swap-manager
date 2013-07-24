@@ -188,6 +188,7 @@ typedef struct
 	int target_count;
 	unsigned int config_flag;
 	int app_launch_timerfd;
+	int connect_timeout_timerfd;
 	pthread_t sampling_thread;
 	pthread_t replay_thread;
 	pthread_t transfer_thread;

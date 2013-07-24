@@ -65,9 +65,10 @@
 #define DA_READELF_PATH			"/home/developer/sdk_tools/da/readelf"
 #define SCREENSHOT_DIR			"/tmp/da"
 
-#define EPOLL_SIZE				10
-#define MAX_CONNECT_SIZE		12
-#define MAX_APP_LAUNCH_TIME		6
+#define EPOLL_SIZE					10
+#define MAX_CONNECT_SIZE			12
+#define MAX_APP_LAUNCH_TIME			6
+#define MAX_CONNECT_TIMEOUT_TIME	5*60
 
 #define MAX_DEVICE				10
 #define MAX_FILENAME			128
@@ -348,6 +349,49 @@ static int exec_app(const struct app_info_t *app_info)
 	return res;
 }
 
+int launch_timer_start()
+{
+	static struct epoll_event ev;
+	int res = 0;
+
+	manager.connect_timeout_timerfd = timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC);
+	if(manager.connect_timeout_timerfd > 0)
+	{
+		struct itimerspec ctime;
+		ctime.it_value.tv_sec = MAX_CONNECT_TIMEOUT_TIME;
+		ctime.it_value.tv_nsec = 0;
+		ctime.it_interval.tv_sec = 0;
+		ctime.it_interval.tv_nsec = 0;
+		if (timerfd_settime(manager.connect_timeout_timerfd, 0, &ctime, NULL) < 0)
+		{
+			LOGE("fail to set connect timeout timer\n");
+			close(manager.connect_timeout_timerfd);
+			manager.connect_timeout_timerfd = -1;
+		}
+		else
+		{
+			// add event fd to epoll list
+			ev.events = EPOLLIN;
+			ev.data.fd = manager.connect_timeout_timerfd;
+			if (epoll_ctl(manager.efd, EPOLL_CTL_ADD,
+						manager.connect_timeout_timerfd, &ev) < 0)
+			{
+				// fail to add event fd
+				LOGE("fail to add app connection timeout timer fd to epoll list\n");
+				close(manager.connect_timeout_timerfd);
+				manager.connect_timeout_timerfd = -1;
+			} else {
+				LOGI("connection timeout timer started\n");
+			}
+		}
+	} else {
+		LOGE("cannot create connection timeout timer\n");
+	}
+
+	LOGI("ret=%d\n", res);
+	return res;
+}
+
 static void epoll_add_input_events();
 static void epoll_del_input_events();
 
@@ -496,6 +540,7 @@ void terminate_all()
 	{
 		if(manager.target[i].recv_thread != -1)
 		{
+			LOGI("pthread_join #%d\n", i + 1);
 			pthread_join(manager.target[i].recv_thread, NULL);
 		}
 	}
@@ -549,7 +594,7 @@ static int deviceEventHandler(input_dev* dev, int input_type)
 	else
 	{
 		LOGW("unknown input_type\n");
-		ret = 1;
+		ret = 1; // it is not error
 	}
 	return ret;
 }
@@ -757,6 +802,14 @@ static int controlSocketHandler(int efd)
 	struct msg_t *msg;
 	int res = 0;
 
+	if(manager.connect_timeout_timerfd >= 0)
+	{
+		LOGI("release connect timeout timer\n");
+		epoll_ctl(efd, EPOLL_CTL_DEL, manager.connect_timeout_timerfd, NULL);
+		close(manager.connect_timeout_timerfd);
+		manager.connect_timeout_timerfd = -1;
+	}
+
 	// Receive header
 	recv_len = recv(manager.host.control_socket,
 		       &msg_head,
@@ -884,7 +937,11 @@ int daemonLoop()
 		ret = -1;
 		goto END_EFD;
 	}
-
+	if (launch_timer_start() < 0) {
+		LOGE("Launch timer start failed\n");
+		ret = -1;
+		goto END_EFD;
+	}
 	// handler loop
 	while (1)
 	{
@@ -934,10 +991,9 @@ int daemonLoop()
 				{
 					if(deviceEventHandler(&g_touch_dev[k], INPUT_ID_TOUCH) < 0)
 					{
-						terminate_error("Internal DA framework error, "
-										"Please re-run the profiling.", 1);
-						ret = -1;
-						goto END_EFD;
+						LOGE("Internal DA framework error, "
+							 "Please re-run the profiling (touch dev)\n");
+						continue;
 					}
 					break;
 				}
@@ -953,10 +1009,9 @@ int daemonLoop()
 				{
 					if(deviceEventHandler(&g_key_dev[k], INPUT_ID_KEY) < 0)
 					{
-						terminate_error("Internal DA framework error, "
-										"Please re-run the profiling.", 1);
-						ret = -1;
-						goto END_EFD;
+						LOGE("Internal DA framework error, "
+							 "Please re-run the profiling (key dev)\n");
+						continue;
 					}
 					break;
 				}
@@ -966,52 +1021,50 @@ int daemonLoop()
 				continue;
 
 			// connect request from target
-			if(events[i].data.fd == manager.target_server_socket)
+			if (events[i].data.fd == manager.target_server_socket)
 			{
-				if(targetServerHandler(manager.efd) < 0)	// critical error
+				if (targetServerHandler(manager.efd) < 0)	// critical error
 				{
 					terminate_error("Internal DA framework error, "
-									"Please re-run the profiling.", 1);
-					ret = -1;
-					goto END_EFD;
+									"Please re-run the profiling (targetServerHandler)\n", 1);
+					continue;
 				}
 			}
 			// connect request from host
-			else if(events[i].data.fd == manager.host_server_socket)
+			else if (events[i].data.fd == manager.host_server_socket)
 			{
 				int result = hostServerHandler(manager.efd);
-				if(result < 0)
+				if (result < 0)
 				{
-					terminate_error("Internal DA framework error, "
-									"Please re-run the profiling.", 1);
-					ret = -1;
-					goto END_EFD;
+					LOGE("Internal DA framework error (hostServerHandler)\n");
+					continue;
 				}
 			}
 			// control message from host
-			else if(events[i].data.fd == manager.host.control_socket)
+			else if (events[i].data.fd == manager.host.control_socket)
 			{
 				int result = controlSocketHandler(manager.efd);
-				if(result == -11)	// socket close
+				if (result == -11)	// socket close
 				{
-					// close target and host socket and quit
-					LOGI("host close = %d\n", manager.host.control_socket);
+					//if the host disconnected.
+					//In all other cases daemon must report an error and continue the loop
+					//close connect_timeoutt and host socket and quit
+					LOGI("Connection closed. Termination. (%d)\n", manager.host.control_socket);
 					ret = 0;
 					goto END_EFD;
 				}
-				else if(result < 0)
+				else if (result < 0)
 				{
-					terminate_error("Internal DA framework error, "
-									"Please re-run the profiling.", 1);
-					ret = -1;
-					goto END_EFD;
+					LOGE("Internal DA framework error, "
+						 "Please re-run the profiling (controlSocketHandler Error)\n");
+					continue;
 				}
 			}
-			else if(events[i].data.fd == manager.host.data_socket)
+			else if (events[i].data.fd == manager.host.data_socket)
 			{
 				char recvBuf[32];
 				recvLen = recv(manager.host.data_socket, recvBuf, 32, MSG_DONTWAIT);
-				if(recvLen == 0)
+				if (recvLen == 0)
 				{	// close data socket
 					epoll_ctl(manager.efd, EPOLL_CTL_DEL,
 						  manager.host.data_socket,
@@ -1024,15 +1077,26 @@ int daemonLoop()
 				LOGI("host message from data socket %d\n", recvLen);
 			}
 			// check for application launch timerfd
-			else if(events[i].data.fd == manager.app_launch_timerfd)
+			else if (events[i].data.fd == manager.app_launch_timerfd)
 			{
 				// send to host timeout error message for launching application
-				terminate_error("Failed to launch application", 1);
 				epoll_ctl(manager.efd, EPOLL_CTL_DEL,
 					  manager.app_launch_timerfd, NULL);
 				close(manager.app_launch_timerfd);
 				manager.app_launch_timerfd = -1;
-				ret = -1;
+				LOGE("Failed to launch application\n");
+				continue;
+			}
+			// check for connection timeout timerfd
+			else if (events[i].data.fd == manager.connect_timeout_timerfd)
+			{
+				// send to host timeout error message for launching application
+				terminate_error("no incoming connections", 1);
+				epoll_ctl(manager.efd, EPOLL_CTL_DEL,
+					  manager.connect_timeout_timerfd, NULL);
+				close(manager.connect_timeout_timerfd);
+				manager.connect_timeout_timerfd = -1;
+				LOGE("No connection in %d sec. shutdown.\n",MAX_CONNECT_TIMEOUT_TIME);
 				goto END_EFD;
 			}
 			// unknown socket
