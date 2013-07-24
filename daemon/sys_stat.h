@@ -46,7 +46,7 @@ extern "C" {
 
 #define EMUL_BRIGHTNESSFD			"/sys/class/backlight/emulator/brightness"
 #define EMUL_MAX_BRIGHTNESSFD		"/sys/class/backlight/emulator/max_brightness"
-	
+
 
 #define AUDIOFD						"/sys/devices/platform/soc-audio/dapm_widget"
 

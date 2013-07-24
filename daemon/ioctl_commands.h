@@ -50,7 +50,7 @@ struct buffer_initialize {
 										     void *)
 
 
-int ioctl_send_msg(struct msg_data_t *msg);
+int ioctl_send_msg(struct msg_t *msg);
 
 
 #endif /* __SWAP_IOCTL_H__ */

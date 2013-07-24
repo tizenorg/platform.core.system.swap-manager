@@ -61,11 +61,6 @@ struct prof_session_t prof_session;
 
 static void print_app_info( struct app_info_t *app_info);
 static void print_conf(struct conf_t * conf);
-static void print_us_func_inst(struct us_func_inst_t * func_inst, int count,char * tab);
-static void print_us_lib_inst(struct us_lib_inst_t * lib_inst,int num,char * tab);
-static void print_user_space_app_inst(struct app_inst_t * app_inst, int num, char * tab);
-static void print_user_space_inst(struct user_space_inst_t * user_space_inst);
-static void print_prof_session(struct prof_session_t *prof_session);
 //DEBUG FUNCTIONS
 #define dstr(x) #x
 
@@ -340,8 +335,8 @@ static int parse_func_inst_list(struct msg_buf_t *msg,
 	//parse user space function list
 
 	parse_deb("us_func_inst_list size = %d * %d\n",(*num) , (int)sizeof(**us_func_inst_list) );
-	*us_func_inst_list = 
-		(struct us_func_inst_t *) 
+	*us_func_inst_list =
+		(struct us_func_inst_t *)
 		malloc( (*num) * sizeof(**us_func_inst_list) );
 	if (!*us_func_inst_list){
 		LOGE("func alloc error\n");
@@ -385,8 +380,8 @@ static int parse_lib_inst_list(struct msg_buf_t *msg,
 	}
 
 	parse_deb("lib_list size = %d\n", (*num) * (int)sizeof(**us_lib_inst_list) );
-	*us_lib_inst_list = 
-		(struct us_lib_inst_t *) 
+	*us_lib_inst_list =
+		(struct us_lib_inst_t *)
 		malloc( (*num) * sizeof(**us_lib_inst_list) );
 	if (!*us_lib_inst_list){
 		LOGE("lib alloc error\n");
@@ -404,8 +399,6 @@ static int parse_lib_inst_list(struct msg_buf_t *msg,
 static int parse_app_inst(struct msg_buf_t *msg,
 			    struct app_inst_t *app_inst)
 {
-	uint32_t num = 0;
-
 	if (!parse_int32( msg, &app_inst->app_type)) {
 		LOGE("app type parsing error\n");
 		return 0;
@@ -422,7 +415,7 @@ static int parse_app_inst(struct msg_buf_t *msg,
 		LOGE("funcs parsing error\n");
 		return 0;
 	}
-	
+
 	parse_deb(">=%04X : %s, %s, %d\n",
 	     app_inst->app_type, app_inst->app_id, app_inst->exec_path , num);
 
@@ -435,7 +428,7 @@ static int parse_app_inst(struct msg_buf_t *msg,
 }
 
 int parse_user_space_inst(struct msg_buf_t *msg,
-			    struct user_space_inst_t *user_space_inst) 
+			    struct user_space_inst_t *user_space_inst)
 {
 	parse_deb("parse_user_space_inst\n");
 	uint32_t num = 0 , i = 0;
@@ -448,7 +441,7 @@ int parse_user_space_inst(struct msg_buf_t *msg,
 
 	parse_deb("%d * %d\n",(int) sizeof(*(user_space_inst->app_inst_list)), num);
 	if ( num != 0 ) {
-		list = (struct app_inst_t *) malloc ( 
+		list = (struct app_inst_t *) malloc (
 			sizeof(*(user_space_inst->app_inst_list)) * num);
 		if ( !list ) {
 			LOGE("apps alloc error\n");
@@ -530,7 +523,7 @@ void reset_replay_event_seq(struct replay_event_seq_t *res)
 	free(res->events);
 }
 
-static char *parse_replay_event_seq(struct msg_buf_t *msg,
+static int parse_replay_event_seq(struct msg_buf_t *msg,
 				    struct replay_event_seq_t *res)
 {
 	LOGI("parse_replay_event_seq\n");
@@ -617,37 +610,31 @@ int get_sys_mem_size(uint32_t *sys_mem_size){
 	return 0;
 }
 
-static char *parse_msg_config(char * msg_payload, 
+static int parse_msg_config(struct msg_buf_t * msg_payload,
 			      struct conf_t * conf)
 {
-	char *p = msg_payload;
-
-	p = parse_conf(p, conf);
-	if (!p) {
+	if (!parse_conf(msg_payload, conf)) {
 		LOGE("conf parsing error\n");
 		return 0;
 	}
 
 	print_conf(conf);
-	return p;
+	return 1;
 }
 
-static char *parse_msg_binary_info(char * msg_payload, 
+static int parse_msg_binary_info(struct msg_buf_t * msg_payload,
 			      struct app_info_t *app_info)
 {
-	char *p = msg_payload;
-
-	p = parse_app_info(p, app_info);
-	if (!p) {
+	if (!parse_app_info(msg_payload, app_info)) {
 		LOGE("app info parsing error\n");
 		return 0;
 	}
 
 	print_app_info(app_info);
-	return p;
+	return 1;
 }
 
-static init_parse_control(struct msg_buf_t *buf, struct msg_t *msg)
+static void init_parse_control(struct msg_buf_t *buf, struct msg_t *msg)
 {
 	LOGI("init parse control\n");
 	buf->payload = msg->payload;
@@ -664,7 +651,7 @@ static void concat_add_user_space_inst(struct user_space_inst_t *from,
 {
 	struct app_inst_t *new_app_inst_list = NULL;
 	uint32_t size;
-	char *p;
+	void *p;
 
 	if (from->app_num == 0)
 		return;
@@ -875,7 +862,7 @@ static int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 		int loglen = sizeof(*msg) - sizeof(msg->payload) +
 					 sizeof(err) + //return ID
 					 payload_size;
-		msg = (struct msg_reply_t *)malloc(loglen);
+		msg = malloc(loglen);
 		char *p = msg->payload;
 
 		//get ack message ID
@@ -910,7 +897,7 @@ static int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 				return 1;
 		}
 
-		//set message id 
+		//set message id
 		msg->id = resp;
 		//set payload lenth
 		msg->len = payload_size + sizeof(err);
@@ -1154,76 +1141,6 @@ static void print_conf(struct conf_t * conf)
 		 );
 }
 
-static void print_us_func_inst(struct us_func_inst_t * func_inst, int count,char * tab)
-{
-	LOGI("%s#%02d "
-		"func_addr = <%Lu>/<0x%08LX>\t"
-		"args = <%s>\n",
-		tab,count,
-		func_inst->func_addr,func_inst->func_addr,
-		func_inst->args
-		);
-}
-
-static void print_us_lib_inst(struct us_lib_inst_t * lib_inst,int num,char * tab)
-{
-	uint32_t i = 0;
-
-//	LOGI("lib_inst = %08x\n",lib_inst);
-//	LOGI("lib_inst->us_func_inst_lis = %08x\n",lib_inst->us_func_inst_list);
-
-	LOGI("%s#%02d path = <%s>\n"
-		"%s\tfunc_count = %d\n",
-		tab,num,
-		lib_inst->bin_path,
-		tab,lib_inst->func_num
-		);
-
-	for ( i = 0; i < lib_inst->func_num; i++) {
-		print_us_func_inst(&(lib_inst->us_func_inst_list[i]),i+1,"\t\t\t\t\t\t");
-	}
-
-}
-
-static void print_user_space_app_inst(struct app_inst_t * app_inst, int num, char * tab)
-{
-	uint32_t i = 0;
-
-	LOGI("%s#%02d app_inst : \n"
-		"%s\tapp_type = 0x%04X\n"
-		"%s\tapp_id=<%s>\n"
-		"%s\texec_path=<%s>\n",
-		tab,num,
-		tab,app_inst->app_type,
-		tab,app_inst->app_id,
-		tab,app_inst->exec_path
-		);
-	LOGI("\t%sfunc_num = %d\n", tab, app_inst->func_num);
-	for ( i = 0; i < app_inst->func_num; i++) {
-		print_us_func_inst(&app_inst->us_func_inst_list[i],i+1,"\t\t\t\t");
-	}
-
-	LOGI("\t%slib_num = %d\n", tab, app_inst->lib_num);
-	for ( i = 0; i < app_inst->lib_num; i++) {
-		print_us_lib_inst(&app_inst->us_lib_inst_list[i],i+1,"\t\t\t\t");
-	}
-
-
-}
-
-static void print_user_space_inst(struct user_space_inst_t * user_space_inst)
-{
-	uint32_t i = 0;
-	LOGI("user_space_inst = \n"
-		"\tapp_num = %d\n",
-		user_space_inst->app_num
-		);
-	for ( i = 0; i < user_space_inst->app_num; i ++){
-		print_user_space_app_inst(&(user_space_inst->app_inst_list[i]),i+1,"\t\t");
-	}
-}
-
-//static
 void print_replay_event( struct replay_event_t *ev, uint32_t num, char *tab)
 {
 	LOGW("%s\t#%04d:time=0x%08X %08X, "
@@ -1257,14 +1174,3 @@ void print_replay_event_seq( struct replay_event_seq_t *event_seq)
 		print_replay_event(&event_seq->events[i], i+1, tab);
 
 }
-
-static void print_prof_session(struct prof_session_t *prof_session)
-{
-	printf("prof session\n");
-	print_app_info(&prof_session->app_info);
-	print_conf(&prof_session->conf);
-	print_user_space_inst(&prof_session->user_space_inst);
-	print_replay_event_seq(&prof_session->replay_event_seq);
-}
-
-

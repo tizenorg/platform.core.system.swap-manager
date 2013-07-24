@@ -228,7 +228,7 @@ struct msg_data_t *gen_message_terminate(uint32_t id)
 //allocate memory, need free!!!
 struct msg_data_t *gen_message_error(const char * err_msg)
 {
-	int payload_len = strlen(err_msg)+1; 
+	int payload_len = strlen(err_msg)+1;
 	struct msg_data_t *data = malloc(sizeof(*data) + payload_len);
 	char *p;
 	fill_data_msg_head(data, NMSG_ERROR, 0, payload_len);
@@ -245,7 +245,7 @@ struct msg_data_t *gen_message_event(
 		      uint32_t id)
 {
 	uint32_t i = 0;
-	uint32_t payload_len = events_count * (sizeof(id) * 4) + 
+	uint32_t payload_len = events_count * (sizeof(id) * 4) +
 							sizeof(events_count);
 	struct msg_data_t *data = malloc(sizeof(*data) + payload_len);
 	memset(data,0,sizeof(*data) + payload_len);

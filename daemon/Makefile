@@ -1,99 +1,53 @@
-CURDIR = `pwd`
-INSTALLDIR = usr/bin
-
-UNAME := $(shell uname -sm)
-ifneq (,$(findstring 86,$(UNAME)))
-	HOST_ARCH := x86
+CC :=gcc
+CPPFLAGS := 	-I/usr/include		\
+		-I/usr/include/system 	\
+		-I/usr/include/telephony\
+		-I/usr/include/vconf	\
+		-DDEBUG=1
+ifeq (arm, $(findstring arm, $(shell uname -sm)))
+	CPPFLAGS += -DDEVICE_ONLY
 endif
 
-TARGET_ARCH = $(HOST_ARCH)
-ifeq ($(TARGET_ARCH),)
-	TARGET_ARCH := arm
-endif
+HOST_CPPFLAGS := -DLOCALTEST=1 -O0 -g
+COMMON_LIBS := -lglib-2.0 -lpthread
+TARGET_LIBS := $(COMMON_LIBS) -lvconf -lsmack -lcapi-system-info
+CFLAGS := -Wall -pthread -g -O0
 
-ifeq ($(TARGET_ARCH),arm)
-	DEVICE = -DDEVICE_ONLY
-endif
+DAEMON_SRCS =			\
+	buffer.c		\
+	da_data.c		\
+	da_debug.c		\
+	da_protocol.c		\
+	daemon.c		\
+	debug.c			\
+	elf.c			\
+	ioctl_commands.c	\
+	main.c			\
+	process_info.c		\
+	sys_stat.c		\
+	threads.c		\
+	transfer_thread.c	\
+	utils.c			\
 
-INC := 	-I/usr/include	\
-		-I/usr/include/system \
-		-I/usr/include/telephony \
-		-I/usr/include/vconf
-
-DAEMON_SRCS :=	\
-	main.c		\
-	daemon.c	\
-	da_protocol.c	\
-	debug.c	\
-	threads.c	\
-	da_debug.c	\
-	da_data.c	\
-	utils.c		\
-	sys_stat.c	\
-	elf.c		\
-	buffer.c	\
-	transfer_thread.c\
-	ioctl_commands.c \
-	process_info.c
-
-DAEMON_SRCS_HOST :=	\
-	main.c		\
-	daemon.c	\
-	da_protocol.c	\
-	debug.c	\
-	threads.c	\
-	da_debug.c	\
-	da_data.c	\
-	utils.c		\
-	sys_stat.c	\
-	elf.c	\
-	ioctl_commands.c \
-	process_info.c
-
-
-LDLIBS_PATH := -L/usr/lib -L./lib/
-LIBS_TIZEN :=# -lcapi-system-runtime-info \
-				-lcapi-telephony-network-info \
-				-lcapi-telephony-call \
-				-lSLP-tapi \
-				-lsecurity-server-client \
-				-lbundle \
-				-lail \
-				-lxdgmime \
-				-ldlog \
-				-lSLP-db-util
-LIBS_COMMON :=	-lglib-2.0 \
-				-lvconf \
-				-lsmack \
-				-lcapi-system-info
-
-LIBS_COMMON_HOST :=		-lglib-2.0
-HOST_BUILD := -DLOCALTEST=1 -O0 -g
-NO_LOGS_BUILD := -DNOLOGI=1
-DEBUG_ON := -DDEBUG=1
-FLAGS = -pthread -Wall
+DAEMON_OBJS = $(patsubst %.c,%.o, $(DAEMON_SRCS))
 
 TARGET = da_manager
 DASCRIPT = da_command
 
-all: $(TARGET)
+all: target-nolog
+host: $(COMMON_LIBS)
+target target-nolog: $(TARGET_LIBS)
+target-nolog: CPPFLAGS+=-DNOLOGI=1
+host: CPPFLAGS+=$(HOST_CPPFLAGS)
+target host target-nolog: $(DAEMON_OBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $(TARGET)
 
-host: $(DAEMON_SRCS_HOST)
-	$(CC) $(INC) $(FLAGS) $(DEBUG_ON) $(HOST_BUILD) $(DEVICE) -o $(TARGET) $(DAEMON_SRCS_HOST) $(LDLIBS_PATH) $(LIBS_COMMON_HOST) $(LIBS_TIZEN)
-
-debug: $(DAEMON_SRCS)
-	$(CC) $(INC) $(FLAGS) $(DEBUG_ON) $(DEVICE) -o $(TARGET) $(DAEMON_SRCS) $(LDLIBS_PATH) $(LIBS_COMMON) $(LIBS_TIZEN)
-
-$(TARGET): $(DAEMON_SRCS)
-	$(CC) $(INC) $(FLAGS) $(DEBUG_ON) $(NO_LOGS_BUILD) $(DEVICE) -o $(TARGET) $(DAEMON_SRCS) $(LDLIBS_PATH) $(LIBS_COMMON) $(LIBS_TIZEN)
-
-localtest:
-	$(CC) -DLOCALTEST -DHOST_BUILD $(INC) $(FLAGS) -o $(TARGET) $(DEBUG_ON) $(DEVICE) $(LDLIBS_PATH) $(LIBS_COMMON) $(DAEMON_SRCS)
-
-install:
-	[ -d "$(DESTDIR)/$(INSTALLDIR)" ] || mkdir -p $(DESTDIR)/$(INSTALLDIR)
-	install $(TARGET) $(DASCRIPT) $(DESTDIR)/$(INSTALLDIR)/
+install: BINDIR=$(DESTDIR)/usr/bin
+install: target
+	mkdir -p $(BINDIR)
+	install $(TARGET) $(DASCRIPT) -t $(BINDIR)
 
 clean:
-	rm $(TARGET) 
+	rm -f $(TARGET) $(DAEMON_OBJS)
 
+.PHONY: all host target clean install target-nolog

@@ -32,6 +32,7 @@
 #include <stdio.h>			// for fopen, fprintf
 #include <stdlib.h>			// for atexit
 #include <sys/types.h>		// for open
+#include <sys/file.h>
 #include <sys/stat.h>		// for open
 #include <sys/socket.h>		// for socket
 #include <sys/un.h>			// for sockaddr_un
@@ -40,6 +41,7 @@
 #include <signal.h>			// for signal
 #include <unistd.h>			// for unlink
 #include <fcntl.h>			// for open, fcntl
+#include <stdbool.h>
 #ifndef LOCALTEST
 #include <attr/xattr.h>		// for fsetxattr
 #endif
@@ -49,7 +51,7 @@
 #include "buffer.h"
 #include "debug.h"
 
-#define SINGLETON_LOCKFILE			"/tmp/lockfile.da"
+#define SINGLETON_LOCKFILE			"/tmp/da_manager.lock"
 #define PORTFILE					"/tmp/port.da"
 #define UDS_NAME					"/tmp/da.socket"
 
@@ -226,41 +228,75 @@ static int makeHostServerSocket()
 // initializing / finalizing functions
 // =============================================================================
 
-static int singleton(void)
+static bool ensure_singleton(const char *lockfile)
 {
-	struct flock fl;
-	int fd;
+	if (access(lockfile, F_OK) == 0)	/* File exists */
+		return false;
 
-	fd = open(SINGLETON_LOCKFILE, O_RDWR | O_CREAT, 0600);
-	if(fd < 0)
-	{
+	int lockfd = open(lockfile, O_WRONLY | O_CREAT, 0600);
+	if (lockfd < 0) {
 		writeToPortfile(ERR_LOCKFILE_CREATE_FAILED);
 		LOGE("singleton lock file creation failed");
-		return -1;
+		return false;
 	}
+	/* To prevent race condition, also check for lock availiability. */
+	bool locked = flock(lockfd, LOCK_EX | LOCK_NB) == 0;
 
-	fl.l_start = 0;
-	fl.l_len = 0;
-	fl.l_type = F_WRLCK;
-	fl.l_whence = SEEK_SET;
-	if(fcntl(fd, F_SETLK, &fl) < 0)
-	{
+	if (!locked) {
 		writeToPortfile(ERR_ALREADY_RUNNING);
 		LOGE("another instance of daemon is already running");
-		close(fd);
-		return -1;
 	}
+	close(lockfd);
+	return locked;
+}
+static void inititialize_manager_targets(__da_manager * mng)
+{
+	int index;
+	__da_target_info target_init_value = {
+		.pid = -1,
+		.socket = -1,
+		.event_fd = -1,
+		.recv_thread = -1,
+		.initial_log = 0,
+		.allocmem = 0,
+		.starttime = 0
+	};
 
-	close(fd);
-	return 0;
+	for (index = 0; index < MAX_TARGET_COUNT; index++)
+		mng->target[index] = target_init_value;
+
+	manager.target_count = 0;
+}
+
+static bool initialize_pthread_sigmask()
+{
+	sigset_t newsigmask;
+
+	sigemptyset(&newsigmask);
+	sigaddset(&newsigmask, SIGALRM);
+	sigaddset(&newsigmask, SIGUSR1);
+	if (pthread_sigmask(SIG_BLOCK, &newsigmask, NULL) != 0) {
+		writeToPortfile(ERR_SIGNAL_MASK_SETTING_FAILED);
+		return false;
+	}
+	return true;
+}
+
+static bool initialize_host_server_socket()
+{
+	int port = makeHostServerSocket();
+
+	if (port < 0) {
+		writeToPortfile(ERR_HOST_SERVER_SOCKET_CREATE_FAILED);
+		return false;
+	}
+	writeToPortfile(port);
+	return true;
 }
 
 // return 0 for normal case
 static int initializeManager()
 {
-	int i;
-	sigset_t newsigmask;
-
 	if (init_buf() != 0) {
 		LOGE("Cannot init buffer\n");
 		return -1;
@@ -280,42 +316,14 @@ static int initializeManager()
 		return -1;
 	}
 
-	i = makeHostServerSocket();
-	if(i < 0)
-	{
-		writeToPortfile(ERR_HOST_SERVER_SOCKET_CREATE_FAILED);
-		return -1;
-	}
-	else	// host server socket creation succeed
-	{
-		writeToPortfile(i);
-	}
-
-	// initialize signal mask
-	sigemptyset(&newsigmask);
-	sigaddset(&newsigmask, SIGALRM);
-	sigaddset(&newsigmask, SIGUSR1);
-	if(pthread_sigmask(SIG_BLOCK, &newsigmask, NULL) != 0)
-	{
-		writeToPortfile(ERR_SIGNAL_MASK_SETTING_FAILED);
-		return -1;
-	}
+	if (!initialize_host_server_socket())
+	  return -1;
 
 	LOGI("SUCCESS to write port\n");
 
-	// initialize target client sockets
-	for (i = 0; i < MAX_TARGET_COUNT; i++)
-	{
-		manager.target[i].pid = -1;
-		manager.target[i].socket = -1;
-		manager.target[i].event_fd = -1;
-		manager.target[i].recv_thread = -1;
-		manager.target[i].initial_log = 0;
-		manager.target[i].allocmem = 0;
-		manager.target[i].starttime = 0;
-	}
-	manager.target_count = 0;
-
+	inititialize_manager_targets(&manager);
+	if (!initialize_pthread_sigmask())
+	  return -1;
 	// initialize sendMutex
 	pthread_mutex_init(&(manager.host.data_socket_mutex), NULL);
 
@@ -347,27 +355,23 @@ static int finalizeManager()
 	return 0;
 }
 
-
-
 // main function
 int main()
 {
 	int result;
+	if (!ensure_singleton(SINGLETON_LOCKFILE))
+		return 1;
+
 	initialize_log();
 
 	LOGI("da_started\n");
 	atexit(_unlink_file);
 
 	manager.portfile = fopen(PORTFILE, "w");
-	if(manager.portfile == NULL)
-	{
+	if (manager.portfile == NULL) {
 		LOGE("cannot create portfile");
 		return 1;
 	}
-
-	if(singleton() < 0)
-		return 1;
-
 	//for terminal exit
 	signal(SIGHUP, SIG_IGN);
 	chdir("/");

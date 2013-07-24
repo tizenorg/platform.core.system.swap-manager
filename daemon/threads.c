@@ -226,7 +226,7 @@ int makeRecvThread(int index)
 	return 0;
 }
 
-//static 
+//static
 void* samplingThread(void* data)
 {
 	int err, signo, i;
