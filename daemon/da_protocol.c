@@ -998,7 +998,6 @@ int host_message_handler(struct msg_t *msg)
 		cut_replay_events(msg);
 		if (ioctl_send_msg(msg) != 0){
 			LOGE("cannot send message to device\n");
-			sendACKCodeToHost(MSG_NOTOK, ERR_CANNOT_START_PROFILING);
 			// response to control socket
 			sendACKToHost(msg->id, ERR_CANNOT_START_PROFILING, 0, 0);
 			return -1;
