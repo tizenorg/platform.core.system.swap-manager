@@ -252,6 +252,61 @@ static void setEmptyTargetSlot(int index)
 // start and terminate control functions
 // =============================================================================
 
+//start application launch timer function
+static int start_app_launch_timer()
+{
+	int res = 0;
+	struct epoll_event ev;
+
+	manager.app_launch_timerfd = timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC);
+	if(manager.app_launch_timerfd > 0)
+	{
+		struct itimerspec ctime;
+		ctime.it_value.tv_sec = MAX_APP_LAUNCH_TIME;
+		ctime.it_value.tv_nsec = 0;
+		ctime.it_interval.tv_sec = 0;
+		ctime.it_interval.tv_nsec = 0;
+		if (timerfd_settime(manager.app_launch_timerfd, 0, &ctime, NULL) < 0)
+		{
+			LOGE("fail to set app launch timer\n");
+			close(manager.app_launch_timerfd);
+			manager.app_launch_timerfd = -1;
+			res = -1;
+		}
+		else
+		{
+			// add event fd to epoll list
+			ev.events = EPOLLIN;
+			ev.data.fd = manager.app_launch_timerfd;
+			if (epoll_ctl(manager.efd, EPOLL_CTL_ADD,
+						manager.app_launch_timerfd, &ev) < 0)
+			{
+				// fail to add event fd
+				LOGE("fail to add app launch timer fd to epoll list\n");
+				close(manager.app_launch_timerfd);
+				manager.app_launch_timerfd = -1;
+				res = -2;
+			} else {
+				LOGI("application launch time started\n");
+			}
+		}
+	} else {
+		LOGE("cannot create launch timer\n");
+		res = -3;
+	}
+
+	return res;
+}
+
+//stop application launch timer
+static int stop_app_launch_timer()
+{
+	epoll_ctl(manager.efd, EPOLL_CTL_DEL,manager.app_launch_timerfd, NULL);
+	close(manager.app_launch_timerfd);
+	manager.app_launch_timerfd = -1;
+	return 0;
+}
+
 static int exec_app(const struct app_info_t *app_info)
 {
 	int res = 0;
@@ -284,41 +339,9 @@ static int exec_app(const struct app_info_t *app_info)
 		break;
 	}
 
-	if (res == 0 && app_info->app_type != APP_TYPE_RUNNING) {
-		manager.app_launch_timerfd = timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC);
-		if(manager.app_launch_timerfd > 0)
-		{
-			struct itimerspec ctime;
-			ctime.it_value.tv_sec = MAX_APP_LAUNCH_TIME;
-			ctime.it_value.tv_nsec = 0;
-			ctime.it_interval.tv_sec = 0;
-			ctime.it_interval.tv_nsec = 0;
-			if (timerfd_settime(manager.app_launch_timerfd, 0, &ctime, NULL) < 0)
-			{
-				LOGE("fail to set app launch timer\n");
-				close(manager.app_launch_timerfd);
-				manager.app_launch_timerfd = -1;
-			}
-			else
-			{
-				// add event fd to epoll list
-				ev.events = EPOLLIN;
-				ev.data.fd = manager.app_launch_timerfd;
-				if (epoll_ctl(manager.efd, EPOLL_CTL_ADD,
-							manager.app_launch_timerfd, &ev) < 0)
-				{
-					// fail to add event fd
-					LOGE("fail to add app launch timer fd to epoll list\n");
-					close(manager.app_launch_timerfd);
-					manager.app_launch_timerfd = -1;
-				} else {
-					LOGI("application launch time started\n");
-				}
-			}
-		} else {
-			LOGE("cannot create launch timer\n");
-		}
-	}
+	if (res == 0 && app_info->app_type != APP_TYPE_RUNNING)
+		if (start_app_launch_timer()<0)
+			res = -1;
 
 	LOGI("ret=%d\n", res);
 	return res;
@@ -686,9 +709,8 @@ static int targetServerHandler(int efd)
 		if(manager.app_launch_timerfd >= 0)
 		{
 			LOGI("release launch timer\n");
-			epoll_ctl(efd, EPOLL_CTL_DEL, manager.app_launch_timerfd, NULL);
-			close(manager.app_launch_timerfd);
-			manager.app_launch_timerfd = -1;
+			if (stop_app_launch_timer()<0)
+				LOGE("cannot stop app launch timer\n");
 		}
 
 		LOGI("target connected = %d(running %d target)\n",
@@ -1056,11 +1078,9 @@ int daemonLoop()
 			else if (events[i].data.fd == manager.app_launch_timerfd)
 			{
 				// send to host timeout error message for launching application
-				epoll_ctl(manager.efd, EPOLL_CTL_DEL,
-					  manager.app_launch_timerfd, NULL);
-				close(manager.app_launch_timerfd);
-				manager.app_launch_timerfd = -1;
 				LOGE("Failed to launch application\n");
+				if (stop_app_launch_timer()<0)
+					LOGE("cannot stop app launch timer\n");
 				continue;
 			}
 			// check for connection timeout timerfd
