@@ -840,6 +840,7 @@ static int parse_proc_smaps_file_bypid(char *path, proc_t* P)
 
 	// reset pss size of proc_t
 	P->pss = 0;
+	P->sh_mem = 0;
 
 	// read from smaps file
 	sprintf(filename, "%s/smaps", path);
@@ -862,6 +863,17 @@ static int parse_proc_smaps_file_bypid(char *path, proc_t* P)
 					probe_so_size += atoi(numbuf);
 					is_probe_so = 0;	// reset search flag
 				}
+			}
+			else if(strncmp(buf, "Shared", 6) == 0)	// line is started with "Shared"
+			{
+				char *p = buf;
+				p = strstr(buf, ":");
+				int add = 0;
+				if (p != 0) {
+					sscanf(p, ":%s kB", numbuf);
+					P->sh_mem += atoi(numbuf);
+				}
+
 			}
 			else	// not Pss line
 			{
@@ -894,6 +906,16 @@ static int parse_proc_smaps_file_bypid(char *path, proc_t* P)
 			{
 				sscanf(buf, "Pss:%s kB", numbuf);
 				P->pss += atoi(numbuf);
+			}
+			else if(strncmp(buf, "Shared", 6) == 0)	// line is started with "Shared"
+			{
+				char *p = buf;
+				p = strstr(buf, ":");
+				int add = 0;
+				if (p != 0) {
+					sscanf(p, ":%s kB", numbuf);
+					P->sh_mem += atoi(numbuf);
+				}
 			}
 		}
 	}
@@ -1884,6 +1906,7 @@ int fill_system_processes_info(float factor, struct system_info_t * sys_info)
 		virtual += proc->proc_data.vir_mem;					// Byte
 		resident += (proc->proc_data.res_memblock * 4);		// KByte
 		pssmem += (proc->proc_data.pss);					// KByte
+		shared += (proc->proc_data.sh_mem);					// KByte
 		ticks += (proc->proc_data.utime + proc->proc_data.stime -
 					proc->saved_utime - proc->saved_stime);
 
@@ -1902,6 +1925,7 @@ int fill_system_processes_info(float factor, struct system_info_t * sys_info)
 		app_cpu_usage = 100.0f;
 	resident = resident * 1024;		// change to Byte
 	pssmem = pssmem * 1024;			// change to Byte
+	shared = shared * 1024;			// change to Byte
 
 	sys_info->virtual_memory = virtual;
 	sys_info->resident_memory = resident;

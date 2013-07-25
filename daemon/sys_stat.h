@@ -106,6 +106,7 @@ typedef struct {
 	long dummy;
 	unsigned long long start_time;
 	unsigned long vir_mem;
+	unsigned long sh_mem;
 	long res_memblock;
 	unsigned long pss;
 } proc_t;
