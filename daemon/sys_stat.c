@@ -44,6 +44,9 @@
 #include <dirent.h>
 #include <errno.h>
 
+#include <inttypes.h>
+#include <stdint.h>
+
 #ifndef LOCALTEST
 #include <system_info.h>
 #include <runtime_info.h>
@@ -2069,6 +2072,79 @@ int fill_cpu_frequecy(int event_num)
 	return -0;
 }
 
+static void skip_lines(FILE * fp, unsigned int count)
+{
+	char *buffer = NULL;
+	size_t buflen;
+	unsigned int index;
+	for (index = 0; index != count; ++index)
+		getline(&buffer, &buflen, fp);
+	free(buffer);
+}
+
+static void skip_tokens(FILE * fp, unsigned int count)
+{
+	unsigned int index;
+
+	for (index = 0; index != count; ++index)
+		fscanf(fp, "%*s");
+}
+
+static void get_network_stat(uint32_t * recv, uint32_t * send)
+{
+	FILE *fp = fopen("/proc/net/dev", "r");
+	uintmax_t irecv, isend;
+	char ifname[64];
+
+	*recv = *send = 0;
+	skip_lines(fp, 2);	/* strip header */
+
+	while (fscanf(fp, "%s", ifname) != EOF)
+		if (strcmp("lo:", ifname)) {
+			fscanf(fp, "%" SCNuMAX, &irecv);
+			skip_tokens(fp, 7);
+
+			fscanf(fp, "%" SCNuMAX, &isend);
+			skip_tokens(fp, 7);
+
+			*recv += irecv;
+			*send += isend;
+		} else
+			skip_tokens(fp, 16);
+}
+
+static void get_disk_stat(uint32_t * read, uint32_t * write)
+{
+	enum { partition_name_maxlength = 128 };
+	FILE *fp = fopen("/proc/diskstats", "r");
+	char master_partition[partition_name_maxlength] = { 0 };
+
+	*read = *write = 0;
+	while (!feof(fp)) {
+		char partition[partition_name_maxlength];
+		uintmax_t pread, pwrite;
+		skip_tokens(fp, 2);
+		fscanf(fp, "%s", partition);
+		if (*master_partition
+		    && !strncmp(master_partition, partition,
+			       strlen(master_partition))) {
+			/* subpartition */
+			skip_tokens(fp, 11);
+		} else {
+			skip_tokens(fp, 2);
+			fscanf(fp, "%" SCNuMAX, &pread);
+			skip_tokens(fp, 3);
+			fscanf(fp, "%" SCNuMAX, &pwrite);
+			skip_tokens(fp, 4);
+
+			memcpy(master_partition, partition,
+			       partition_name_maxlength);
+			*read += pread;
+			*write += pwrite;
+		}
+	}
+}
+
 // return log length (>0) for normal case
 // return negative value for error
 
@@ -2202,10 +2278,12 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 	sys_info->system_memory_total = sysmemtotal;
 	sys_info->system_memory_used = sysmemused;
 	sys_info->total_used_drive = get_total_used_drive();
-	sys_info->disk_read_size = 0; // TODO
-	sys_info->disk_write_size = 0; // TODO
-	sys_info->network_send_size = 0; // TODO
-	sys_info->network_receive_size = 0; // TODO
+
+	get_network_stat(&sys_info->network_send_size,
+					 &sys_info->network_receive_size);
+
+	get_disk_stat(&sys_info->disk_read_size,
+				  &sys_info->disk_write_size);
 
 #else /* LOCALTEST */
 
