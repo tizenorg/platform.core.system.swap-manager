@@ -1462,7 +1462,7 @@ static int update_thread_data(int pid)
 				procnode = add_node(&thread_prochead, tid);
 				if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data))) < 0))
 				{
-					LOGE("Failed to get proc stat file by tid(%d) 1\n", tid);
+					LOGE("Failed to get proc stat file by tid(%d). add node\n", tid);
 				}
 				else
 				{
@@ -1475,7 +1475,7 @@ static int update_thread_data(int pid)
 			{
 				if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data))) < 0))
 				{
-					LOGE("Failed to get proc stat file by tid(%d) 2\n", tid);
+					LOGE("Failed to get proc stat file by tid(%d). node exist\n", tid);
 				}
 			}
 		}
@@ -2504,43 +2504,16 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	fill_data_msg_head(msg, NMSG_SYSTEM, 0, len);
 	p = msg->payload;
 
-	pack_int(p, sys_info->energy);
-	pack_int(p, sys_info->wifi_status);
-	pack_int(p, sys_info->bt_status);
-	pack_int(p, sys_info->gps_status);
-	pack_int(p, sys_info->brightness_status);
-	pack_int(p, sys_info->camera_status);
-	pack_int(p, sys_info->sound_status);
-	pack_int(p, sys_info->audio_status);
-	pack_int(p, sys_info->vibration_status);
-	pack_int(p, sys_info->voltage_status);
-	pack_int(p, sys_info->rssi_status);
-	pack_int(p, sys_info->video_status);
-	pack_int(p, sys_info->call_status);
-	pack_int(p, sys_info->dnet_status);
-
-	pack_int(p, sys_info->disk_read_size);
-	pack_int(p, sys_info->disk_write_size);
-
 	// CPU
+	pack_float(p, sys_info->app_cpu_usage);
+
 	for (i = 0; i < num_of_cpu; i++) {
 		pack_float(p, sys_info->cpu_frequency[i]); //FIXME wrong pack float define
 	}
 
-	pack_float(p, sys_info->app_cpu_usage);
-
 	for (i = 0; i < num_of_cpu; i++) {
 		pack_float(p, sys_info->cpu_load[i]); //FIXME wrong pack float define
 	}
-
-	pack_int(p, sys_info->virtual_memory);
-	pack_int(p, sys_info->resident_memory);
-	pack_int(p, sys_info->shared_memory);
-	pack_int(p, sys_info->pss_memory);
-	pack_int(p, sys_info->total_alloc_size);
-	pack_int(p, sys_info->system_memory_total);
-	pack_int(p, sys_info->system_memory_used);
-	pack_int(p, sys_info->total_used_drive);
 
 	// thread
 	pack_int(p, sys_info->count_of_threads);
@@ -2558,8 +2531,38 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 		pack_float(p, sys_info->process_load[i].load); //FIXME wrong pack float define
 	}
 
+	pack_int(p, sys_info->virtual_memory);
+	pack_int(p, sys_info->resident_memory);
+	pack_int(p, sys_info->shared_memory);
+	pack_int(p, sys_info->pss_memory);
+	pack_int(p, sys_info->total_alloc_size);
+	pack_int(p, sys_info->system_memory_total);
+	pack_int(p, sys_info->system_memory_used);
+
+	pack_int(p, sys_info->disk_read_size);
+	pack_int(p, sys_info->disk_write_size);
+
 	pack_int(p, sys_info->network_send_size);
 	pack_int(p, sys_info->network_receive_size);
+
+	pack_int(p, sys_info->wifi_status);
+	pack_int(p, sys_info->bt_status);
+	pack_int(p, sys_info->gps_status);
+	pack_int(p, sys_info->brightness_status);
+	pack_int(p, sys_info->camera_status);
+	pack_int(p, sys_info->sound_status);
+	pack_int(p, sys_info->audio_status);
+	pack_int(p, sys_info->vibration_status);
+	pack_int(p, sys_info->voltage_status);
+	pack_int(p, sys_info->rssi_status);
+	pack_int(p, sys_info->video_status);
+	pack_int(p, sys_info->call_status);
+	pack_int(p, sys_info->dnet_status);
+	pack_int(p, sys_info->energy);
+
+
+//	pack_int(p, sys_info->total_used_drive);
+
 
 	return msg;
 }
