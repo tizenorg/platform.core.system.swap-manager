@@ -2111,6 +2111,7 @@ static void get_network_stat(uint32_t * recv, uint32_t * send)
 			*send += isend;
 		} else
 			skip_tokens(fp, 16);
+	fclose(fp);
 }
 
 static void get_disk_stat(uint32_t * read, uint32_t * write)
