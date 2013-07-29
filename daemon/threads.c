@@ -49,8 +49,6 @@
 #include "debug.h"
 #include "process_info.h"
 
-//#define DEBUG_GSI
-
 static void* recvThread(void* data)
 {
 	int index = (int)data;
@@ -230,14 +228,6 @@ int makeRecvThread(int index)
 void* samplingThread(void* data)
 {
 	int err, signo, i;
-	//debug only
-#ifdef DEBUG_GSI
-	int pidarr[1] = {656};//{3619}; //DEBUG ONLY
-	int pidcount = 1;
-#else
-	int pidarr[MAX_TARGET_COUNT];
-	int pidcount;
-#endif
 	sigset_t waitsigmask;
 
 	LOGI("sampling thread started\n");
@@ -247,37 +237,22 @@ void* samplingThread(void* data)
 	sigaddset(&waitsigmask, SIGUSR1);
 
 	while (1) {
-		//debug only
-#ifdef DEBUG_GSI
-		err = 0;
-#else
 		err = sigwait(&waitsigmask, &signo);
-#endif
-		if(err != 0)
-		{
+		if (err != 0) {
 			LOGE("Failed to sigwait() in sampling thread\n");
 			continue;
 		}
 
-		//debug only
-#ifdef DEBUG_GSI
-		if(1)
-#else
-		if(signo == SIGALRM)
-#endif
-		{
-
-
-#ifndef DEBUG_GSI
-			pidcount = 0;
-			for(i = 0; i < MAX_TARGET_COUNT; i++)
-			{
+		if (signo == SIGALRM) {
+			int pidarr[MAX_TARGET_COUNT];
+			int pidcount = 0;
+			for (i = 0; i < MAX_TARGET_COUNT; i++) {
 				//LOGI("#%d: sock=%d; pid=%d;\n", i,
 				//		manager.target[i].socket , manager.target[i].pid );
-				if(manager.target[i].socket != -1 && manager.target[i].pid != -1)
+				if (manager.target[i].socket != -1 &&
+				    manager.target[i].pid != -1)
 					pidarr[pidcount++] = manager.target[i].pid;
 			}
-#endif
 			struct system_info_t sys_info;
 			if (get_system_info(&sys_info, pidarr, pidcount) == -1) {
 				LOGE("Cannot get system info\n");
@@ -300,10 +275,6 @@ void* samplingThread(void* data)
 
 			free_msg_data(msg);
 			reset_system_info(&sys_info);
-#ifdef DEBUG_GSI
-			break; //FOR DEBUG ONLY
-#endif
-
 		}
 		else if(signo == SIGUSR1)
 		{
