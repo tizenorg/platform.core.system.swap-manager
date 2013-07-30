@@ -127,6 +127,7 @@ int get_file_status(int* pfd, const char* filename)
 			if(unlikely(*pfd == -1))
 			{
 				/* This file may absent in the system */
+/* 				LOGE("cannot open '%s': %s\n", filename, strerror(errno)); */
 				return 0;
 			}
 		}
@@ -548,8 +549,10 @@ static int get_audio_status()
 	FILE *fp = NULL;
 
 	fp = fopen(AUDIOFD, "r");
-	if(fp == NULL)
+	if(fp == NULL){
+/* 		LOGE("cannot open '%s': %s\n", AUDIOFD, strerror(errno)); */
 		return -1;
+	}
 
 	while(ret != EOF)
 	{
@@ -777,14 +780,18 @@ static int parse_proc_stat_file_bypid(char *path, proc_t* P)
 	sprintf(filename, "%s/stat", path);
 	fd = open(filename, O_RDONLY, 0);
 
-	if(unlikely(fd == -1))
+	if(unlikely(fd == -1)){
+/* 		LOGE("cannot open '%s' err:%s\n", filename, strerror(errno) ); */
 		return -1;
+	}
 
 	num = read(fd, buf, BUFFER_MAX);
 	close(fd);
 
-	if(unlikely(num <= 0))
+	if(unlikely(num <= 0)){
+		LOGE("nothing read from '%s'\n", filename);
 		return -1;
+	}
 
 	buf[num] = '\0';
 
@@ -849,8 +856,10 @@ static int parse_proc_smaps_file_bypid(char *path, proc_t* P)
 	sprintf(filename, "%s/smaps", path);
 	fp = fopen(filename, "r");
 
-	if(fp == NULL)
+	if(fp == NULL){
+/* 		LOGE("cannot open '%s' err:%s\n", filename, strerror(errno) ); */
 		return -1;
+	}
 
 	if(unlikely(probe_so_size == 0))	// probe so size is not abtained
 	{
@@ -1050,6 +1059,7 @@ static int update_system_cpu_frequency(int cur_index)
 		else
 		{
 			/* This file may absent in the system */
+/* 			LOGE("cannot open '%s' err:%s\n", CPUNUM_OF_FREQ, strerror(errno) ); */
 		}
 
 		for(i = 0; i < num_of_cpu; i++)
@@ -1085,6 +1095,7 @@ static int update_system_cpu_frequency(int cur_index)
 		}
 		else	// cannot load cpu frequency information
 		{	// do nothing
+/* 			LOGE("cannot open '%s' err:%s\n", filename, strerror(errno) ); */
 		}
 	}
 
@@ -1451,19 +1462,20 @@ static int update_thread_data(int pid)
 				procnode = add_node(&thread_prochead, tid);
 				if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data))) < 0))
 				{
-					LOGE("Failed to get proc stat file by tid(%d)\n", tid);
+					LOGE("Failed to get proc stat file by tid(%d). add node\n", tid);
 				}
 				else
 				{
 					procnode->saved_utime = procnode->proc_data.utime;
 					procnode->saved_stime = procnode->proc_data.stime;
+/* 					LOGI("data updated\n"); */
 				}
 			}
 			else
 			{
 				if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data))) < 0))
 				{
-					LOGE("Failed to get proc stat file by tid(%d)\n", tid);
+					LOGE("Failed to get proc stat file by tid(%d). node exist\n", tid);
 				}
 			}
 		}
@@ -1650,6 +1662,8 @@ int get_camera_count()
 		}
 
 		fclose(fp);
+	} else {
+/* 		LOGE("cannot open '%s' err:%s\n", CAMCORDER_FILE, strerror(errno) ); */
 	}
 
 	return count;
@@ -2111,10 +2125,40 @@ static void get_network_stat(uint32_t * recv, uint32_t * send)
 			*send += isend;
 		} else
 			skip_tokens(fp, 16);
+	fclose(fp);
+}
+
+//function return partition sector size
+// returns
+//  0 if error
+//  <size> if no errors
+static int get_partition_sector_size(const char * partition_name)
+{
+	int sec_size = 0;
+	FILE *sfp = 0;
+	char sec_size_buff[LARGE_BUFFER];
+
+	sprintf(sec_size_buff, "/sys/block/%s/queue/hw_sector_size", partition_name);
+	sfp = fopen(sec_size_buff, "r");
+	if (sfp == 0) {
+		LOGE("cannot detect sector size for <%s> (%s)\n",
+				partition_name, sec_size_buff);
+		return 0;
+	}
+	fscanf(sfp, "%d", &sec_size);
+	fclose(sfp);
+	if (sec_size <= 0){
+		LOGE("cannot detect sector size for <%s> (%s)\n",
+				partition_name, sec_size_buff);
+		return 0;
+	}
+
+	return sec_size;
 }
 
 static void get_disk_stat(uint32_t * read, uint32_t * write)
 {
+	int sec_size = 0;
 	enum { partition_name_maxlength = 128 };
 	FILE *fp = fopen("/proc/diskstats", "r");
 	char master_partition[partition_name_maxlength] = { 0 };
@@ -2131,6 +2175,16 @@ static void get_disk_stat(uint32_t * read, uint32_t * write)
 			/* subpartition */
 			skip_tokens(fp, 11);
 		} else {
+			// FIXME it is not good way call this func
+			// each time to get partition sector size
+			/*sec_size = get_partition_sector_size(partition);
+			if (sec_size <= 0){
+				*read = 0;
+				*write = 0;
+				LOGE("get RW error\n");
+				fclose(fp);
+				return;
+			}*/
 			skip_tokens(fp, 2);
 			fscanf(fp, "%" SCNuMAX, &pread);
 			skip_tokens(fp, 3);
@@ -2139,10 +2193,19 @@ static void get_disk_stat(uint32_t * read, uint32_t * write)
 
 			memcpy(master_partition, partition,
 			       partition_name_maxlength);
+			// FIXME rw size is in sectors
+			// actualy different disks - different partition sector size (?)
+			// maybe need convert to bytes like this:
+			//*read += pread * sec_size;
+			//*write += pwrite * sec_size;
+
 			*read += pread;
 			*write += pwrite;
 		}
 	}
+
+	fclose(fp);
+
 }
 
 static float get_elapsed(void)
@@ -2445,25 +2508,9 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	fill_data_msg_head(msg, NMSG_SYSTEM, 0, len);
 	p = msg->payload;
 
-	pack_int(p, sys_info->energy);
-	pack_int(p, sys_info->wifi_status);
-	pack_int(p, sys_info->bt_status);
-	pack_int(p, sys_info->gps_status);
-	pack_int(p, sys_info->brightness_status);
-	pack_int(p, sys_info->camera_status);
-	pack_int(p, sys_info->sound_status);
-	pack_int(p, sys_info->audio_status);
-	pack_int(p, sys_info->vibration_status);
-	pack_int(p, sys_info->voltage_status);
-	pack_int(p, sys_info->rssi_status);
-	pack_int(p, sys_info->video_status);
-	pack_int(p, sys_info->call_status);
-	pack_int(p, sys_info->dnet_status);
-
-	pack_int(p, sys_info->disk_read_size);
-	pack_int(p, sys_info->disk_write_size);
-
 	// CPU
+	pack_float(p, sys_info->app_cpu_usage);
+
 	for (i = 0; i < num_of_cpu; i++) {
 		if (sys_info->cpu_frequency)
 			pack_float(p, sys_info->cpu_frequency[i]);
@@ -2471,23 +2518,12 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 			pack_float(p, 0.0);
 	}
 
-	pack_float(p, sys_info->app_cpu_usage);
-
 	for (i = 0; i < num_of_cpu; i++) {
 		if (sys_info->cpu_load)
 			pack_float(p, sys_info->cpu_load[i]);
 		else
 			pack_float(p, 0.0);
 	}
-
-	pack_int(p, sys_info->virtual_memory);
-	pack_int(p, sys_info->resident_memory);
-	pack_int(p, sys_info->shared_memory);
-	pack_int(p, sys_info->pss_memory);
-	pack_int(p, sys_info->total_alloc_size);
-	pack_int(p, sys_info->system_memory_total);
-	pack_int(p, sys_info->system_memory_used);
-	pack_int(p, sys_info->total_used_drive);
 
 	// thread
 	pack_int(p, sys_info->count_of_threads);
@@ -2513,8 +2549,38 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 		}
 	}
 
+	pack_int(p, sys_info->virtual_memory);
+	pack_int(p, sys_info->resident_memory);
+	pack_int(p, sys_info->shared_memory);
+	pack_int(p, sys_info->pss_memory);
+	pack_int(p, sys_info->total_alloc_size);
+	pack_int(p, sys_info->system_memory_total);
+	pack_int(p, sys_info->system_memory_used);
+
+	pack_int(p, sys_info->disk_read_size);
+	pack_int(p, sys_info->disk_write_size);
+
 	pack_int(p, sys_info->network_send_size);
 	pack_int(p, sys_info->network_receive_size);
+
+	pack_int(p, sys_info->wifi_status);
+	pack_int(p, sys_info->bt_status);
+	pack_int(p, sys_info->gps_status);
+	pack_int(p, sys_info->brightness_status);
+	pack_int(p, sys_info->camera_status);
+	pack_int(p, sys_info->sound_status);
+	pack_int(p, sys_info->audio_status);
+	pack_int(p, sys_info->vibration_status);
+	pack_int(p, sys_info->voltage_status);
+	pack_int(p, sys_info->rssi_status);
+	pack_int(p, sys_info->video_status);
+	pack_int(p, sys_info->call_status);
+	pack_int(p, sys_info->dnet_status);
+	pack_int(p, sys_info->energy);
+
+
+//	pack_int(p, sys_info->total_used_drive);
+
 
 	return msg;
 }
