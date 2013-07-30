@@ -983,16 +983,10 @@ int host_message_handler(struct msg_t *msg)
 			return -1;
 		}
 
-		// TODO: launch translator thread
 		if (start_transfer() != 0) {
 			LOGE("Cannot start transfer\n");
 			return -1;
 		}
-
-
-		// TODO: apply_prof_session()
-
-		//write to device
 
 		//response to control sockete
 		cut_replay_events(msg);
