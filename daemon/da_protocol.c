@@ -903,7 +903,7 @@ int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 		msg->len = payload_size + sizeof(err);
 		//set return id
 		//*(uint32_t *)p = err; p+=sizeof(err);
-		pack_int(p, err)
+		pack_int(p, err);
 		//copy payload data
 		memcpy(p, payload, payload_size);
 

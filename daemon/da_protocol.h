@@ -310,12 +310,42 @@ struct recorded_event_t{
 	uint32_t code;
 	uint32_t value;
 };
-#define pack_int(to,n) { *(typeof(n) *) to = n; to += sizeof(typeof(n));}
-#define pack_int64(to,n) { *(uint64_t *) to = n; to += sizeof(uint64_t);}
-#define pack_int32(to,n) { *(uint32_t *) to = n; to += sizeof(uint32_t);}
-#define pack_time(to,n) {pack_int32(to,n.tv_sec); pack_int32(to,n.tv_usec);}
-#define pack_float(to,n) { memcpy(to,&n,sizeof(float)); to += sizeof(float);}
-#define pack_str(to,n) { memcpy(to,n,strlen(n)+1); to += strlen(n)+1;}
+
+#define pack_int(to, n)					\
+	do {						\
+		*(typeof(n) *) to = n;			\
+		to += sizeof(typeof(n));		\
+	} while (0)
+
+#define pack_int64(to, n)					\
+	do {							\
+		*(uint64_t *)to = n;				\
+		to += sizeof(uint64_t);				\
+	} while (0)
+
+#define pack_int32(to, n)					\
+	do {							\
+		*(uint32_t *)to = n;				\
+		to += sizeof(uint32_t);				\
+	} while (0)
+
+#define pack_time(to, n)						\
+	do {								\
+		pack_int32(to, n.tv_sec);				\
+		pack_int32(to, n.tv_usec);				\
+	} while (0)
+
+#define pack_float(to, n)					\
+	do {							\
+		*(float *)to = n;				\
+		to += sizeof(float);				\
+	} while (0)
+
+#define pack_str(to, n)				\
+	do {					\
+		memcpy(to, n, strlen(n) + 1);	\
+		to += strlen(n) + 1;		\
+	} while (0)
 
 struct msg_data_t *pack_system_info(struct system_info_t *sys_info);
 int write_to_buf(struct msg_data_t *msg);
