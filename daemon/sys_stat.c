@@ -2465,13 +2465,19 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 
 	// CPU
 	for (i = 0; i < num_of_cpu; i++) {
-		pack_float(p, sys_info->cpu_frequency[i]); //FIXME wrong pack float define
+		if (sys_info->cpu_frequency)
+			pack_float(p, sys_info->cpu_frequency[i]);
+		else
+			pack_float(p, 0.0);
 	}
 
 	pack_float(p, sys_info->app_cpu_usage);
 
 	for (i = 0; i < num_of_cpu; i++) {
-		pack_float(p, sys_info->cpu_load[i]); //FIXME wrong pack float define
+		if (sys_info->cpu_load)
+			pack_float(p, sys_info->cpu_load[i]);
+		else
+			pack_float(p, 0.0);
 	}
 
 	pack_int(p, sys_info->virtual_memory);
@@ -2485,18 +2491,26 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 
 	// thread
 	pack_int(p, sys_info->count_of_threads);
-	for (i = 0; i < sys_info->count_of_threads; i++)
-	{
-		pack_int(p, sys_info->thread_load[i].pid); //FIXME wrong pack float define
-		pack_float(p, sys_info->thread_load[i].load); //FIXME wrong pack float define
+	for (i = 0; i < sys_info->count_of_threads; i++) {
+		if (sys_info->thread_load) {
+			pack_int(p, sys_info->thread_load[i].pid);
+			pack_float(p, sys_info->thread_load[i].load);
+		} else {
+			pack_int(p, 0);
+			pack_float(p, 0.0);
+		}
 	}
 
 	// process
 	pack_int(p, sys_info->count_of_processes);
-	for (i = 0; i < sys_info->count_of_processes; i++)
-	{
-		pack_int(p, sys_info->process_load[i].id); //FIXME wrong pack float define
-		pack_float(p, sys_info->process_load[i].load); //FIXME wrong pack float define
+	for (i = 0; i < sys_info->count_of_processes; i++) {
+		if (sys_info->process_load) {
+			pack_int(p, sys_info->process_load[i].id);
+			pack_float(p, sys_info->process_load[i].load);
+		} else {
+			pack_int(p, 0);
+			pack_float(p, 0.0);
+		}
 	}
 
 	pack_int(p, sys_info->network_send_size);
