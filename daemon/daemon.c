@@ -521,7 +521,8 @@ static void terminate_all_target()
 			if(sendlen != -1)
 			{
 				LOGI("TERMINATE send exit msg (socket %d) "
-						"by terminate_all_target()\n", manager.target[i].socket);
+				     "by terminate_all_target()\n",
+				     manager.target[i].socket);
 			}
 		}
 	}
