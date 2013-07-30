@@ -405,12 +405,10 @@ int start_profiling()
 	smack_lsetlabel(SCREENSHOT_DIR, "*", SMACK_LABEL_ACCESS);
 #endif
 
-	if (IS_OPT_SET(FL_CPU | FL_MEMORY)) {
-		if (samplingStart() < 0) {
-			LOGE("Cannot start sampling\n");
-			res = -1;
-			goto exit;
-		}
+	if (samplingStart() < 0) {
+		LOGE("Cannot start sampling\n");
+		res = -1;
+		goto exit;
 	}
 
 	if (IS_OPT_SET(FL_RECORDING))
@@ -427,8 +425,7 @@ int start_profiling()
 recording_stop:
 	if (IS_OPT_SET(FL_RECORDING))
 		epoll_del_input_events();
-	if (IS_OPT_SET(FL_CPU | FL_MEMORY))
-		samplingStop();
+	samplingStop();
 
 exit:
 	LOGI("return %d\n", res);
@@ -439,8 +436,7 @@ void stop_profiling(void)
 {
 	if (IS_OPT_SET(FL_RECORDING))
 		epoll_del_input_events();
-	if (IS_OPT_SET(FL_CPU | FL_MEMORY))
-		samplingStop();
+	samplingStop();
 }
 
 static void reconfigure_recording(struct conf_t conf)
@@ -462,39 +458,14 @@ static void reconfigure_recording(struct conf_t conf)
 
 }
 
-static int reconfigure_cpu_and_memory(struct conf_t conf)
-{
-	uint64_t old_features = prof_session.conf.use_features0;
-	uint64_t new_features = conf.use_features0;
-	uint64_t to_enable = (new_features ^ old_features) & new_features;
-	uint64_t to_disable = (new_features ^ old_features) & old_features;
-
-	prof_session.conf.system_trace_period = conf.system_trace_period;
-
-	if (IS_OPT_SET(FL_CPU | FL_MEMORY))
-		samplingStop();
-
-	if (IS_OPT_SET_IN(FL_CPU | FL_MEMORY, to_disable)) {
-		prof_session.conf.use_features0 &= ~(FL_CPU | FL_MEMORY);
-		return 0;
-	}
-
-	if (IS_OPT_SET_IN(FL_CPU | FL_MEMORY, to_enable)) {
-		if (samplingStart() < 0) {
-			LOGE("Cannot start sampling\n");
-			return -1;
-		}
-		prof_session.conf.use_features0 |= (FL_CPU | FL_MEMORY);
-	}
-
-	return 0;
-}
-
 int reconfigure(struct conf_t conf)
 {
 	reconfigure_recording(conf);
-	if (reconfigure_cpu_and_memory(conf)) {
-		LOGE("Cannot reconf cpu and memory\n");
+
+	samplingStop();
+	memcpy(&prof_session.conf, &conf, sizeof(conf));
+	if (samplingStart() < 0) {
+		LOGE("Cannot start sampling\n");
 		return -1;
 	}
 

@@ -246,35 +246,37 @@ void* samplingThread(void* data)
 		if (signo == SIGALRM) {
 			int pidarr[MAX_TARGET_COUNT];
 			int pidcount = 0;
-			for (i = 0; i < MAX_TARGET_COUNT; i++) {
-				//LOGI("#%d: sock=%d; pid=%d;\n", i,
-				//		manager.target[i].socket , manager.target[i].pid );
-				if (manager.target[i].socket != -1 &&
-				    manager.target[i].pid != -1)
-					pidarr[pidcount++] = manager.target[i].pid;
-			}
 			struct system_info_t sys_info;
-			if (get_system_info(&sys_info, pidarr, pidcount) == -1) {
-				LOGE("Cannot get system info\n");
-				//do not send sys_info because
-				//it is corrupted
-				continue;
-			}
-
 			struct msg_data_t *msg;
-			msg = pack_system_info(&sys_info);
-			if (!msg) {
-				LOGE("Cannot pack system info\n");
+
+			if (IS_SYSTEM_INFO_NEEDED()) {
+				for (i = 0; i < MAX_TARGET_COUNT; i++) {
+					if (manager.target[i].socket != -1 &&
+					    manager.target[i].pid != -1)
+						pidarr[pidcount++] = manager.target[i].pid;
+				}
+
+				if (get_system_info(&sys_info, pidarr, pidcount) == -1) {
+					LOGE("Cannot get system info\n");
+					//do not send sys_info because
+					//it is corrupted
+					continue;
+				}
+
+				msg = pack_system_info(&sys_info);
+				if (!msg) {
+					LOGE("Cannot pack system info\n");
+					reset_system_info(&sys_info);
+					continue;
+				}
+
+				write_to_buf(msg);
+
+				printBuf((char *)msg, MSG_DATA_HDR_LEN + msg->len);
+
+				free_msg_data(msg);
 				reset_system_info(&sys_info);
-				continue;
 			}
-
-			write_to_buf(msg);
-
-			printBuf((char *)msg, MSG_DATA_HDR_LEN + msg->len);
-
-			free_msg_data(msg);
-			reset_system_info(&sys_info);
 		}
 		else if(signo == SIGUSR1)
 		{

@@ -134,6 +134,14 @@ enum feature_code{
 };
 #define IS_OPT_SET_IN(OPT, reg) (reg & (OPT))
 #define IS_OPT_SET(OPT) IS_OPT_SET_IN((OPT), prof_session.conf.use_features0)
+#define IS_SYSTEM_INFO_NEEDED() (					\
+		IS_OPT_SET(FL_CPU) ||					\
+		IS_OPT_SET(FL_PROCESSES) ||				\
+		IS_OPT_SET(FL_MEMORY) ||				\
+		IS_OPT_SET(FL_DISK) ||					\
+		IS_OPT_SET(FL_NETWORK) ||				\
+		IS_OPT_SET(FL_DEVICE) ||				\
+		IS_OPT_SET(FL_ENERGY))
 
 enum app_type{
 	AT_TIZEN	=0x01,
