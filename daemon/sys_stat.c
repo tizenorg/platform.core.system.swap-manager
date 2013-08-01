@@ -130,7 +130,7 @@ int get_file_status_no_open(int pfd, const char* filename)
 
 		// read from file
 		if (unlikely(read(pfd, buf, STATUS_STRING_MAX) == -1))
-			status =  -(errno)
+			status =  -(errno);
 		else
 			status = atoi(buf);
 	}
@@ -2256,178 +2256,182 @@ static void get_disk_stat(uint32_t * read, uint32_t * write)
 
 }
 
-// return log length (>0) for normal case
-// return negative value for error
-
-int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
+static float get_elapsed(void)
 {
 	static struct timeval old_time = {0, 0};
-	static int event_num = 0;
-	LOGI_th_samp("start\n");
-
-
 	struct timeval current_time;
-	uint64_t sysmemtotal = 0;
-	uint64_t sysmemused = 0;
 	float elapsed;
-	float factor;
-	unsigned long curtime;
-	int res = 0;
 
-	/* system_info_get_value_bool() changes only 1 byte
-	   so we need to be sure that the integer as a whole is correct
-	   just clean it */
-
-	//clean output structure
-	memset(sys_info, 0, sizeof(*sys_info));
-
-
-	LOGI_th_samp("PID count : %d\n", pidcount);
-
-	if (update_process_data(pidarray, pidcount, PROCDATA_STAT) < 0)
-	{
-		LOGE("Failed to update process stat data\n");
-		goto fail_exit;
-	}
-
-	// this position is optimized position of timestamp.
-	// just before get system cpu data and just after get process cpu data
-	// because cpu data is changed so fast and variance is so remarkable
-	gettimeofday(&current_time, NULL);	// DO NOT MOVE THIS SENTENCE!
-
-	if (update_system_cpu_data(event_num) < 0)
-	{
-		LOGE("Failed to update system cpu data\n");
-		goto fail_exit;
-	}
-
-	// update cpu freq
-	if (update_system_cpu_frequency(event_num) < 0) {
-		LOGE("Failed to update system cpu freq data\n");
-		goto fail_exit;
-	}
-
-	// memory data is changed slowly and variance is not remarkable
-	// so memory data is less related with timestamp then cpu data
-	if (update_process_data(pidarray, pidcount, PROCDATA_SMAPS) < 0)
-	{
-		LOGE("Failed to update process smaps data\n");
-		goto fail_exit;
-	}
-
-	if (pidcount > 0)
-		if (update_thread_data(pidarray[0]) < 0)
-		{
-			LOGE("Failed to update thread stat data\n");
-			goto fail_exit;
-		}
-
-	if(update_system_memory_data(&sysmemtotal, &sysmemused) < 0)
-	{
-		LOGE("Failed to update system memory data\n");
-		goto fail_exit;
-	}
-
-	// prepare calculate
+	gettimeofday(&current_time, NULL);
 	elapsed = (current_time.tv_sec - old_time.tv_sec) +
 		((float)(current_time.tv_usec - old_time.tv_usec) / 1000000.0f);
 	old_time.tv_sec = current_time.tv_sec;
 	old_time.tv_usec = current_time.tv_usec;
-	curtime = ((unsigned long)current_time.tv_sec * 10000) +
-			((unsigned long)current_time.tv_usec / 100);
 
-	factor = 100.0f / ((float)Hertz * elapsed * num_of_cpu);
+	return elapsed;
+}
 
-	//update cpus information
-	if (update_cpus_info(event_num, elapsed) < 0)
-	{
-		LOGE("Failed to update cpus info\n");
-		goto fail_exit;
+static float get_factor(float elapsed)
+{
+	return 100.0f / ((float)Hertz * elapsed * num_of_cpu);
+}
+
+// return log length (>0) for normal case
+// return negative value for error
+int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
+{
+	static int event_num = 0;
+	uint64_t sysmemtotal = 0;
+	uint64_t sysmemused = 0;
+	int res = 0;
+	float elapsed;
+	float factor;
+
+	LOGI_th_samp("start\n");
+	LOGI_th_samp("PID count : %d\n", pidcount);
+
+	// clean output structure
+	memset(sys_info, 0, sizeof(*sys_info));
+
+	// common (cpu, processes, memory)
+	if (IS_OPT_SET(FL_CPU) ||
+	    IS_OPT_SET(FL_PROCESSES) ||
+	    IS_OPT_SET(FL_MEMORY)) {
+		if (update_process_data(pidarray, pidcount, PROCDATA_STAT) < 0) {
+			LOGE("Failed to update process stat data\n");
+			goto fail_exit;
+		}
+
+		// this position is optimized position of timestamp.
+		// just before get system cpu data and just after get process cpu data
+		// because cpu data is changed so fast and variance is so remarkable
+		elapsed = get_elapsed(); // DO NOT MOVE THIS SENTENCE!
+		factor = get_factor(elapsed);
+
+		if (update_system_cpu_data(event_num) < 0) {
+			LOGE("Failed to update system cpu data\n");
+			goto fail_exit;
+		}
+
+		// update cpu freq
+		if (update_system_cpu_frequency(event_num) < 0) {
+			LOGE("Failed to update system cpu freq data\n");
+			goto fail_exit;
+		}
+
+		// memory data is changed slowly and variance is not remarkable
+		// so memory data is less related with timestamp then cpu data
+		if (update_process_data(pidarray, pidcount, PROCDATA_SMAPS) < 0) {
+			LOGE("Failed to update process smaps data\n");
+			goto fail_exit;
+		}
+
+		if (pidcount > 0)
+			if (update_thread_data(pidarray[0]) < 0) {
+				LOGE("Failed to update thread stat data\n");
+				goto fail_exit;
+			}
+
+		if (update_system_memory_data(&sysmemtotal, &sysmemused) < 0) {
+			LOGE("Failed to update system memory data\n");
+			goto fail_exit;
+		}
+
+		// update cpus information
+		if (update_cpus_info(event_num, elapsed) < 0) {
+			LOGE("Failed to update cpus info\n");
+			goto fail_exit;
+		}
+
+		// calculate process load, memory, app_cpu_usage
+		if (fill_system_processes_info(factor, sys_info) < 0) {
+			LOGE("Failed to fill processes info\n");
+			goto fail_exit;
+		}
+
+		// calculate thread load
+		if (fill_system_threads_info(factor, sys_info) < 0) {
+			LOGE("Failed to fill threads info\n");
+			goto fail_exit;
+		}
+
+		if (fill_system_cpu_info(sys_info) < 0) {
+			LOGE("Failed to fill threads info\n");
+			goto fail_exit;
+		}
 	}
 
-	// calculate process load, memory, app_cpu_usage
-	if (fill_system_processes_info(factor, sys_info) < 0)
-	{
-		LOGE("Failed to fill processes info\n");
-		goto fail_exit;
+	// memory (not full)
+	if (IS_OPT_SET(FL_MEMORY)) {
+		sys_info->total_alloc_size = get_total_alloc_size();
+		sys_info->system_memory_total = sysmemtotal;
+		sys_info->system_memory_used = sysmemused;
 	}
 
-	// calculate thread load
-	if (fill_system_threads_info(factor, sys_info) < 0)
-	{
-		LOGE("Failed to fill threads info\n");
-		goto fail_exit;
-	}
-
-	if (fill_system_cpu_info(sys_info) < 0)
-	{
-		LOGE("Failed to fill threads info\n");
-		goto fail_exit;
-	}
-
-#ifndef LOCALTEST
 	// Fill result strutcture
 	LOGI_th_samp("fill result structure\n");
+#ifndef LOCALTEST
+	// disk
+	if (IS_OPT_SET(FL_DISK)) {
+		sys_info->total_used_drive = get_total_used_drive();
+		get_disk_stat(&sys_info->disk_read_size,
+			      &sys_info->disk_write_size);
+	}
 
-	sys_info->energy = 0; // not implemented
-	sys_info->wifi_status = get_wifi_status();
-	sys_info->bt_status = get_bt_status();
-	sys_info->gps_status = get_gps_status();
-	sys_info->brightness_status = get_brightness_status();
-	sys_info->camera_status = get_camera_status();
-	sys_info->sound_status = get_sound_status();
-	sys_info->audio_status = get_audio_status();
-	sys_info->vibration_status = get_vibration_status();
-	sys_info->voltage_status = get_voltage_status();
-	sys_info->rssi_status = get_rssi_status();
-	sys_info->video_status = get_video_status();
-	sys_info->call_status = get_call_status();
-	sys_info->dnet_status = get_dnet_status();
+	// network
+	if (IS_OPT_SET(FL_NETWORK))
+		get_network_stat(&sys_info->network_send_size,
+				 &sys_info->network_receive_size);
 
-	sys_info->total_alloc_size = get_total_alloc_size();
-
-	sys_info->system_memory_total = sysmemtotal;
-	sys_info->system_memory_used = sysmemused;
-	sys_info->total_used_drive = get_total_used_drive();
-
-	get_network_stat(&sys_info->network_send_size,
-					 &sys_info->network_receive_size);
-
-	get_disk_stat(&sys_info->disk_read_size,
-				  &sys_info->disk_write_size);
-
+	// device
+	if (IS_OPT_SET(FL_DEVICE)) {
+		sys_info->wifi_status = get_wifi_status();
+		sys_info->bt_status = get_bt_status();
+		sys_info->gps_status = get_gps_status();
+		sys_info->brightness_status = get_brightness_status();
+		sys_info->camera_status = get_camera_status();
+		sys_info->sound_status = get_sound_status();
+		sys_info->audio_status = get_audio_status();
+		sys_info->vibration_status = get_vibration_status();
+		sys_info->voltage_status = get_voltage_status();
+		sys_info->rssi_status = get_rssi_status();
+		sys_info->video_status = get_video_status();
+		sys_info->call_status = get_call_status();
+		sys_info->dnet_status = get_dnet_status();
+	}
 #else /* LOCALTEST */
+	// disk
+	if (IS_OPT_SET(FL_DISK)) {
+		sys_info->disk_read_size = 0x20;
+		sys_info->disk_write_size = 0x21;
+	}
 
-/* 	static float freq[4] = {1.1, 2.2, 3.3, 4.4}; */
-/* 	static struct thread_info_t th_load[1] = {{0x111, 10.6}}; */
-/* 	static struct process_info_t pr_load[1] = {{0x222, 20.7}}; */
+	// network
+	if (IS_OPT_SET(FL_NETWORK)) {
+		sys_info->network_send_size = 0x22;
+		sys_info->network_receive_size = 0x23;
+	}
 
-	sys_info->energy = 1;
-	sys_info->wifi_status = 2;
-	sys_info->bt_status = 3;
-	sys_info->gps_status = 4;
-	sys_info->brightness_status = 5;
-	sys_info->camera_status = 6;
-	sys_info->sound_status = 7;
-	sys_info->audio_status = 8;
-	sys_info->vibration_status = 9;
-	sys_info->voltage_status = 0xa;
-	sys_info->rssi_status = 0xb;
-	sys_info->video_status = 0xc;
-	sys_info->call_status = 0xd;
-	sys_info->dnet_status = 0xe;
-
-	sys_info->total_alloc_size = get_total_alloc_size();
-
-	sys_info->system_memory_total = sysmemtotal;
-	sys_info->system_memory_used = sysmemused;
-	sys_info->total_used_drive = get_total_used_drive();
-
-	sys_info->disk_read_size = 0x20;
-	sys_info->disk_write_size = 0x21;
-	sys_info->network_send_size = 0x22;
-	sys_info->network_receive_size = 0x23;
+	// device
+	if (IS_OPT_SET(FL_DEVICE)) {
+		sys_info->wifi_status = 2;
+		sys_info->bt_status = 3;
+		sys_info->gps_status = 4;
+		sys_info->brightness_status = 5;
+		sys_info->camera_status = 6;
+		sys_info->sound_status = 7;
+		sys_info->audio_status = 8;
+		sys_info->vibration_status = 9;
+		sys_info->voltage_status = 0xa;
+		sys_info->rssi_status = 0xb;
+		sys_info->video_status = 0xc;
+		sys_info->call_status = 0xd;
+		sys_info->dnet_status = 0xe;
+	}
 #endif /* LOCALTEST */
+	// energy
+	if (IS_OPT_SET(FL_ENERGY))
+		sys_info->energy = 0; // not implemented
 
 #ifdef THREAD_SAMPLING_DEBUG
 	print_sys_info(sys_info);
@@ -2611,27 +2615,41 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	pack_float(p, sys_info->app_cpu_usage);
 
 	for (i = 0; i < num_of_cpu; i++) {
-		pack_float(p, sys_info->cpu_frequency[i]); //FIXME wrong pack float define
+		if (sys_info->cpu_frequency)
+			pack_float(p, sys_info->cpu_frequency[i]);
+		else
+			pack_float(p, 0.0);
 	}
 
 	for (i = 0; i < num_of_cpu; i++) {
-		pack_float(p, sys_info->cpu_load[i]); //FIXME wrong pack float define
+		if (sys_info->cpu_load)
+			pack_float(p, sys_info->cpu_load[i]);
+		else
+			pack_float(p, 0.0);
 	}
 
 	// thread
 	pack_int(p, sys_info->count_of_threads);
-	for (i = 0; i < sys_info->count_of_threads; i++)
-	{
-		pack_int(p, sys_info->thread_load[i].pid); //FIXME wrong pack float define
-		pack_float(p, sys_info->thread_load[i].load); //FIXME wrong pack float define
+	for (i = 0; i < sys_info->count_of_threads; i++) {
+		if (sys_info->thread_load) {
+			pack_int(p, sys_info->thread_load[i].pid);
+			pack_float(p, sys_info->thread_load[i].load);
+		} else {
+			pack_int(p, 0);
+			pack_float(p, 0.0);
+		}
 	}
 
 	// process
 	pack_int(p, sys_info->count_of_processes);
-	for (i = 0; i < sys_info->count_of_processes; i++)
-	{
-		pack_int(p, sys_info->process_load[i].id); //FIXME wrong pack float define
-		pack_float(p, sys_info->process_load[i].load); //FIXME wrong pack float define
+	for (i = 0; i < sys_info->count_of_processes; i++) {
+		if (sys_info->process_load) {
+			pack_int(p, sys_info->process_load[i].id);
+			pack_float(p, sys_info->process_load[i].load);
+		} else {
+			pack_int(p, 0);
+			pack_float(p, 0.0);
+		}
 	}
 
 	pack_int(p, sys_info->virtual_memory);

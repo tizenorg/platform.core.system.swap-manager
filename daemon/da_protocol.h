@@ -104,28 +104,44 @@ enum ErrorCode{
 };
 
 enum feature_code{
-	FL_CPU									=0x0001, //CPU core load, frequency, process load
-	FL_MEMORY								=0x0002, //Process size(VSS, PSS. RSS), heap usage(application, library), physical memory in use
-	FL_FUNCTION_PROFILING					=0x0004, //On/Off the UserSpaceInst
-	FL_MEMORY_ALLCATION_PROBING				=0x0008, //memory allocation API (glibc)
-	FL_FILE_API_PROBING						=0x0010, //file API (glibc, OSP)
-	FL_THREAD_API_PROBING					=0x0020, //thread API (glibc, OSP)
-	FL_OSP_UI_API_PROBING					=0x0040, //UI API (OSP)
-	FL_SCREENSHOT							=0x0080, //Screenshot
-	FL_USER_EVENT							=0x0100, //events of Touch, Gesture, Orientation, Key
-	FL_RECORDING							=0x0200, //recording the user event
-	FL_SYSTCALL_FILE						=0x0400, //File operation syscalls tracing
-	FL_SYSTCALL_IPC							=0x0800, //IPC syscall tracing
-	FL_SYSTCALL_PROCESS						=0x1000, //Process syscalls tracing
-	FL_SYSTCALL_SIGNAL						=0x2000, //Signal syscalls tracing
-	FL_SYSTCALL_NETWORK						=0x4000, //Network syscalls tracing
-	FL_SYSTCALL_DESC						=0x8000, //Descriptor syscalls tracing
-	FL_CONTEXT_SWITCH						=0x10000,//Context switch tracing
-	FL_NETWORK_API_PROBING					=0x20000,//network API (glibc, OSP, libsoap, openssl)
-	FL_OPENGL_API_PROBING					=0x40000 //openGL API
+	FL_RESERVED0                = 0x0000001,
+	FL_RESERVED1                = 0x0000002,
+	FL_FUNCTION_PROFILING       = 0x0000004, //On/Off the UserSpaceInst
+	FL_MEMORY_ALLCATION_PROBING = 0x0000008, //memory allocation API (glibc)
+	FL_FILE_API_PROBING         = 0x0000010, //file API (glibc, OSP)
+	FL_THREAD_API_PROBING       = 0x0000020, //thread API (glibc, OSP)
+	FL_OSP_UI_API_PROBING       = 0x0000040, //UI API (OSP)
+	FL_SCREENSHOT               = 0x0000080, //Screenshot
+	FL_USER_EVENT               = 0x0000100, //events of Touch, Gesture, Orientation, Key
+	FL_RECORDING                = 0x0000200, //recording the user event
+	FL_SYSTCALL_FILE            = 0x0000400, //File operation syscalls tracing
+	FL_SYSTCALL_IPC             = 0x0000800, //IPC syscall tracing
+	FL_SYSTCALL_PROCESS         = 0x0001000, //Process syscalls tracing
+	FL_SYSTCALL_SIGNAL          = 0x0002000, //Signal syscalls tracing
+	FL_SYSTCALL_NETWORK         = 0x0004000, //Network syscalls tracing
+	FL_SYSTCALL_DESC            = 0x0008000, //Descriptor syscalls tracing
+	FL_CONTEXT_SWITCH           = 0x0010000, //Context switch tracing
+	FL_NETWORK_API_PROBING      = 0x0020000, //network API (glibc, OSP, libsoap, openssl)
+	FL_OPENGL_API_PROBING       = 0x0040000, //openGL API
+	FL_CPU                      = 0x0100000, //CPU core load, frequency
+	FL_PROCESSES                = 0x0200000, //Process load
+	FL_MEMORY                   = 0x0400000, //Process size(VSS, PSS. RSS), heap usage(application, library), physical memory in use
+	FL_DISK                     = 0x0800000,
+	FL_NETWORK                  = 0x1000000,
+	FL_DEVICE                   = 0x2000000,
+	FL_ENERGY                   = 0x4000000,
+	FL_RESERVED2                = 0x8000000
 };
 #define IS_OPT_SET_IN(OPT, reg) (reg & (OPT))
 #define IS_OPT_SET(OPT) IS_OPT_SET_IN((OPT), prof_session.conf.use_features0)
+#define IS_SYSTEM_INFO_NEEDED() (					\
+		IS_OPT_SET(FL_CPU) ||					\
+		IS_OPT_SET(FL_PROCESSES) ||				\
+		IS_OPT_SET(FL_MEMORY) ||				\
+		IS_OPT_SET(FL_DISK) ||					\
+		IS_OPT_SET(FL_NETWORK) ||				\
+		IS_OPT_SET(FL_DEVICE) ||				\
+		IS_OPT_SET(FL_ENERGY))
 
 enum app_type{
 	AT_TIZEN	=0x01,
@@ -302,12 +318,42 @@ struct recorded_event_t{
 	uint32_t code;
 	uint32_t value;
 };
-#define pack_int(to,n) { *(typeof(n) *) to = n; to += sizeof(typeof(n));}
-#define pack_int64(to,n) { *(uint64_t *) to = n; to += sizeof(uint64_t);}
-#define pack_int32(to,n) { *(uint32_t *) to = n; to += sizeof(uint32_t);}
-#define pack_time(to,n) {pack_int32(to,n.tv_sec); pack_int32(to,n.tv_usec);}
-#define pack_float(to,n) { memcpy(to,&n,sizeof(float)); to += sizeof(float);}
-#define pack_str(to,n) { memcpy(to,n,strlen(n)+1); to += strlen(n)+1;}
+
+#define pack_int(to, n)					\
+	do {						\
+		*(typeof(n) *) to = n;			\
+		to += sizeof(typeof(n));		\
+	} while (0)
+
+#define pack_int64(to, n)					\
+	do {							\
+		*(uint64_t *)to = n;				\
+		to += sizeof(uint64_t);				\
+	} while (0)
+
+#define pack_int32(to, n)					\
+	do {							\
+		*(uint32_t *)to = n;				\
+		to += sizeof(uint32_t);				\
+	} while (0)
+
+#define pack_time(to, n)						\
+	do {								\
+		pack_int32(to, n.tv_sec);				\
+		pack_int32(to, n.tv_usec);				\
+	} while (0)
+
+#define pack_float(to, n)					\
+	do {							\
+		*(float *)to = n;				\
+		to += sizeof(float);				\
+	} while (0)
+
+#define pack_str(to, n)				\
+	do {					\
+		memcpy(to, n, strlen(n) + 1);	\
+		to += strlen(n) + 1;		\
+	} while (0)
 
 struct msg_data_t *pack_system_info(struct system_info_t *sys_info);
 int write_to_buf(struct msg_data_t *msg);
