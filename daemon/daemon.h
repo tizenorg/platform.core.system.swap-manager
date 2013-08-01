@@ -182,6 +182,18 @@ typedef struct
 
 typedef struct
 {
+	int brightness;
+	int video;
+	int voltage;
+	FILE *audio_status;
+	FILE *procstat;
+	FILE *procmeminfo;
+	FILE *networkstat;
+	FILE *diskstats;
+} __file_descriptors;
+
+typedef struct
+{
 	FILE *portfile;
 	int host_server_socket;
 	int target_server_socket;
@@ -196,6 +208,7 @@ typedef struct
 	int efd;
 	__da_host_info host;
 	__da_target_info target[MAX_TARGET_COUNT];
+	__file_descriptors fd;
 	char appPath[128]; // application executable path
 } __da_manager;
 

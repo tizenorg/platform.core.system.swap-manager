@@ -110,6 +110,34 @@ static uint64_t mem_slot_array[MEM_SLOT_MAX];
 static CPU_t* cpus = NULL;
 static unsigned long probe_so_size = 0;
 
+
+int get_file_status_no_open(int pfd, const char* filename)
+{
+	int status = 0;
+
+#ifndef LOCALTEST
+	if (likely(pfd != NULL))
+	{
+		if (unlikely(pfd < 0)) {
+			// open file first
+			return 0;
+		}
+
+		char buf[STATUS_STRING_MAX];
+
+
+		lseek(pfd, 0, SEEK_SET);	// rewind to start of file
+
+		// read from file
+		if (unlikely(read(pfd, buf, STATUS_STRING_MAX) == -1))
+			status =  -(errno)
+		else
+			status = atoi(buf);
+	}
+#endif
+
+	return status;
+}
 // daemon api : get status from file
 // pfd must not be null
 int get_file_status(int* pfd, const char* filename)
@@ -117,34 +145,22 @@ int get_file_status(int* pfd, const char* filename)
 	int status = 0;
 
 #ifndef LOCALTEST
-	if(likely(pfd != NULL))
+	if (likely(pfd != NULL))
 	{
-		char buf[STATUS_STRING_MAX];
-
-		if(unlikely(*pfd < 0))	// open file first
+		if (unlikely(*pfd < 0))	// open file first
 		{
 			*pfd = open(filename, O_RDONLY);
-			if(unlikely(*pfd == -1))
+			if (unlikely(*pfd == -1))
 			{
 				/* This file may absent in the system */
-/* 				LOGE("cannot open '%s': %s\n", filename, strerror(errno)); */
 				return 0;
 			}
 		}
 		else
 		{
-			lseek(*pfd, 0, SEEK_SET);	// rewind to start of file
+			status = get_file_status_no_open(*pfd,filename);
 		}
 
-		// read from file
-		if(unlikely(read(*pfd, buf, STATUS_STRING_MAX) == -1))
-		{
-			status =  -(errno);
-		}
-		else
-		{
-			status = atoi(buf);
-		}
 	}
 #endif
 
@@ -255,11 +271,8 @@ static int get_gps_status()
 	return gps_status;
 }
 
-static int get_brightness_status()
+static int init_brightness_status()
 {
-	static int brightnessfd = -1;
-	int brightness_status = 0;
-
 #ifndef LOCALTEST
 	#ifdef DEVICE_ONLY
 		DIR* dir_info;
@@ -279,7 +292,7 @@ static int get_brightness_status()
 					sprintf(fullpath,
 							BRIGHTNESS_PARENT_DIR "/%s/" BRIGHTNESS_FILENAME,
 							dir_entry->d_name);
-					brightness_status = get_file_status(&brightnessfd, fullpath);
+					get_file_status(&manager.fd.brightness, fullpath);
 				}
 			}
 			closedir(dir_info);
@@ -289,11 +302,14 @@ static int get_brightness_status()
 			// do nothing
 		}
 	#else
-		brightness_status = get_file_status(&brightnessfd, EMUL_BRIGHTNESSFD);
+		get_file_status(&maneger.fd.brightness, EMUL_BRIGHTNESSFD);
 	#endif
 #endif	// LOCALTEST
+}
 
-	return brightness_status;
+static int get_brightness_status()
+{
+	return get_file_status_no_open(manager.fd.brightness, EMUL_BRIGHTNESSFD);
 }
 
 static int get_max_brightness()
@@ -343,13 +359,21 @@ static int get_max_brightness()
 	return max_brightness;
 }
 
+static int init_video_status()
+{
+#ifndef LOCALTEST
+	get_file_status(&manager.fd.video, MFCFD);
+#endif
+
+
+}
+
 static int get_video_status()
 {
-	static int videofd = -1;
 	int video_status = 0;
 
 #ifndef LOCALTEST
-	video_status = get_file_status(&videofd, MFCFD);
+	video_status = get_file_status_no_open(manager.fd.video, MFCFD);
 	if (video_status > 1)
 		video_status = 0;
 #endif
@@ -536,6 +560,19 @@ static int get_sound_status()
 	return sound_status;
 }
 
+static void init_audio_status()
+{
+#ifndef LOCALTEST
+
+#ifdef DEVICE_ONLY
+	//first open
+	manager.fd.audio_status = fopen(AUDIOFD, "r");
+#endif
+
+#endif	// LOCALTEST
+
+}
+
 static int get_audio_status()
 {
 	int audio_state = 0;
@@ -546,17 +583,19 @@ static int get_audio_status()
 	int ret = 0;
 	char dev[40];
 	char state[3];
-	FILE *fp = NULL;
-
-	fp = fopen(AUDIOFD, "r");
-	if(fp == NULL){
-/* 		LOGE("cannot open '%s': %s\n", AUDIOFD, strerror(errno)); */
+	FILE *audio_status_fp = manager.fd.audio_status;
+	if (audio_status_fp == NULL){
+		//file is not open
 		return -1;
+	} else {
+//		fseek(audio_status_fp, 0, SEEK_SET);
+		rewind(audio_status_fp);
+		fflush(audio_status_fp);
 	}
 
 	while(ret != EOF)
 	{
-		ret = fscanf(fp, "%[^:] %*c %[^\n] ", dev, state);
+		ret = fscanf(audio_status_fp, "%[^:] %*c %[^\n] ", dev, state);
 		if(strncmp(dev,"SPKR",4) == 0 && strncmp(state, "On",2) == 0)
 		{
 			audio_state = 1;
@@ -568,7 +607,6 @@ static int get_audio_status()
 		}
 	}
 
-	fclose(fp);
 #endif
 
 #endif	// LOCALTEST
@@ -599,10 +637,14 @@ static int get_vibration_status()
 	return vibration_status;
 }
 
+static void init_voltage_status()
+{
+	get_file_status(&manager.fd.voltage, VOLTAGEFD);
+}
+
 static int get_voltage_status()
 {
-	static int voltagefd = -2;
-	return get_file_status(&voltagefd, VOLTAGEFD);
+	return get_file_status_no_open(manager.fd.voltage, VOLTAGEFD);
 }
 
 // =====================================================================
@@ -781,7 +823,6 @@ static int parse_proc_stat_file_bypid(char *path, proc_t* P)
 	fd = open(filename, O_RDONLY, 0);
 
 	if(unlikely(fd == -1)){
-/* 		LOGE("cannot open '%s' err:%s\n", filename, strerror(errno) ); */
 		return -1;
 	}
 
@@ -857,7 +898,6 @@ static int parse_proc_smaps_file_bypid(char *path, proc_t* P)
 	fp = fopen(filename, "r");
 
 	if(fp == NULL){
-/* 		LOGE("cannot open '%s' err:%s\n", filename, strerror(errno) ); */
 		return -1;
 	}
 
@@ -1059,7 +1099,6 @@ static int update_system_cpu_frequency(int cur_index)
 		else
 		{
 			/* This file may absent in the system */
-/* 			LOGE("cannot open '%s' err:%s\n", CPUNUM_OF_FREQ, strerror(errno) ); */
 		}
 
 		for(i = 0; i < num_of_cpu; i++)
@@ -1095,7 +1134,6 @@ static int update_system_cpu_frequency(int cur_index)
 		}
 		else	// cannot load cpu frequency information
 		{	// do nothing
-/* 			LOGE("cannot open '%s' err:%s\n", filename, strerror(errno) ); */
 		}
 	}
 
@@ -1104,22 +1142,21 @@ static int update_system_cpu_frequency(int cur_index)
 
 // return 0 for normal case
 // return negative value for error
+static void init_system_cpu_data()
+{
+	manager.fd.procstat = fopen(PROCSTAT, "r");
+}
+
 static int update_system_cpu_data(int cur_index)
 {
 /* 	LOGI(">\n"); */
 
-	static FILE* fp = NULL;
+	FILE* fp = manager.fd.procstat;
 	int num;
 	char buf[BUFFER_MAX];
 
 	if(fp == NULL)
-	{
-		if((fp = fopen(PROCSTAT, "r")) == NULL)
-		{
-			LOGE("Failed to open " PROCSTAT "\n");
-			return -1;
-		}
-	}
+		return -1;
 
 	rewind(fp);
 	fflush(fp);
@@ -1127,8 +1164,6 @@ static int update_system_cpu_data(int cur_index)
 	if(fgets(buf, sizeof(buf), fp) == NULL)
 	{
 		LOGE("Failed to read first line of " PROCSTAT "\n");
-//		fclose(fp);
-/* 		LOGI("< -1"); */
 		return -1;
 	}
 
@@ -1151,8 +1186,6 @@ static int update_system_cpu_data(int cur_index)
 	if(num < 4)
 	{
 		LOGE("Failed to read from " PROCSTAT "\n");
-//		fclose(fp);
-/* 		LOGI("< -1"); */
 		return -1;
 	}
 
@@ -1198,21 +1231,22 @@ static int update_system_cpu_data(int cur_index)
 	else
 	{
 		// not possible
-//		fclose(fp);
-/* 		LOGI("< -1"); */
 		return -1;
 	}
 #endif
-/* 	LOGI("<0"); */
-//	fclose(fp);
 	return 0;
 }
 
 // return 0 for normal case
 // return negative value for error
+static void init_update_system_memory_data()
+{
+	manager.fd.procmeminfo = open(PROCMEMINFO, O_RDONLY);
+}
+
 static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 {
-	int meminfo_fd = -1;
+	int meminfo_fd = manager.fd.procmeminfo;
 	char *head, *tail;
 	int i, num;
 	char buf[BUFFER_MAX];
@@ -1224,16 +1258,13 @@ static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 	};
 	const int mem_table_size = sizeof(mem_table) / sizeof(mem_t);
 
-	if((meminfo_fd = open(PROCMEMINFO, O_RDONLY)) == -1)
-	{
-		LOGE("Failed to open " PROCMEMINFO "\n");
+	if (meminfo_fd == -1)
 		return -1;
-	}
-	/* lseek(meminfo_fd, 0L, SEEK_SET); */
+
+	lseek(meminfo_fd, 0L, SEEK_SET);
 	if((num = read(meminfo_fd, buf, BUFFER_MAX)) < 0)
 	{
 		LOGE("Failed to read from " PROCMEMINFO "\n");
-		close(meminfo_fd);
 		return -1;
 	}
 	buf[num] = '\0';
@@ -1279,13 +1310,11 @@ static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 
 		*memtotal *= 1024;	// change to Byte
 		*memused *= 1024;	// change to Byte
-		close(meminfo_fd);
 		return 0;
 	}
 	else
 	{
 		LOGE("Cannot find all neccessary element in meminfo\n");
-		close(meminfo_fd);
 		return -1;
 	}
 }
@@ -1296,26 +1325,24 @@ static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 //static
 unsigned long get_system_total_memory()
 {
-	int meminfo_fd = -1;
+	int meminfo_fd = manager.fd.procmeminfo;
 	char *head, *tail;
 	int num;
 	char buf[BUFFER_MAX];
 	static const char* memtotalstr = "MemTotal";
 	unsigned long totalmem = 0;
 
-	if((meminfo_fd = open(PROCMEMINFO, O_RDONLY)) == -1)
-	{
-		LOGE("Failed to open " PROCMEMINFO "\n");
+	if (meminfo_fd == -1)
 		return 0;
-	}
+
+	lseek(meminfo_fd, 0L, SEEK_SET);
+
 	if((num = read(meminfo_fd, buf, BUFFER_MAX)) < 0)
 	{
 		LOGE("Failed to read from " PROCMEMINFO "\n");
-		close(meminfo_fd);
 		return 0;
 	}
 	buf[num] = '\0';
-	close(meminfo_fd);
 
 	head = buf;
 	for( ; ; )
@@ -1663,7 +1690,7 @@ int get_camera_count()
 
 		fclose(fp);
 	} else {
-/* 		LOGE("cannot open '%s' err:%s\n", CAMCORDER_FILE, strerror(errno) ); */
+		//can not open file
 	}
 
 	return count;
@@ -2104,11 +2131,21 @@ static void skip_tokens(FILE * fp, unsigned int count)
 		fscanf(fp, "%*s");
 }
 
+static void init_network_stat()
+{
+	manager.fd.networkstat = fopen("/proc/net/dev", "r");
+}
+
 static void get_network_stat(uint32_t * recv, uint32_t * send)
 {
-	FILE *fp = fopen("/proc/net/dev", "r");
+	FILE *fp = manager.fd.networkstat;
 	uintmax_t irecv, isend;
 	char ifname[64];
+	if (fp == NULL)
+		return;
+
+	rewind(fp);
+	fflush(fp);
 
 	*recv = *send = 0;
 	skip_lines(fp, 2);	/* strip header */
@@ -2125,13 +2162,17 @@ static void get_network_stat(uint32_t * recv, uint32_t * send)
 			*send += isend;
 		} else
 			skip_tokens(fp, 16);
-	fclose(fp);
 }
 
 //function return partition sector size
 // returns
 //  0 if error
 //  <size> if no errors
+static init_disk_stat()
+{
+	manager.fd.diskstats =  fopen("/proc/diskstats", "r");
+}
+
 static int get_partition_sector_size(const char * partition_name)
 {
 	int sec_size = 0;
@@ -2160,8 +2201,16 @@ static void get_disk_stat(uint32_t * read, uint32_t * write)
 {
 	int sec_size = 0;
 	enum { partition_name_maxlength = 128 };
-	FILE *fp = fopen("/proc/diskstats", "r");
+	FILE *fp = manager.fd.diskstats;
 	char master_partition[partition_name_maxlength] = { 0 };
+
+	if (fp == NULL){
+		*read = *write = 0;
+		return;
+	}
+
+	rewind(fp);
+	fflush(fp);
 
 	*read = *write = 0;
 	while (!feof(fp)) {
@@ -2204,7 +2253,6 @@ static void get_disk_stat(uint32_t * read, uint32_t * write)
 		}
 	}
 
-	fclose(fp);
 
 }
 
@@ -2303,8 +2351,8 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 		LOGE("Failed to fill processes info\n");
 		goto fail_exit;
 	}
-	// calculate thread load
 
+	// calculate thread load
 	if (fill_system_threads_info(factor, sys_info) < 0)
 	{
 		LOGE("Failed to fill threads info\n");
@@ -2386,12 +2434,14 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 #endif
 
 	event_num++;
+	LOGI_th_samp("exit\n");
 	return res;
 
 fail_exit:
 	//some data corrupted
 	//free allocated data
 	reset_system_info(sys_info);
+	LOGI_th_samp("fail exit\n");
 	return -1;
 }
 
@@ -2444,8 +2494,61 @@ int finalize_system_info()
 
 }
 
+void test_and_close(int fd)
+{
+	if (fd != 0)
+		close(fd);
+}
 
+void ftest_and_close(FILE *fd)
+{
+	if (fd != NULL)
+		fclose(fd);
+}
 
+void close_system_file_descriptors()
+{
+	test_and_close(manager.fd.brightness);
+	test_and_close(manager.fd.video);
+	test_and_close(manager.fd.voltage);
+
+	ftest_and_close(manager.fd.audio_status);
+	ftest_and_close(manager.fd.procstat);
+	ftest_and_close(manager.fd.procmeminfo);
+	ftest_and_close(manager.fd.networkstat);
+	ftest_and_close(manager.fd.diskstats);
+}
+
+int init_system_file_descriptors()
+{
+	//inits
+	init_brightness_status();
+	init_video_status();
+	init_voltage_status();
+	init_audio_status();
+	init_system_cpu_data();
+	init_update_system_memory_data();
+	init_network_stat();
+	init_disk_stat();
+
+	if (manager.fd.brightness < 0)
+		LOGE("brightness file not found\n");
+	if (manager.fd.video < 0)
+		LOGE("video file not found\n");
+	if (manager.fd.voltage < 0)
+		LOGE("voltage file not found\n");
+	if (manager.fd.audio_status < 0)
+		LOGE("audio file not found\n");
+	if (manager.fd.procstat < 0)
+		LOGE("procstat file not found\n");
+	if (manager.fd.procmeminfo < 0)
+		LOGE("procmeminfo file not found\n");
+	if (manager.fd.networkstat < 0)
+		LOGE("networkstat file not found\n");
+	if (manager.fd.diskstats < 0)
+		LOGE("difostat file not found\n");
+	return 0;
+}
 
 //CMD SOCKET FUNCTIONS
 int fill_target_info(struct target_info_t *target_info)

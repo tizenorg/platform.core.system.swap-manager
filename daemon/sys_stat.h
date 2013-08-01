@@ -161,6 +161,7 @@ int finalize_system_info();
 
 int fill_target_info(struct target_info_t *target_info);
 
+int init_system_file_descriptors();
 #ifdef __cplusplus
 }
 #endif

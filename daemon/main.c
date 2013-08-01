@@ -84,7 +84,16 @@ __da_manager manager =
 	.target = {
 		{0L, },
 	},
-
+	.fd = {
+		.brightness = -1,
+		.video = -1,
+		.voltage = -1,
+		.audio_status = NULL,
+		.procstat = NULL,
+		.procmeminfo = NULL,
+		.networkstat = NULL,
+		.diskstats = NULL
+	},
 	.appPath = {0, }
 
 	};

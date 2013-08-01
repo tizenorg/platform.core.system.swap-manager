@@ -938,6 +938,10 @@ int daemonLoop()
 		return_value = -1;
 		goto END_EFD;
 	}
+
+	//init all file descriptors
+	init_system_file_descriptors();
+
 	// handler loop
 	while (1) {
 		int i, k;
@@ -1109,5 +1113,6 @@ END_EFD:
 	close(manager.efd);
 END_EVENT:
 	free(events);
+	close_system_file_descriptors();
 	return return_value;
 }

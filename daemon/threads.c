@@ -318,6 +318,7 @@ void* samplingThread(void* data)
 		}
 	}
 
+	close_system_file_descriptors();
 	LOGI("sampling thread ended\n");
 	return NULL;
 }
