@@ -302,7 +302,7 @@ static int init_brightness_status()
 			// do nothing
 		}
 	#else
-		get_file_status(&maneger.fd.brightness, EMUL_BRIGHTNESSFD);
+		get_file_status(&manager.fd.brightness, EMUL_BRIGHTNESSFD);
 	#endif
 #endif	// LOCALTEST
 }
