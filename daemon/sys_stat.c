@@ -1703,27 +1703,26 @@ static int get_device_network_type(char* buf, int buflen)
 	bool bool_var;
 
 	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.cdma", &bool_var);
-	if(bool_var) len += sprintf(buf + len, ",CDMA");
+	if(bool_var) len += sprintf(buf + len, "CDMA,");
 	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.edge", &bool_var);
-	if(bool_var) len += sprintf(buf + len, ",EDGE");
+	if(bool_var) len += sprintf(buf + len, "EDGE,");
 	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.gprs", &bool_var);
-	if(bool_var) len += sprintf(buf + len, ",GPRS");
+	if(bool_var) len += sprintf(buf + len, "GPRS,");
 	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.gsm", &bool_var);
-	if(bool_var) len += sprintf(buf + len, ",GSM");
+	if(bool_var) len += sprintf(buf + len, "GSM,");
 	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.hsdpa", &bool_var);
-	if(bool_var) len += sprintf(buf + len, ",HSDPA");
+	if(bool_var) len += sprintf(buf + len, "HSDPA,");
 	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.hspa", &bool_var);
-	if(bool_var) len += sprintf(buf + len, ",HSPA");
+	if(bool_var) len += sprintf(buf + len, "HSPA,");
 	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.hsupa", &bool_var);
-	if(bool_var) len += sprintf(buf + len, ",HSUPA");
+	if(bool_var) len += sprintf(buf + len, "HSUPA,");
 	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.umts", &bool_var);
-	if(bool_var) len += sprintf(buf + len, ",UMTS");
+	if(bool_var) len += sprintf(buf + len, "UMTS,");
 	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.lte", &bool_var);
-	if(bool_var) len += sprintf(buf + len, ",LTE");
+	if(bool_var) len += sprintf(buf + len, "LTE,");
 
 	if (len != 0) {
-		memcpy(p, p + 1, len + 1);
-		len--;
+		buf[--len] = 0;
 	}
 	return len;
 }
