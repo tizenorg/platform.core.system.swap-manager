@@ -88,9 +88,9 @@ __da_manager manager =
 		.brightness = -1,
 		.video = -1,
 		.voltage = -1,
+		.procmeminfo = -1,
 		.audio_status = NULL,
 		.procstat = NULL,
-		.procmeminfo = NULL,
 		.networkstat = NULL,
 		.diskstats = NULL
 	},

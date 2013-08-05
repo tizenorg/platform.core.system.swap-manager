@@ -1699,10 +1699,11 @@ int get_camera_count()
 static int get_device_network_type(char* buf, int buflen)
 {
 	int len = 0;
+	char *p = buf;
 	bool bool_var;
 
 	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.cdma", &bool_var);
-	if(bool_var) len += sprintf(buf + len, "CDMA");
+	if(bool_var) len += sprintf(buf + len, ",CDMA");
 	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.edge", &bool_var);
 	if(bool_var) len += sprintf(buf + len, ",EDGE");
 	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.gprs", &bool_var);
@@ -1720,6 +1721,10 @@ static int get_device_network_type(char* buf, int buflen)
 	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.lte", &bool_var);
 	if(bool_var) len += sprintf(buf + len, ",LTE");
 
+	if (len != 0) {
+		memcpy(p, p + 1, len + 1);
+		len--;
+	}
 	return len;
 }
 
@@ -2498,27 +2503,33 @@ int finalize_system_info()
 
 }
 
-void test_and_close(int fd)
+inline void tac(int fd)
 {
-	if (fd != 0)
+	if (fd > 0)
 		close(fd);
+	fd = -1;
 }
 
-void ftest_and_close(FILE *fd)
+inline void ftac(FILE *fd)
 {
 	if (fd != NULL)
 		fclose(fd);
+	fd = NULL;
 }
 
+#define strr(x) #x
+#define str(x) strr(x)
+#define test_and_close(fd) do {LOGI("CLOSE " str(fd) "\n");tac(fd);} while(0)
+#define ftest_and_close(fd) do {LOGI("CLOSE " str(fd) "\n");ftac(fd);} while(0)
 void close_system_file_descriptors()
 {
 	test_and_close(manager.fd.brightness);
 	test_and_close(manager.fd.video);
 	test_and_close(manager.fd.voltage);
+	test_and_close(manager.fd.procmeminfo);
 
 	ftest_and_close(manager.fd.audio_status);
 	ftest_and_close(manager.fd.procstat);
-	ftest_and_close(manager.fd.procmeminfo);
 	ftest_and_close(manager.fd.networkstat);
 	ftest_and_close(manager.fd.diskstats);
 }
@@ -2529,9 +2540,9 @@ int init_system_file_descriptors()
 	init_brightness_status();
 	init_video_status();
 	init_voltage_status();
+	init_update_system_memory_data();
 	init_audio_status();
 	init_system_cpu_data();
-	init_update_system_memory_data();
 	init_network_stat();
 	init_disk_stat();
 
@@ -2541,16 +2552,16 @@ int init_system_file_descriptors()
 		LOGE("video file not found\n");
 	if (manager.fd.voltage < 0)
 		LOGE("voltage file not found\n");
-	if (manager.fd.audio_status < 0)
-		LOGE("audio file not found\n");
-	if (manager.fd.procstat < 0)
-		LOGE("procstat file not found\n");
 	if (manager.fd.procmeminfo < 0)
 		LOGE("procmeminfo file not found\n");
-	if (manager.fd.networkstat < 0)
+	if (manager.fd.audio_status == NULL)
+		LOGE("audio file not found\n");
+	if (manager.fd.procstat == NULL)
+		LOGE("procstat file not found\n");
+	if (manager.fd.networkstat == NULL)
 		LOGE("networkstat file not found\n");
-	if (manager.fd.diskstats < 0)
-		LOGE("difostat file not found\n");
+	if (manager.fd.diskstats == NULL)
+		LOGE("diskstat file not found\n");
 	return 0;
 }
 
@@ -2563,7 +2574,7 @@ int fill_target_info(struct target_info_t *target_info)
 	target_info->gps_supp = 0;
 	target_info->wifi_supp = 0;
 	target_info->camera_count = 0;
-	target_info->network_type = 0;
+	target_info->network_type[0] = 0;
 
 	target_info->sys_mem_size = get_system_total_memory();
 	target_info->storage_size = stat_get_storageinfo(FSINFO_TYPE_TOTAL) *
@@ -2581,7 +2592,8 @@ int fill_target_info(struct target_info_t *target_info)
 				   (_Bool *)&target_info->wifi_supp);
 
 	target_info->camera_count = get_camera_count();
-	get_device_network_type(target_info->network_type, 128);
+
+	get_device_network_type(target_info->network_type, NWTYPE_SIZE);
 
 
 #endif /* LOCALTEST */

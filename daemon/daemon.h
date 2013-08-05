@@ -185,9 +185,9 @@ typedef struct
 	int brightness;
 	int video;
 	int voltage;
+	int procmeminfo;
 	FILE *audio_status;
 	FILE *procstat;
-	FILE *procmeminfo;
 	FILE *networkstat;
 	FILE *diskstats;
 } __file_descriptors;

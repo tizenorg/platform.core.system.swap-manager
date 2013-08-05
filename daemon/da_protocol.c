@@ -692,7 +692,7 @@ static void reset_app_info(struct app_info_t *app_info)
 
 static void reset_target_info(struct target_info_t *target_info)
 {
-	free(target_info->network_type);
+	return;
 }
 
 static void reset_conf(struct conf_t *conf)
@@ -826,8 +826,8 @@ static struct msg_t *gen_target_info_reply(struct target_info_t *target_info)
 	p = msg->payload;
 
 	pack_int(p, ret_id);
-	pack_int(p, target_info->sys_mem_size);
-	pack_int(p, target_info->storage_size);
+	pack_int64(p, target_info->sys_mem_size);
+	pack_int64(p, target_info->storage_size);
 	pack_int(p, target_info->bluetooth_supp);
 	pack_int(p, target_info->gps_supp);
 	pack_int(p, target_info->wifi_supp);
@@ -843,6 +843,7 @@ static struct msg_t *gen_target_info_reply(struct target_info_t *target_info)
 
 static int send_reply(struct msg_t *msg)
 {
+	printBuf(msg, msg->len + sizeof (*msg));
 	if (send(manager.host.control_socket,
 		 msg, MSG_CMD_HDR_LEN + msg->len, MSG_NOSIGNAL) == -1) {
 		LOGE("Cannot send reply : %s\n", strerror(errno));
@@ -1090,6 +1091,7 @@ int host_message_handler(struct msg_t *msg)
 		fill_target_info(&target_info);
 		msg_reply = gen_target_info_reply(&target_info);
 		if (!msg_reply) {
+			LOGE("cannot generate reply message\n");
 			sendACKToHost(msg->id, ERR_UNKNOWN, 0, 0);
 			return -1;
 		}

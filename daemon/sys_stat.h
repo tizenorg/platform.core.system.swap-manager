@@ -76,6 +76,7 @@ extern "C" {
 #define FSINFO_TYPE_TOTAL			1
 #define FSINFO_TYPE_FREE			2
 
+#define NWTYPE_SIZE 128
 #define MAXNAMESIZE 16
 
 #include <stdint.h>
@@ -144,7 +145,7 @@ struct target_info_t {
 	uint32_t gps_supp;
 	uint32_t wifi_supp;
 	uint32_t camera_count;
-	char *network_type;
+	char network_type[NWTYPE_SIZE];
 	uint32_t max_brightness;
 	uint32_t cpu_core_count;
 };
