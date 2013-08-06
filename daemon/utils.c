@@ -517,12 +517,9 @@ void kill_app(const char* binary_path)
 	char command[PATH_MAX];
 
 	pkg_pid = find_pid_from_path(binary_path);
-	if(pkg_pid > 0)
-	{
+	if (pkg_pid > 0) {
 		sprintf(command, "kill -9 %d", pkg_pid);
 		system(command);
-	} else {
-		LOGW("cannot kill '%s' task not found\n", binary_path);
 	}
 }
 
