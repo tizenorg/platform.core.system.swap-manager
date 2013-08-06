@@ -2502,35 +2502,35 @@ int finalize_system_info()
 
 }
 
-inline void tac(int fd)
+static void test_and_close(int *fd)
 {
-	if (fd > 0)
-		close(fd);
-	fd = -1;
+	if (*fd > 0)
+		close(*fd);
+	*fd = -1;
 }
 
-inline void ftac(FILE *fd)
+static void ftest_and_close(FILE **fd)
 {
-	if (fd != NULL)
-		fclose(fd);
-	fd = NULL;
+	if (*fd != NULL)
+		fclose(*fd);
+	*fd = NULL;
 }
 
 #define strr(x) #x
 #define str(x) strr(x)
-#define test_and_close(fd) do {LOGI("CLOSE " str(fd) "\n");tac(fd);} while(0)
-#define ftest_and_close(fd) do {LOGI("CLOSE " str(fd) "\n");ftac(fd);} while(0)
+#define dtest_and_close(fd) do {LOGI("CLOSE " str(fd) "\n");test_and_close(fd);} while(0)
+#define dftest_and_close(fd) do {LOGI("CLOSE " str(fd) "\n");ftest_and_close(fd);} while(0)
 void close_system_file_descriptors()
 {
-	test_and_close(manager.fd.brightness);
-	test_and_close(manager.fd.video);
-	test_and_close(manager.fd.voltage);
-	test_and_close(manager.fd.procmeminfo);
+	dtest_and_close(&manager.fd.brightness);
+	dtest_and_close(&manager.fd.video);
+	dtest_and_close(&manager.fd.voltage);
+	dtest_and_close(&manager.fd.procmeminfo);
 
-	ftest_and_close(manager.fd.audio_status);
-	ftest_and_close(manager.fd.procstat);
-	ftest_and_close(manager.fd.networkstat);
-	ftest_and_close(manager.fd.diskstats);
+	dftest_and_close(&manager.fd.audio_status);
+	dftest_and_close(&manager.fd.procstat);
+	dftest_and_close(&manager.fd.networkstat);
+	dftest_and_close(&manager.fd.diskstats);
 }
 
 int init_system_file_descriptors()
