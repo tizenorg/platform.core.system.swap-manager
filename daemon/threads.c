@@ -271,13 +271,13 @@ void* samplingThread(void* data)
 				}
 
 				write_to_buf(msg);
-				flush_buf();
 
 				printBuf((char *)msg, MSG_DATA_HDR_LEN + msg->len);
 
 				free_msg_data(msg);
 				reset_system_info(&sys_info);
 			}
+			flush_buf();
 		}
 		else if(signo == SIGUSR1)
 		{
