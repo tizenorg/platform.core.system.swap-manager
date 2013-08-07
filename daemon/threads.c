@@ -48,6 +48,7 @@
 #include "da_data.h"
 #include "debug.h"
 #include "process_info.h"
+#include "buffer.h"
 
 static void* recvThread(void* data)
 {
