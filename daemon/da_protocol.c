@@ -416,8 +416,8 @@ static int parse_app_inst(struct msg_buf_t *msg,
 		return 0;
 	}
 
-	parse_deb(">=%04X : %s, %s, %d\n",
-	     app_inst->app_type, app_inst->app_id, app_inst->exec_path , num);
+	parse_deb(">=%04X : %s, %s\n",
+	     app_inst->app_type, app_inst->app_id, app_inst->exec_path);
 
 	if (!parse_lib_inst_list( msg, &app_inst->lib_num , &app_inst->us_lib_inst_list)) {
 		LOGE("libs parsing error\n");

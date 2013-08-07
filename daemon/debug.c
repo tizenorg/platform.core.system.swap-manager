@@ -32,13 +32,13 @@
 
 #ifdef DEB_PRINTBUF
 //TODO del it or move to debug section
-void printBuf (char * buf, int len)
+void print_buf (char * buf, int len, char *info)
 {
 	int i,j;
 	char local_buf[3*16 + 2*16 + 1 + 8];
 	char * p1, * p2;
 
-	LOGI("BUFFER [%d]:\n", len);
+	LOGI("BUFFER [%d] <%s>:\n", len, info);
 	for ( i = 0; i < len/16 + 1; i++)
 	{
 		memset(local_buf, ' ', 5*16 + 8);
@@ -65,7 +65,7 @@ void printBuf (char * buf, int len)
 	}
 }
 #else
-inline void printBuf (char * buf, int len){
+inline void print_buf (char * buf, int len, char *info){
 	return;
 }
 #endif

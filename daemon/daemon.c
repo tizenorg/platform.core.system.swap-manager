@@ -802,6 +802,7 @@ static int controlSocketHandler(int efd)
 			if (recv_len == -1)
 				return -11;
 		}
+		printBuf(msg, MSG_DATA_HDR_LEN + msg->len);
 		res = host_message_handler(msg);
 		free(msg);
 	}
