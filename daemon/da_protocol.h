@@ -306,8 +306,10 @@ struct system_info_t {
 	struct thread_info_t *thread_load;
 	uint32_t count_of_processes;
 	struct process_info_t *process_load;
-	uint32_t disk_read_size;
-	uint32_t disk_write_size;
+	uint32_t disk_reads;
+	uint32_t disk_sectors_read;
+	uint32_t disk_writes;
+	uint32_t disk_sectors_write;
 	uint32_t network_send_size;
 	uint32_t network_receive_size;
 };

@@ -114,9 +114,11 @@ int print_sys_info(struct system_info_t * sys_info)
 	thread_load (pointer)= 0x%X\n\
 	count_of_processes = %u\n\
 	process_load = 0x%X\n\
-	disk_read_size = 0x%X\n\
+	disk_reads = 0x%X\n\
 \
-	disk_write_size = 0x%X\n\
+	disk_sectors_read = 0x%X\n\
+	disk_writes = 0x%X\n\
+	disk_sectors_write = 0x%X\n\
 	network_send_size = 0x%X\n\
 	network_receive_size = 0x%X\n",
 
@@ -154,9 +156,11 @@ int print_sys_info(struct system_info_t * sys_info)
 	(unsigned int)sys_info->thread_load,
 	sys_info->count_of_processes,
 	(unsigned int)sys_info->process_load,
-	sys_info->disk_read_size,
+	sys_info->disk_reads,
 
-	sys_info->disk_write_size,
+	sys_info->disk_sectors_read,
+	sys_info->disk_writes,
+	sys_info->disk_sectors_write,
 	sys_info->network_send_size,
 	sys_info->network_receive_size
 	);

@@ -2212,25 +2212,28 @@ static int get_partition_sector_size(const char * partition_name)
 	return sec_size;
 }
 
-static void get_disk_stat(uint32_t * read, uint32_t * write)
+static void get_disk_stat(uint32_t *reads, uint32_t *sec_reads,
+						 uint32_t * writes, uint32_t *sec_writes)
 {
 	int sec_size = 0;
 	enum { partition_name_maxlength = 128 };
 	FILE *fp = manager.fd.diskstats;
 	char master_partition[partition_name_maxlength] = { 0 };
 
-	if (fp == NULL){
-		*read = *write = 0;
+	*reads = *writes = 0;
+	*sec_reads = *sec_writes = 0;
+
+	if (fp == NULL)
 		return;
-	}
+
 
 	rewind(fp);
 	fflush(fp);
 
-	*read = *write = 0;
 	while (!feof(fp)) {
 		char partition[partition_name_maxlength];
-		uintmax_t pread, pwrite;
+		uintmax_t preads, pwrites;
+		uintmax_t psec_read, psec_write;
 		skip_tokens(fp, 2);
 		fscanf(fp, "%s", partition);
 		if (*master_partition
@@ -2249,10 +2252,18 @@ static void get_disk_stat(uint32_t * read, uint32_t * write)
 				fclose(fp);
 				return;
 			}*/
-			skip_tokens(fp, 2);
-			fscanf(fp, "%" SCNuMAX, &pread);
-			skip_tokens(fp, 3);
-			fscanf(fp, "%" SCNuMAX, &pwrite);
+
+			//1
+			fscanf(fp, "%" SCNuMAX, &preads);
+			skip_tokens(fp, 1);
+			//3
+			fscanf(fp, "%" SCNuMAX, &psec_read);
+			skip_tokens(fp, 1);
+			//5
+			fscanf(fp, "%" SCNuMAX, &pwrites);
+			skip_tokens(fp, 1);
+			//7
+			fscanf(fp, "%" SCNuMAX, &psec_write);
 			skip_tokens(fp, 4);
 
 			memcpy(master_partition, partition,
@@ -2263,8 +2274,11 @@ static void get_disk_stat(uint32_t * read, uint32_t * write)
 			//*read += pread * sec_size;
 			//*write += pwrite * sec_size;
 
-			*read += pread;
-			*write += pwrite;
+			*reads += preads;
+			*writes += pwrites;
+
+			*sec_reads += psec_read;
+			*sec_writes += psec_write;
 		}
 	}
 
@@ -2389,8 +2403,10 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 	// disk
 	if (IS_OPT_SET(FL_DISK)) {
 		sys_info->total_used_drive = get_total_used_drive();
-		get_disk_stat(&sys_info->disk_read_size,
-			      &sys_info->disk_write_size);
+		get_disk_stat(&sys_info->disk_reads,
+			      &sys_info->disk_sectors_read,
+			      &sys_info->disk_writes,
+			      &sys_info->disk_sectors_write);
 	}
 
 	// network
@@ -2684,8 +2700,10 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	pack_int(p, sys_info->system_memory_total);
 	pack_int(p, sys_info->system_memory_used);
 
-	pack_int(p, sys_info->disk_read_size);
-	pack_int(p, sys_info->disk_write_size);
+	pack_int(p, sys_info->disk_reads);
+	pack_int(p, sys_info->disk_sectors_read);
+	pack_int(p, sys_info->disk_writes);
+	pack_int(p, sys_info->disk_sectors_write);
 
 	pack_int(p, sys_info->network_send_size);
 	pack_int(p, sys_info->network_receive_size);
