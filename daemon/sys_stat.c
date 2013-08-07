@@ -111,20 +111,18 @@ static CPU_t* cpus = NULL;
 static unsigned long probe_so_size = 0;
 
 
-int get_file_status_no_open(int pfd, const char* filename)
+int get_file_status_no_open(int pfd, const char *filename)
 {
 	int status = 0;
 
 #ifndef LOCALTEST
-	if (likely(pfd != NULL))
-	{
+	char buf[STATUS_STRING_MAX];
+
+	if (likely(pfd != NULL)) {
 		if (unlikely(pfd < 0)) {
-			// open file first
+			// file is not open
 			return 0;
 		}
-
-		char buf[STATUS_STRING_MAX];
-
 
 		lseek(pfd, 0, SEEK_SET);	// rewind to start of file
 
@@ -140,25 +138,25 @@ int get_file_status_no_open(int pfd, const char* filename)
 }
 // daemon api : get status from file
 // pfd must not be null
-int get_file_status(int* pfd, const char* filename)
+int get_file_status(int *pfd, const char *filename)
 {
 	int status = 0;
 
 #ifndef LOCALTEST
-	if (likely(pfd != NULL))
-	{
-		if (unlikely(*pfd < 0))	// open file first
-		{
+	if (likely(pfd != NULL)) {
+		//open if is not open
+		if (unlikely(*pfd < 0)) {
+			// open file first
 			*pfd = open(filename, O_RDONLY);
-			if (unlikely(*pfd == -1))
-			{
+			if (unlikely(*pfd == -1)) {
 				/* This file may absent in the system */
 				return 0;
 			}
 		}
-		else
-		{
-			status = get_file_status_no_open(*pfd,filename);
+
+		if (unlikely(*pfd < 0)) {
+			//file is open. lets read
+			status = get_file_status_no_open(*pfd, filename);
 		}
 
 	}

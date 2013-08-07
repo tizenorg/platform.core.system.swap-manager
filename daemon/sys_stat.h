@@ -47,8 +47,6 @@ extern "C" {
 #define EMUL_BRIGHTNESSFD			"/sys/class/backlight/emulator/brightness"
 #define EMUL_MAX_BRIGHTNESSFD		"/sys/class/backlight/emulator/max_brightness"
 
-
-//#define AUDIOFD						"/sys/devices/platform/soc-audio/dapm_widget"
 #define AUDIOFD						"/sys/devices/platform/soc-audio/WM1811 Voice/dapm_widget"
 
 #define MFCFD						"/sys/devices/platform/s3c-mfc/mfc/mfc_status"
