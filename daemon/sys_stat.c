@@ -2179,15 +2179,15 @@ static void get_network_stat(uint32_t * recv, uint32_t * send)
 			skip_tokens(fp, 16);
 }
 
+static void init_disk_stat(void)
+{
+	manager.fd.diskstats = fopen("/proc/diskstats", "r");
+}
+
 //function return partition sector size
 // returns
 //  0 if error
 //  <size> if no errors
-static init_disk_stat()
-{
-	manager.fd.diskstats =  fopen("/proc/diskstats", "r");
-}
-
 static int get_partition_sector_size(const char * partition_name)
 {
 	int sec_size = 0;
