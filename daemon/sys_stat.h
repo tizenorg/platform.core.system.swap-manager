@@ -49,7 +49,7 @@ extern "C" {
 
 #define AUDIOFD						"/sys/devices/platform/soc-audio/WM1811 Voice/dapm_widget"
 
-#define MFCFD						"/sys/devices/platform/s3c-mfc/mfc/mfc_status"
+#define MFCFD						"/sys/devices/platform/samsung-pd.0/power/runtime_status"
 
 #define FREQFD						"/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq"
 

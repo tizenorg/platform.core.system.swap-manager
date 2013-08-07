@@ -357,13 +357,11 @@ static int get_max_brightness()
 	return max_brightness;
 }
 
-static int init_video_status()
+static void init_video_status()
 {
 #ifndef LOCALTEST
-	get_file_status(&manager.fd.video, MFCFD);
+	manager.fd.video = fopen(MFCFD, "r");
 #endif
-
-
 }
 
 static int get_video_status()
@@ -371,9 +369,24 @@ static int get_video_status()
 	int video_status = 0;
 
 #ifndef LOCALTEST
-	video_status = get_file_status_no_open(manager.fd.video, MFCFD);
-	if (video_status > 1)
-		video_status = 0;
+	int ret;
+	FILE *video_fp = manager.fd.video;
+	char stat[256];
+
+	if (video_fp == NULL){
+		//file is not open
+		return -1;
+	}
+
+	rewind(video_fp);
+	fflush(video_fp);
+
+	ret = fscanf(video_fp, "%s", stat);
+
+	if (ret != EOF)
+		if(strncmp(stat,"active",6) == 0)
+			video_status = 1;
+
 #endif
 
 	return video_status;
@@ -2521,10 +2534,10 @@ static void ftest_and_close(FILE **fd)
 void close_system_file_descriptors()
 {
 	dtest_and_close(&manager.fd.brightness);
-	dtest_and_close(&manager.fd.video);
 	dtest_and_close(&manager.fd.voltage);
 	dtest_and_close(&manager.fd.procmeminfo);
 
+	dftest_and_close(&manager.fd.video);
 	dftest_and_close(&manager.fd.audio_status);
 	dftest_and_close(&manager.fd.procstat);
 	dftest_and_close(&manager.fd.networkstat);
@@ -2535,9 +2548,10 @@ int init_system_file_descriptors()
 {
 	//inits
 	init_brightness_status();
-	init_video_status();
 	init_voltage_status();
 	init_update_system_memory_data();
+
+	init_video_status();
 	init_audio_status();
 	init_system_cpu_data();
 	init_network_stat();
@@ -2545,12 +2559,13 @@ int init_system_file_descriptors()
 
 	if (manager.fd.brightness < 0)
 		LOGE("brightness file not found\n");
-	if (manager.fd.video < 0)
-		LOGE("video file not found\n");
 	if (manager.fd.voltage < 0)
 		LOGE("voltage file not found\n");
 	if (manager.fd.procmeminfo < 0)
 		LOGE("procmeminfo file not found\n");
+
+	if (manager.fd.video == NULL)
+		LOGE("video file not found\n");
 	if (manager.fd.audio_status == NULL)
 		LOGE("audio file not found\n");
 	if (manager.fd.procstat == NULL)

@@ -86,9 +86,9 @@ __da_manager manager =
 	},
 	.fd = {
 		.brightness = -1,
-		.video = -1,
 		.voltage = -1,
 		.procmeminfo = -1,
+		.video = NULL,
 		.audio_status = NULL,
 		.procstat = NULL,
 		.networkstat = NULL,
