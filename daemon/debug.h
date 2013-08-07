@@ -56,7 +56,8 @@ extern "C" {
 #endif /*parse_on*/
 
 //PRINT BUFFER DEBUG
-void printBuf (char * buf, int len);
+#define printBuf(buf, len) print_buf(buf, len, __FUNCTION__)
+void print_buf (char * buf, int len, char *info);
 
 //THREAD SAMPLING DEBUG
 #ifdef THREAD_SAMPLING_DEBUG
