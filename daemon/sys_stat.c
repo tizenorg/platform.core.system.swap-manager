@@ -269,7 +269,7 @@ static int get_gps_status()
 	return gps_status;
 }
 
-static int init_brightness_status()
+static void init_brightness_status()
 {
 #ifndef LOCALTEST
 	#ifdef DEVICE_ONLY
