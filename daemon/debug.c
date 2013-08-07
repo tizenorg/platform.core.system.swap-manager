@@ -32,7 +32,7 @@
 
 #ifdef DEB_PRINTBUF
 //TODO del it or move to debug section
-void print_buf (char * buf, int len, char *info)
+void print_buf(char * buf, int len, const char *info)
 {
 	int i,j;
 	char local_buf[3*16 + 2*16 + 1 + 8];
@@ -65,7 +65,7 @@ void print_buf (char * buf, int len, char *info)
 	}
 }
 #else
-inline void print_buf (char * buf, int len, char *info){
+inline void print_buf(char * buf, int len, const char *info) {
 	return;
 }
 #endif

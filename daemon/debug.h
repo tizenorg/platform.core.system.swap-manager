@@ -57,7 +57,7 @@ extern "C" {
 
 //PRINT BUFFER DEBUG
 #define printBuf(buf, len) print_buf(buf, len, __FUNCTION__)
-void print_buf (char * buf, int len, char *info);
+void print_buf (char * buf, int len, const char *info);
 
 //THREAD SAMPLING DEBUG
 #ifdef THREAD_SAMPLING_DEBUG
