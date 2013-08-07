@@ -373,10 +373,8 @@ static int get_video_status()
 	FILE *video_fp = manager.fd.video;
 	char stat[256];
 
-	if (video_fp == NULL){
-		//file is not open
-		return -1;
-	}
+	if (video_fp == NULL) // file is not open
+		return 0;
 
 	rewind(video_fp);
 	fflush(video_fp);
