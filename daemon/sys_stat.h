@@ -77,6 +77,7 @@ extern "C" {
 #define NWTYPE_SIZE 128
 #define MAXNAMESIZE 16
 
+
 #include <stdint.h>
 #include "da_protocol.h"
 

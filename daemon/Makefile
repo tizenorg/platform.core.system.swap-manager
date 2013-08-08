@@ -28,6 +28,7 @@ DAEMON_SRCS =			\
 	threads.c		\
 	transfer_thread.c	\
 	utils.c			\
+	da_protocol_check.c
 
 DAEMON_OBJS = $(patsubst %.c,%.o, $(DAEMON_SRCS))
 

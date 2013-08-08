@@ -38,6 +38,7 @@
 #include <sys/sysinfo.h>
 
 #include "da_protocol.h"
+#include "da_protocol_check.h"
 #include "daemon.h"
 #include "sys_stat.h"
 #include "transfer_thread.h"
@@ -258,18 +259,22 @@ static int parse_int64(struct msg_buf_t *msg, uint64_t *val)
 static int parse_app_info(struct msg_buf_t *msg,
 			       struct app_info_t *app_info)
 {
-
+	//Application type
 	parse_deb("parse_app_info\n");
-	if (!parse_int32(msg, &app_info->app_type)){
-		LOGE("app type parsing error\n");
+	if (!parse_int32(msg, &app_info->app_type) ||
+		!check_app_type(app_info->app_type))
+	{
+		LOGE("app type error\n");
 		return 0;
 	}
-
-	if (!parse_string(msg, &app_info->app_id)){
+	//Application ID
+	if (!parse_string(msg, &app_info->app_id) ||
+		!check_app_id(app_info->app_type, app_info->app_id))
+	{
 		LOGE("app id parsing error\n");
 		return 0;
 	}
-
+	//Applicaion exe path
 	if (!parse_string(msg, &app_info->exe_path)) {
 		LOGE("app info parsing error\n");
 		return 0;
