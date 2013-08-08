@@ -81,8 +81,8 @@ void write_process_info(int pid, uint64_t starttime)
 	pclose(f);
 
 	if (starttime != 0) {
-		up_sec = starttime / 100;
-		up_nsec = starttime % 100 * 1000 * 1000 * 10;
+		up_sec = starttime / (1000 * 1000);
+		up_nsec = starttime % (1000 * 1000) * 1000;
 	} else {
 		//get system uptime
 		sprintf(buf, "%s", AWK_SYSTEM_UP_TIME);
