@@ -118,20 +118,18 @@ int get_file_status_no_open(int pfd, const char *filename)
 #ifndef LOCALTEST
 	char buf[STATUS_STRING_MAX];
 
-	if (likely(pfd != NULL)) {
-		if (unlikely(pfd < 0)) {
-			// file is not open
-			return 0;
-		}
-
-		lseek(pfd, 0, SEEK_SET);	// rewind to start of file
-
-		// read from file
-		if (unlikely(read(pfd, buf, STATUS_STRING_MAX) == -1))
-			status =  -(errno);
-		else
-			status = atoi(buf);
+	if (unlikely(pfd < 0)) {
+		// file is not open
+		return 0;
 	}
+
+	lseek(pfd, 0, SEEK_SET);	// rewind to start of file
+
+	// read from file
+	if (unlikely(read(pfd, buf, STATUS_STRING_MAX) == -1))
+		status =  -(errno);
+	else
+		status = atoi(buf);
 #endif
 
 	return status;
