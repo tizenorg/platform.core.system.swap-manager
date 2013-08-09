@@ -29,6 +29,7 @@
 
 #include <stdint.h>
 
+//application checking functions
 int check_app_type(uint32_t app_type)
 {
 	if ((app_type >= APP_INFO_TYPE_MIN) &&
@@ -68,3 +69,51 @@ int check_app_id (uint32_t app_type, char *app_id)
 	return res;
 }
 
+//config checking functions
+int check_conf_features (uint64_t feature0, uint64_t feature1)
+{
+	int res = 1;
+
+	feature0 &= ~(uint64_t)FL_ALL_FEATURES;
+
+	if (feature0 != 0) {
+		LOGE("wrong features0 0x%016llX mask %016llX\n", feature0, (uint64_t)FL_ALL_FEATURES);
+		res = 0;
+	}
+
+	feature1 &= ~(uint64_t)0;
+
+	if (feature1 != 0) {
+		LOGE("wrong features1 0x%016llX mask %016llX\n", feature1, (uint64_t)0);
+		res = 0;
+	}
+
+	return res;
+}
+
+
+int check_conf_systrace_period(uint32_t system_trace_period)
+{
+	int res = 1;
+	if ((system_trace_period<CONF_SYSTRACE_PERIOD_MIN) ||
+		(system_trace_period>CONF_SYSTRACE_PERIOD_MAX))
+	{
+		LOGE("wrong system trace period value %lu\n", system_trace_period);
+		res = 0;
+	}
+
+	return res;
+}
+
+int check_conf_datamsg_period(uint32_t data_message_period)
+{
+	int res = 1;
+	if ((data_message_period<CONF_DATA_MSG_PERIOD_MIN) ||
+		(data_message_period>CONF_DATA_MSG_PERIOD_MAX))
+	{
+		LOGE("wrong data message period value %lu\n", data_message_period);
+		res = 0;
+	}
+
+	return res;
+}

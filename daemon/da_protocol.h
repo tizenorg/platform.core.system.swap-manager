@@ -104,34 +104,42 @@ enum ErrorCode{
 };
 
 enum feature_code{
-	FL_RESERVED0                = 0x0000001,
-	FL_RESERVED1                = 0x0000002,
-	FL_FUNCTION_PROFILING       = 0x0000004, //On/Off the UserSpaceInst
-	FL_MEMORY_ALLCATION_PROBING = 0x0000008, //memory allocation API (glibc)
-	FL_FILE_API_PROBING         = 0x0000010, //file API (glibc, OSP)
-	FL_THREAD_API_PROBING       = 0x0000020, //thread API (glibc, OSP)
-	FL_OSP_UI_API_PROBING       = 0x0000040, //UI API (OSP)
-	FL_SCREENSHOT               = 0x0000080, //Screenshot
-	FL_USER_EVENT               = 0x0000100, //events of Touch, Gesture, Orientation, Key
-	FL_RECORDING                = 0x0000200, //recording the user event
-	FL_SYSTCALL_FILE            = 0x0000400, //File operation syscalls tracing
-	FL_SYSTCALL_IPC             = 0x0000800, //IPC syscall tracing
-	FL_SYSTCALL_PROCESS         = 0x0001000, //Process syscalls tracing
-	FL_SYSTCALL_SIGNAL          = 0x0002000, //Signal syscalls tracing
-	FL_SYSTCALL_NETWORK         = 0x0004000, //Network syscalls tracing
-	FL_SYSTCALL_DESC            = 0x0008000, //Descriptor syscalls tracing
-	FL_CONTEXT_SWITCH           = 0x0010000, //Context switch tracing
-	FL_NETWORK_API_PROBING      = 0x0020000, //network API (glibc, OSP, libsoap, openssl)
-	FL_OPENGL_API_PROBING       = 0x0040000, //openGL API
-	FL_CPU                      = 0x0100000, //CPU core load, frequency
-	FL_PROCESSES                = 0x0200000, //Process load
-	FL_MEMORY                   = 0x0400000, //Process size(VSS, PSS. RSS), heap usage(application, library), physical memory in use
-	FL_DISK                     = 0x0800000,
-	FL_NETWORK                  = 0x1000000,
-	FL_DEVICE                   = 0x2000000,
-	FL_ENERGY                   = 0x4000000,
-	FL_RESERVED2                = 0x8000000
+	FL_RESERVED1                = 0x00000001,
+	FL_RESERVED2                = 0x00000002,
+	FL_FUNCTION_PROFILING       = 0x00000004, //On/Off the UserSpaceInst
+	FL_MEMORY_ALLCATION_PROBING = 0x00000008, //memory allocation API (glibc)
+	FL_FILE_API_PROBING         = 0x00000010, //file API (glibc, OSP)
+	FL_THREAD_API_PROBING       = 0x00000020, //thread API (glibc, OSP)
+	FL_OSP_UI_API_PROBING       = 0x00000040, //UI API (OSP)
+	FL_SCREENSHOT               = 0x00000080, //Screenshot
+	FL_USER_EVENT               = 0x00000100, //events of Touch, Gesture, Orientation, Key
+	FL_RECORDING                = 0x00000200, //recording the user event
+	FL_SYSTCALL_FILE            = 0x00000400, //File operation syscalls tracing
+	FL_SYSTCALL_IPC             = 0x00000800, //IPC syscall tracing
+	FL_SYSTCALL_PROCESS         = 0x00001000, //Process syscalls tracing
+	FL_SYSTCALL_SIGNAL          = 0x00002000, //Signal syscalls tracing
+	FL_SYSTCALL_NETWORK         = 0x00004000, //Network syscalls tracing
+	FL_SYSTCALL_DESC            = 0x00008000, //Descriptor syscalls tracing
+	FL_CONTEXT_SWITCH           = 0x00010000, //Context switch tracing
+	FL_NETWORK_API_PROBING      = 0x00020000, //network API (glibc, OSP, libsoap, openssl)
+	FL_OPENGL_API_PROBING       = 0x00040000, //openGL API
+	FL_RESERVED3                = 0x00080000,
+	FL_CPU                      = 0x00100000, //CPU core load, frequency
+	FL_PROCESSES                = 0x00200000, //Process load
+	FL_MEMORY                   = 0x00400000, //Process size(VSS, PSS. RSS), heap usage(application, library), physical memory in use
+	FL_DISK                     = 0x00800000,
+	FL_NETWORK                  = 0x01000000,
+	FL_DEVICE                   = 0x02000000,
+	FL_ENERGY                   = 0x04000000,
+	FL_RESERVED4                = 0x08000000,
+
+	FL_ALL_FEATURES             = 0xFFFFFFFF &
+	                              (~FL_RESERVED1) &
+	                              (~FL_RESERVED2) &
+	                              (~FL_RESERVED3) &
+	                              (~FL_RESERVED4)
 };
+
 #define IS_OPT_SET_IN(OPT, reg) (reg & (OPT))
 #define IS_OPT_SET(OPT) IS_OPT_SET_IN((OPT), prof_session.conf.use_features0)
 #define IS_SYSTEM_INFO_NEEDED() (					\

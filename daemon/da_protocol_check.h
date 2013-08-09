@@ -31,5 +31,11 @@
 #define APP_INFO_TYPE_MIN 0x0001
 #define APP_INFO_TYPE_MAX 0x0003
 
+#define CONF_SYSTRACE_PERIOD_MIN 10
+#define CONF_SYSTRACE_PERIOD_MAX 1000
+
+#define CONF_DATA_MSG_PERIOD_MIN 10
+#define CONF_DATA_MSG_PERIOD_MAX 1000
 int check_app_type(uint32_t app_type);
 int check_app_id (uint32_t app_type, char *app_id);
+int check_conf_features (uint64_t feature0, uint64_t feature1);

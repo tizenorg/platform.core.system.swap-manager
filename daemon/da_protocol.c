@@ -290,7 +290,7 @@ static int parse_conf(struct msg_buf_t *msg, struct conf_t *conf)
 
 	parse_deb("parse_conf\n");
 	if (!parse_int64(msg, &conf->use_features0)) {
-		LOGE("use features0 parsing error\n");
+		LOGE("use features0 error\n");
 		return 0;
 	}
 
@@ -299,13 +299,23 @@ static int parse_conf(struct msg_buf_t *msg, struct conf_t *conf)
 		return 0;
 	}
 
-	if (!parse_int32( msg, &conf->system_trace_period)) {
-		LOGE("system trace period parsing error\n");
+	//Check features value
+	if (!check_conf_features(conf->use_features0, conf->use_features1)) {
+		LOGE("check features fail\n");
 		return 0;
 	}
 
-	if (!parse_int32( msg, &conf->data_message_period)) {
-		LOGE("data message period parsing error\n");
+	if (!parse_int32( msg, &conf->system_trace_period) ||
+		!check_conf_systrace_period(conf->system_trace_period))
+	{
+		LOGE("system trace period error\n");
+		return 0;
+	}
+
+	if (!parse_int32( msg, &conf->data_message_period) ||
+		!check_conf_datamsg_period(conf->data_message_period))
+	{
+		LOGE("data message period error\n");
 		return 0;
 	}
 	//print_conf(conf);
