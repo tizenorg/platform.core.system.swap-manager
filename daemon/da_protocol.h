@@ -123,7 +123,7 @@ enum feature_code{
 	FL_CONTEXT_SWITCH           = 0x00010000, //Context switch tracing
 	FL_NETWORK_API_PROBING      = 0x00020000, //network API (glibc, OSP, libsoap, openssl)
 	FL_OPENGL_API_PROBING       = 0x00040000, //openGL API
-	FL_RESERVED3                = 0x00080000,
+	FL_FUNCTION_SAMPLING        = 0x00080000, //Function sampling
 	FL_CPU                      = 0x00100000, //CPU core load, frequency
 	FL_PROCESSES                = 0x00200000, //Process load
 	FL_MEMORY                   = 0x00400000, //Process size(VSS, PSS. RSS), heap usage(application, library), physical memory in use
@@ -131,13 +131,12 @@ enum feature_code{
 	FL_NETWORK                  = 0x01000000,
 	FL_DEVICE                   = 0x02000000,
 	FL_ENERGY                   = 0x04000000,
-	FL_RESERVED4                = 0x08000000,
+	FL_RESERVED3                = 0x08000000,
 
 	FL_ALL_FEATURES             = 0xFFFFFFFF &
 	                              (~FL_RESERVED1) &
 	                              (~FL_RESERVED2) &
-	                              (~FL_RESERVED3) &
-	                              (~FL_RESERVED4)
+	                              (~FL_RESERVED3)
 };
 
 #define IS_OPT_SET_IN(OPT, reg) (reg & (OPT))
