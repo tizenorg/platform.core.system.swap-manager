@@ -275,7 +275,8 @@ static int parse_app_info(struct msg_buf_t *msg,
 		return 0;
 	}
 	//Applicaion exe path
-	if (!parse_string(msg, &app_info->exe_path)) {
+	if (!parse_string(msg, &app_info->exe_path) ||
+		!check_exec_path(app_info->exe_path)) {
 		LOGE("app info parsing error\n");
 		return 0;
 	}
@@ -330,7 +331,9 @@ static int parse_us_inst_func(struct msg_buf_t *msg , struct us_func_inst_t * de
 		return 0;
 	}
 
-	if (!parse_string(msg, &dest->args)) {
+	if (!parse_string(msg, &dest->args) ||
+		!check_us_inst_func_args(dest->args))
+	{
 		LOGE("args format parsing error\n");
 		return 0;
 	}
@@ -343,23 +346,27 @@ static int parse_func_inst_list(struct msg_buf_t *msg,
 			    struct us_func_inst_t ** us_func_inst_list)
 {
 	uint32_t i = 0;
-	if (!parse_int32( msg, num)) {
+	if (!parse_int32(msg, num) ||
+		!check_us_app_inst_func_count(*num))
+	{
 		LOGE("func num parsing error\n");
 		return 0;
 	}
 	//parse user space function list
 
-	parse_deb("us_func_inst_list size = %d * %d\n",(*num) , (int)sizeof(**us_func_inst_list) );
+	parse_deb("us_func_inst_list size = %d * %d\n",(*num),
+				(int)sizeof(**us_func_inst_list));
 	*us_func_inst_list =
 		(struct us_func_inst_t *)
-		malloc( (*num) * sizeof(**us_func_inst_list) );
+		malloc((*num) * sizeof(**us_func_inst_list));
 	if (!*us_func_inst_list){
 		LOGE("func alloc error\n");
 		return 0;
 	};
 
-	for ( i = 0; i < *num; i++){
-		if (!parse_us_inst_func( msg, &((* us_func_inst_list)[i]))){
+	for (i = 0; i < *num; i++){
+		if (!parse_us_inst_func(msg, &((*us_func_inst_list)[i]))){
+			// TODO maybe need to free allocated memory up there
 			LOGE("parse us inst func #%d failed\n", i + 1);
 			return 0;
 		}
@@ -371,7 +378,9 @@ static int parse_func_inst_list(struct msg_buf_t *msg,
 static int parse_us_inst_lib(struct msg_buf_t *msg, struct us_lib_inst_t * dest)
 {
 
-	if (!parse_string(msg, &(dest)->bin_path)) {
+	if (!parse_string(msg, &(dest)->bin_path) ||
+		!check_exec_path(dest->bin_path))
+	{
 		LOGE("bin path parsing error\n");
 		return 0;
 	}
@@ -389,7 +398,9 @@ static int parse_lib_inst_list(struct msg_buf_t *msg,
 			    struct us_lib_inst_t ** us_lib_inst_list)
 {
 	uint32_t i = 0;
-	if (!parse_int32( msg, num)) {
+	if (!parse_int32(msg, num) ||
+		!check_lib_inst_count(*num))
+	{
 		LOGE("lib num parsing error\n");
 		return 0;
 	}
@@ -402,8 +413,9 @@ static int parse_lib_inst_list(struct msg_buf_t *msg,
 		LOGE("lib alloc error\n");
 		return 0;
 	};
-	for ( i = 0; i < *num; i++){
+	for (i = 0; i < *num; i++){
 		if (!parse_us_inst_lib( msg, &( (*us_lib_inst_list)[i] ) )){
+			// TODO maybe need free allocated memory up there
 			LOGE("parse is inst lib #%d failed\n", i + 1);
 			return 0;
 		}
@@ -414,19 +426,25 @@ static int parse_lib_inst_list(struct msg_buf_t *msg,
 static int parse_app_inst(struct msg_buf_t *msg,
 			    struct app_inst_t *app_inst)
 {
-	if (!parse_int32( msg, &app_inst->app_type)) {
+	if (!parse_int32(msg, &app_inst->app_type) ||
+		!check_app_type(app_inst->app_type))
+	{
 		LOGE("app type parsing error\n");
 		return 0;
 	}
-	if (!parse_string( msg, &app_inst->app_id)) {
+	if (!parse_string(msg, &app_inst->app_id) ||
+		!check_app_id(app_inst->app_type, app_inst->app_id))
+	{
 		LOGE("app id parsing error\n");
 		return 0;
 	}
-	if (!parse_string( msg, &app_inst->exec_path)) {
+	if (!parse_string(msg, &app_inst->exec_path) ||
+		!check_exec_path(app_inst->exec_path))
+	{
 		LOGE("exec path parsing error\n");
 		return 0;
 	}
-	if (!parse_func_inst_list( msg, &app_inst->func_num , &(app_inst->us_func_inst_list))) {
+	if (!parse_func_inst_list(msg, &app_inst->func_num, &(app_inst->us_func_inst_list))) {
 		LOGE("funcs parsing error\n");
 		return 0;
 	}
@@ -449,8 +467,10 @@ int parse_user_space_inst(struct msg_buf_t *msg,
 	uint32_t num = 0 , i = 0;
 	struct app_inst_t * list = 0;
 
-	if (!parse_int32 ( msg, &num )) {
-		LOGE("app num parsing error\n");
+	if (!parse_int32 ( msg, &num ) ||
+		!check_us_app_count(num))
+	{
+		LOGE("app num error\n");
 		return 0;
 	}
 

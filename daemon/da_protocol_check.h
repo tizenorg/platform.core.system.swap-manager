@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 
+#include "daemon.h"
 
 // Max values defines
 #define APP_INFO_TYPE_MIN 0x0001
@@ -36,6 +37,25 @@
 
 #define CONF_DATA_MSG_PERIOD_MIN 10
 #define CONF_DATA_MSG_PERIOD_MAX 1000
+
+#define US_APP_COUNT_MIN 0
+#define US_APP_COUNT_MAX MAX_TARGET_COUNT
+
+#define US_APP_INST_FUNC_MIN 0
+#define US_APP_INST_FUNC_MAX 50000
+
+#define US_FUNC_ARGS "cdxpfw"
+
+#define US_APP_INST_LIB_MIN 0
+#define US_APP_INST_LIB_MAX 100
+
 int check_app_type(uint32_t app_type);
-int check_app_id (uint32_t app_type, char *app_id);
-int check_conf_features (uint64_t feature0, uint64_t feature1);
+int check_app_id(uint32_t app_type, char *app_id);
+int check_exec_path(char *path);
+int check_conf_features(uint64_t feature0, uint64_t feature1);
+int check_conf_systrace_period(uint32_t system_trace_period);
+int check_conf_datamsg_period(uint32_t data_message_period);
+int check_us_app_count(uint32_t app_count);
+int check_us_app_inst_func_count(uint32_t func_count);
+int check_us_inst_func_args(char *args);
+int check_lib_inst_count(uint32_t lib_count);

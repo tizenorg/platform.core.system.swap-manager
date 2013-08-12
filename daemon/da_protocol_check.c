@@ -28,6 +28,7 @@
 #include "da_protocol_check.h"
 
 #include <stdint.h>
+#include <string.h>
 
 //application checking functions
 int check_app_type(uint32_t app_type)
@@ -41,7 +42,7 @@ int check_app_type(uint32_t app_type)
 	}
 }
 
-int check_app_id (uint32_t app_type, char *app_id)
+int check_app_id(uint32_t app_type, char *app_id)
 {
 	int res = 0;
 	char *p;
@@ -69,8 +70,19 @@ int check_app_id (uint32_t app_type, char *app_id)
 	return res;
 }
 
+int check_exec_path(char *path)
+{
+	int res = 1;
+	struct stat buffer;
+
+	if (!(res = (stat (path, &buffer) == 0)))
+		LOGE("wrong exec path <%s>\n", path);
+
+	return res;
+}
+
 //config checking functions
-int check_conf_features (uint64_t feature0, uint64_t feature1)
+int check_conf_features(uint64_t feature0, uint64_t feature1)
 {
 	int res = 1;
 
@@ -95,10 +107,11 @@ int check_conf_features (uint64_t feature0, uint64_t feature1)
 int check_conf_systrace_period(uint32_t system_trace_period)
 {
 	int res = 1;
-	if ((system_trace_period<CONF_SYSTRACE_PERIOD_MIN) ||
-		(system_trace_period>CONF_SYSTRACE_PERIOD_MAX))
+	if ((system_trace_period < CONF_SYSTRACE_PERIOD_MIN) ||
+		(system_trace_period > CONF_SYSTRACE_PERIOD_MAX))
 	{
-		LOGE("wrong system trace period value %lu\n", system_trace_period);
+		LOGE("wrong system trace period value %lu (0x%08X)\n",
+				system_trace_period, system_trace_period);
 		res = 0;
 	}
 
@@ -108,10 +121,65 @@ int check_conf_systrace_period(uint32_t system_trace_period)
 int check_conf_datamsg_period(uint32_t data_message_period)
 {
 	int res = 1;
-	if ((data_message_period<CONF_DATA_MSG_PERIOD_MIN) ||
-		(data_message_period>CONF_DATA_MSG_PERIOD_MAX))
+	if ((data_message_period < CONF_DATA_MSG_PERIOD_MIN) ||
+		(data_message_period > CONF_DATA_MSG_PERIOD_MAX))
 	{
-		LOGE("wrong data message period value %lu\n", data_message_period);
+		LOGE("wrong data message period value %lu (0x%08X)\n",
+				data_message_period, data_message_period);
+		res = 0;
+	}
+
+	return res;
+}
+
+//User space check functions
+int check_us_app_count(uint32_t app_count)
+{
+	int res = 1;
+	if ((app_count < US_APP_COUNT_MIN) ||
+		(app_count > US_APP_COUNT_MAX))
+	{
+		LOGE("wrong user space app count %lu (0x%08X)\n", app_count, app_count);
+		res = 0;
+	}
+
+	return res;
+}
+//User space app inst check function
+int check_us_app_inst_func_count(uint32_t func_count)
+{
+	int res = 1;
+	if ((func_count < US_APP_INST_FUNC_MIN) ||
+		(func_count > US_APP_INST_FUNC_MAX))
+	{
+		LOGE("wrong US app inst func count %lu (0x%08X)\n",
+				func_count, func_count);
+		res = 0;
+	}
+
+	return res;
+}
+
+static char *args_avail = US_FUNC_ARGS;
+int check_us_inst_func_args(char *args)
+{
+	char *p;
+	for (p = args; *p != 0; p++)
+		if (strchr(args_avail, (int)*p) == NULL){
+			LOGE("wrong args <%s> char <%c>\n", args, (int)*p);
+			return 0;
+		}
+	return 1;
+}
+
+int check_lib_inst_count(uint32_t lib_count)
+{
+	int res = 1;
+	if ((lib_count < US_APP_INST_LIB_MIN) ||
+		(lib_count > US_APP_INST_LIB_MAX))
+	{
+		LOGE("wrong US app inst lib count %lu (0x%08X)\n",
+				lib_count, lib_count);
 		res = 0;
 	}
 
