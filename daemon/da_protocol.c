@@ -466,6 +466,7 @@ int parse_user_space_inst(struct msg_buf_t *msg,
 		for ( i = 0; i < num; i++){
 			if (!parse_app_inst( msg, &(list[i]) )){
 				LOGE("parse app inst #%d failed\n", i + 1);
+				free(list);
 				return 0;
 			}
 		};
