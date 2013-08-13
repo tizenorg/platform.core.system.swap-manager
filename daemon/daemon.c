@@ -1029,10 +1029,7 @@ int daemonLoop()
 				}
 				else if (result < 0)
 				{
-					terminate_error("Internal DA framework error, "
-							"Please re-run the profiling.", 1);
-					return_value = -1;
-					goto END_EFD;
+					LOGE("Control socket handler.\n");
 				}
 			}
 			else if (events[i].data.fd == manager.host.data_socket)
