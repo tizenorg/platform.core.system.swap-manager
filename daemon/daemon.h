@@ -194,7 +194,6 @@ typedef struct
 
 typedef struct
 {
-	FILE *portfile;
 	int host_server_socket;
 	int target_server_socket;
 	int target_count;

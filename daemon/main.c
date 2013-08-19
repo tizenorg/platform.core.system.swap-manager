@@ -62,7 +62,6 @@
 // initialize global variable
 __da_manager manager =
 {
-	.portfile = NULL,
 	.host_server_socket = -1,
 	.target_server_socket = -1,
 	.target_count = 0,
@@ -101,12 +100,9 @@ __da_manager manager =
 // util functions
 // =============================================================================
 
-static void write_to_portfile(int code)
+static void write_int(FILE *fp, int code)
 {
-	if(unlikely(manager.portfile == 0))
-		return;
-
-	fprintf(manager.portfile, "%d", code);
+	fprintf(fp, "%d", code);
 }
 
 // =============================================================================
@@ -245,7 +241,6 @@ static bool ensure_singleton(const char *lockfile)
 
 	int lockfd = open(lockfile, O_WRONLY | O_CREAT, 0600);
 	if (lockfd < 0) {
-		write_to_portfile(ERR_LOCKFILE_CREATE_FAILED);
 		LOGE("singleton lock file creation failed");
 		return false;
 	}
@@ -253,7 +248,6 @@ static bool ensure_singleton(const char *lockfile)
 	bool locked = flock(lockfd, LOCK_EX | LOCK_NB) == 0;
 
 	if (!locked) {
-		write_to_portfile(ERR_ALREADY_RUNNING);
 		LOGE("another instance of daemon is already running");
 	}
 	close(lockfd);
@@ -286,59 +280,49 @@ static bool initialize_pthread_sigmask()
 	sigemptyset(&newsigmask);
 	sigaddset(&newsigmask, SIGALRM);
 	sigaddset(&newsigmask, SIGUSR1);
-	if (pthread_sigmask(SIG_BLOCK, &newsigmask, NULL) != 0) {
-		write_to_portfile(ERR_SIGNAL_MASK_SETTING_FAILED);
-		return false;
-	}
-	return true;
-}
-
-static bool initialize_host_server_socket()
-{
-	int port = makeHostServerSocket();
-
-	if (port < 0) {
-		write_to_portfile(ERR_HOST_SERVER_SOCKET_CREATE_FAILED);
-		return false;
-	}
-	write_to_portfile(port);
-	return true;
+	return pthread_sigmask(SIG_BLOCK, &newsigmask, NULL) == 0;
 }
 
 // return 0 for normal case
-static int initializeManager()
+static int initializeManager(FILE *portfile)
 {
 	if (init_buf() != 0) {
 		LOGE("Cannot init buffer\n");
 		return -1;
 	}
 
-	if(initialize_system_info() < 0)
-	{
-		write_to_portfile(ERR_INITIALIZE_SYSTEM_INFO_FAILED);
+	if (initialize_system_info() < 0) {
+		write_int(portfile, ERR_INITIALIZE_SYSTEM_INFO_FAILED);
 		return -1;
 	}
-
 	// make server socket
-	if(makeTargetServerSocket() != 0)
-	{
-		write_to_portfile(ERR_TARGET_SERVER_SOCKET_CREATE_FAILED);
+	if (makeTargetServerSocket() != 0) {
+		write_int(portfile, ERR_TARGET_SERVER_SOCKET_CREATE_FAILED);
+		return -1;
+	}
+	if (!initialize_pthread_sigmask()) {
+		write_int(portfile, ERR_SIGNAL_MASK_SETTING_FAILED);
 		return -1;
 	}
 
-	if (!initialize_host_server_socket())
-	  return -1;
+	int port = makeHostServerSocket();
+	if (port < 0) {
+		write_int(portfile, ERR_HOST_SERVER_SOCKET_CREATE_FAILED);
+		return -1;
+	} else {
+		write_int(portfile, port);
+	}
 
 	LOGI("SUCCESS to write port\n");
 
 	inititialize_manager_targets(&manager);
-	if (!initialize_pthread_sigmask())
-	  return -1;
+
 	// initialize sendMutex
 	pthread_mutex_init(&(manager.host.data_socket_mutex), NULL);
 
 	return 0;
 }
+
 
 static int finalizeManager()
 {
@@ -406,18 +390,19 @@ int main()
 	LOGI("da_started\n");
 	atexit(terminate0);
 
-	manager.portfile = fopen(PORTFILE, "w");
-	if (manager.portfile == NULL) {
-		LOGE("cannot create portfile");
-		return 1;
-	}
+
 	//for terminal exit
 	setup_signals();
 	daemon(0, 1);
 
-	// initialize manager
-	int err = initializeManager();
-	fclose(manager.portfile);
+	FILE *portfile = fopen(PORTFILE, "w");
+	if (!portfile) {
+		LOGE("cannot create portfile");
+		return 1;
+	}
+
+	int err = initializeManager(portfile);
+	fclose(portfile);
 	if (err)
 		return 1;
 
