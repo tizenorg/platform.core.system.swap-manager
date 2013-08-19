@@ -256,9 +256,20 @@ static int parse_int64(struct msg_buf_t *msg, uint64_t *val)
 	return 1;
 }
 
+static void strip_args(const char *cmd, char *path)
+{
+	char *bin_end = strchr(cmd, ' ');
+	size_t binname_len = bin_end - cmd;
+
+	memcpy(path, cmd, binname_len);
+	path[binname_len] = '\0';
+}
+
 static int parse_app_info(struct msg_buf_t *msg,
 			       struct app_info_t *app_info)
 {
+	char bin_path[MAX_FILENAME];
+
 	//Application type
 	parse_deb("parse_app_info\n");
 	if (!parse_int32(msg, &app_info->app_type) ||
@@ -267,6 +278,7 @@ static int parse_app_info(struct msg_buf_t *msg,
 		LOGE("app type error\n");
 		return 0;
 	}
+
 	//Application ID
 	if (!parse_string(msg, &app_info->app_id) ||
 		!check_app_id(app_info->app_type, app_info->app_id))
@@ -274,9 +286,14 @@ static int parse_app_info(struct msg_buf_t *msg,
 		LOGE("app id parsing error\n");
 		return 0;
 	}
+
 	//Applicaion exe path
-	if (!parse_string(msg, &app_info->exe_path) ||
-		!check_exec_path(app_info->exe_path)) {
+	if (!parse_string(msg, &app_info->exe_path)) {
+		LOGE("app info parsing error\n");
+		return 0;
+	}
+	strip_args(app_info->exe_path, bin_path);
+	if (!check_exec_path(bin_path)) {
 		LOGE("app info parsing error\n");
 		return 0;
 	}
