@@ -313,7 +313,6 @@ static int initializeManager()
 		return -1;
 	}
 
-	atexit(_close_server_socket);
 	if(initialize_system_info() < 0)
 	{
 		write_to_portfile(ERR_INITIALIZE_SYSTEM_INFO_FAILED);
@@ -366,6 +365,36 @@ static int finalizeManager()
 	return 0;
 }
 
+static void terminate(int sig)
+{
+	_unlink_files();
+	_close_server_socket();
+	if (sig != 0) {
+		LOGW("Terminating due signal %s\n", strsignal(sig));
+		signal(sig, SIG_DFL);
+		raise(sig);
+	}
+}
+
+static void terminate0()
+{
+	terminate(0);
+}
+
+
+static void setup_signals()
+{
+	struct sigaction sigact = {
+		.sa_handler = terminate,
+		.sa_flags = 0
+	};
+	sigemptyset(&sigact.sa_mask);
+	sigaction(SIGTERM, &sigact, 0);
+	sigaction(SIGINT, &sigact, 0);
+
+	signal(SIGHUP, SIG_IGN);
+}
+
 // main function
 int main()
 {
@@ -375,7 +404,7 @@ int main()
 	initialize_log();
 
 	LOGI("da_started\n");
-	atexit(_unlink_files);
+	atexit(terminate0);
 
 	manager.portfile = fopen(PORTFILE, "w");
 	if (manager.portfile == NULL) {
@@ -383,7 +412,7 @@ int main()
 		return 1;
 	}
 	//for terminal exit
-	signal(SIGHUP, SIG_IGN);
+	setup_signals();
 	chdir("/");
 
 	//new session reader
