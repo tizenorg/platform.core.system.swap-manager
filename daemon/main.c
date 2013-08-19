@@ -413,10 +413,7 @@ int main()
 	}
 	//for terminal exit
 	setup_signals();
-	chdir("/");
-
-	//new session reader
-	setsid();
+	daemon(0, 1);
 
 	// initialize manager
 	int err = initializeManager();
