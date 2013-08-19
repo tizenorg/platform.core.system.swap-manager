@@ -259,6 +259,7 @@ static bool ensure_singleton(const char *lockfile)
 	close(lockfd);
 	return locked;
 }
+
 static void inititialize_manager_targets(__da_manager * mng)
 {
 	int index;
@@ -368,7 +369,6 @@ static int finalizeManager()
 // main function
 int main()
 {
-	int result;
 	if (!ensure_singleton(SINGLETON_LOCKFILE))
 		return 1;
 
@@ -390,22 +390,18 @@ int main()
 	setsid();
 
 	// initialize manager
-	result = initializeManager();
+	int err = initializeManager();
 	fclose(manager.portfile);
-	if(result == 0)
-	{
-		//daemon work
-		//FIX ME remove samplingThread it is only for debug
-		//samplingThread(NULL);
-		daemonLoop();
-		LOGI("daemon loop finished\n");
-		stop_all();
-		finalizeManager();
-		LOGI("main finished\n");
-		return 0;
-	}
-	else
-	{
+	if (err)
 		return 1;
-	}
+
+	//daemon work
+	//FIX ME remove samplingThread it is only for debug
+	//samplingThread(NULL);
+	daemonLoop();
+	LOGI("daemon loop finished\n");
+	stop_all();
+	finalizeManager();
+	LOGI("main finished\n");
+	return 0;
 }
