@@ -101,7 +101,7 @@ __da_manager manager =
 // util functions
 // =============================================================================
 
-static void writeToPortfile(int code)
+static void write_to_portfile(int code)
 {
 	if(unlikely(manager.portfile == 0))
 		return;
@@ -245,7 +245,7 @@ static bool ensure_singleton(const char *lockfile)
 
 	int lockfd = open(lockfile, O_WRONLY | O_CREAT, 0600);
 	if (lockfd < 0) {
-		writeToPortfile(ERR_LOCKFILE_CREATE_FAILED);
+		write_to_portfile(ERR_LOCKFILE_CREATE_FAILED);
 		LOGE("singleton lock file creation failed");
 		return false;
 	}
@@ -253,7 +253,7 @@ static bool ensure_singleton(const char *lockfile)
 	bool locked = flock(lockfd, LOCK_EX | LOCK_NB) == 0;
 
 	if (!locked) {
-		writeToPortfile(ERR_ALREADY_RUNNING);
+		write_to_portfile(ERR_ALREADY_RUNNING);
 		LOGE("another instance of daemon is already running");
 	}
 	close(lockfd);
@@ -287,7 +287,7 @@ static bool initialize_pthread_sigmask()
 	sigaddset(&newsigmask, SIGALRM);
 	sigaddset(&newsigmask, SIGUSR1);
 	if (pthread_sigmask(SIG_BLOCK, &newsigmask, NULL) != 0) {
-		writeToPortfile(ERR_SIGNAL_MASK_SETTING_FAILED);
+		write_to_portfile(ERR_SIGNAL_MASK_SETTING_FAILED);
 		return false;
 	}
 	return true;
@@ -298,10 +298,10 @@ static bool initialize_host_server_socket()
 	int port = makeHostServerSocket();
 
 	if (port < 0) {
-		writeToPortfile(ERR_HOST_SERVER_SOCKET_CREATE_FAILED);
+		write_to_portfile(ERR_HOST_SERVER_SOCKET_CREATE_FAILED);
 		return false;
 	}
-	writeToPortfile(port);
+	write_to_portfile(port);
 	return true;
 }
 
@@ -316,14 +316,14 @@ static int initializeManager()
 	atexit(_close_server_socket);
 	if(initialize_system_info() < 0)
 	{
-		writeToPortfile(ERR_INITIALIZE_SYSTEM_INFO_FAILED);
+		write_to_portfile(ERR_INITIALIZE_SYSTEM_INFO_FAILED);
 		return -1;
 	}
 
 	// make server socket
 	if(makeTargetServerSocket() != 0)
 	{
-		writeToPortfile(ERR_TARGET_SERVER_SOCKET_CREATE_FAILED);
+		write_to_portfile(ERR_TARGET_SERVER_SOCKET_CREATE_FAILED);
 		return -1;
 	}
 
