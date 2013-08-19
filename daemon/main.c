@@ -123,7 +123,7 @@ void _close_server_socket(void)
 		close(manager.target_server_socket);
 }
 
-static void _unlink_file(void)
+static void _unlink_files(void)
 {
 	LOGI("unlink files start\n");
 	unlink(PORTFILE);
@@ -375,7 +375,7 @@ int main()
 	initialize_log();
 
 	LOGI("da_started\n");
-	atexit(_unlink_file);
+	atexit(_unlink_files);
 
 	manager.portfile = fopen(PORTFILE, "w");
 	if (manager.portfile == NULL) {
