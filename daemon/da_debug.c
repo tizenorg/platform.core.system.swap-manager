@@ -51,7 +51,6 @@ void initialize_log()
 		close(1);
 		close(2);
 	}
-	fprintf(stderr, "--- daemon starting (pid %d) ---\n", getpid());
 
 	close(0);
 }

@@ -404,6 +404,7 @@ int main()
 	//for terminal exit
 	setup_signals();
 	daemon(0, 1);
+	LOGI("--- daemonized (pid %d) ---\n", getpid());
 
 	FILE *portfile = fopen(PORTFILE, "w");
 	if (!portfile) {
