@@ -627,7 +627,17 @@ static int target_event_handler(int epollfd, int index, uint64_t msg)
 
 	return 0;
 }
-
+#ifndef LOCALTEST
+static void target_setup_smack_attributes(int target_index)
+{
+	fsetxattr(manager.target[target_index].socket,
+		  "security.SMACK64IPIN", "*", 1, 0);
+	fsetxattr(manager.target[target_index].socket,
+		  "security.SMACK64IPOUT", "*", 1, 0);
+}
+#else
+static void target_setup_smack_attributes(int unused) {}
+#endif
 
 // return 0 if normal case
 // return plus value if non critical error occur
@@ -649,11 +659,7 @@ static int targetServerHandler(int efd)
 
 	if(manager.target[index].socket >= 0)	// accept succeed
 	{
-#ifndef LOCALTEST
-		// set smack attribute for certification
-		fsetxattr(manager.target[index].socket, "security.SMACK64IPIN", "*", 1, 0);
-		fsetxattr(manager.target[index].socket, "security.SMACK64IPOUT", "*", 1, 0);
-#endif /* LOCALTEST */
+		target_setup_smack_attributes(index);
 
 		// send config message to target process
 		log.type = MSG_OPTION;
