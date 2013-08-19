@@ -349,10 +349,20 @@ static int finalizeManager()
 	return 0;
 }
 
+static void remove_buf_modules(void)
+{
+	LOGI("rmmod buffer start\n");
+	if (system("cd /opt/swap/sdk && ./stop.sh")) {
+		LOGW("Cannot remove swap modules\n");
+	}
+	LOGI("rmmod buffer done\n");
+}
+
 static void terminate(int sig)
 {
 	_unlink_files();
 	_close_server_socket();
+	remove_buf_modules();
 	if (sig != 0) {
 		LOGW("Terminating due signal %s\n", strsignal(sig));
 		signal(sig, SIG_DFL);

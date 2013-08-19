@@ -68,15 +68,6 @@ static int insert_buf_modules(void)
 	return 0;
 }
 
-static void remove_buf_modules(void)
-{
-	LOGI("rmmod buffer start\n");
-	if (system("cd /opt/swap/sdk && ./stop.sh")) {
-		LOGW("Cannot remove swap modules\n");
-	}
-	LOGI("rmmod buffer done\n");
-}
-
 int init_buf(void)
 {
 	struct buffer_initialize init = {
@@ -91,7 +82,6 @@ int init_buf(void)
 
 	if (open_buf() != 0) {
 		LOGE("Cannot open buffer\n");
-		remove_buf_modules();
 		return 1;
 	}
 
@@ -110,7 +100,6 @@ void exit_buf(void)
 		LOGW("Cannot uninit buffer: %s\n", strerror(errno));
 
 	close_buf();
-	remove_buf_modules();
 }
 
 void flush_buf(void)
@@ -127,4 +116,3 @@ int write_to_buf(struct msg_data_t *msg)
 	}
 	return 0;
 }
-
