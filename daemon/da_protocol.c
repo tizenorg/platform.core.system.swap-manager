@@ -259,10 +259,14 @@ static int parse_int64(struct msg_buf_t *msg, uint64_t *val)
 static void strip_args(const char *cmd, char *path)
 {
 	char *bin_end = strchr(cmd, ' ');
-	size_t binname_len = bin_end - cmd;
 
-	memcpy(path, cmd, binname_len);
-	path[binname_len] = '\0';
+	if (!bin_end) {
+		strcpy(path, cmd);
+	} else {
+		size_t binname_len = bin_end - cmd;
+		memcpy(path, cmd, binname_len);
+		path[binname_len] = '\0';
+	}
 }
 
 static int parse_app_info(struct msg_buf_t *msg,
