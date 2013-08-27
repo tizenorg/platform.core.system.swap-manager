@@ -125,10 +125,28 @@ static int is_like_absolute_path(const char *str)
 	return 0;
 }
 
+static bool exist(const char *filename)
+{
+	struct stat decoy;
+	return stat(filename, &decoy) == 0;
+}
+
+void suffix_filename(char buf[PATH_MAX], const char *filename)
+{
+	char adj_filename[PATH_MAX];
+	sprintf(adj_filename, "%s.exe", filename);
+	char *use_filename = exist(adj_filename) ? adj_filename : filename;
+	strcmp(buf, use_filename);
+}
+
 void get_build_dir(char builddir[PATH_MAX], const char *filename)
 {
 	size_t len;
-	void *filemem = mmap_file(filename, &len);
+	void *filemem;
+	char adj_filename[PATH_MAX];
+	suffix_filename(adj_filename, filename);
+
+	filemem = mmap_file(adj_filename, &len);
 	if (filemem) {
 		const Elf_Shdr *debug_header = elf_find_debug_header(filemem);
 		if (debug_header) {
