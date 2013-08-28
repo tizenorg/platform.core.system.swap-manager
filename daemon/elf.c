@@ -136,7 +136,7 @@ void suffix_filename(char buf[PATH_MAX], const char *filename)
 	char adj_filename[PATH_MAX];
 	sprintf(adj_filename, "%s.exe", filename);
 	char *use_filename = exist(adj_filename) ? adj_filename : filename;
-	strcmp(buf, use_filename);
+	strcpy(buf, use_filename);
 }
 
 void get_build_dir(char builddir[PATH_MAX], const char *filename)
