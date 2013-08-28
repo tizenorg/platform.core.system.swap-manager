@@ -44,7 +44,7 @@
 #define US_APP_INST_FUNC_MIN 0
 #define US_APP_INST_FUNC_MAX 50000
 
-#define US_FUNC_ARGS "cdxpfw"
+#define US_FUNC_ARGS "bcdxpfw"
 
 #define US_APP_INST_LIB_MIN 0
 #define US_APP_INST_LIB_MAX 100
