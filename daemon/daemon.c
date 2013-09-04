@@ -493,9 +493,11 @@ static void terminate_all_target()
 							MSG_NOSIGNAL);
 			if(sendlen != -1)
 			{
+				// send to only first main target proces
 				LOGI("TERMINATE send exit msg (socket %d) "
 				     "by terminate_all_target()\n",
 				     manager.target[i].socket);
+				break;
 			}
 		}
 	}
