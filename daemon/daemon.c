@@ -301,7 +301,9 @@ static int start_app_launch_timer()
 //stop application launch timer
 static int stop_app_launch_timer()
 {
-	epoll_ctl(manager.efd, EPOLL_CTL_DEL,manager.app_launch_timerfd, NULL);
+	if (0 > epoll_ctl(manager.efd, EPOLL_CTL_DEL,
+			  manager.app_launch_timerfd, NULL))
+		LOGW("fail to EPOLL DEL of app launch timerfd\n");
 	close(manager.app_launch_timerfd);
 	manager.app_launch_timerfd = -1;
 	return 0;
@@ -598,8 +600,9 @@ static int target_event_stop_handler(int epollfd,
 	if (index == 0) 	// main application
 		stop_replay();
 
-	epoll_ctl(epollfd, EPOLL_CTL_DEL,
-		  manager.target[index].event_fd, NULL);
+	if (0 > epoll_ctl(epollfd, EPOLL_CTL_DEL,
+			  manager.target[index].event_fd, NULL))
+		LOGW("fail to EPOLL DEL of event fd(%d)\n", index);
 
 	setEmptyTargetSlot(index);
 	// all target client are closed
@@ -665,9 +668,10 @@ static int targetServerHandler(int efd)
 		log.type = MSG_OPTION;
 		log.length = sprintf(log.data, "%lu",
 				     (unsigned long int) prof_session.conf.use_features0);
-		send(manager.target[index].socket, &log,
-		     sizeof(log.type) + sizeof(log.length) + log.length,
-		     MSG_NOSIGNAL);
+		if (0 > send(manager.target[index].socket, &log,
+			     sizeof(log.type) + sizeof(log.length) + log.length,
+			     MSG_NOSIGNAL))
+			LOGE("fail to send data to target index(%d)\n", index);
 
 		// make event fd
 		manager.target[index].event_fd = eventfd(0, EFD_NONBLOCK);
@@ -696,7 +700,9 @@ static int targetServerHandler(int efd)
 			// fail to make recv thread
 			LOGE("fail to make recv thread for socket (%d)\n",
 					manager.target[index].socket);
-			epoll_ctl(efd, EPOLL_CTL_DEL, manager.target[index].event_fd, NULL);
+			if (0 > epoll_ctl(efd, EPOLL_CTL_DEL,
+					  manager.target[index].event_fd, NULL))
+				LOGW("fail to EPOLL DEL of event fd(%d)\n", index);
 			goto TARGET_CONNECT_FAIL;
 		}
 
@@ -795,7 +801,9 @@ static int controlSocketHandler(int efd)
 	if(manager.connect_timeout_timerfd >= 0)
 	{
 		LOGI("release connect timeout timer\n");
-		epoll_ctl(efd, EPOLL_CTL_DEL, manager.connect_timeout_timerfd, NULL);
+		if (0 > epoll_ctl(efd, EPOLL_CTL_DEL,
+				  manager.connect_timeout_timerfd, NULL))
+			LOGW("fail to EPOLL DEL of timeout timer fd\n");
 		close(manager.connect_timeout_timerfd);
 		manager.connect_timeout_timerfd = -1;
 	}
@@ -1060,9 +1068,10 @@ int daemonLoop()
 				recvLen = recv(manager.host.data_socket, recvBuf, 32, MSG_DONTWAIT);
 				if (recvLen == 0)
 				{	// close data socket
-					epoll_ctl(manager.efd, EPOLL_CTL_DEL,
-						  manager.host.data_socket,
-						  NULL);
+					if (0 > epoll_ctl(manager.efd, EPOLL_CTL_DEL,
+							  manager.host.data_socket,
+							  NULL))
+						LOGW("fail to EPOLL DEL of host data socket\n");
 					close(manager.host.data_socket);
 					manager.host.data_socket = -1;
 					// TODO: finish transfer thread
@@ -1084,8 +1093,9 @@ int daemonLoop()
 			{
 				// send to host timeout error message for launching application
 				terminate_error("no incoming connections", 1);
-				epoll_ctl(manager.efd, EPOLL_CTL_DEL,
-					  manager.connect_timeout_timerfd, NULL);
+				if (0 > epoll_ctl(manager.efd, EPOLL_CTL_DEL,
+						  manager.connect_timeout_timerfd, NULL))
+					LOGW("fail to EPOLL DEL of timeout timer fd\n");
 				close(manager.connect_timeout_timerfd);
 				manager.connect_timeout_timerfd = -1;
 				LOGE("No connection in %d sec. shutdown.\n",MAX_CONNECT_TIMEOUT_TIME);
