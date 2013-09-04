@@ -99,7 +99,7 @@ static void* recvThread(void* data)
 		{
 			recvLen = recv(manager.target[index].socket,
 							log.data, log.length, MSG_WAITALL);
-			if(unlikely(recvLen != log.length))	// consume as disconnect
+			if(unlikely((recvLen == -1) || (recvLen != log.length)))	// consume as disconnect
 			{
 				event = EVENT_STOP;
 				write(manager.target[index].event_fd, &event, sizeof(uint64_t));

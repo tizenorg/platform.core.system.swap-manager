@@ -170,7 +170,11 @@ static int makeTargetServerSocket()
 		return -1;
 	}
 
-	chmod(serverAddrUn.sun_path, 0777);
+	if(chmod(serverAddrUn.sun_path, 0777) < 0)
+	{
+		LOGE("Failed to change mode for socket file : errno(%d)\n", errno);
+	}
+
 
 	if (-1 == listen(manager.target_server_socket, 5))
 	{
@@ -199,7 +203,12 @@ static int makeHostServerSocket()
 		return -1;
 	}
 
-	setsockopt(manager.host_server_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+	if(setsockopt(manager.host_server_socket,
+	   SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+	{
+		LOGE("Failed to set socket option : errno(%d)\n", errno);
+	}
+
 	memset(&serverAddrIn, 0, sizeof(serverAddrIn));
 	serverAddrIn.sin_family = AF_INET;
 	serverAddrIn.sin_addr.s_addr = htonl(INADDR_ANY);

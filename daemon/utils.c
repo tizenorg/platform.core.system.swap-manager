@@ -588,7 +588,7 @@ int get_app_install_path(char *strAppInstall, int length)
 		//find
 		if (*p != ':')
 			break;
-		for (; i < BUFFER_MAX; i++)
+		for (; i < BUFFER_MAX - 1; i++)
 		{
 			if (*p == ':' || *p == ' ' || *p == '\t')
 				p++;

@@ -839,7 +839,9 @@ static int parse_proc_stat_file_bypid(char *path, proc_t* P)
 	if(unlikely(num <= 0)){
 		LOGE("nothing read from '%s'\n", filename);
 		return -1;
-	}
+	} else if(num == BUFFER_MAX)
+		num -= 1;
+
 
 	buf[num] = '\0';
 
@@ -1274,6 +1276,10 @@ static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 		LOGE("Failed to read from " PROCMEMINFO "\n");
 		return -1;
 	}
+
+	if(num == BUFFER_MAX)
+		num -= 1;
+
 	buf[num] = '\0';
 //	LOGI("buffer=<%s>\n", buf);
 
@@ -1349,6 +1355,9 @@ unsigned long get_system_total_memory()
 		LOGE("Failed to read from " PROCMEMINFO "\n");
 		return 0;
 	}
+
+	if(num == BUFFER_MAX)
+		num -= 1;
 	buf[num] = '\0';
 
 	head = buf;

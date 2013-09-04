@@ -88,6 +88,7 @@ static int _file_read(FILE* fp, char *buffer, int size)
 	if(fp != NULL && size > 0)
 	{
 		ret = fread((void*)buffer, sizeof(char), size, fp);
+		buffer[ret] = '\0';
 	}
 	else
 	{
@@ -135,7 +136,14 @@ static int get_input_id(char* inputname)
 
 	// run command
 	cmd_fp = popen(command, "r");
-	_file_read(cmd_fp, buffer, BUF_SIZE);
+	if(_file_read(cmd_fp, buffer, BUF_SIZE) < 0)
+	{
+		LOGE("Failed to read input_id\n");
+		if(cmd_fp != NULL)
+			pclose(cmd_fp);
+		return ret;
+	}
+
 
 	// determine input id
 	if(strstr(buffer, INPUT_ID_STR_KEY))			// key
@@ -402,7 +410,12 @@ int start_profiling()
 
 	// remove previous screen capture files
 	remove_indir(SCREENSHOT_DIR);
-	mkdir(SCREENSHOT_DIR, 0777);
+	if(mkdir(SCREENSHOT_DIR, 0777) < 0)
+	{
+		LOGE("Failed to create directory for screenshot : errno(%d)\n", errno);
+	}
+
+
 #ifndef LOCALTEST
 	smack_lsetlabel(SCREENSHOT_DIR, "*", SMACK_LABEL_ACCESS);
 #endif
