@@ -714,3 +714,18 @@ int is_same_app_process(char* appPath, int pid)
 	return ret;
 }
 
+char *dereference_tizen_exe_path(const char *path, char *resolved)
+{
+	char *res = NULL;
+	char tmp_path[PATH_MAX];
+
+	resolved[0] = 0;
+	//try resolve <path>.exe
+	sprintf(tmp_path, "%s.exe", path);
+	if ((res = realpath(tmp_path, resolved)) == NULL) {
+		//try to resolve path <path>
+		res = realpath(path, resolved);
+	}
+
+	return res;
+}

@@ -30,6 +30,7 @@
 #include <errno.h>
 #include "da_protocol.h"
 #include "da_data.h"
+#include "utils.h"
 #include "elf.h"
 #include "debug.h"
 
@@ -59,12 +60,13 @@ void write_process_info(int pid, uint64_t starttime)
 	int fields;
 	FILE *f;
 
+	// TODO need check this result and return error
+	dereference_tizen_exe_path(prof_session.app_info.exe_path, path);
 	get_build_dir(binary_path, prof_session.app_info.exe_path);
 
 	fill_data_msg_head(msg, NMSG_PROCESS_INFO, 0, 0);
 
-	sprintf(buf, "%s%d%s%s", AWK_START, pid, AWK_END_PROCESS,
-		prof_session.app_info.exe_path);
+	sprintf(buf, "%s%d%s%s", AWK_START, pid, AWK_END_PROCESS,path);
 
 	f = popen(buf, "r");
 	if (!f) {
@@ -77,6 +79,7 @@ void write_process_info(int pid, uint64_t starttime)
 	if (fields != 3) {
 		start = 0;
 		end = 0;
+		LOGW("cannot find start-end values. fields=%d\n", fields);
 	}
 	pclose(f);
 
