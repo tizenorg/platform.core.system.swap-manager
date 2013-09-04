@@ -387,6 +387,7 @@ static void setup_signals()
 	sigaction(SIGINT, &sigact, 0);
 
 	signal(SIGHUP, SIG_IGN);
+	signal(SIGPIPE,SIG_IGN);
 }
 
 // main function

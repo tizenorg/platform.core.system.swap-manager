@@ -39,15 +39,34 @@
 
 #define BUF_SIZE 4096
 
+static void transfer_thread_cleanup(void *arg)
+{
+	int *fd_pipe;
+	fd_pipe = (int *) arg;
+
+	close(fd_pipe[0]);
+	close(fd_pipe[1]);
+
+}
+
 static void *transfer_thread(void *arg)
 {
 	(void)arg;
 	int fd_pipe[2];
 	ssize_t nrd, nwr;
 
+	//init thread
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+
+	//init pipe
+	pipe(fd_pipe);
+	//set cleanup function
+	pthread_cleanup_push(transfer_thread_cleanup, (void *)fd_pipe);
+
+	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+
 	LOGI("transfer thread started\n");
 
-	pipe(fd_pipe);
 	while (1) {
 		nrd = splice(manager.buf_fd, NULL,
 			     fd_pipe[1], NULL,
@@ -64,6 +83,7 @@ static void *transfer_thread(void *arg)
 		nwr = splice(fd_pipe[0], NULL,
 			     manager.host.data_socket, NULL,
 			     nrd, 0);
+
 		if (nwr == -1) {
 			LOGE("Cannot splice write: %s\n", strerror(errno));
 			goto thread_exit;
@@ -74,11 +94,9 @@ static void *transfer_thread(void *arg)
 	}
 
 	thread_exit:
+	pthread_cleanup_pop(1);
 
-	close(fd_pipe[0]);
-	close(fd_pipe[1]);
-
-	LOGI("transfer thread finished\n");
+	LOGI("transfer thread finished. return\n");
 
 	return NULL;
 }
