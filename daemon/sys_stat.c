@@ -2570,22 +2570,22 @@ int init_system_file_descriptors()
 	init_disk_stat();
 
 	if (manager.fd.brightness < 0)
-		LOGE("brightness file not found\n");
+		LOGW("brightness file not found\n");
 	if (manager.fd.voltage < 0)
-		LOGE("voltage file not found\n");
+		LOGW("voltage file not found\n");
 	if (manager.fd.procmeminfo < 0)
-		LOGE("procmeminfo file not found\n");
+		LOGW("procmeminfo file not found\n");
 
 	if (manager.fd.video == NULL)
-		LOGE("video file not found\n");
+		LOGW("video file not found\n");
 	if (manager.fd.audio_status == NULL)
-		LOGE("audio file not found\n");
+		LOGW("audio file not found\n");
 	if (manager.fd.procstat == NULL)
-		LOGE("procstat file not found\n");
+		LOGW("procstat file not found\n");
 	if (manager.fd.networkstat == NULL)
-		LOGE("networkstat file not found\n");
+		LOGW("networkstat file not found\n");
 	if (manager.fd.diskstats == NULL)
-		LOGE("diskstat file not found\n");
+		LOGW("diskstat file not found\n");
 	return 0;
 }
 
