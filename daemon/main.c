@@ -427,6 +427,8 @@ int main()
 	if (err)
 		return 1;
 
+	//init all file descriptors
+	init_system_file_descriptors();
 	//daemon work
 	//FIX ME remove samplingThread it is only for debug
 	//samplingThread(NULL);
@@ -434,6 +436,9 @@ int main()
 	LOGI("daemon loop finished\n");
 	stop_all();
 	finalizeManager();
+
+	close_system_file_descriptors();
+
 	LOGI("main finished\n");
 	return 0;
 }
