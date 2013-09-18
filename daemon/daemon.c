@@ -410,11 +410,11 @@ int start_profiling()
 
 	// remove previous screen capture files
 	remove_indir(SCREENSHOT_DIR);
-	if(mkdir(SCREENSHOT_DIR, 0777) < 0)
-	{
-		LOGE("Failed to create directory for screenshot : errno(%d)\n", errno);
-	}
-
+	if (unlink(SCREENSHOT_DIR) == -1)
+		LOGW("Cannot remove screenshot dir: %s\n", strerror(errno));
+	if (mkdir(SCREENSHOT_DIR, 0777) == -1)
+		LOGW("Failed to create directory for screenshot : %s\n",
+		     strerror(errno));
 
 #ifndef LOCALTEST
 	smack_lsetlabel(SCREENSHOT_DIR, "*", SMACK_LABEL_ACCESS);
