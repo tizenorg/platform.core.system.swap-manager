@@ -371,6 +371,7 @@ static void terminate(int sig)
 {
 	_unlink_files();
 	_close_server_socket();
+	exit_buf();
 	remove_buf_modules();
 	if (sig != 0) {
 		LOGW("Terminating due signal %s\n", strsignal(sig));
