@@ -410,9 +410,7 @@ int start_profiling()
 
 	// remove previous screen capture files
 	remove_indir(SCREENSHOT_DIR);
-	if (unlink(SCREENSHOT_DIR) == -1)
-		LOGW("Cannot remove screenshot dir: %s\n", strerror(errno));
-	if (mkdir(SCREENSHOT_DIR, 0777) == -1)
+	if (mkdir(SCREENSHOT_DIR, 0777) == -1 && errno != EEXIST)
 		LOGW("Failed to create directory for screenshot : %s\n",
 		     strerror(errno));
 
