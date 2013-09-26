@@ -36,6 +36,7 @@
 int init_buf(void);
 void exit_buf(void);
 void flush_buf(void);
+void wake_up_buf(void);
 int write_to_buf(struct msg_data_t *msg);
 
 #endif /* _BUFFER_ */

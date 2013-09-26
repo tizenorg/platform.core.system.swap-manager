@@ -130,13 +130,10 @@ int start_transfer()
 	return 0;
 }
 
-#define SECS_TO_FORCE_STOP 10
 void stop_transfer()
 {
 	int saved_flags;
 	int ret = 0;
-	struct timeval tv;
-	struct timespec ts;
 
 	if (manager.transfer_thread == -1) {
 		LOGI("transfer thread not running\n");
@@ -147,19 +144,12 @@ void stop_transfer()
 	flush_buf();
 	saved_flags = fcntl(manager.buf_fd, F_GETFL);
 	fcntl(manager.buf_fd, F_SETFL, saved_flags | O_NONBLOCK);
+	wake_up_buf();
 
-	gettimeofday(&tv, NULL);
-	ts.tv_sec = tv.tv_sec + SECS_TO_FORCE_STOP;
-	ts.tv_nsec = tv.tv_usec * 1000;
-	ret = pthread_timedjoin_np(manager.transfer_thread, NULL, &ts);
-	if (ret == ETIMEDOUT) {
-		LOGW("transfer thread is not joined in %d sec, force stop\n",
-			SECS_TO_FORCE_STOP);
-		ret = pthread_cancel(manager.transfer_thread);
-		if (ret == ESRCH)
-			LOGW("no transfer thread to force stop\n");
-	} else if (ret != 0)
-		LOGW("pthread_timedjoin_np: unknown error %d\n", ret);
+	LOGI("joining thread...\n");
+	ret = pthread_join(manager.transfer_thread, NULL);
+	if (ret != 0)
+		LOGW("pthread_join: unknown error %d\n", ret);
 
 	manager.transfer_thread = -1;
 

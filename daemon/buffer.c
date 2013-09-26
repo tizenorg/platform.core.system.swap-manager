@@ -108,6 +108,12 @@ void flush_buf(void)
 		LOGW("Cannot flush buffer: %s\n", strerror(errno));
 }
 
+void wake_up_buf(void)
+{
+	if (ioctl(manager.buf_fd, SWAP_DRIVER_WAKE_UP) == -1)
+		LOGW("Cannot wake up buffer: %s\n", strerror(errno));
+}
+
 int write_to_buf(struct msg_data_t *msg)
 {
 	if (write(manager.buf_fd, msg, MSG_DATA_HDR_LEN + msg->len) == -1) {
