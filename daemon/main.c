@@ -351,9 +351,6 @@ static int finalizeManager()
 		close(manager.host.data_socket);
 	}
 
-	LOGI("exit buf\n");
-	exit_buf();
-
 	LOGI("return\n");
 	return 0;
 }
