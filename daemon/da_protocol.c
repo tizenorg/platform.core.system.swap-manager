@@ -881,6 +881,20 @@ static struct msg_t *gen_binary_info_reply(struct app_info_t *app_info)
 	return msg;
 }
 
+static size_t str_array_getsize(const char **strings, size_t len)
+{
+	/*!
+	 * Calculate about of memory to place array
+	 * of \0 delimited strings
+	 */
+	size_t size = 0;
+	unsigned int index;
+	for (index = 0; index != len; ++index)
+		size += strlen(strings[index]) + 1;
+	return size;
+}
+
+
 static struct msg_t *gen_target_info_reply(struct target_info_t *target_info)
 {
 	struct msg_t *msg;
@@ -888,10 +902,13 @@ static struct msg_t *gen_target_info_reply(struct target_info_t *target_info)
 	uint32_t ret_id = ERR_NO;
 
 	msg = malloc(sizeof(*msg) +
-			      sizeof(ret_id) +
-			      sizeof(*target_info) -
-			      sizeof(target_info->network_type) +
-			      strlen(target_info->network_type) + 1);
+		     sizeof(ret_id) +
+		     sizeof(*target_info) -
+		     sizeof(target_info->network_type) +
+		     strlen(target_info->network_type) + 1 +
+		     sizeof(uint32_t) + /* devices count */
+		     str_array_getsize(supported_devices_strings,
+				       supported_devices_count));
 	if (!msg) {
 		LOGE("Cannot alloc target info msg\n");
 		free(msg);
@@ -911,6 +928,9 @@ static struct msg_t *gen_target_info_reply(struct target_info_t *target_info)
 	pack_str(p, target_info->network_type);
 	pack_int(p, target_info->max_brightness);
 	pack_int(p, target_info->cpu_core_count);
+	pack_int32(p, supported_devices_count);
+	p = pack_str_array(p, supported_devices_strings,
+			   supported_devices_count);
 
 	msg->len = p - msg->payload;
 

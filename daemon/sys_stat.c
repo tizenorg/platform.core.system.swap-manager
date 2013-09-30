@@ -43,7 +43,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <errno.h>
-
+#include <assert.h>
 #include <inttypes.h>
 #include <stdint.h>
 
@@ -2310,6 +2310,51 @@ static float get_factor(float elapsed)
 	return 100.0f / ((float)Hertz * elapsed * num_of_cpu);
 }
 
+static uint32_t read_int_from_file(const char *fname)
+{
+	FILE *fp = fopen(fname, "r");
+	int value;
+	if (!fp)
+		return 0;
+	if (fscanf(fp, "%d", &value) != 1)
+		value = 0;
+	fclose(fp);
+	return value;
+}
+
+#define swap_sysfs_relpath(x) ("/sys/kernel/debug/swap/energy/" #x)
+#define swap_read_int(x) (read_int_from_file(swap_sysfs_relpath(x)))
+
+static uint32_t get_energy_per_device(enum supported_device dev)
+{
+	switch (dev) {
+	case DEVICE_CPU:
+		return swap_read_int(cpu_idle/system) +
+			swap_read_int(cpu_running/system);
+
+	case DEVICE_FLASH:
+		return swap_read_int(flash_read/system) +
+			swap_read_int(flash_write/system);
+	default:
+		assert(0 && "Unknown device. This should not happen");
+		return -41;
+	}
+}
+
+static uint32_t app_get_energy_per_device(enum supported_device dev)
+{
+	switch (dev) {
+	case DEVICE_CPU:
+		return swap_read_int(cpu_running/apps);
+	case DEVICE_FLASH:
+		return swap_read_int(flash_read/apps) +
+			swap_read_int(flash_write/apps);
+	default:
+		assert(0 && "Unknown device. This should not happen");
+		return -41;
+	}
+}
+
 // return log length (>0) for normal case
 // return negative value for error
 int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
@@ -2466,8 +2511,16 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 	}
 #endif /* LOCALTEST */
 	// energy
-	if (IS_OPT_SET(FL_ENERGY))
+	if (IS_OPT_SET(FL_ENERGY)) {
+		int i;
 		sys_info->energy = 0; // not implemented
+		for (i = 0; i != supported_devices_count; ++i) {
+			sys_info->energy_per_device[i] =
+				get_energy_per_device(i);
+			sys_info->app_energy_per_device[i] =
+				app_get_energy_per_device(i);
+		}
+	}
 
 #ifdef THREAD_SAMPLING_DEBUG
 	print_sys_info(sys_info);
@@ -2727,7 +2780,10 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	pack_int(p, sys_info->call_status);
 	pack_int(p, sys_info->dnet_status);
 	pack_int(p, sys_info->energy);
-
+	for (i = 0; i != supported_devices_count; ++i)
+		pack_int(p, sys_info->energy_per_device[i]);
+	for (i = 0; i != supported_devices_count; ++i)
+		pack_int(p, sys_info->app_energy_per_device[i]);
 
 //	pack_int(p, sys_info->total_used_drive);
 

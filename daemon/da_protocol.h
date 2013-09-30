@@ -155,6 +155,16 @@ enum app_type{
 	AT_LAUNCHED	=0x02,
 	AT_COMMON	=0x03
 };
+enum supported_device {
+  DEVICE_FLASH,
+  DEVICE_CPU
+};
+static const char *supported_devices_strings[] = {
+	"FLASH",
+	"CPU"
+};
+#define array_size(x) (sizeof(x)/sizeof((x)[0]))
+enum { supported_devices_count = array_size(supported_devices_strings) };
 
 #define MAX_FILENAME 128
 
@@ -319,6 +329,8 @@ struct system_info_t {
 	uint32_t disk_sectors_write;
 	uint32_t network_send_size;
 	uint32_t network_receive_size;
+	uint32_t energy_per_device[supported_devices_count];
+	uint32_t app_energy_per_device[supported_devices_count];
 };
 
 struct recorded_event_t{
@@ -363,6 +375,15 @@ struct recorded_event_t{
 		memcpy(to, n, strlen(n) + 1);	\
 		to += strlen(n) + 1;		\
 	} while (0)
+
+static inline void* pack_str_array(void *buffer, const char **strings,
+				   size_t count)
+{
+	int index;
+	for (index = 0; index != count; ++index)
+		pack_str(buffer, strings[index]);
+	return buffer;
+}
 
 struct msg_data_t *pack_system_info(struct system_info_t *sys_info);
 int write_to_buf(struct msg_data_t *msg);
