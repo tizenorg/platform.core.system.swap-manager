@@ -204,6 +204,7 @@ typedef struct
 	pthread_t replay_thread;
 	pthread_t transfer_thread;
 	int buf_fd;
+	int user_ev_fd;
 	int efd;
 	__da_host_info host;
 	__da_target_info target[MAX_TARGET_COUNT];

@@ -40,22 +40,33 @@
 #define SUBBUF_SIZE 64 * 1024
 #define SUBBUF_NUM 32 * 16
 
-static int open_buf(void)
+static int open_buf_ctl(void)
 {
-	manager.buf_fd = open(BUF_FILENAME, O_RDWR);
+	manager.buf_fd = open(BUF_FILENAME, O_RDONLY);
 	if (manager.buf_fd == -1) {
 		LOGE("Cannot open buffer: %s\n", strerror(errno));
 		return 1;
 	}
 	LOGI("buffer opened: %s, %d\n", BUF_FILENAME, manager.buf_fd);
 
+	manager.user_ev_fd = open(USER_EVENT_FILENAME, O_WRONLY);
+	if (manager.user_ev_fd == -1) {
+		LOGE("Cannot open user event sysfs file: %s\b", strerror(errno));
+		return 1;
+	}
+	LOGI("user event sysfs file opened: %s, %d\n", USER_EVENT_FILENAME,
+	     manager.user_ev_fd);
+
 	return 0;
 }
 
-static void close_buf(void)
+static void close_buf_ctl(void)
 {
 	LOGI("close buffer (%d)\n", manager.buf_fd);
 	close(manager.buf_fd);
+
+	LOGI("close user event sysfs file (%d)\n", manager.user_ev_fd);
+	close(manager.user_ev_fd);
 }
 
 static int insert_buf_modules(void)
@@ -80,7 +91,7 @@ int init_buf(void)
 		return 1;
 	}
 
-	if (open_buf() != 0) {
+	if (open_buf_ctl() != 0) {
 		LOGE("Cannot open buffer\n");
 		return 1;
 	}
@@ -95,28 +106,28 @@ int init_buf(void)
 
 void exit_buf(void)
 {
-	LOGI("Uninit buffer (%d)\n", manager.buf_fd);
+	LOGI("Uninit driver (%d)\n", manager.buf_fd);
 	if (ioctl(manager.buf_fd, SWAP_DRIVER_BUFFER_UNINITIALIZE) == -1)
-		LOGW("Cannot uninit buffer: %s\n", strerror(errno));
+		LOGW("Cannot uninit driver: %s\n", strerror(errno));
 
-	close_buf();
+	close_buf_ctl();
 }
 
 void flush_buf(void)
 {
 	if (ioctl(manager.buf_fd, SWAP_DRIVER_FLUSH_BUFFER) == -1)
-		LOGW("Cannot flush buffer: %s\n", strerror(errno));
+		LOGW("Cannot send flush to driver: %s\n", strerror(errno));
 }
 
 void wake_up_buf(void)
 {
 	if (ioctl(manager.buf_fd, SWAP_DRIVER_WAKE_UP) == -1)
-		LOGW("Cannot wake up buffer: %s\n", strerror(errno));
+		LOGW("Cannot send wake up to driver: %s\n", strerror(errno));
 }
 
 int write_to_buf(struct msg_data_t *msg)
 {
-	if (write(manager.buf_fd, msg, MSG_DATA_HDR_LEN + msg->len) == -1) {
+	if (write(manager.user_ev_fd, msg, MSG_DATA_HDR_LEN + msg->len) == -1) {
 		LOGE("write to buf: %s\n", strerror(errno));
 		return 1;
 	}

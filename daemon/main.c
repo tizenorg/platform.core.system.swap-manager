@@ -72,6 +72,7 @@ __da_manager manager =
 	.replay_thread = -1,
 	.transfer_thread = -1,
 	.buf_fd = -1,
+	.user_ev_fd = -1,
 	.efd = -1,
 
 	.host = {

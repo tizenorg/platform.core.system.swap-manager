@@ -31,6 +31,7 @@
 
 #include "da_protocol.h"
 
+#define USER_EVENT_FILENAME "/sys/kernel/debug/swap/writer/raw"
 #define BUF_FILENAME "/dev/swap_device"
 
 int init_buf(void);
