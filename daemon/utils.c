@@ -679,6 +679,8 @@ int is_same_app_process(char* appPath, int pid)
 	char buf[BUFFER_MAX];
 	char cmdPath[PATH_MAX];
 	char tPath[PATH_MAX];
+	char buf_res[PATH_MAX];
+	char tPath_res[PATH_MAX];
 
 	strcpy(tPath, appPath);
 	tlen = strlen(tPath);
@@ -704,7 +706,10 @@ int is_same_app_process(char* appPath, int pid)
 			buf[tlen - 4] = '\0';
 		}
 
-		if(strcmp(buf, tPath) == 0)
+		dereference_tizen_exe_path(buf, buf_res);
+		dereference_tizen_exe_path(tPath, tPath_res);
+
+		if(strcmp(buf_res, tPath_res) == 0)
 			ret = 1;
 		else
 			ret = 0;
