@@ -910,6 +910,13 @@ static int send_reply(struct msg_t *msg)
 	return 0;
 }
 
+static void write_msg_error(const char *err_str)
+{
+	struct msg_data_t *err_msg = gen_message_error(err_str);
+	write_to_buf(err_msg);
+	free_msg_data(err_msg);
+}
+
 int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 			char *payload, int payload_size)
 {
@@ -1068,9 +1075,9 @@ int host_message_handler(struct msg_t *msg)
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
 	case NMSG_STOP:
-		error_code = stop_all();
-		//send ack to host
-		sendACKToHost(msg->id, error_code, 0, 0);
+		sendACKToHost(msg->id, ERR_NO, 0, 0);
+		if (stop_all() != ERR_NO)
+			write_msg_error("Stop failed");
 		break;
 	case NMSG_CONFIG:
 		error_code=ERR_NO;
