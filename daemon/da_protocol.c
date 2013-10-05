@@ -525,17 +525,16 @@ static int parse_timeval(struct msg_buf_t *msg, struct timeval *tv)
 
 	parse_deb("time\n");
 
-	// FIXME: is sec/usec order correct?
+	if (!parse_int32(msg, (uint32_t *)&tv->tv_sec)) {
+		LOGE("sec parsing error\n");
+		return 0;
+	}
+
 	if (!parse_int32(msg, &nsec)) {
 		LOGE("usec parsing error\n");
 		return 0;
 	}
 	tv->tv_usec = nsec / 1000;
-
-	if (!parse_int32(msg, (uint32_t *)&tv->tv_sec)) {
-		LOGE("sec parsing error\n");
-		return 0;
-	}
 
 	return 1;
 }
