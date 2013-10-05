@@ -386,12 +386,12 @@ static void *replay_thread(void *arg)
 		switch (pevent->id)
 		{
 		case INPUT_ID_TOUCH:
-			LOGI_th_rep("event -> %s\n", INPUT_ID_STR_KEY);
+			LOGI_th_rep("event -> %s\n", INPUT_ID_STR_TOUCH);
 			_device_write(g_touch_dev, &pevent->ev);
 			break;
 
 		case INPUT_ID_KEY:
-			LOGI_th_rep("event -> %s\n", INPUT_ID_STR_TOUCH);
+			LOGI_th_rep("event -> %s\n", INPUT_ID_STR_KEY);
 			_device_write(g_key_dev, &pevent->ev);
 			break;
 		default:
