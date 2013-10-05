@@ -575,8 +575,9 @@ void reset_replay_event_seq(struct replay_event_seq_t *res)
 {
 	res->enabled = 0;
 	res->tv = (struct timeval){0, 0};
+	if (res->event_num != 0)
+		free(res->events);
 	res->event_num = 0;
-	free(res->events);
 }
 
 static int parse_replay_event_seq(struct msg_buf_t *msg,
