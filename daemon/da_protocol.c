@@ -45,6 +45,7 @@
 #include "elf.h"
 #include "ioctl_commands.h"
 #include "debug.h"
+#include "md5.h"
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -228,6 +229,24 @@ static int parse_string(struct msg_buf_t *msg, char **str)
 	parse_deb("<%s>\n",*str);
 	msg->cur_pos += len;
 	return 1;
+}
+
+static const char* parse_string_inplace(struct msg_buf_t *msg)
+{
+	const char *str = msg->cur_pos;
+	int avail_size = get_avail_msg_size(msg);
+	int len = strnlen(str, avail_size);
+
+	/* Malformed string or exhaused buffer. Strlen is at least one byte
+	 * less, that availiable space. If it is not, string is lacking
+	 * terminating null char.
+	 */
+
+	if (len == avail_size)
+		return NULL;
+
+	msg->cur_pos += len + 1;
+	return str;
 }
 
 static int parse_int32(struct msg_buf_t *msg, uint32_t *val)
@@ -904,7 +923,7 @@ static int send_reply(struct msg_t *msg)
 	if (send(manager.host.control_socket,
 		 msg, MSG_CMD_HDR_LEN + msg->len, MSG_NOSIGNAL) == -1) {
 		LOGE("Cannot send reply : %s\n", strerror(errno));
-		return 1;
+		return -1;
 	}
 
 	return 0;
@@ -1023,6 +1042,112 @@ enum ErrorCode stop_all(void)
 	LOGI("finished\n");
 	return error_code;
 }
+struct binary_ack {
+	uint32_t type;
+	char *binpath;
+	md5_byte_t digest[16];
+};
+
+static void binary_ack_free(struct binary_ack *ba)
+{
+	if (ba)
+		free(ba->binpath);
+	free(ba);
+}
+static size_t binary_ack_size(const struct binary_ack *ba)
+{
+	/* MD5 is 16 bytes, so 16*2 hex digits */
+	return sizeof(uint32_t) + strlen(ba->binpath) + 1
+		+ 2*16 + 1;
+}
+
+static size_t binary_ack_pack(char *s, const struct binary_ack *ba)
+{
+	unsigned int len = strlen(ba->binpath);
+	int i;
+	*(uint32_t *) s = ba->type;
+	s += sizeof(uint32_t);
+
+	if (len)
+		memmove(s, ba->binpath, len);
+
+	*(s += len) = '\0';
+	s += 1;
+
+	for (i = 0; i!= 16; ++i) {
+		sprintf(s, "%02x", ba->digest[i]);
+		s += 2;
+	}
+	*s = '\0';
+	return sizeof(uint32_t) + len + 1 + 2*16 + 1;
+}
+
+static void get_file_md5sum(md5_byte_t digest[16], const char *filename)
+{
+	char buffer[1024];
+	ssize_t size;
+	md5_state_t md5_state;
+	int fd = open(filename, O_RDONLY);
+
+	md5_init(&md5_state);
+	if (fd > 0)
+		while ((size = read(fd, buffer, sizeof(buffer))) > 0)
+			md5_append(&md5_state, buffer, size);
+
+	md5_finish(&md5_state, digest);
+	close(fd);
+}
+
+static struct binary_ack* binary_ack_alloc(const char *filename)
+{
+	struct binary_ack *ba = malloc(sizeof(*ba));
+	char binpath[PATH_MAX];
+	ba->type = get_binary_type(filename);
+
+	get_build_dir(binpath, filename);
+	ba->binpath = strdup(binpath);
+
+	get_file_md5sum(ba->digest, filename);
+
+	return ba;
+}
+
+static int process_msg_binary_info(struct msg_buf_t *msg)
+{
+	uint32_t i, bincount;
+
+	if (!parse_int32(msg, &bincount)) {
+		LOGE("MSG_BINARY_INFO error: No binaries count\n");
+		return -1;
+	}
+
+	struct binary_ack* acks[bincount];
+	size_t total_size = 0;
+	for (i = 0; i != bincount; ++i) {
+		const char *str = parse_string_inplace(msg);
+		if (!str) {
+			LOGE("MSG_BINARY_INFO error: No enough binaries\n");
+			return -1;
+		}
+		acks[i] = binary_ack_alloc(str);
+		total_size += binary_ack_size(acks[i]);
+	}
+
+	struct msg_t* msg_reply = malloc(8 + total_size);
+	char *p = msg_reply->payload;
+
+	msg_reply->id = NMSG_BINARY_INFO_ACK;
+	msg_reply->len = total_size;
+
+	for (i = 0; i != bincount; ++i) {
+		p += binary_ack_pack(p, acks[i]);
+		binary_ack_free(acks[i]);
+	}
+
+	int err = send_reply(msg_reply);
+	free(msg_reply);
+	return err;
+}
 
 int host_message_handler(struct msg_t *msg)
 {
@@ -1099,24 +1224,7 @@ int host_message_handler(struct msg_t *msg)
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
 	case NMSG_BINARY_INFO:
-		if (!parse_msg_binary_info(&msg_control, &app_info)) {
-			LOGE("binary info parsing error\n");
-			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
-			return -1;
-		}
-		msg_reply = gen_binary_info_reply(&app_info);
-		if (!msg_reply) {
-			sendACKToHost(msg->id, ERR_UNKNOWN, 0, 0);
-			return -1;
-		}
-
-		if (send_reply(msg_reply) != 0) {
-			LOGE("Cannot send reply\n");
-		}
-
-		reset_app_info(&app_info);
-		free(msg_reply);
-		break;
+		return process_msg_binary_info(&msg_control);
 	case NMSG_SWAP_INST_ADD:
 		if (!parse_user_space_inst(&msg_control,
 					   &user_space_inst)) {
