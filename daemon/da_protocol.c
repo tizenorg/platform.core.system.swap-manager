@@ -1159,6 +1159,10 @@ int host_message_handler(struct msg_t *msg)
 	struct conf_t conf;
 	enum ErrorCode error_code;
 
+	int target_index;
+	ssize_t sendlen;
+	msg_target_t sendlog;
+
 	LOGI("MY HANDLE %s (%X)\n", msg_ID_str(msg->id), msg->id);
 	init_parse_control(&msg_control, msg);
 
@@ -1222,6 +1226,21 @@ int host_message_handler(struct msg_t *msg)
 		}
 		//send ack to host
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
+
+		// send config message to target process
+		sendlog.type = MSG_OPTION;
+		sendlog.length = sprintf(sendlog.data, "%lu",
+				     (unsigned long int) prof_session.conf.use_features0);
+		for (target_index = 0; target_index < MAX_TARGET_COUNT; target_index++)
+		{
+			if(manager.target[target_index].socket != -1)
+			{
+				if (0 > send(manager.target[target_index].socket, &sendlog,
+					sizeof(sendlog.type) + sizeof(sendlog.length) + sendlog.length,
+					     MSG_NOSIGNAL))
+					LOGE("fail to send data to target index(%d)\n", target_index);
+			}
+		}
 		break;
 	case NMSG_BINARY_INFO:
 		return process_msg_binary_info(&msg_control);
