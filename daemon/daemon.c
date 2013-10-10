@@ -62,7 +62,6 @@
 #include "da_inst.h"
 #include "da_data.h"
 #include "debug.h"
-#include "process_info.h"
 
 #define DA_WORK_DIR				"/home/developer/sdk_tools/da/"
 #define DA_READELF_PATH			"/home/developer/sdk_tools/da/readelf"
@@ -246,7 +245,6 @@ static void setEmptyTargetSlot(int index)
 		manager.target[index].pid = -1;
 		manager.target[index].recv_thread = -1;
 		manager.target[index].allocmem = 0;
-		manager.target[index].starttime	= 0;
 		manager.target[index].initial_log = 0;
 		if(manager.target[index].event_fd != -1)
 			close(manager.target[index].event_fd);
@@ -338,7 +336,6 @@ static int exec_app(const struct app_info_t *app_info)
 	case APP_TYPE_RUNNING:
 		// TODO: nothing, it's running
 		LOGI("already started\n");
-		write_process_info(atoi(app_info->app_id), 0);
 		break;
 	case APP_TYPE_COMMON:
 		kill_app(app_info->exe_path);

@@ -25,7 +25,6 @@ DAEMON_SRCS =			\
 	elf.c			\
 	ioctl_commands.c	\
 	main.c			\
-	process_info.c		\
 	sys_stat.c		\
 	threads.c		\
 	transfer_thread.c	\

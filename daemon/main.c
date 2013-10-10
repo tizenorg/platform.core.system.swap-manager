@@ -273,8 +273,7 @@ static void inititialize_manager_targets(__da_manager * mng)
 		.event_fd = -1,
 		.recv_thread = -1,
 		.initial_log = 0,
-		.allocmem = 0,
-		.starttime = 0
+		.allocmem = 0
 	};
 
 	for (index = 0; index < MAX_TARGET_COUNT; index++)

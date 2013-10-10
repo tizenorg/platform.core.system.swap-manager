@@ -47,7 +47,6 @@
 #include "da_protocol.h"
 #include "da_data.h"
 #include "debug.h"
-#include "process_info.h"
 #include "buffer.h"
 
 static void* recvThread(void* data)
@@ -60,7 +59,6 @@ static void* recvThread(void* data)
 
 	// initialize target variable
 	manager.target[index].pid = -1;
-	manager.target[index].starttime = 0;
 	manager.target[index].allocmem = 0;
 
 	while(1)
@@ -132,12 +130,6 @@ static void* recvThread(void* data)
 				}
 				barloc[0] = '\0';
 				barloc++;
-
-				manager.target[index].pid = atoi(log.data);
-				manager.target[index].starttime = str_to_uint64(barloc);
-
-				write_process_info(manager.target[index].pid,
-						   manager.target[index].starttime);
 
 				event = EVENT_PID;
 				write(manager.target[index].event_fd, &event, sizeof(uint64_t));
