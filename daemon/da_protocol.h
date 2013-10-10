@@ -150,7 +150,7 @@ enum feature_code{
 		IS_OPT_SET(FL_DEVICE) ||				\
 		IS_OPT_SET(FL_ENERGY))
 
-enum app_type{
+enum app_type {
 	AT_TIZEN	=0x01,
 	AT_LAUNCHED	=0x02,
 	AT_COMMON	=0x03
@@ -179,8 +179,8 @@ struct msg_data_t {
 };
 
 #define MSG_CMD_HDR_LEN 8
-
-struct msg_buf_t{
+//conf
+struct msg_buf_t {
 	char *payload;
 	char *cur_pos;
 	char *end;
@@ -194,17 +194,6 @@ struct msg_t {
 };
 
 
-enum app_type_t {
-	APP_TYPE_TIZEN = 1,
-	APP_TYPE_RUNNING = 2,
-	APP_TYPE_COMMON = 3,
-};
-struct app_info_t {
-	uint32_t app_type;
-	char *app_id;
-	char *exe_path;
-};
-
 struct conf_t {
 	uint64_t use_features0;
 	uint64_t use_features1;
@@ -214,45 +203,38 @@ struct conf_t {
 
 typedef uint32_t log_interval_t;
 
-struct probe_t {
-	uint64_t addr;
-	uint32_t arg_num;
-	char *arg_fmt;
+//app, libs, probes
+enum app_type_t {
+	APP_TYPE_TIZEN = 1,
+	APP_TYPE_RUNNING = 2,
+	APP_TYPE_COMMON = 3,
+};
+
+struct app_info_t {
+	uint32_t app_type;
+	char *app_id;
+	char *exe_path;
 };
 
 
-struct us_inst_t {
-	char * path;
-	uint32_t probe_num;
-	struct probe_t *probes;
-};
 
-struct us_func_inst_t {
+struct us_func_inst_plane_t {
 	uint64_t func_addr;
-	char *args;
+	char args[0];
 };
 
 struct us_lib_inst_t {
-	char * bin_path;
-	uint32_t func_num;
-	struct us_func_inst_t *us_func_inst_list;
-};
-
-struct app_inst_t {
-	uint32_t app_type;
-	char * app_id;
-	char * exec_path;
-	uint32_t func_num;
-	struct us_func_inst_t *us_func_inst_list;
-	uint32_t lib_num;
-	struct us_lib_inst_t *us_lib_inst_list;
+	char *bin_path;
 };
 
 struct user_space_inst_t {
 	uint32_t app_num;
-	struct app_inst_t *app_inst_list;
+	struct app_list_t *app_inst_list;
+	uint32_t lib_num;
+	struct lib_list_t *lib_inst_list;
 };
 
+//replays
 struct replay_event_t {
 	uint32_t id;
 	struct input_event ev;
@@ -266,16 +248,15 @@ struct replay_event_seq_t {
 };
 
 struct prof_session_t {
-	struct app_info_t app_info;
 	struct conf_t conf;
 	struct user_space_inst_t user_space_inst;
 	struct replay_event_seq_t replay_event_seq;
 };
 
-int parseHostMessage(struct msg_t *log, char* msg);
+int parseHostMessage(struct msg_t *log, char *msg);
 int host_message_handler(struct msg_t *msg);
 
-char* msg_ID_str ( enum HostMessageT ID);
+char *msg_ID_str(enum HostMessageT ID);
 
 // testing
 #include <sys/stat.h>
@@ -283,12 +264,12 @@ char* msg_ID_str ( enum HostMessageT ID);
 #include <unistd.h>
 
 //data protocol
-struct thread_info_t{
+struct thread_info_t {
 	uint32_t pid;
 	float load;
 };
 
-struct process_info_t{
+struct process_info_t {
 	uint32_t id;
 	float load;
 };
@@ -333,7 +314,7 @@ struct system_info_t {
 	uint32_t app_energy_per_device[supported_devices_count];
 };
 
-struct recorded_event_t{
+struct recorded_event_t {
 	uint32_t id;
 	uint32_t type;
 	uint32_t code;
@@ -401,9 +382,16 @@ void reset_system_info(struct system_info_t *sys);
 extern struct prof_session_t prof_session;
 
 //debugs
-void print_replay_event( struct replay_event_t *ev,  uint32_t num, char *tab);
+void print_replay_event(struct replay_event_t *ev, uint32_t num, char *tab);
 
 int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 			char *payload, int payload_size);
 
+int parse_int32(struct msg_buf_t *msg, uint32_t *val);
+int parse_int64(struct msg_buf_t *msg, uint64_t *val);
+int parse_string(struct msg_buf_t *msg, char **str);
+int parse_string_no_alloc(struct msg_buf_t *msg, char *str);
+int parse_replay_event_seq(struct msg_buf_t *msg, struct replay_event_seq_t *res);
+
+void init_prof_session(struct prof_session_t *prof_session);
 #endif /* _DA_PROTOCOL_ */

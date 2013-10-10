@@ -59,3 +59,4 @@ int check_us_app_count(uint32_t app_count);
 int check_us_app_inst_func_count(uint32_t func_count);
 int check_us_inst_func_args(char *args);
 int check_lib_inst_count(uint32_t lib_count);
+int check_conf(struct conf_t *conf);

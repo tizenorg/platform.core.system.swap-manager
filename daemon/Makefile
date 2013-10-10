@@ -18,6 +18,8 @@ DAEMON_SRCS =			\
 	da_data.c		\
 	da_debug.c		\
 	da_protocol.c		\
+	da_protocol_inst.c	\
+	da_inst.c		\
 	daemon.c		\
 	debug.c			\
 	elf.c			\

@@ -166,7 +166,7 @@ int check_us_inst_func_args(char *args)
 	char *p;
 	for (p = args; *p != 0; p++)
 		if (strchr(args_avail, (int)*p) == NULL){
-			LOGE("wrong args <%s> char <%c>\n", args, (int)*p);
+			LOGE("wrong args <%s> char <%c> <0x%02X>\n", args, (int)*p, (char)*p);
 			return 0;
 		}
 	return 1;
@@ -184,4 +184,25 @@ int check_lib_inst_count(uint32_t lib_count)
 	}
 
 	return res;
+}
+
+int check_conf(struct conf_t *conf)
+{
+	//Check features value
+	if (!check_conf_features(conf->use_features0, conf->use_features1)) {
+		LOGE("check features fail\n");
+		return 0;
+	}
+
+	if (!check_conf_systrace_period(conf->system_trace_period)) {
+		LOGE("system trace period error\n");
+		return 0;
+	}
+
+	if (!check_conf_datamsg_period(conf->data_message_period)) {
+		LOGE("data message period error\n");
+		return 0;
+	}
+
+	return 1;
 }

@@ -35,7 +35,7 @@
 void print_buf(char * buf, int len, const char *info)
 {
 	int i,j;
-	char local_buf[3*16 + 2*16 + 1 + 8];
+	char local_buf[3*17 + 2*16 + 1 + 8];
 	char * p1, * p2;
 
 	LOGI("BUFFER [%d] <%s>:\n", len, info);

@@ -59,6 +59,7 @@
 #include "sys_stat.h"
 #include "utils.h"
 #include "da_protocol.h"
+#include "da_inst.h"
 #include "da_data.h"
 #include "debug.h"
 #include "process_info.h"
@@ -320,8 +321,11 @@ static int stop_app_launch_timer()
 static int exec_app(const struct app_info_t *app_info)
 {
 	int res = 0;
-	static struct epoll_event ev;
 
+	if (app_info == NULL) {
+		LOGE("Cannot exec app. app_info is NULL");
+		return -1;
+	}
 
 	switch (app_info->app_type) {
 	case APP_TYPE_TIZEN:
@@ -350,7 +354,7 @@ static int exec_app(const struct app_info_t *app_info)
 	}
 
 	if (res == 0 && app_info->app_type != APP_TYPE_RUNNING)
-		if (start_app_launch_timer()<0)
+		if (start_app_launch_timer() < 0)
 			res = -1;
 
 	LOGI("ret=%d\n", res);
@@ -405,8 +409,16 @@ static void epoll_del_input_events();
 
 int start_profiling()
 {
-	const struct app_info_t *app_info = &prof_session.app_info;
+	struct app_list_t *app = NULL;
+	const struct app_info_t *app_info = NULL;
 	int res = 0;
+
+	app_info = app_info_get_first(&app);
+	if (app_info == NULL) {
+		LOGE("No app info found\n");
+		return -1;
+	}
+
 
 	// remove previous screen capture files
 	remove_indir(SCREENSHOT_DIR);
@@ -557,8 +569,7 @@ static int deviceEventHandler(input_dev* dev, int input_type)
 	struct input_event in_ev[MAX_EVENTS_NUM];
 	struct msg_data_t *log;
 
-	if(input_type == INPUT_ID_TOUCH || input_type == INPUT_ID_KEY)
-	{
+	if(input_type == INPUT_ID_TOUCH || input_type == INPUT_ID_KEY) {
 		do {
 			size = read(dev->fd, &in_ev[count], sizeof(*in_ev) );
 			if (size >0)
@@ -574,9 +585,7 @@ static int deviceEventHandler(input_dev* dev, int input_type)
 			write_to_buf(log);
 			free_msg_data(log);
 		}
-	}
-	else
-	{
+	} else {
 		LOGW("unknown input_type\n");
 		ret = 1; // it is not error
 	}
@@ -585,12 +594,25 @@ static int deviceEventHandler(input_dev* dev, int input_type)
 
 static int target_event_pid_handler(int index, uint64_t msg)
 {
+	struct app_list_t *app = NULL;
+	struct app_info_t *app_info = NULL;
 	if (index == 0) {	// main application
-		if (!is_same_app_process(prof_session.app_info.exe_path,
-					 manager.target[index].pid)) {
-			LOGE("is same error: '%s' is not %d\n",
-			     prof_session.app_info.exe_path,
-			     manager.target[index].pid);
+		app_info = app_info_get_first(&app);
+		if (app_info == NULL) {
+			LOGE("No app info found\n");
+			return -1;
+		}
+
+		while (app_info != NULL) {
+			if (is_same_app_process(app_info->exe_path,
+						manager.target[index].pid))
+				break;
+			app_info = app_info_get_next(&app);
+		}
+
+		if (app_info == NULL) {
+			LOGE("pid %d not found in app list\n",
+			      manager.target[index].pid);
 			return -1;
 		}
 
@@ -845,7 +867,7 @@ static int controlSocketHandler(int efd)
 			if (recv_len == -1)
 				return -11;
 		}
-		printBuf(msg, MSG_DATA_HDR_LEN + msg->len);
+		printBuf((char *)msg, MSG_CMD_HDR_LEN + msg->len);
 		res = host_message_handler(msg);
 		free(msg);
 	}
@@ -954,6 +976,8 @@ int daemonLoop()
 		return_value = -1;
 		goto END_EFD;
 	}
+
+	init_prof_session(&prof_session);
 
 
 	// handler loop

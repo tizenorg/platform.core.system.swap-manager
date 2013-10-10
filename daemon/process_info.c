@@ -30,6 +30,7 @@
 #include <errno.h>
 #include "da_protocol.h"
 #include "da_data.h"
+#include "da_inst.h"
 #include "utils.h"
 #include "elf.h"
 #include "debug.h"
@@ -40,16 +41,19 @@
 #define AWK_END_PROCESS "/maps | grep 'r-x' | awk '{print $1, $6}' | grep "
 #define AWK_SYSTEM_UP_TIME "cat /proc/uptime  | awk '{print $1}'"
 
+// TODO don't make me cry
 void write_process_info(int pid, uint64_t starttime)
 {
 	// TODO refactor this code
 	char buf[1024];
-	struct msg_data_t *msg = malloc(64 * 1024);
+	struct msg_data_t *msg = NULL;
 	char *p = msg->payload;
 	char *dep_count_p = NULL;
 	int dep_count = 0;
+	struct app_list_t *app = NULL;
+	struct app_info_t *app_info = NULL;
 	// TODO: add check for unknown type
-	uint32_t binary_type = get_binary_type(prof_session.app_info.exe_path);
+	uint32_t binary_type = BINARY_TYPE_UNKNOWN;
 	char binary_path[PATH_MAX];
 	uint64_t start, end;
 	float process_up_time;
@@ -60,10 +64,19 @@ void write_process_info(int pid, uint64_t starttime)
 	int fields;
 	FILE *f;
 
-	// TODO need check this result and return error
-	dereference_tizen_exe_path(prof_session.app_info.exe_path, path);
-	get_build_dir(binary_path, prof_session.app_info.exe_path);
+	app_info = app_info_get_first(&app);
+	if (app_info == NULL) {
+		LOGE("No app info found\n");
+		return;
+	}
+	binary_type = get_binary_type(app_info->exe_path);
 
+	// TODO need check this result and return error
+	dereference_tizen_exe_path(app_info->exe_path, path);
+	get_build_dir(binary_path, app_info->exe_path);
+
+	msg = malloc(64 * 1024);
+	p = msg->payload;
 	fill_data_msg_head(msg, NMSG_PROCESS_INFO, 0, 0);
 
 	sprintf(buf, "%s%d%s%s", AWK_START, pid, AWK_END_PROCESS,path);
