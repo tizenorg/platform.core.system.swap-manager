@@ -2310,45 +2310,69 @@ static float get_factor(float elapsed)
 	return 100.0f / ((float)Hertz * elapsed * num_of_cpu);
 }
 
-static uint32_t read_int_from_file(const char *fname)
+static uint64_t read_int64_from_file(const char *fname)
 {
 	FILE *fp = fopen(fname, "r");
-	int value;
+	uint64_t value;
 	if (!fp)
 		return 0;
-	if (fscanf(fp, "%d", &value) != 1)
+	if (fscanf(fp, "%lld", &value) != 1)
 		value = 0;
 	fclose(fp);
 	return value;
 }
 
 #define swap_sysfs_relpath(x) ("/sys/kernel/debug/swap/energy/" #x)
-#define swap_read_int(x) (read_int_from_file(swap_sysfs_relpath(x)))
+#define swap_read_int64(x) (read_int64_from_file(swap_sysfs_relpath(x)))
 
-static uint32_t get_energy_per_device(enum supported_device dev)
+// Calculates difference between current and previous sample (system).
+// Stores mutable state in static variables.
+static uint32_t pop_sys_energy_per_device(enum supported_device dev)
 {
+	static uint64_t cpu_old, flash_old;
+	uint64_t cpu_new, flash_new;
+	uint64_t cpu_diff, flash_diff;
+
 	switch (dev) {
 	case DEVICE_CPU:
-		return swap_read_int(cpu_idle/system) +
-			swap_read_int(cpu_running/system);
+		cpu_new = swap_read_int64(cpu_idle/system) +
+			swap_read_int64(cpu_running/system);
+		cpu_diff = cpu_new - cpu_old;
+		cpu_old = cpu_new;
+		return (uint32_t)cpu_diff;
 
 	case DEVICE_FLASH:
-		return swap_read_int(flash_read/system) +
-			swap_read_int(flash_write/system);
+		flash_new = swap_read_int64(flash_read/system) +
+			swap_read_int64(flash_write/system);
+		flash_diff = flash_new - flash_old;
+		flash_old = flash_new;
+		return (uint32_t)flash_diff;
 	default:
 		assert(0 && "Unknown device. This should not happen");
 		return -41;
 	}
 }
 
-static uint32_t app_get_energy_per_device(enum supported_device dev)
+// Calculates difference between current and previous sample (app).
+// Stores mutable state in static variables.
+static uint32_t pop_app_energy_per_device(enum supported_device dev)
 {
+	static uint64_t cpu_old, flash_old;
+	uint64_t cpu_new, flash_new;
+	uint64_t cpu_diff, flash_diff;
+
 	switch (dev) {
 	case DEVICE_CPU:
-		return swap_read_int(cpu_running/apps);
+		cpu_new = swap_read_int64(cpu_running/apps);
+		cpu_diff = cpu_new - cpu_old;
+		cpu_old = cpu_new;
+		return (uint32_t)cpu_diff;
 	case DEVICE_FLASH:
-		return swap_read_int(flash_read/apps) +
-			swap_read_int(flash_write/apps);
+		flash_new = swap_read_int64(flash_read/apps) +
+			swap_read_int64(flash_write/apps);
+		flash_diff = flash_new - flash_old;
+		flash_old = flash_new;
+		return (uint32_t)flash_diff;
 	default:
 		assert(0 && "Unknown device. This should not happen");
 		return -41;
@@ -2516,9 +2540,9 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 		sys_info->energy = 0; // not implemented
 		for (i = 0; i != supported_devices_count; ++i) {
 			sys_info->energy_per_device[i] =
-				get_energy_per_device(i);
+				pop_sys_energy_per_device(i);
 			sys_info->app_energy_per_device[i] =
-				app_get_energy_per_device(i);
+				pop_app_energy_per_device(i);
 		}
 	}
 
