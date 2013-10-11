@@ -55,29 +55,29 @@ NMSG_GET_TARGET_INFO_ACK	=0x1007,
 NMSG_SWAP_INST_ADD_ACK		=0x1008,
 NMSG_SWAP_INST_REMOVE_ACK	=0x1009,
 
-NMSG_PROCESS_INFO			=0x2002,	//	target process info
-NMSG_TERMINATE				=0x2004,	//terminate
-NMSG_ERROR					=0x2005,	//error message
-NMSG_SAMPLE					=0x2006,	//N	10ms
-NMSG_SYSTEM					=0x2007,	//N	10~1000ms	DaData, start sending immediately after start message from host, first system message time is tracing start time
-NMSG_IMAGE					=0x2008,	//N	irregular	image
-NMSG_RECORD					=0x2009,	//N	irregular	replay event
-NMSG_FUNCTION_ENTRY			=0x2010,	//N	irregular	swap instrumentation, Instrumented functions by AppInst and LibInst
-NMSG_FUNCTION_EXIT			=0x2011,	//N	irregular	swap instrumentation, Instrumented functions by AppInst and LibInst
-NMSG_CONTEXT_SWITCH_ENTRY	=0x2012,	//N	irregular	swap instrumentation for kernel
-NMSG_CONTEXT_SWITCH_EXIT	=0x2013,	//N	irregular	swap instrumentation for kernel
+NMSG_PROCESS_INFO			=0x0001,	//	target process info
+NMSG_TERMINATE				=0x0002,	//terminate
+NMSG_ERROR					=0x0003,	//error message
+NMSG_SAMPLE					=0x0004,	//N	10ms
+NMSG_SYSTEM					=0x0005,	//N	10~1000ms	DaData, start sending immediately after start message from host, first system message time is tracing start time
+NMSG_IMAGE					=0x0006,	//N	irregular	image
+NMSG_RECORD					=0x0007,	//N	irregular	replay event
+NMSG_FUNCTION_ENTRY			=0x0008,	//N	irregular	swap instrumentation, Instrumented functions by AppInst and LibInst
+NMSG_FUNCTION_EXIT			=0x0009,	//N	irregular	swap instrumentation, Instrumented functions by AppInst and LibInst
+NMSG_CONTEXT_SWITCH_ENTRY	=0x0010,	//N	irregular	swap instrumentation for kernel
+NMSG_CONTEXT_SWITCH_EXIT	=0x0011,	//N	irregular	swap instrumentation for kernel
 
-NMSG_PROBE					=0x3100,	//N	irregular	resource log
-NMSG_PROBE_MEMORY			=0X3001,	//N	irregular	resource log
-NMSG_PROBE_UICONTROL		=0X3002,	//N	irregular	resource log
-NMSG_PROBE_UIEVENT			=0X3003,	//N	irregular	resource log
-NMSG_PROBE_RESOURCE			=0X3004,	//N	irregular	resource log
-NMSG_PROBE_LIFECYCLE		=0X3005,	//N	irregular	resource log
-NMSG_PROBE_SCREENSHOT		=0X3006,	//N	irregular	resource log
-NMSG_PROBE_SCENE			=0X3007,	//N	irregular	resource log
-NMSG_PROBE_THREAD			=0X3008,	//N	irregular	resource log
-NMSG_PROBE_CUSTOM			=0X3009,	//N	irregular	resource log
-NMSG_PROBE_SYNC				=0X3010	//N	irregular	resource log
+NMSG_PROBE					=0x0100,	//N	irregular	resource log
+NMSG_PROBE_MEMORY			=0x0101,	//N	irregular	resource log
+NMSG_PROBE_UICONTROL		=0x0102,	//N	irregular	resource log
+NMSG_PROBE_UIEVENT			=0x0103,	//N	irregular	resource log
+NMSG_PROBE_RESOURCE			=0x0104,	//N	irregular	resource log
+NMSG_PROBE_LIFECYCLE		=0x0105,	//N	irregular	resource log
+NMSG_PROBE_SCREENSHOT		=0x0106,	//N	irregular	resource log
+NMSG_PROBE_SCENE			=0x0107,	//N	irregular	resource log
+NMSG_PROBE_THREAD			=0x0108,	//N	irregular	resource log
+NMSG_PROBE_CUSTOM			=0x0109,	//N	irregular	resource log
+NMSG_PROBE_SYNC				=0x0110	//N	irregular	resource log
 
 
 };

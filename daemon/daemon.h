@@ -94,7 +94,7 @@ enum TargetMessageType
 	MSG_ALLOC = 10,
 	MSG_ERROR = 11
 };
-#define IS_PROBE_MSG(type) ((type & 0x3000) == 0x3000)
+#define IS_PROBE_MSG(type) (((type) & 0x0100) == 0x0100)
 
 enum HostMessageType
 {
