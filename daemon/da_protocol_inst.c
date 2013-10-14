@@ -208,7 +208,7 @@ int parse_inst_app(struct msg_buf_t *msg, struct app_list_t **dest)
 	}
 
 	(*dest)->size += (end - start) + sizeof((*dest)->func_num);
-	(*dest)->hash = calc_app_hash((struct app_info_t *)&((*dest)->app));
+	(*dest)->hash = calc_app_hash(app_info);
 	return 1;
 }
 
