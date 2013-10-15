@@ -131,6 +131,7 @@ static void* recvThread(void* data)
 				barloc[0] = '\0';
 				barloc++;
 
+				manager.target[index].pid = atoi(log.data);
 				event = EVENT_PID;
 				write(manager.target[index].event_fd, &event, sizeof(uint64_t));
 			}
