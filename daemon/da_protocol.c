@@ -861,13 +861,24 @@ static void get_file_md5sum(md5_byte_t digest[16], const char *filename)
 	close(fd);
 }
 
+static const char* basename(const char *filename)
+{
+	const char *p = strrchr(filename, '/');
+	return p ? p + 1 : NULL;
+}
 static struct binary_ack* binary_ack_alloc(const char *filename)
 {
 	struct binary_ack *ba = malloc(sizeof(*ba));
+	char builddir[PATH_MAX];
 	char binpath[PATH_MAX];
+
 	ba->type = get_binary_type(filename);
 
-	get_build_dir(binpath, filename);
+	get_build_dir(builddir, filename);
+
+	snprintf(binpath, sizeof(binpath), "%s/%s",
+		 builddir, basename(filename) ?: "");
+
 	ba->binpath = strdup(binpath);
 
 	get_file_md5sum(ba->digest, filename);
