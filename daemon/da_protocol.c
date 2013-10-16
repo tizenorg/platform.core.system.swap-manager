@@ -949,12 +949,6 @@ int host_message_handler(struct msg_t *msg)
 			error_code = ERR_CANNOT_START_PROFILING;
 			goto send_ack;
 		}
-		//response to control socket
-		if (msg_reply == NULL) {
-			LOGE("message for kernel is null\n");
-			error_code = ERR_CANNOT_START_PROFILING;
-			goto send_ack;
-		}
 
 		if (ioctl_send_msg(msg_reply) != 0) {
 			LOGE("cannot send message to device\n");
