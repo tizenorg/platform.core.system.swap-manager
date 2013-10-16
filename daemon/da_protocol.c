@@ -931,6 +931,55 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 	return err;
 }
 
+static void get_serialized_time(uint32_t dst[2])
+{
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	dst[0] = tv.tv_sec;
+	dst[1] = tv.tv_usec * 1000;
+}
+
+static int process_msg_start(struct msg_buf_t *msg_control)
+{
+	enum ErrorCode err_code = ERR_CANNOT_START_PROFILING;
+	struct msg_t *msg_reply;
+	uint32_t serialized_time[2];
+
+	if (!check_conf(&prof_session.conf)) {
+		LOGE("wrong profile config\n");
+		goto send_ack;
+	}
+
+	if (msg_start(msg_control, &prof_session.user_space_inst,
+		      &msg_reply) != 0) {
+		LOGE("parse error\n");
+		goto send_ack;
+	}
+
+	if (start_transfer() != 0) {
+		LOGE("Cannot start transfer\n");
+		goto send_ack;
+	}
+
+	if (ioctl_send_msg(msg_reply) != 0) {
+		LOGE("cannot send message to device\n");
+		goto send_ack;
+	}
+
+	if (start_profiling() < 0) {
+		LOGE("cannot start profiling\n");
+		goto send_ack;
+	}
+
+	err_code = ERR_NO;
+send_ack:
+	get_serialized_time(&serialized_time);
+	sendACKToHost(NMSG_START, err_code, (void *)&serialized_time,
+		      sizeof(serialized_time));
+
+	return -(err_code == ERR_NO);
+}
+
 int host_message_handler(struct msg_t *msg)
 {
 	struct app_info_t app_info;
@@ -952,38 +1001,7 @@ int host_message_handler(struct msg_t *msg)
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
 	case NMSG_START:
-		if (!check_conf(&prof_session.conf)) {
-			error_code = ERR_CANNOT_START_PROFILING;
-			LOGE("wrong profile config\n");
-			goto send_ack;
-		}
-		if (msg_start(&msg_control, &prof_session.user_space_inst, &msg_reply) != 0) {
-			LOGE("parse error\n");
-			error_code = ERR_CANNOT_START_PROFILING;
-			goto send_ack;
-		}
-
-		if (start_transfer() != 0) {
-			LOGE("Cannot start transfer\n");
-			error_code = ERR_CANNOT_START_PROFILING;
-			goto send_ack;
-		}
-
-		if (ioctl_send_msg(msg_reply) != 0) {
-			LOGE("cannot send message to device\n");
-			// response to control socket
-			error_code = ERR_CANNOT_START_PROFILING;
-			goto send_ack;
-		}
-
-		if (start_profiling() < 0) {
-			LOGE("cannot start profiling\n");
-			error_code = ERR_CANNOT_START_PROFILING;
-			goto send_ack;
-		}
-		// success
-		error_code = ERR_NO;
-		goto send_ack;
+		return process_msg_start(&msg_control);
 	case NMSG_STOP:
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		if (stop_all() != ERR_NO)
