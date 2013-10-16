@@ -884,7 +884,7 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 		return -1;
 	}
 
-	struct binary_ack* acks[bincount];
+	struct binary_ack *acks[bincount];
 	size_t total_size = 0;
 	for (i = 0; i != bincount; ++i) {
 		const char *str = parse_string_inplace(msg);
@@ -895,12 +895,20 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 		acks[i] = binary_ack_alloc(str);
 		total_size += binary_ack_size(acks[i]);
 	}
-
-	struct msg_t* msg_reply = malloc(8 + total_size);
+	typedef uint32_t return_id;
+	typedef uint32_t binary_ack_count;
+	struct msg_t *msg_reply = malloc(sizeof(struct msg_t)
+					 + sizeof(return_id)
+					 + sizeof(binary_ack_count)
+					 + total_size);
 	char *p = msg_reply->payload;
 
 	msg_reply->id = NMSG_BINARY_INFO_ACK;
-	msg_reply->len = total_size;
+	msg_reply->len = total_size + sizeof(return_id)
+				    + sizeof(binary_ack_count);
+
+	pack_int32(p, ERR_NO);
+	pack_int32(p, bincount);
 
 	for (i = 0; i != bincount; ++i) {
 		p += binary_ack_pack(p, acks[i]);
