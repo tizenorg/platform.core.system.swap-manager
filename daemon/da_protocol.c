@@ -977,7 +977,7 @@ send_ack:
 	sendACKToHost(NMSG_START, err_code, (void *)&serialized_time,
 		      sizeof(serialized_time));
 
-	return -(err_code == ERR_NO);
+	return -(err_code != ERR_NO);
 }
 
 int host_message_handler(struct msg_t *msg)
