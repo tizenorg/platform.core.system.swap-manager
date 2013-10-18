@@ -73,9 +73,12 @@ struct data_list_t {
 typedef int (cmp_data_f) (struct data_list_t *el_1, struct data_list_t *el_2);
 typedef char *(*pack_head_t) (char *to, void *data);
 
-extern int msg_swap_inst_remove(struct msg_buf_t *data, struct user_space_inst_t *us_inst, struct msg_t **msg);
-extern int msg_swap_inst_add(struct msg_buf_t *data, struct user_space_inst_t *us_inst, struct msg_t **msg);
-extern int msg_start(struct msg_buf_t *data, struct user_space_inst_t *us_inst, struct msg_t **msg);
+extern int msg_swap_inst_remove(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
+				struct msg_t **msg, enum ErrorCode *err);
+extern int msg_swap_inst_add(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
+			     struct msg_t **msg, enum ErrorCode *err);
+extern int msg_start(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
+		     struct msg_t **msg, enum ErrorCode *err);
 
 struct probe_list_t *new_probe();
 struct lib_list_t *new_lib();

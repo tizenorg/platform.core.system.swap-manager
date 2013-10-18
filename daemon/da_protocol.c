@@ -753,7 +753,7 @@ int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 		//copy payload data
 		memcpy(p, payload, payload_size);
 
-		LOGI("ACK (%s) errcode<%s> payload=%d; size=%d\n", msg_ID_str(resp),
+		LOGI("ACK (%s) errcode<%s> payload=0x%08X; size=%d\n", msg_ID_str(resp),
 				msgErrStr(err_code), (int)payload, payload_size);
 		printBuf((char *)msg, loglen);
 
@@ -951,7 +951,7 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 	}
 
 	if (msg_start(msg_control, &prof_session.user_space_inst,
-		      &msg_reply) != 0) {
+		      &msg_reply, &err_code) != 0) {
 		LOGE("parse error\n");
 		goto send_ack;
 	}
@@ -1044,9 +1044,9 @@ int host_message_handler(struct msg_t *msg)
 	case NMSG_BINARY_INFO:
 		return process_msg_binary_info(&msg_control);
 	case NMSG_SWAP_INST_ADD:
-		if (msg_swap_inst_add(&msg_control, &prof_session.user_space_inst, &msg_reply) != 0) {
+		if (msg_swap_inst_add(&msg_control, &prof_session.user_space_inst,
+				      &msg_reply, &error_code) != 0) {
 			LOGE("swap inst add\n");
-			error_code = ERR_UNKNOWN;
 			goto send_ack;
 		}
 		if (msg_reply != NULL)
@@ -1057,7 +1057,8 @@ int host_message_handler(struct msg_t *msg)
 		//send ack to host
 		goto send_ack;
 	case NMSG_SWAP_INST_REMOVE:
-		if (msg_swap_inst_remove(&msg_control, &prof_session.user_space_inst, &msg_reply) != 0) {
+		if (msg_swap_inst_remove(&msg_control, &prof_session.user_space_inst,
+					 &msg_reply, &error_code) != 0) {
 			LOGE("swap inst remove\n");
 			error_code = ERR_UNKNOWN;
 			goto send_ack;

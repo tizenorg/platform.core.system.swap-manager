@@ -623,11 +623,13 @@ struct app_info_t *app_info_get_next(struct app_list_t **app_list)
 }
 
 //-----------------------------------------------------------------------------
-int msg_start(struct msg_buf_t *data, struct user_space_inst_t *us_inst, struct msg_t **msg)
+int msg_start(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
+	      struct msg_t **msg, enum ErrorCode *err)
 {
 	char *p = NULL;
 	*msg = NULL;
 	if (!parse_app_inst_list(data, &us_inst->app_num, &us_inst->app_inst_list)) {
+		*err = ERR_WRONG_MESSAGE_FORMAT;
 		LOGE("parse app inst\n");
 		return 1;
 	}
@@ -638,17 +640,22 @@ int msg_start(struct msg_buf_t *data, struct user_space_inst_t *us_inst, struct 
 		p = (char *)*msg;
 		pack_int32(p, NMSG_START);
 	} else {
+		*err = ERR_CANNOT_START_PROFILING;
 		return 1;
 	}
 	return 0;
 }
 
-int msg_swap_inst_add(struct msg_buf_t *data, struct user_space_inst_t *us_inst, struct msg_t **msg)
+int msg_swap_inst_add(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
+		      struct msg_t **msg, enum ErrorCode *err)
 {
 	uint32_t lib_num = 0;
 	char *p = NULL;
 
+	*err = ERR_UNKNOWN;
+
 	if (!parse_lib_inst_list(data, &lib_num, &us_inst->lib_inst_list)) {
+		*err = ERR_WRONG_MESSAGE_FORMAT;
 		LOGE("parse lib inst list fail\n");
 		return 1;
 	}
@@ -677,15 +684,19 @@ int msg_swap_inst_add(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 	// free new_list
 	free_data_list((struct data_list_t **)&new_lib_inst_list);
 	new_lib_inst_list = NULL;
+	*err = ERR_NO;
 	return 0;
 }
 
-int msg_swap_inst_remove(struct msg_buf_t *data, struct user_space_inst_t *us_inst, struct msg_t **msg)
+int msg_swap_inst_remove(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
+			 struct msg_t **msg, enum ErrorCode *err)
 {
 	uint32_t lib_num = 0;
 	char *p = NULL;
+	*err = ERR_UNKNOWN;
 
 	if (!parse_lib_inst_list(data, &lib_num, &new_lib_inst_list)) {
+		*err = ERR_WRONG_MESSAGE_FORMAT;
 		LOGE("parse lib inst\n");
 		return 1;
 	}
@@ -706,5 +717,6 @@ int msg_swap_inst_remove(struct msg_buf_t *data, struct user_space_inst_t *us_in
 
 	free_data_list((struct data_list_t **)&new_lib_inst_list);
 	new_lib_inst_list = NULL;
+	*err = ERR_NO;
 	return 0;
 }
