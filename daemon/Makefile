@@ -8,7 +8,6 @@ ifeq (arm, $(findstring arm, $(shell uname -sm)))
 	CPPFLAGS += -DDEVICE_ONLY
 endif
 
-HOST_CPPFLAGS := -DLOCALTEST=1 -O0 -g
 COMMON_LIBS := -lglib-2.0 -lpthread
 TARGET_LIBS := $(COMMON_LIBS) -lvconf -lsmack -lcapi-system-info
 CFLAGS := -Wall -pthread -g -O0
@@ -37,12 +36,10 @@ DAEMON_OBJS = $(patsubst %.c,%.o, $(DAEMON_SRCS))
 TARGET = da_manager
 DASCRIPT = da_command
 
-all: target-nolog
-host: $(COMMON_LIBS)
-target target-nolog: $(TARGET_LIBS)
-target-nolog: CPPFLAGS+=-DNOLOGI=1
-host: CPPFLAGS+=$(HOST_CPPFLAGS)
-target host target-nolog: $(DAEMON_OBJS)
+all: debug
+debug release: $(TARGET_LIBS)
+release: CPPFLAGS+=-DNOLOGI=1
+debug release: $(DAEMON_OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $(TARGET)
 
 install: BINDIR=$(DESTDIR)/usr/bin
@@ -53,4 +50,4 @@ install: target
 clean:
 	rm -f $(TARGET) $(DAEMON_OBJS)
 
-.PHONY: all host target clean install target-nolog
+.PHONY: all target clean install target-nolog
