@@ -543,6 +543,21 @@ static void reset_conf(struct conf_t *conf)
 	memset(conf, 0, sizeof(*conf));
 }
 
+static void running_status_on(struct prof_session_t *prof_session)
+{
+	prof_session->running_status = 1;
+}
+
+static void running_status_off(struct prof_session_t *prof_session)
+{
+	prof_session->running_status = 0;
+}
+
+int check_running_status(struct prof_session_t *prof_session)
+{
+	return prof_session->running_status;
+}
+
 static void reset_app_inst(struct user_space_inst_t *us_inst)
 {
 	free_data_list((struct data_list_t **)&us_inst->app_inst_list);
@@ -586,6 +601,7 @@ static void reset_prof_session(struct prof_session_t *prof_session)
 	reset_conf(&prof_session->conf);
 	reset_user_space_inst(&prof_session->user_space_inst);
 	reset_replay_event_seq(&prof_session->replay_event_seq);
+	running_status_off(prof_session);
 }
 
 static struct msg_t *gen_binary_info_reply(struct app_info_t *app_info)
@@ -780,29 +796,40 @@ struct msg_t *gen_stop_msg(void)
 
 enum ErrorCode stop_all(void)
 {
-	LOGI("entry\n");
 	enum ErrorCode error_code = ERR_NO;
-	struct msg_t *msg = gen_stop_msg();
+	struct msg_t *msg;
 
-	terminate_all();
-	stop_profiling();
+	LOGI("entry\n");
 
-	if (msg == NULL) {
-		LOGE("cannot generate stop message\n");
-		return ERR_UNKNOWN;
-	} else {
-		if (ioctl_send_msg(msg) != 0) {
-			LOGE("ioctl send filed\n");
+	// stop all only if it has not been called yet
+	if (check_running_status(&prof_session)) {
+		msg = gen_stop_msg();
+		terminate_all();
+		stop_profiling();
+
+		if (msg == NULL) {
+			LOGE("cannot generate stop message\n");
 			error_code = ERR_UNKNOWN;
+			goto stop_all_exit;
+		} else {
+			if (ioctl_send_msg(msg) != 0) {
+				LOGE("ioctl send failed\n");
+				error_code = ERR_UNKNOWN;
+				free_msg(msg);
+				goto stop_all_exit;
+			}
+			free_msg(msg);
 		}
-		free_msg(msg);
-	}
 
-	//we reset only app inst no lib no confing reset
-	reset_app_inst(&prof_session.user_space_inst);
-	stop_transfer();
+		// we reset only app inst no lib no confing reset
+		reset_app_inst(&prof_session.user_space_inst);
+		stop_transfer();
+		running_status_off(&prof_session);
+	} else
+		LOGI("already stopped\n");
 
-	LOGI("finished\n");
+stop_all_exit:
+	LOGI("finished: ret = %d\n", error_code);
 	return error_code;
 }
 struct binary_ack {
@@ -976,6 +1003,7 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 	}
 
 	err_code = ERR_NO;
+	running_status_on(&prof_session);
 send_ack:
 	get_serialized_time(&serialized_time);
 	sendACKToHost(NMSG_START, err_code, (void *)&serialized_time,

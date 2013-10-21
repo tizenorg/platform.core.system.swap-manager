@@ -837,8 +837,9 @@ static void epoll_add_input_events()
 		if (g_key_dev[i].fd >= 0) {
 			ev.data.fd = g_key_dev[i].fd;
 			if (epoll_ctl(manager.efd,
-				      EPOLL_CTL_ADD, g_key_dev[i].fd, &ev) < 0)
-				LOGE("keyboard device file epoll_ctl error\n");
+				      EPOLL_CTL_ADD, g_key_dev[i].fd, &ev) < 0
+				      && errno != EEXIST)
+				LOGE("keyboard device file epoll_ctl error: %s\n", strerror(errno));
 		}
 	}
 
@@ -848,8 +849,9 @@ static void epoll_add_input_events()
 			ev.data.fd = g_touch_dev[i].fd;
 			if (epoll_ctl(manager.efd,
 				      EPOLL_CTL_ADD,
-				      g_touch_dev[i].fd, &ev) < 0)
-				LOGE("touch device file epoll_ctl error\n");
+				      g_touch_dev[i].fd, &ev) < 0
+				      && errno != EEXIST)
+				LOGE("touch device file epoll_ctl error: %s\n", strerror(errno));
 		}
 	}
 }
@@ -863,14 +865,14 @@ static void epoll_del_input_events()
 		if (g_key_dev[i].fd >= 0)
 			if (epoll_ctl(manager.efd,
 				      EPOLL_CTL_DEL, g_key_dev[i].fd, NULL) < 0)
-				LOGE("keyboard device file epoll_ctl error\n");
+				LOGE("keyboard device file epoll_ctl error: %s\n", strerror(errno));
 
 	for (i = 0; g_touch_dev[i].fd != ARRAY_END; i++)
 		if (g_touch_dev[i].fd >= 0)
 			if (epoll_ctl(manager.efd,
 				      EPOLL_CTL_DEL,
 				      g_touch_dev[i].fd, NULL) < 0)
-				LOGE("touch device file epoll_ctl error\n");
+				LOGE("touch device file epoll_ctl error: %s\n", strerror(errno));
 }
 
 static bool initialize_epoll_events(void)

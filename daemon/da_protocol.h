@@ -251,6 +251,7 @@ struct prof_session_t {
 	struct conf_t conf;
 	struct user_space_inst_t user_space_inst;
 	struct replay_event_seq_t replay_event_seq;
+	unsigned running_status:1; // to stop properly (1 - it is running, 0 - no)
 };
 
 int parseHostMessage(struct msg_t *log, char *msg);
@@ -378,6 +379,7 @@ enum ErrorCode stop_all(void);
 void reset_msg(struct msg_t *msg);
 void reset_replay_event_seq(struct replay_event_seq_t *res);
 void reset_system_info(struct system_info_t *sys);
+int check_running_status(struct prof_session_t *prof_session);
 
 extern struct prof_session_t prof_session;
 
