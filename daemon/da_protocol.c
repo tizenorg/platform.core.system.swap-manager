@@ -968,6 +968,10 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 
 	if (start_profiling() < 0) {
 		LOGE("cannot start profiling\n");
+		if (stop_all() != ERR_NO) {
+			LOGE("Stop failed\n");
+			write_msg_error("Stop failed");
+		}
 		goto send_ack;
 	}
 
@@ -1004,8 +1008,10 @@ int host_message_handler(struct msg_t *msg)
 		return process_msg_start(&msg_control);
 	case NMSG_STOP:
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
-		if (stop_all() != ERR_NO)
+		if (stop_all() != ERR_NO) {
+			LOGE("Stop failed\n");
 			write_msg_error("Stop failed");
+		}
 		break;
 	case NMSG_CONFIG:
 		error_code = ERR_NO;
