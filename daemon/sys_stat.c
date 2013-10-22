@@ -2734,53 +2734,78 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	p = msg->payload;
 
 	// CPU
-	pack_float(p, sys_info->app_cpu_usage);
+	if (IS_OPT_SET(FL_CPU)) {
+		pack_float(p, sys_info->app_cpu_usage);
 
-	for (i = 0; i < num_of_cpu; i++) {
-		if (sys_info->cpu_frequency)
-			pack_float(p, sys_info->cpu_frequency[i]);
-		else
-			pack_float(p, 0.0);
-	}
-
-	for (i = 0; i < num_of_cpu; i++) {
-		if (sys_info->cpu_load)
-			pack_float(p, sys_info->cpu_load[i]);
-		else
-			pack_float(p, 0.0);
-	}
-
-	// thread
-	pack_int(p, sys_info->count_of_threads);
-	for (i = 0; i < sys_info->count_of_threads; i++) {
-		if (sys_info->thread_load) {
-			pack_int(p, sys_info->thread_load[i].pid);
-			pack_float(p, sys_info->thread_load[i].load);
-		} else {
-			pack_int(p, 0);
-			pack_float(p, 0.0);
+		for (i = 0; i < num_of_cpu; i++) {
+			if (sys_info->cpu_frequency)
+				pack_float(p, sys_info->cpu_frequency[i]);
+			else
+				pack_float(p, 0.0);
 		}
+
+		for (i = 0; i < num_of_cpu; i++) {
+			if (sys_info->cpu_load)
+				pack_float(p, sys_info->cpu_load[i]);
+			else
+				pack_float(p, 0.0);
+		}
+		// thread
+		pack_int(p, sys_info->count_of_threads);
+		for (i = 0; i < sys_info->count_of_threads; i++) {
+			if (sys_info->thread_load) {
+				pack_int(p, sys_info->thread_load[i].pid);
+				pack_float(p, sys_info->thread_load[i].load);
+			} else {
+				pack_int(p, 0);
+				pack_float(p, 0.0);
+			}
+		}
+	} else {
+		pack_float(p, 0.0); // pack app_cpu_usage
+
+		for (i = 0; i < num_of_cpu; i++) {
+			pack_float(p, 0.0); // pack cpu_frequency
+			pack_float(p, 0.0); // pack cpu_load
+		}
+		// thread
+		pack_int(p, 0); // pack count_of_threads
 	}
 
 	// process
-	pack_int(p, sys_info->count_of_processes);
-	for (i = 0; i < sys_info->count_of_processes; i++) {
-		if (sys_info->process_load) {
-			pack_int(p, sys_info->process_load[i].id);
-			pack_float(p, sys_info->process_load[i].load);
-		} else {
-			pack_int(p, 0);
-			pack_float(p, 0.0);
+	if (IS_OPT_SET(FL_PROCESSES)) {
+		pack_int(p, sys_info->count_of_processes);
+		for (i = 0; i < sys_info->count_of_processes; i++) {
+			if (sys_info->process_load) {
+				pack_int(p, sys_info->process_load[i].id);
+				pack_float(p, sys_info->process_load[i].load);
+			} else {
+				pack_int(p, 0);
+				pack_float(p, 0.0);
+			}
 		}
+	} else {
+		pack_int(p, 0); // pack count_of_processes
 	}
 
-	pack_int(p, sys_info->virtual_memory);
-	pack_int(p, sys_info->resident_memory);
-	pack_int(p, sys_info->shared_memory);
-	pack_int(p, sys_info->pss_memory);
-	pack_int(p, sys_info->total_alloc_size);
-	pack_int(p, sys_info->system_memory_total);
-	pack_int(p, sys_info->system_memory_used);
+	// memory
+	if (IS_OPT_SET(FL_MEMORY)) {
+		pack_int(p, sys_info->virtual_memory);
+		pack_int(p, sys_info->resident_memory);
+		pack_int(p, sys_info->shared_memory);
+		pack_int(p, sys_info->pss_memory);
+		pack_int(p, sys_info->total_alloc_size);
+		pack_int(p, sys_info->system_memory_total);
+		pack_int(p, sys_info->system_memory_used);
+	} else {
+		pack_int(p, 0); // pack virtual_memory
+		pack_int(p, 0); // pack resident_memory
+		pack_int(p, 0); // pack shared_memory
+		pack_int(p, 0); // pack pss_memory
+		pack_int(p, 0); // pack total_alloc_size
+		pack_int(p, 0); // pack system_memory_total
+		pack_int(p, 0); // pack system_memory_used
+	}
 
 	pack_int(p, sys_info->disk_reads);
 	pack_int(p, sys_info->disk_sectors_read);
