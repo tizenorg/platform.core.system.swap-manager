@@ -605,8 +605,12 @@ static int target_event_stop_handler(int epollfd, int index, uint64_t msg)
 
 	setEmptyTargetSlot(index);
 	// all target client are closed
-	if (0 == __sync_sub_and_fetch(&manager.target_count, 1))
+	if (0 == __sync_sub_and_fetch(&manager.target_count, 1)) {
+		LOGI("all targets are stopped\n");
+		if (stop_all() != ERR_NO)
+			LOGE("Stop failed\n");
 		return -11;
+	}
 
 	return 0;
 }
@@ -626,7 +630,7 @@ static int target_event_handler(int epollfd, int index, uint64_t msg)
 	if (msg & EVENT_STOP || msg & EVENT_ERROR)
 		err = target_event_stop_handler(epollfd, index, msg);
 
-	return 0;
+	return err;
 }
 
 #ifndef LOCALTEST
