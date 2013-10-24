@@ -366,14 +366,34 @@ static void remove_buf_modules(void)
 
 static void terminate(int sig)
 {
-	_unlink_files();
-	_close_server_socket();
-	exit_buf();
-	remove_buf_modules();
-	if (sig != 0) {
-		LOGW("Terminating due signal %s\n", strsignal(sig));
-		signal(sig, SIG_DFL);
-		raise(sig);
+	LOGI("terminate! sig = %d\n", sig);
+	if (!stop_all_in_process()) {
+		// we are up there if signal accept and stop_all func was not
+		// called yet.
+
+		// so we need stop_all firstly (if profiling was
+		// not started it will be dummy call) and release other sources
+		stop_all_no_lock();
+		_unlink_files();
+		_close_server_socket();
+		exit_buf();
+		remove_buf_modules();
+		if (sig != 0) {
+			LOGW("Terminating due signal %s\n", strsignal(sig));
+			signal(sig, SIG_DFL);
+			raise(sig);
+		}
+		stop_all_done();
+	} else {
+		// we are there if stop_all function was called by some reasons
+
+		// if stop_all called we cannot call remove_buf_modules and
+		// other funcs because of threads are not stopped yet
+		LOGW("Stop in progress\n");
+		if (sig != 0) {
+			LOGW("ignore signal %s\n", strsignal(sig));
+			signal(sig, SIG_IGN);
+		}
 	}
 }
 

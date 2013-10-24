@@ -335,7 +335,9 @@ int samplingStop()
 		setitimer(ITIMER_REAL, &stopval, NULL);
 
 		pthread_kill(manager.sampling_thread, SIGUSR1);
+		LOGI("join sampling thread started\n");
 		pthread_join(manager.sampling_thread, NULL);
+		LOGI("join sampling thread done\n");
 
 		manager.sampling_thread = -1;
 	}

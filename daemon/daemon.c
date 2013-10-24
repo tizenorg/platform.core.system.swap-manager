@@ -502,7 +502,9 @@ void terminate_all()
 	// wait for all other thread exit
 	for (i = 0; i < MAX_TARGET_COUNT; i++) {
 		if (manager.target[i].recv_thread != -1) {
+			LOGI("join recv thread [%d] is started\n", i);
 			pthread_join(manager.target[i].recv_thread, NULL);
+			LOGI("join recv thread %d. done\n", i);
 		}
 	}
 }

@@ -374,7 +374,11 @@ void free_msg_payload(struct msg_t *msg);
 void free_sys_info(struct system_info_t *sys_info);
 int start_replay(void);
 void stop_replay(void);
+
 enum ErrorCode stop_all(void);
+enum ErrorCode stop_all_no_lock(void);
+int stop_all_in_process(void);
+void stop_all_done(void);
 
 void reset_msg(struct msg_t *msg);
 void reset_replay_event_seq(struct replay_event_seq_t *res);

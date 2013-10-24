@@ -52,7 +52,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-
+static pthread_mutex_t stop_all_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void inline free_msg(struct msg_t *msg)
 {
@@ -794,12 +794,11 @@ struct msg_t *gen_stop_msg(void)
 	return res;
 }
 
-enum ErrorCode stop_all(void)
+
+enum ErrorCode stop_all_no_lock(void)
 {
 	enum ErrorCode error_code = ERR_NO;
 	struct msg_t *msg;
-
-	LOGI("entry\n");
 
 	// stop all only if it has not been called yet
 	if (check_running_status(&prof_session)) {
@@ -832,6 +831,28 @@ stop_all_exit:
 	LOGI("finished: ret = %d\n", error_code);
 	return error_code;
 }
+
+int stop_all_in_process(void)
+{
+	return (pthread_mutex_trylock(&stop_all_mutex) != 0);
+}
+
+void stop_all_done(void)
+{
+	pthread_mutex_unlock(&stop_all_mutex);
+}
+
+enum ErrorCode stop_all(void)
+{
+	enum ErrorCode error_code = ERR_NO;
+
+	pthread_mutex_lock(&stop_all_mutex);
+	error_code = stop_all_no_lock();
+	pthread_mutex_unlock(&stop_all_mutex);
+
+	return error_code;
+}
+
 struct binary_ack {
 	uint32_t type;
 	char *binpath;
@@ -844,6 +865,7 @@ static void binary_ack_free(struct binary_ack *ba)
 		free(ba->binpath);
 	free(ba);
 }
+
 static size_t binary_ack_size(const struct binary_ack *ba)
 {
 	/* MD5 is 16 bytes, so 16*2 hex digits */
