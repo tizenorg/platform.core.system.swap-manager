@@ -301,6 +301,11 @@ int samplingStart()
 	if(manager.sampling_thread != -1)	// already started
 		return 1;
 
+	if (check_running_status(&prof_session) == 0) {
+		LOGI("try to start sampling when running_status is 0\n");
+		return 1;
+	}
+
 	if(pthread_create(&(manager.sampling_thread), NULL, samplingThread, NULL) < 0)
 	{
 		LOGE("Failed to create sampling thread\n");

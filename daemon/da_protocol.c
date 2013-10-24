@@ -993,6 +993,8 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 		goto send_ack;
 	}
 
+	running_status_on(&prof_session);
+
 	if (start_profiling() < 0) {
 		LOGE("cannot start profiling\n");
 		if (stop_all() != ERR_NO) {
@@ -1003,7 +1005,6 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 	}
 
 	err_code = ERR_NO;
-	running_status_on(&prof_session);
 send_ack:
 	get_serialized_time(&serialized_time);
 	sendACKToHost(NMSG_START, err_code, (void *)&serialized_time,
