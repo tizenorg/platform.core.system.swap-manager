@@ -2819,6 +2819,7 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 		pack_int64(p, 0); // pack system_memory_used
 	}
 
+	pack_int(p, sys_info->total_used_drive);
 	pack_int(p, sys_info->disk_reads);
 	pack_int(p, sys_info->disk_sectors_read);
 	pack_int(p, sys_info->disk_writes);
@@ -2840,14 +2841,12 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	pack_int(p, sys_info->video_status);
 	pack_int(p, sys_info->call_status);
 	pack_int(p, sys_info->dnet_status);
+
 	pack_int(p, sys_info->energy);
 	for (i = 0; i != supported_devices_count; ++i)
 		pack_int(p, sys_info->energy_per_device[i]);
 	for (i = 0; i != supported_devices_count; ++i)
 		pack_int(p, sys_info->app_energy_per_device[i]);
-
-//	pack_int(p, sys_info->total_used_drive);
-
 
 	return msg;
 }
