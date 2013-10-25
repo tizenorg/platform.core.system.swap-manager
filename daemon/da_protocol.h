@@ -268,7 +268,38 @@ struct process_info_t {
 };
 
 struct system_info_t {
-	uint32_t energy;
+	// system_cpu
+	float app_cpu_usage;
+	float *cpu_frequency;
+	float *cpu_load;
+	uint32_t count_of_threads;
+	struct thread_info_t *thread_load;
+
+	// system_processes
+	uint32_t count_of_processes;
+	struct process_info_t *process_load;
+
+	// system_memory
+	uint32_t virtual_memory;
+	uint32_t resident_memory;
+	uint32_t shared_memory;
+	uint32_t pss_memory;
+	uint32_t total_alloc_size;
+	uint64_t system_memory_total;
+	uint64_t system_memory_used;
+
+	// system_disk
+	uint32_t total_used_drive;
+	uint32_t disk_reads;
+	uint32_t disk_sectors_read;
+	uint32_t disk_writes;
+	uint32_t disk_sectors_write;
+
+	// system_network
+	uint32_t network_send_size;
+	uint32_t network_receive_size;
+
+	// system_device
 	uint32_t wifi_status;
 	uint32_t bt_status;
 	uint32_t gps_status;
@@ -282,27 +313,9 @@ struct system_info_t {
 	uint32_t video_status;
 	uint32_t call_status;
 	uint32_t dnet_status;
-	float *cpu_frequency;
-	float app_cpu_usage;
-	float *cpu_load;
-	uint32_t virtual_memory;
-	uint32_t resident_memory;
-	uint32_t shared_memory;
-	uint32_t pss_memory;
-	uint32_t total_alloc_size;
-	uint64_t system_memory_total;
-	uint64_t system_memory_used;
-	uint32_t total_used_drive;
-	uint32_t count_of_threads;
-	struct thread_info_t *thread_load;
-	uint32_t count_of_processes;
-	struct process_info_t *process_load;
-	uint32_t disk_reads;
-	uint32_t disk_sectors_read;
-	uint32_t disk_writes;
-	uint32_t disk_sectors_write;
-	uint32_t network_send_size;
-	uint32_t network_receive_size;
+
+	// system_energy
+	uint32_t energy;
 	uint32_t energy_per_device[supported_devices_count];
 	uint32_t app_energy_per_device[supported_devices_count];
 };
