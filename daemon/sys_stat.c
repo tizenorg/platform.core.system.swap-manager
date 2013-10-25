@@ -2815,8 +2815,8 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 		pack_int(p, 0); // pack shared_memory
 		pack_int(p, 0); // pack pss_memory
 		pack_int(p, 0); // pack total_alloc_size
-		pack_int(p, 0); // pack system_memory_total
-		pack_int(p, 0); // pack system_memory_used
+		pack_int64(p, 0); // pack system_memory_total
+		pack_int64(p, 0); // pack system_memory_used
 	}
 
 	pack_int(p, sys_info->disk_reads);
