@@ -2717,12 +2717,24 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	struct msg_data_t *msg = NULL;
 	char *p = NULL;
 	int i = 0;
-	uint32_t len = sizeof(*sys_info) -
-		(sizeof(sys_info->thread_load) +
-		 sizeof(sys_info->process_load)) +
-		2 * num_of_cpu * sizeof(float) +
-		sys_info->count_of_threads * sizeof(*sys_info->thread_load) +
-		sys_info->count_of_processes * sizeof(*sys_info->process_load);
+	uint32_t len = 0;
+
+	len += sizeof(*sys_info);
+
+	// num_of_cpu is unknown at compile time
+	len += 2 * num_of_cpu * sizeof(float);
+
+	// subtract pointers
+	len -= sizeof(sys_info->cpu_frequency) + sizeof(sys_info->cpu_load);
+	len -= sizeof(sys_info->thread_load) + sizeof(sys_info->process_load);
+
+	if (IS_OPT_SET(FL_CPU))
+		len += sys_info->count_of_threads *
+			sizeof(*sys_info->thread_load);
+
+	if (IS_OPT_SET(FL_PROCESSES))
+		len += sys_info->count_of_processes *
+			sizeof(*sys_info->process_load);
 
 	msg = malloc(MSG_DATA_HDR_LEN + len);
 	if (!msg) {
