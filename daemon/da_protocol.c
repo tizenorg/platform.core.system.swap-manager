@@ -994,6 +994,11 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 	struct msg_t *msg_reply;
 	uint32_t serialized_time[2];
 
+	if (check_running_status(&prof_session.conf) == 1) {
+		LOGW("Profiling has already been started\n");
+		goto send_ack;
+	}
+
 	if (!check_conf(&prof_session.conf)) {
 		LOGE("wrong profile config\n");
 		goto send_ack;
