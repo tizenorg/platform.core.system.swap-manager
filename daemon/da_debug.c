@@ -42,7 +42,8 @@
 #if DEBUG
 void initialize_log()
 {
-	int fd = open(DEBUG_LOGFILE, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+	int fd = open(DEBUG_LOGFILE, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC,
+		      0777);
 	if (fd > 0) {
 		dup2(fd, 1);
 		dup2(fd, 2);
