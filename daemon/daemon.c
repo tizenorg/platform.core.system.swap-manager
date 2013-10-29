@@ -294,6 +294,35 @@ static int stop_app_launch_timer()
 	return 0;
 }
 
+int kill_app_by_info(const struct app_info_t *app_info)
+{
+	int res = 0;
+
+	if (app_info == NULL) {
+		LOGE("Cannot exec app. app_info is NULL");
+		return -1;
+	}
+
+	switch (app_info->app_type) {
+	case APP_TYPE_TIZEN:
+		res = kill_app(app_info->exe_path);
+		break;
+	case APP_TYPE_RUNNING:
+		// TODO: nothing, it's running
+		LOGI("already started\n");
+		break;
+	case APP_TYPE_COMMON:
+		res = kill_app(app_info->exe_path);
+		break;
+	default:
+		LOGE("Unknown app type %d\n", app_info->app_type);
+		res = -1;
+		break;
+	}
+
+	return res;
+}
+
 static int exec_app(const struct app_info_t *app_info)
 {
 	int res = 0;
@@ -305,7 +334,6 @@ static int exec_app(const struct app_info_t *app_info)
 
 	switch (app_info->app_type) {
 	case APP_TYPE_TIZEN:
-		kill_app(app_info->exe_path);
 		if (exec_app_tizen(app_info->app_id, app_info->exe_path)) {
 			LOGE("Cannot exec tizen app %s\n", app_info->app_id);
 			res = -1;
@@ -316,7 +344,6 @@ static int exec_app(const struct app_info_t *app_info)
 		LOGI("already started\n");
 		break;
 	case APP_TYPE_COMMON:
-		kill_app(app_info->exe_path);
 		if (exec_app_common(app_info->exe_path)) {
 			LOGE("Cannot exec common app %s\n", app_info->exe_path);
 			res = -1;
@@ -378,6 +405,30 @@ int launch_timer_start()
 
 static void epoll_add_input_events();
 static void epoll_del_input_events();
+
+int prepare_profiling()
+{
+	struct app_list_t *app = NULL;
+	const struct app_info_t *app_info = NULL;
+
+	app_info = app_info_get_first(&app);
+	if (app_info == NULL) {
+		LOGE("No app info found\n");
+		return -1;
+	}
+
+	//all apps
+	while (app_info != NULL) {
+		if (kill_app_by_info(app_info) != 0) {
+			LOGE("kill app failed\n");
+			return -1;
+		}
+		app_info = app_info_get_next(&app);
+	}
+
+	return 0;
+
+}
 
 int start_profiling()
 {

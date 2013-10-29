@@ -1014,6 +1014,11 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 		goto send_ack;
 	}
 
+	if (prepare_profiling() != 0) {
+		LOGE("failed to prepare profiling\n");
+		goto send_ack;
+	}
+
 	if (ioctl_send_msg(msg_reply) != 0) {
 		LOGE("cannot send message to device\n");
 		goto send_ack;

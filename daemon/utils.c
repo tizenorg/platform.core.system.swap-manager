@@ -34,6 +34,7 @@
 #include <string.h>
 #include <errno.h>
 
+#include <signal.h>			// for signal
 #include <pthread.h>
 #include <unistd.h>		// for unlink
 #include <dirent.h>		// for opendir, readdir
@@ -375,17 +376,17 @@ int exec_app_tizen(const char *app_id, const char *exec_path)
 
 int exec_app_common(const char* exec_path)
 {
-	LOGI("kill %s\n", exec_path);
-
 	pid_t pid;
 	int hw_acc = 0;
 	char manifest[PATH_MAX];
 	char command[PATH_MAX];
+
+	LOGI("exec %s\n", exec_path);
 #ifndef LOCALTEST
 	// TODO: check if this makes sense
 	/* char appid[SMACK_LABEL_LEN]; */
 #endif
-	if (exec_path == NULL || !strlen(exec_path))  {
+	if (exec_path == NULL || !strlen(exec_path)) {
 		LOGE("Executable path is not correct\n");
 		return 1;
 	}
@@ -475,52 +476,89 @@ int exec_app_common(const char* exec_path)
 // find process id from executable binary path
 pid_t find_pid_from_path(const char* path)
 {
-	pid_t status = -1;
+	pid_t status = 0;
 
-	char buffer [BUFFER_MAX];
-	char command [BUFFER_MAX];
+	char buffer[BUFFER_MAX] = {0};
+	char command[BUFFER_MAX] = {0};
 
 	sprintf(command, "/bin/pidof %s", path);
+	LOGI("look for <%s>\n", path);
 
 	FILE *fp = popen(command, "r");
 	if (!fp)
-	{
-		LOGW("Getting pidof %s is failed\n", path);
 		return status;
-	}
 
 	while (fgets(buffer, BUFFER_MAX, fp) != NULL)
-	{
 		LOGI("result of 'pidof' is %s\n", buffer);
-	}
 
 	pclose(fp);
 
-	if (strlen(buffer) > 0)
-	{
-		if (sscanf(buffer,"%d\n", &status) != 1)
-		{
+	if (strlen(buffer) > 0) {
+		if (sscanf(buffer, "%d\n", &status) != 1) {
 			LOGW("Failed to read result buffer of 'pidof',"
-				 " status(%d) with cmd '%s'\n", status, command);
-			return -1;
+			     " status(%d) with cmd '%s'\n", status, command);
+			return 0;
 		}
 	}
 
 	return status;
 }
 
-void kill_app(const char* binary_path)
+pid_t get_pid_by_path(const char *binary_path)
 {
-	LOGI("kill %s\n", binary_path);
-
 	pid_t pkg_pid;
-	char command[PATH_MAX];
+	int len;
+	char *real_path;
+	static const char exe_line[] = ".exe";
+
 
 	pkg_pid = find_pid_from_path(binary_path);
-	if (pkg_pid > 0) {
-		sprintf(command, "kill -9 %d", pkg_pid);
-		system(command);
+	if (pkg_pid == 0) {
+		len = strlen(binary_path);
+		real_path = malloc(len + sizeof(exe_line));
+		if (real_path == NULL) {
+			LOGE("cannot alloc memory\n");
+			return -1;
+		}
+		memcpy(real_path, binary_path, len + 1);
+
+		// try remove or add ".exe" and get pid
+		if (strcmp(real_path + len - (sizeof(exe_line) - 1), exe_line) == 0)
+			// remove .exe from tPath
+			real_path[len - (sizeof(exe_line) - 1)] = '\0';
+		else
+			// add .exe
+			memcpy(&real_path[len], exe_line, sizeof(exe_line));
+
+		pkg_pid = find_pid_from_path(real_path);
+		free(real_path);
 	}
+
+	return pkg_pid;
+}
+
+int kill_app(const char *binary_path)
+{
+	pid_t pkg_pid;
+
+	LOGI("kill %s (%d)\n", binary_path, SIGKILL);
+	pkg_pid = get_pid_by_path(binary_path);
+	if (pkg_pid != 0) {
+		if (kill(pkg_pid, SIGTERM) == -1) {
+			LOGE("cannot kill %d -%d err<%s>\n", pkg_pid, SIGKILL,
+			     strerror(errno));
+			return -1;
+		} else {
+			// we need sleep up there because kill() function
+			// returns control immediately after send signal
+			// without it app_launch returns err on start app
+			sleep(1);
+			LOGI("killed %d -%d\n", pkg_pid, SIGKILL);
+		}
+	} else
+		LOGI("cannot kill <%s>; process not found\n", binary_path);
+
+	return 0;
 }
 
 int get_executable(char* appPath, char* buf, int buflen)
