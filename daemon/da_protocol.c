@@ -631,8 +631,8 @@ static struct msg_t *gen_binary_info_reply(struct app_info_t *app_info)
 	msg->id = NMSG_BINARY_INFO_ACK;
 	p = msg->payload;
 
-	pack_int(p, ret_id);
-	pack_int(p, binary_type);
+	pack_int32(p, ret_id);
+	pack_int32(p, binary_type);
 	pack_str(p, binary_path);
 
 	msg->len = p - msg->payload;
@@ -677,16 +677,16 @@ static struct msg_t *gen_target_info_reply(struct target_info_t *target_info)
 	msg->id = NMSG_GET_TARGET_INFO_ACK;
 	p = msg->payload;
 
-	pack_int(p, ret_id);
+	pack_int32(p, ret_id);
 	pack_int64(p, target_info->sys_mem_size);
 	pack_int64(p, target_info->storage_size);
-	pack_int(p, target_info->bluetooth_supp);
-	pack_int(p, target_info->gps_supp);
-	pack_int(p, target_info->wifi_supp);
-	pack_int(p, target_info->camera_count);
+	pack_int32(p, target_info->bluetooth_supp);
+	pack_int32(p, target_info->gps_supp);
+	pack_int32(p, target_info->wifi_supp);
+	pack_int32(p, target_info->camera_count);
 	pack_str(p, target_info->network_type);
-	pack_int(p, target_info->max_brightness);
-	pack_int(p, target_info->cpu_core_count);
+	pack_int32(p, target_info->max_brightness);
+	pack_int32(p, target_info->cpu_core_count);
 	pack_int32(p, supported_devices_count);
 	p = pack_str_array(p, supported_devices_strings,
 			   supported_devices_count);
@@ -764,8 +764,7 @@ int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 		//set payload lenth
 		msg->len = payload_size + sizeof(err);
 		//set return id
-		//*(uint32_t *)p = err; p+=sizeof(err);
-		pack_int(p, err);
+		pack_int32(p, err);
 		//copy payload data
 		memcpy(p, payload, payload_size);
 

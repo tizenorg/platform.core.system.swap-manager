@@ -225,7 +225,7 @@ struct msg_data_t *gen_message_terminate(uint32_t id)
 	fill_data_msg_head(data,NMSG_TERMINATE, 0, payload_len);
 	// TODO fill good value
 	p = data->payload;
-	pack_int(p,id);
+	pack_int32(p, id);
 	return data;
 }
 
@@ -258,12 +258,12 @@ struct msg_data_t *gen_message_event(
 	fill_data_msg_head(data, NMSG_RECORD, 0, payload_len);
 
 	p = data->payload;
-	pack_int(p,events_count);
+	pack_int32(p, events_count);
 
 	for (i=0; i<events_count; i++){
 		pack_int32(p,id);
-		pack_int32(p,events[i].type);
-		pack_int32(p,events[i].code);
+		pack_int32(p, (int32_t) events[i].type);
+		pack_int32(p, (int32_t) events[i].code);
 		pack_int32(p,events[i].value);
 	}
 
@@ -274,4 +274,3 @@ void inline free_msg_data(struct msg_data_t *msg)
 {
 	free(msg);
 };
-

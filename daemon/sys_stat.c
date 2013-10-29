@@ -929,7 +929,6 @@ static int parse_proc_smaps_file_bypid(char *path, proc_t* P)
 			{
 				char *p = buf;
 				p = strstr(buf, ":");
-				int add = 0;
 				if (p != 0) {
 					sscanf(p, ":%s kB", numbuf);
 					P->sh_mem += atoi(numbuf);
@@ -972,7 +971,6 @@ static int parse_proc_smaps_file_bypid(char *path, proc_t* P)
 			{
 				char *p = buf;
 				p = strstr(buf, ":");
-				int add = 0;
 				if (p != 0) {
 					sscanf(p, ":%s kB", numbuf);
 					P->sh_mem += atoi(numbuf);
@@ -1715,7 +1713,6 @@ int get_camera_count()
 static int get_device_network_type(char* buf, int buflen)
 {
 	int len = 0;
-	char *p = buf;
 	bool bool_var;
 
 	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.cdma", &bool_var);
@@ -2763,90 +2760,90 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 				pack_float(p, 0.0);
 		}
 		// thread
-		pack_int(p, sys_info->count_of_threads);
+		pack_int32(p, sys_info->count_of_threads);
 		for (i = 0; i < sys_info->count_of_threads; i++) {
 			if (sys_info->thread_load) {
-				pack_int(p, sys_info->thread_load[i].pid);
+				pack_int32(p, sys_info->thread_load[i].pid);
 				pack_float(p, sys_info->thread_load[i].load);
 			} else {
-				pack_int(p, 0);
+				pack_int32(p, 0);
 				pack_float(p, 0.0);
 			}
 		}
 	} else {
-		pack_float(p, 0.0); // pack app_cpu_usage
+		pack_float(p, 0.0); /* pack app_cpu_usage */
 
 		for (i = 0; i < num_of_cpu; i++) {
-			pack_float(p, 0.0); // pack cpu_frequency
-			pack_float(p, 0.0); // pack cpu_load
+			pack_float(p, 0.0); /* pack cpu_frequency */
+			pack_float(p, 0.0); /* pack cpu_load */
 		}
-		// thread
-		pack_int(p, 0); // pack count_of_threads
+		/* thread */
+		pack_int32(p, 0); /* pack count_of_threads */
 	}
 
-	// process
+	/* process */
 	if (IS_OPT_SET(FL_PROCESSES)) {
-		pack_int(p, sys_info->count_of_processes);
+		pack_int32(p, sys_info->count_of_processes);
 		for (i = 0; i < sys_info->count_of_processes; i++) {
 			if (sys_info->process_load) {
-				pack_int(p, sys_info->process_load[i].id);
+				pack_int32(p, sys_info->process_load[i].id);
 				pack_float(p, sys_info->process_load[i].load);
 			} else {
-				pack_int(p, 0);
+				pack_int32(p, 0);
 				pack_float(p, 0.0);
 			}
 		}
 	} else {
-		pack_int(p, 0); // pack count_of_processes
+		pack_int32(p, 0); /* pack count_of_processes */
 	}
 
-	// memory
+	/* memory */
 	if (IS_OPT_SET(FL_MEMORY)) {
-		pack_int(p, sys_info->virtual_memory);
-		pack_int(p, sys_info->resident_memory);
-		pack_int(p, sys_info->shared_memory);
-		pack_int(p, sys_info->pss_memory);
-		pack_int(p, sys_info->total_alloc_size);
-		pack_int(p, sys_info->system_memory_total);
-		pack_int(p, sys_info->system_memory_used);
+		pack_int32(p, sys_info->virtual_memory);
+		pack_int32(p, sys_info->resident_memory);
+		pack_int32(p, sys_info->shared_memory);
+		pack_int32(p, sys_info->pss_memory);
+		pack_int32(p, sys_info->total_alloc_size);
+		pack_int64(p, sys_info->system_memory_total);
+		pack_int64(p, sys_info->system_memory_used);
 	} else {
-		pack_int(p, 0); // pack virtual_memory
-		pack_int(p, 0); // pack resident_memory
-		pack_int(p, 0); // pack shared_memory
-		pack_int(p, 0); // pack pss_memory
-		pack_int(p, 0); // pack total_alloc_size
-		pack_int64(p, 0); // pack system_memory_total
-		pack_int64(p, 0); // pack system_memory_used
+		pack_int32(p, 0); /* pack virtual_memory */
+		pack_int32(p, 0); /* pack resident_memory */
+		pack_int32(p, 0); /* pack shared_memory */
+		pack_int32(p, 0); /* pack pss_memory */
+		pack_int32(p, 0); /* pack total_alloc_size */
+		pack_int64(p, (uint64_t) 0); /* pack system_memory_total */
+		pack_int64(p, (uint64_t) 0); /* pack system_memory_used */
 	}
 
-	pack_int(p, sys_info->total_used_drive);
-	pack_int(p, sys_info->disk_reads);
-	pack_int(p, sys_info->disk_sectors_read);
-	pack_int(p, sys_info->disk_writes);
-	pack_int(p, sys_info->disk_sectors_write);
+	pack_int32(p, sys_info->total_used_drive);
+	pack_int32(p, sys_info->disk_reads);
+	pack_int32(p, sys_info->disk_sectors_read);
+	pack_int32(p, sys_info->disk_writes);
+	pack_int32(p, sys_info->disk_sectors_write);
 
-	pack_int(p, sys_info->network_send_size);
-	pack_int(p, sys_info->network_receive_size);
+	pack_int32(p, sys_info->network_send_size);
+	pack_int32(p, sys_info->network_receive_size);
 
-	pack_int(p, sys_info->wifi_status);
-	pack_int(p, sys_info->bt_status);
-	pack_int(p, sys_info->gps_status);
-	pack_int(p, sys_info->brightness_status);
-	pack_int(p, sys_info->camera_status);
-	pack_int(p, sys_info->sound_status);
-	pack_int(p, sys_info->audio_status);
-	pack_int(p, sys_info->vibration_status);
-	pack_int(p, sys_info->voltage_status);
-	pack_int(p, sys_info->rssi_status);
-	pack_int(p, sys_info->video_status);
-	pack_int(p, sys_info->call_status);
-	pack_int(p, sys_info->dnet_status);
+	pack_int32(p, sys_info->wifi_status);
+	pack_int32(p, sys_info->bt_status);
+	pack_int32(p, sys_info->gps_status);
+	pack_int32(p, sys_info->brightness_status);
+	pack_int32(p, sys_info->camera_status);
+	pack_int32(p, sys_info->sound_status);
+	pack_int32(p, sys_info->audio_status);
+	pack_int32(p, sys_info->vibration_status);
+	pack_int32(p, sys_info->voltage_status);
+	pack_int32(p, sys_info->rssi_status);
+	pack_int32(p, sys_info->video_status);
+	pack_int32(p, sys_info->call_status);
+	pack_int32(p, sys_info->dnet_status);
 
-	pack_int(p, sys_info->energy);
+	pack_int32(p, sys_info->energy);
 	for (i = 0; i != supported_devices_count; ++i)
-		pack_int(p, sys_info->energy_per_device[i]);
+		pack_int32(p, sys_info->energy_per_device[i]);
 	for (i = 0; i != supported_devices_count; ++i)
-		pack_int(p, sys_info->app_energy_per_device[i]);
+		pack_int32(p, sys_info->app_energy_per_device[i]);
 
 	return msg;
 }

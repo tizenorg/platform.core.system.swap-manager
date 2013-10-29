@@ -326,23 +326,19 @@ struct recorded_event_t {
 	uint32_t code;
 	uint32_t value;
 };
+#define static_assert(cond) \
+	char __attribute__((unused)) __static_assert[(cond) ? 1 : -1];
 
-#define pack_int(to, n)					\
-	do {						\
-		*(typeof(n) *) to = n;			\
-		to += sizeof(typeof(n));		\
+#define pack_int64(to, n) do {						\
+		static_assert(sizeof(n) == 8);				\
+		*(uint64_t *)to = n;					\
+		to += sizeof(uint64_t);					\
 	} while (0)
 
-#define pack_int64(to, n)					\
-	do {							\
-		*(uint64_t *)to = n;				\
-		to += sizeof(uint64_t);				\
-	} while (0)
-
-#define pack_int32(to, n)					\
-	do {							\
-		*(uint32_t *)to = n;				\
-		to += sizeof(uint32_t);				\
+#define pack_int32(to, n) do {						\
+		static_assert(sizeof(n) == 4);				\
+		*(uint32_t *)to = n;					\
+		to += sizeof(uint32_t);					\
 	} while (0)
 
 #define pack_time(to, n)						\
