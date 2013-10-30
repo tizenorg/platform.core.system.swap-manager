@@ -154,13 +154,9 @@ static int makeTargetServerSocket()
 		return -1;
 	}
 
-#ifndef LOCALTEST
-	// set smack attribute for certification
-	fsetxattr(manager.target_server_socket, "security.SMACK64IPIN", "*", 1, 0);
-	fsetxattr(manager.target_server_socket, "security.SMACK64IPOUT", "*", 1, 0);
-#endif /* LOCALTEST */
+	fd_setup_smack_attributes(manager.target_server_socket);
 
-	bzero(&serverAddrUn, sizeof(serverAddrUn));
+	memset(&serverAddrUn, '\0', sizeof(serverAddrUn));
 	serverAddrUn.sun_family = AF_UNIX;
 	sprintf(serverAddrUn.sun_path, "%s", UDS_NAME);
 

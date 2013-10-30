@@ -734,3 +734,9 @@ char *dereference_tizen_exe_path(const char *path, char *resolved)
 
 	return res;
 }
+
+void fd_setup_smack_attributes(int fd)
+{
+	fsetxattr(fd, "security.SMACK64IPIN", "*", 1, 0);
+	fsetxattr(fd, "security.SMACK64IPOUT", "*", 1, 0);
+}

@@ -75,6 +75,7 @@ int is_same_app_process(char* appPath, int pid);
 int exec_app_tizen(const char *app_id, const char *exec_path);
 int exec_app_common(const char* exec_path);
 char *dereference_tizen_exe_path(const char *path, char *resolved);
+void fd_setup_smack_attributes(int fd);
 #ifdef __cplusplus
 }
 #endif

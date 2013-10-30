@@ -635,23 +635,11 @@ static int target_event_handler(int epollfd, int index, uint64_t msg)
 	return err;
 }
 
-#ifndef LOCALTEST
-static void target_setup_smack_attributes(int target_index)
-{
-	fsetxattr(manager.target[target_index].socket,
-		  "security.SMACK64IPIN", "*", 1, 0);
-	fsetxattr(manager.target[target_index].socket,
-		  "security.SMACK64IPOUT", "*", 1, 0);
-}
-#else
-static void target_setup_smack_attributes(int unused)
-{
-}
-#endif
-
-// return 0 if normal case
-// return plus value if non critical error occur
-// return minus value if critical error occur
+/**
+ * return 0 if normal case
+ * return plus value if non critical error occur
+ * return minus value if critical error occur
+ */
 static int targetServerHandler(int efd)
 {
 	msg_target_t log;
@@ -667,10 +655,10 @@ static int targetServerHandler(int efd)
 	    accept(manager.target_server_socket, NULL, NULL);
 
 	if (manager.target[index].socket >= 0) {
-		// accept succeed
-		target_setup_smack_attributes(index);
+		/* accept succeed */
+		fd_setup_smack_attributes(manager.target[index].socket);
 
-		// send config message to target process
+		/* send config message to target process */
 		log.type = MSG_OPTION;
 		log.length = sprintf(log.data, "%lu",
 				     (unsigned long int)prof_session.conf.use_features0);
