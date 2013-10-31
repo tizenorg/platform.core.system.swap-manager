@@ -425,7 +425,9 @@ int prepare_profiling()
 		}
 		app_info = app_info_get_next(&app);
 	}
-
+	//init rw for systeminfo
+	//init recv send network systeminfo
+	sys_stat_prepare();
 	return 0;
 
 }

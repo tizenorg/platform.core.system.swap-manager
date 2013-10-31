@@ -2153,7 +2153,7 @@ static void init_network_stat()
 	manager.fd.networkstat = fopen("/proc/net/dev", "r");
 }
 
-static void get_network_stat(uint32_t * recv, uint32_t * send)
+static void get_network_stat(uint32_t *recv, uint32_t *send)
 {
 	FILE *fp = manager.fd.networkstat;
 	uintmax_t irecv, isend;
@@ -2179,6 +2179,23 @@ static void get_network_stat(uint32_t * recv, uint32_t * send)
 			*send += isend;
 		} else
 			skip_tokens(fp, 16);
+}
+
+static void peek_network_stat_diff(uint32_t *recv, uint32_t *send)
+{
+	static uint32_t irecv_old, isend_old;
+	uint32_t tmp;
+
+	get_network_stat(recv, send);
+
+	tmp = *recv;
+	*recv = tmp - irecv_old;
+	irecv_old = tmp;
+
+	tmp = *send;
+	*send = tmp - isend_old;
+	isend_old = tmp;
+
 }
 
 static void init_disk_stat(void)
@@ -2215,7 +2232,7 @@ static int get_partition_sector_size(const char * partition_name)
 }
 
 static void get_disk_stat(uint32_t *reads, uint32_t *sec_reads,
-						 uint32_t * writes, uint32_t *sec_writes)
+			  uint32_t *writes, uint32_t *sec_writes)
 {
 	int sec_size = 0;
 	enum { partition_name_maxlength = 128 };
@@ -2276,14 +2293,44 @@ static void get_disk_stat(uint32_t *reads, uint32_t *sec_reads,
 			//*read += pread * sec_size;
 			//*write += pwrite * sec_size;
 
-			*reads += preads;
-			*writes += pwrites;
+			*reads += (uint32_t)preads;
+			*writes += (uint32_t)pwrites;
 
-			*sec_reads += psec_read;
-			*sec_writes += psec_write;
+			*sec_reads += (uint32_t)psec_read;
+			*sec_writes += (uint32_t)psec_write;
 		}
 	}
 
+}
+
+static void peek_disk_stat_diff(uint32_t *reads, uint32_t *sec_reads,
+			        uint32_t *writes, uint32_t *sec_writes)
+{
+	static uint32_t reads_old;
+	static uint32_t sec_reads_old;
+	static uint32_t writes_old;
+	static uint32_t sec_writes_old;
+
+	uint32_t tmp;
+
+	//get cur values
+	get_disk_stat(reads, sec_reads, writes, sec_writes);
+
+	tmp = *reads;
+	*reads = tmp - reads_old;
+	reads_old = tmp;
+
+	tmp = *writes;
+	*writes = tmp - writes_old;
+	writes_old = tmp;
+
+	tmp = *sec_reads;
+	*sec_reads = tmp - sec_reads_old;
+	sec_reads_old = tmp;
+
+	tmp = *sec_writes;
+	*sec_writes = tmp - sec_writes_old;
+	sec_writes_old = tmp;
 
 }
 
@@ -2474,16 +2521,16 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 	// disk
 	if (IS_OPT_SET(FL_DISK)) {
 		sys_info->total_used_drive = get_total_used_drive();
-		get_disk_stat(&sys_info->disk_reads,
-			      &sys_info->disk_sectors_read,
-			      &sys_info->disk_writes,
-			      &sys_info->disk_sectors_write);
+		peek_disk_stat_diff(&sys_info->disk_reads,
+				    &sys_info->disk_sectors_read,
+				    &sys_info->disk_writes,
+				    &sys_info->disk_sectors_write);
 	}
 
 	// network
 	if (IS_OPT_SET(FL_NETWORK))
-		get_network_stat(&sys_info->network_send_size,
-				 &sys_info->network_receive_size);
+		peek_network_stat_diff(&sys_info->network_send_size,
+				       &sys_info->network_receive_size);
 
 	// device
 	if (IS_OPT_SET(FL_DEVICE)) {
@@ -2706,6 +2753,17 @@ int fill_target_info(struct target_info_t *target_info)
 #endif /* LOCALTEST */
 	target_info->max_brightness = get_max_brightness();
 	target_info->cpu_core_count = sysconf(_SC_NPROCESSORS_CONF);
+	return 0;
+}
+
+int sys_stat_prepare(void)
+{
+	uint32_t reads, writes, sec_reads, sec_writes;
+	uint32_t recv, send;
+
+	peek_disk_stat_diff(&reads, &writes, &sec_reads, &sec_writes);
+	peek_network_stat_diff(&recv, &send);
+
 	return 0;
 }
 

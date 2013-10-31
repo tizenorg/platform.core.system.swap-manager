@@ -1009,13 +1009,13 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 		goto send_ack;
 	}
 
-	if (start_transfer() != 0) {
-		LOGE("Cannot start transfer\n");
+	if (prepare_profiling() != 0) {
+		LOGE("failed to prepare profiling\n");
 		goto send_ack;
 	}
 
-	if (prepare_profiling() != 0) {
-		LOGE("failed to prepare profiling\n");
+	if (start_transfer() != 0) {
+		LOGE("Cannot start transfer\n");
 		goto send_ack;
 	}
 
