@@ -242,6 +242,20 @@ int parse_string_no_alloc(struct msg_buf_t *msg, char *str)
 	return 1;
 }
 
+int parse_int8(struct msg_buf_t *msg, uint8_t *val)
+{
+	parse_deb("size = %d\n", get_avail_msg_size(msg));
+	if (get_avail_msg_size(msg) < sizeof(*val))
+		return 0;
+	*val = *(uint8_t *)msg->cur_pos;
+	msg->cur_pos += sizeof(uint8_t);
+
+	parse_deb("<%d><0x%08X>\n", *val, *val);
+	return 1;
+}
+
+
+
 int parse_int32(struct msg_buf_t *msg, uint32_t *val)
 {
 	parse_deb("size = %d\n", get_avail_msg_size(msg));

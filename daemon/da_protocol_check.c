@@ -172,6 +172,15 @@ int check_us_inst_func_args(char *args)
 	return 1;
 }
 
+int check_us_inst_func_ret_type(char ret_type)
+{
+	if (strchr(args_avail, (int)ret_type) == NULL){
+		LOGE("wrong ret type <%c> <0x%02X>\n", (int)ret_type, (char)ret_type);
+		return 0;
+	}
+	return 1;
+}
+
 int check_lib_inst_count(uint32_t lib_count)
 {
 	int res = 1;

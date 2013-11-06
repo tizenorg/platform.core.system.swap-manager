@@ -212,6 +212,12 @@ struct app_info_t {
 
 
 struct us_func_inst_plane_t {
+	//format
+	//name       | type   | len       | info
+	//------------------------------------------
+	//func_addr  | uint64 | 8         |
+	//args       | string | len(args) |end with '\0'
+	//ret_type   | char   | 1         |
 	uint64_t func_addr;
 	char args[0];
 };
@@ -395,6 +401,7 @@ void print_replay_event(struct replay_event_t *ev, uint32_t num, char *tab);
 int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 			char *payload, int payload_size);
 
+int parse_int8(struct msg_buf_t *msg, uint8_t *val);
 int parse_int32(struct msg_buf_t *msg, uint32_t *val);
 int parse_int64(struct msg_buf_t *msg, uint64_t *val);
 int parse_string(struct msg_buf_t *msg, char **str);
