@@ -65,73 +65,52 @@ static void print_app_info(struct app_info_t *app_info);
 static void print_conf(struct conf_t *conf);
 //DEBUG FUNCTIONS
 #define dstr(x) #x
+#define check_and_return(check) if ( ID == check ) {return dstr(check);}
 
-#define check_and_return(par,check) if ( par == check ) {return dstr(check);}
-#define check_2(a1,a2) check_and_return(ID,a1) else check_and_return(ID,a2)
-#define check_4(a1,a2,a3,a4) check_2(a1,a2) else check_2(a3,a4)
-#define check_8(a1,a2,a3,a4,a5,a6,a7,a8) check_4(a1,a2,a3,a4) else check_4(a5,a6,a7,a8)
-
-#define check_all(a1, ...) check_and_return(ID,a1) //#else check_all(__VA_ARGS__)
 char *msg_ID_str(enum HostMessageT ID)
 {
-	check_8(
-		NMSG_KEEP_ALIVE,
-		NMSG_START,
-		NMSG_STOP,
-		NMSG_CONFIG,
-		0,
-		NMSG_BINARY_INFO,
-		NMSG_GET_TARGET_INFO,
-		NMSG_SWAP_INST_ADD
-		)
-	else
-	check_8(
-		NMSG_SWAP_INST_REMOVE,
-		NMSG_KEEP_ALIVE_ACK,
-		NMSG_START_ACK,
-		NMSG_STOP_ACK,
+	check_and_return(NMSG_KEEP_ALIVE);
+	check_and_return(NMSG_START);
+	check_and_return(NMSG_STOP);
+	check_and_return(NMSG_CONFIG);
+	check_and_return(NMSG_BINARY_INFO);
+	check_and_return(NMSG_GET_TARGET_INFO);
+	check_and_return(NMSG_SWAP_INST_ADD);
+	check_and_return(NMSG_SWAP_INST_REMOVE);
+	check_and_return(NMSG_GET_SCREENSHOT);
 
-		NMSG_CONFIG_ACK,
-		NMSG_BINARY_INFO_ACK,
-		NMSG_SWAP_INST_ACK,
-		NMSG_GET_TARGET_INFO_ACK
-		)
-	else
-	check_8(
-		NMSG_SWAP_INST_ADD_ACK,
-		NMSG_SWAP_INST_REMOVE_ACK,
-		NMSG_PROCESS_INFO,
-		NMSG_TERMINATE,
+	check_and_return(NMSG_KEEP_ALIVE_ACK);
+	check_and_return(NMSG_START_ACK);
+	check_and_return(NMSG_STOP_ACK);
+	check_and_return(NMSG_CONFIG_ACK);
+	check_and_return(NMSG_BINARY_INFO_ACK);
+	check_and_return(NMSG_SWAP_INST_ACK);
+	check_and_return(NMSG_GET_TARGET_INFO_ACK);
+	check_and_return(NMSG_SWAP_INST_ADD_ACK);
+	check_and_return(NMSG_SWAP_INST_REMOVE_ACK);
 
-		NMSG_ERROR,
-		NMSG_SAMPLE,
-		NMSG_SYSTEM,
-		NMSG_IMAGE
-		)
-	else
-	check_8(
-		NMSG_RECORD,
-		NMSG_FUNCTION_ENTRY,
-		NMSG_FUNCTION_EXIT,
-		NMSG_CONTEXT_SWITCH_ENTRY,
-
-		NMSG_CONTEXT_SWITCH_EXIT,
-		NMSG_PROBE,
-		NMSG_PROBE_MEMORY,
-		NMSG_PROBE_UICONTROL
-		)
-	else
-	check_8(
-		NMSG_PROBE_UIEVENT,
-		NMSG_PROBE_RESOURCE,
-		NMSG_PROBE_LIFECYCLE,
-		NMSG_PROBE_SCREENSHOT,
-
-		NMSG_PROBE_SCENE,
-		NMSG_PROBE_THREAD,
-		NMSG_PROBE_CUSTOM,
-		NMSG_PROBE_SYNC
-	) else
+	check_and_return(NMSG_PROCESS_INFO);
+	check_and_return(NMSG_TERMINATE);
+	check_and_return(NMSG_ERROR);
+	check_and_return(NMSG_SAMPLE);
+	check_and_return(NMSG_SYSTEM);
+	check_and_return(NMSG_IMAGE);
+	check_and_return(NMSG_RECORD);
+	check_and_return(NMSG_FUNCTION_ENTRY);
+	check_and_return(NMSG_FUNCTION_EXIT);
+	check_and_return(NMSG_CONTEXT_SWITCH_ENTRY);
+	check_and_return(NMSG_CONTEXT_SWITCH_EXIT);
+	check_and_return(NMSG_PROBE);
+	check_and_return(NMSG_PROBE_MEMORY);
+	check_and_return(NMSG_PROBE_UICONTROL);
+	check_and_return(NMSG_PROBE_UIEVENT);
+	check_and_return(NMSG_PROBE_RESOURCE);
+	check_and_return(NMSG_PROBE_LIFECYCLE);
+	check_and_return(NMSG_PROBE_SCREENSHOT);
+	check_and_return(NMSG_PROBE_SCENE);
+	check_and_return(NMSG_PROBE_THREAD);
+	check_and_return(NMSG_PROBE_CUSTOM);
+	check_and_return(NMSG_PROBE_SYNC);
 	return "HZ";
 }
 
@@ -755,6 +734,7 @@ int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 				break;
 			default:
 				//TODO report error
+				LOGE("unknown message ID [0x%X]\n", resp);
 				free(msg);
 				return 1;
 		}
@@ -1044,6 +1024,35 @@ send_ack:
 	return -(err_code != ERR_NO);
 }
 
+int process_msg_get_screenshot(struct msg_buf_t *msg_control)
+{
+	int target_index;
+	int sock;
+	uint32_t log_len;
+	msg_target_t sendlog;
+	enum ErrorCode err_code = ERR_UNKNOWN;
+
+	// send config message to target process
+	sendlog.type = MSG_CAPTURE_SCREEN;
+	sendlog.length = sprintf(sendlog.data, "");
+	log_len = sizeof(sendlog.type) + sizeof(sendlog.length) + sendlog.length;
+
+	for (target_index = 0; target_index < MAX_TARGET_COUNT; target_index++) {
+		sock = manager.target[target_index].socket;
+		if (sock != -1) {
+			if (send(sock, &sendlog, log_len, MSG_NOSIGNAL) == -1) {
+				LOGE("fail to send data to target index(%d)\n",
+				     target_index);
+			} else {
+				err_code = ERR_NO;
+				break;
+			}
+		}
+	}
+
+	return -(err_code != ERR_NO);
+}
+
 int host_message_handler(struct msg_t *msg)
 {
 	struct app_info_t app_info;
@@ -1150,7 +1159,8 @@ int host_message_handler(struct msg_t *msg)
 		free(msg_reply);
 		reset_target_info(&target_info);
 		break;
-
+	case NMSG_GET_SCREENSHOT:
+		return process_msg_get_screenshot(&msg_control);
 	default:
 		LOGE("unknown message %d <0x%08X>\n", msg->id, msg->id);
 	}
