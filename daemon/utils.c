@@ -339,35 +339,32 @@ int get_manifest_path(const char* exec_path, char* buf, int buflen)
 	return 0;
 }
 
-// execute applcation with executable binary path
-// return 0 to fail to execute
-// return 1 to succeed to execute
+/* execute applcation with executable binary path */
 int exec_app_tizen(const char *app_id, const char *exec_path)
 {
-	LOGI("exec %s\n", exec_path);
 	pid_t pid;
-	//char command[PATH_MAX];
-	//char appid[PATH_MAX];
+
+	LOGI("exec %s\n", exec_path);
 
 	if (exec_path == NULL || !strlen(exec_path)) {
 		LOGE("Executable path is not correct\n");
-		return 0;
+		return -1;
 	}
-
-	pid = fork();
-	if (pid == -1)
-		return 1;
-	else if (pid > 0)
-		return 0; // exit parent process with success
-
 	LOGI("launch app path is %s, executable path is %s\n"
 	     "launch app name (%s), app_id (%s)\n",
-	     LAUNCH_APP_PATH, exec_path,
-	     LAUNCH_APP_NAME, app_id);
-	execl(LAUNCH_APP_PATH, LAUNCH_APP_NAME, app_id, LAUNCH_APP_SDK,
-	      DA_PRELOAD_EXEC, NULL);
+	     LAUNCH_APP_PATH, exec_path, LAUNCH_APP_NAME, app_id);
+	pid = fork();
+	if (pid == -1)
+		return -1;
 
-	return 0;
+	if (pid > 0) { /* parent */
+		return 0;
+	} else { /* child */
+		execl(LAUNCH_APP_PATH, LAUNCH_APP_NAME, app_id, LAUNCH_APP_SDK,
+		      DA_PRELOAD_EXEC, NULL);
+		/* FIXME: If code flows here, it deserves greater attention */
+		_Exit(EXIT_FAILURE);
+	}
 }
 
 int exec_app_common(const char* exec_path)
@@ -378,95 +375,25 @@ int exec_app_common(const char* exec_path)
 	char command[PATH_MAX];
 
 	LOGI("exec %s\n", exec_path);
-#ifndef LOCALTEST
-	// TODO: check if this makes sense
-	/* char appid[SMACK_LABEL_LEN]; */
-#endif
 	if (exec_path == NULL || !strlen(exec_path)) {
 		LOGE("Executable path is not correct\n");
-		return 1;
+		return -1;
 	}
+
+	sprintf(command, "%s %s", DA_PRELOAD_OSP, exec_path);
+	LOGI("cmd: %s\n", command);
 
 	pid = fork();
 	if (pid == -1)
-		return 1;
-	else if (pid > 0)
-		return 0; // exit parent process with success
+		return -1;
 
-	if (get_manifest_path(exec_path, manifest, PATH_MAX) == 0) {
-		FILE* fp;
-		char buffer[BUFFER_MAX];
-		char* res;
-
-		// grep for manifest
-		sprintf(command, "grep \"HwAcceleration=\\\"On\\\"\" %s",
-			manifest);
-		fp = popen(command, "r");
-		if (fp != NULL) {
-			buffer[0] = '\0';
-			res = fgets(buffer, BUFFER_MAX, fp);
-			if (res != NULL && strlen(buffer) != 0) {
-				hw_acc = 1;
-			}
-			pclose(fp);
-		}
+	if (pid > 0) { /* parent */
+		return 0;
+	} else { /* child */
+		execl(SHELL_CMD, SHELL_CMD, "-c", command, NULL);
+		/* FIXME: Again, such case deserve much more attention */
+		_Exit(EXIT_FAILURE);
 	}
-
-	// FIXME: I think the followin does not make sense
-/* #ifndef LOCALTEST */
-/* 	if (get_smack_label(exec_path, appid, SMACK_LABEL_LEN - 1) < 0) { */
-/* 		LOGE("failed to get smack label\n"); */
-/* 		return 1; */
-/* 	} else */
-/* #endif */
-/* 	{ */
-/* #ifndef LOCALTEST */
-/* 		LOGI("smack lable is %s\n", appid); */
-/* 		if(smack_set_label_for_self(appid) < 0) { */
-/* 			LOGE("failed to set label for self\n"); */
-/* 		} */
-/* #endif */
-/* 		set_appuser_groups(); */
-/* 		if (setgid(SID_APP) < 0) { */
-/* 			LOGE("failed to setgid\n"); */
-/* 		} */
-/* 		if (setuid(SID_APP) < 0) { */
-/* 			LOGE("failed to setuid\n"); */
-/* 		} */
-
-/* 		pid = getpid(); */
-/* 		if (setpgid(pid, pid) < 0) { */
-/* 			LOGE("failed to setpgid\n"); */
-/* 		} */
-
-/* 		if (hw_acc != 0) { */
-/* 			sprintf(command, "HWACC=USE %s %s", DA_PRELOAD(app_type), exec_path); */
-/* 		} else { */
-/* 			sprintf(command, "%s %s", DA_PRELOAD(app_type), exec_path); */
-/* 		} */
-
-/* 		LOGI("launch app path is %s, executable path is %s\n", LAUNCH_APP_PATH, exec_path); */
-/* 		execl(SHELL_CMD, SHELL_CMD, "-c", command, NULL); */
-/* 		return 0; */
-/* 	} */
-	// TODO:
-	/* if (hw_acc) */
-	/* 	sprintf(command, "HWACC=USE %s %s", */
-	/* 		DA_PRELOAD(app_type), exec_path); */
-	/* else */
-	/* 	sprintf(command, "%s %s", */
-	/* 		DA_PRELOAD(app_type), exec_path); */
-#ifndef LOCALTEST
-	sprintf(command, "%s %s",
-		DA_PRELOAD_OSP, exec_path);
-#else /* LOCALTEST */
-	sprintf(command, "%s", exec_path);
-#endif /* LOCALTEST */
-
-	LOGI("cmd: %s\n", command);
-	execl(SHELL_CMD, SHELL_CMD, "-c", command, NULL);
-
-	return 0;
 }
 
 // find process id from executable binary path
