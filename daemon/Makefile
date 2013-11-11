@@ -1,9 +1,16 @@
 CC :=gcc
+DEBUG_CPPFLAGS = 			\
+		-DDEBUG			\
+#		-DDEB_PRINTBUF		\#
+#		-DPARSE_DEBUG_ON	\#
+#		-DTHREAD_SAMPLING_DEBUG	\#
+#		-THREAD_REPLAY_DEBUG	 #
+
 CPPFLAGS := 	-I/usr/include		\
 		-I/usr/include/system 	\
 		-I/usr/include/telephony\
 		-I/usr/include/vconf	\
-		-DDEBUG=1
+		$(DEBUG_CPPFLAGS)
 ifeq (arm, $(findstring arm, $(shell uname -sm)))
 	CPPFLAGS += -DDEVICE_ONLY
 endif
@@ -38,16 +45,16 @@ DASCRIPT = da_command
 
 all: debug
 debug release: $(TARGET_LIBS)
-release: CPPFLAGS+=-DNOLOGI=1
+release: CPPFLAGS += -DNOLOGI=1
 debug release: $(DAEMON_OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $(TARGET)
 
-install: BINDIR=$(DESTDIR)/usr/bin
-install: target
+install: BINDIR = $(DESTDIR)/usr/bin
+install: $(TARGET)
 	mkdir -p $(BINDIR)
 	install $(TARGET) $(DASCRIPT) -t $(BINDIR)
 
 clean:
 	rm -f $(TARGET) $(DAEMON_OBJS)
 
-.PHONY: all target clean install target-nolog
+.PHONY: all debug release clean install

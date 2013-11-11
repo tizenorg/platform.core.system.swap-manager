@@ -774,3 +774,18 @@ void fd_setup_smack_attributes(int fd)
 	fsetxattr(fd, "security.SMACK64IPIN", "*", 1, 0);
 	fsetxattr(fd, "security.SMACK64IPOUT", "*", 1, 0);
 }
+
+float get_uptime(void)
+{
+	const char *LINUX_UPTIME_FILE = "/proc/uptime";
+	FILE *fp = fopen(LINUX_UPTIME_FILE, "r");
+	float uptime;
+	if (!fp)
+		return 0.0;
+
+	if (fscanf(fp, "%f", &uptime) != 1)
+		uptime = 0.0;
+
+	fclose(fp);
+	return uptime;
+}

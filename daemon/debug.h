@@ -31,75 +31,68 @@
 
 #include <stdint.h>		// for uint64_t, int64_t
 #include <pthread.h>	// for pthread_mutex_t
+#include <stdarg.h>
 
 #include "da_protocol.h"
+#include "utils.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/*
- * DEBUG DEFINES
- */
-//#define DEB_PRINTBUF
-//#define PARSE_DEBUG_ON
-//threads debug
-//#define THREAD_SAMPLING_DEBUG
-//#define THREAD_REPLAY_DEBUG
+#define printBuf(buf, len) print_buf(buf, len, __func__)
+void print_buf(char *buf, int len, const char *info);
 
-
-//DEBUG ON PARSING
 #ifdef PARSE_DEBUG_ON
-#define parse_deb LOGI
+	#define parse_deb LOGI
 #else
-#define parse_deb(...) do{}while(0)
-#endif /*parse_on*/
+	#define parse_deb(...)
+#endif
 
-//PRINT BUFFER DEBUG
-#define printBuf(buf, len) print_buf(buf, len, __FUNCTION__)
-void print_buf (char * buf, int len, const char *info);
-
-//THREAD SAMPLING DEBUG
 #ifdef THREAD_SAMPLING_DEBUG
 	#define LOGI_th_samp LOGI
 #else
-	#define LOGI_th_samp(...)	do{} while(0)
+	#define LOGI_th_samp(...)
 #endif
 
-//THREAD REPLAY DEBUG
 #ifdef THREAD_REPLAY_DEBUG
 	#define LOGI_th_rep LOGI
 #else
-	#define LOGI_th_rep(...)	do{} while(0)
+	#define LOGI_th_rep(...)
 #endif
 
-
-/*
- * END DEBUG DEFINES
- */
 #ifdef DEBUG
+#define LOGE(...) do_log("ERR", __func__, __VA_ARGS__)
+#define LOGW(...) do_log("WRN", __func__, __VA_ARGS__)
 
-#ifdef NOLOGI
-	#define LOGI(...)	do{} while(0)
-	#define LOGI_(...)	do{} while(0)
+static inline void do_log(const char *prefix, const char *funcname, ...)
+{
+	va_list ap;
+	const char *fmt;
+	fprintf(stderr, "[%s][%f] (%s):", prefix, get_uptime(), funcname);
+
+	va_start(ap, funcname);
+	fmt = va_arg(ap, const char *);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+}
+
+	#ifdef NOLOGI
+		#define LOGI(...)
+		#define LOGI_(...)
+	#else
+		#define LOGI(...) do_log("INF", __func__, __VA_ARGS__)
+		#define LOGI_(...)	do {		\
+			fprintf(stderr, __VA_ARGS__);	\
+			fflush(stderr);			\
+		} while (0)
+
+	#endif
 #else
-//	#define LOGI(...)	do{ fprintf(stderr, "[INF] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); usleep(100000);} while(0)
-	#define LOGI(...)	do{ fprintf(stderr, "[INF] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
-//	#define LOGI(...)	do{} while(0)
-	#define LOGI_(...)	do{ fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
-	//#define LOGI_(...)	do{} while(0)
-#endif
-
-//	#define LOGE(...)	do{ fprintf(stderr, "[ERR] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); usleep(1000000);} while(0)
-	#define LOGE(...)	do{ fprintf(stderr, "[ERR] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
-	#define LOGW(...)	do{ fprintf(stderr, "[WRN] (%s):", __FUNCTION__); fflush(stderr); fprintf(stderr, __VA_ARGS__ ); fflush(stderr); } while(0)
-
-
-#else
-	#define LOGI(...)	do{} while(0)
-	#define LOGI_(...)	do{} while(0)
-	#define LOGE(...)	do{} while(0)
-	#define LOGW(...)	do{} while(0)
+	#define LOGI(...)
+	#define LOGI_(...)
+	#define LOGE(...)
+	#define LOGW(...)
 #endif
 
 
