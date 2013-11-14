@@ -100,17 +100,6 @@ char *msg_ID_str(enum HostMessageT ID)
 	check_and_return(NMSG_FUNCTION_EXIT);
 	check_and_return(NMSG_CONTEXT_SWITCH_ENTRY);
 	check_and_return(NMSG_CONTEXT_SWITCH_EXIT);
-	check_and_return(NMSG_PROBE);
-	check_and_return(NMSG_PROBE_MEMORY);
-	check_and_return(NMSG_PROBE_UICONTROL);
-	check_and_return(NMSG_PROBE_UIEVENT);
-	check_and_return(NMSG_PROBE_RESOURCE);
-	check_and_return(NMSG_PROBE_LIFECYCLE);
-	check_and_return(NMSG_PROBE_SCREENSHOT);
-	check_and_return(NMSG_PROBE_SCENE);
-	check_and_return(NMSG_PROBE_THREAD);
-	check_and_return(NMSG_PROBE_CUSTOM);
-	check_and_return(NMSG_PROBE_SYNC);
 	return "HZ";
 }
 

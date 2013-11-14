@@ -67,20 +67,6 @@ NMSG_FUNCTION_ENTRY			=0x0008,	//N	irregular	swap instrumentation, Instrumented 
 NMSG_FUNCTION_EXIT			=0x0009,	//N	irregular	swap instrumentation, Instrumented functions by AppInst and LibInst
 NMSG_CONTEXT_SWITCH_ENTRY	=0x0010,	//N	irregular	swap instrumentation for kernel
 NMSG_CONTEXT_SWITCH_EXIT	=0x0011,	//N	irregular	swap instrumentation for kernel
-
-NMSG_PROBE					=0x0100,	//N	irregular	resource log
-NMSG_PROBE_MEMORY			=0x0101,	//N	irregular	resource log
-NMSG_PROBE_UICONTROL		=0x0102,	//N	irregular	resource log
-NMSG_PROBE_UIEVENT			=0x0103,	//N	irregular	resource log
-NMSG_PROBE_RESOURCE			=0x0104,	//N	irregular	resource log
-NMSG_PROBE_LIFECYCLE		=0x0105,	//N	irregular	resource log
-NMSG_PROBE_SCREENSHOT		=0x0106,	//N	irregular	resource log
-NMSG_PROBE_SCENE			=0x0107,	//N	irregular	resource log
-NMSG_PROBE_THREAD			=0x0108,	//N	irregular	resource log
-NMSG_PROBE_CUSTOM			=0x0109,	//N	irregular	resource log
-NMSG_PROBE_SYNC				=0x0110	//N	irregular	resource log
-
-
 };
 #define MSG_MAX_NUM NMSG_SWAP_INST_REMOVE
 
