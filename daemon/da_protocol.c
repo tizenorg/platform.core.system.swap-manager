@@ -154,33 +154,33 @@ static char *msgErrStr(enum ErrorCode err)
 }
 
 
-#define print_feature(f,in,to,delim) if (f & in)\
-								{\
-									sprintf(to, dstr(f) delim );\
-									to+=strlen( dstr(f) delim );\
-								}
-#define print_feature_a(f) print_feature(f,feature,to,", ")
-void feature_code_str(uint32_t feature, char *to)
+#define print_feature(f,in,to,delim)		\
+	if (f & in) {				\
+		sprintf(to, dstr(f) delim );	\
+		to+=strlen( dstr(f) delim );	\
+	}
+#define print_feature_0(f) print_feature(f, feature0, to, ", \n\t")
+void feature_code_str(uint32_t feature0, uint32_t feature1, char *to)
 {
-	print_feature_a(FL_CPU);
-	print_feature_a(FL_MEMORY);
-	print_feature_a(FL_FUNCTION_PROFILING);
-	print_feature_a(FL_MEMORY_ALLCATION_PROBING);
-	print_feature_a(FL_FILE_API_PROBING);
-	print_feature_a(FL_THREAD_API_PROBING);
-	print_feature_a(FL_OSP_UI_API_PROBING);
-	print_feature_a(FL_SCREENSHOT);
-	print_feature_a(FL_USER_EVENT);
-	print_feature_a(FL_RECORDING);
-	print_feature_a(FL_SYSTCALL_FILE);
-	print_feature_a(FL_SYSTCALL_IPC);
-	print_feature_a(FL_SYSTCALL_PROCESS);
-	print_feature_a(FL_SYSTCALL_SIGNAL);
-	print_feature_a(FL_SYSTCALL_NETWORK);
-	print_feature_a(FL_SYSTCALL_DESC);
-	print_feature_a(FL_CONTEXT_SWITCH);
-	print_feature_a(FL_NETWORK_API_PROBING);
-	print_feature_a(FL_OPENGL_API_PROBING);
+	print_feature_0(FL_CPU);
+	print_feature_0(FL_MEMORY);
+	print_feature_0(FL_FUNCTION_PROFILING);
+	print_feature_0(FL_MEMORY_ALLCATION_PROBING);
+	print_feature_0(FL_FILE_API_PROBING);
+	print_feature_0(FL_THREAD_API_PROBING);
+	print_feature_0(FL_OSP_UI_API_PROBING);
+	print_feature_0(FL_SCREENSHOT);
+	print_feature_0(FL_USER_EVENT);
+	print_feature_0(FL_RECORDING);
+	print_feature_0(FL_SYSTCALL_FILE);
+	print_feature_0(FL_SYSTCALL_IPC);
+	print_feature_0(FL_SYSTCALL_PROCESS);
+	print_feature_0(FL_SYSTCALL_SIGNAL);
+	print_feature_0(FL_SYSTCALL_NETWORK);
+	print_feature_0(FL_SYSTCALL_DESC);
+	print_feature_0(FL_CONTEXT_SWITCH);
+	print_feature_0(FL_NETWORK_API_PROBING);
+	print_feature_0(FL_OPENGL_API_PROBING);
 
 }
 
@@ -1207,10 +1207,10 @@ static void print_conf(struct conf_t *conf)
 {
 	char buf[1024];
 	memset(&buf[0], 0, 1024);
-	feature_code_str(conf->use_features0, buf);
+	feature_code_str(conf->use_features0, conf->use_features1, buf);
 	LOGI("conf = \n");
-	LOGI("\tuse_features0 = 0x%016LX (%s)\n", conf->use_features0, buf);
-	LOGI("\tuse_features1 = 0x%016LX (%s)\n", conf->use_features1, buf);
+	LOGI("\tuse_features = 0x%016LX : 0x%016LX \n(\t%s)\n",
+	     conf->use_features0, conf->use_features1, buf);
 	LOGI(
 		 "\tsystem_trace_period = %d ms\n"
 		 "\tdata message period = %d ms\n",
