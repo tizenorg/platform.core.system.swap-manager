@@ -45,6 +45,7 @@
 #define US_APP_INST_FUNC_MAX 50000
 
 #define US_FUNC_ARGS "bcdxpfw"
+#define US_FUNC_RETURN "vnbcdxpfw"
 
 #define US_APP_INST_LIB_MIN 0
 #define US_APP_INST_LIB_MAX 100

@@ -172,9 +172,10 @@ int check_us_inst_func_args(char *args)
 	return 1;
 }
 
+static char *rets_avail = US_FUNC_RETURN;
 int check_us_inst_func_ret_type(char ret_type)
 {
-	if (strchr(args_avail, (int)ret_type) == NULL){
+	if (strchr(rets_avail, (int)ret_type) == NULL){
 		LOGE("wrong ret type <%c> <0x%02X>\n", (int)ret_type, (char)ret_type);
 		return 0;
 	}
