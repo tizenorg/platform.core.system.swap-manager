@@ -28,7 +28,7 @@
  * - Samsung RnD Institute Russia
  *
  */
-
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -40,13 +40,19 @@
 #define DEBUG_LOGFILE		"/tmp/daemonlog.da"
 
 #if DEBUG
+static inline void close_on_exec_dup(int old, int new)
+{
+	dup2(old, new);
+	fcntl(new, F_SETFD, fcntl(new, F_GETFD) | FD_CLOEXEC);
+}
+
 void initialize_log()
 {
-	int fd = open(DEBUG_LOGFILE, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC,
-		      0777);
+	int fd = open(DEBUG_LOGFILE, O_WRONLY | O_CREAT | O_TRUNC, 0777);
 	if (fd > 0) {
-		dup2(fd, 1);
-		dup2(fd, 2);
+		close_on_exec_dup(fd, 1);
+		close_on_exec_dup(fd, 2);
+
 		close(fd);
 	} else {
 		close(1);
