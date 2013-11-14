@@ -129,7 +129,6 @@ int read_line(const int fd, char* ptr, const unsigned int maxlen)
 	return -1; // no space
 }
 
-#ifndef LOCALTEST
 int smack_set_label_for_self(const char *label)
 {
 	int len;
@@ -149,7 +148,6 @@ int smack_set_label_for_self(const char *label)
 
 	return (ret < 0) ? -1 : 0;
 }
-#endif
 
 void set_appuser_groups(void)
 {
@@ -208,7 +206,6 @@ void set_appuser_groups(void)
 	close(fd);
 }
 
-#ifndef LOCALTEST
 int get_smack_label(const char* execpath, char* buffer, int buflen)
 {
 	char* appid = NULL;
@@ -224,7 +221,6 @@ int get_smack_label(const char* execpath, char* buffer, int buflen)
 	else
 		return -1;
 }
-#endif
 
 int get_appid(const char* execpath, char* buffer, int buflen)
 {
