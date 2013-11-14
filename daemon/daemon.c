@@ -198,10 +198,10 @@ void _device_write(input_dev *dev, struct input_event *in_ev)
 	}
 }
 
-long long get_total_alloc_size()
+uint64_t get_total_alloc_size()
 {
 	int i;
-	long long allocsize = 0;
+	uint64_t allocsize = 0;
 
 	for (i = 0; i < MAX_TARGET_COUNT; i++) {
 		if (manager.target[i].socket != -1 && manager.target[i].allocmem > 0)

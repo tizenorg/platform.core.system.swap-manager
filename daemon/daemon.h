@@ -226,7 +226,7 @@ extern __da_manager manager;
 
 void initialize_log();
 int daemonLoop();
-long long get_total_alloc_size();
+uint64_t get_total_alloc_size();
 void unlink_portfile(void);
 
 int makeRecvThread(int index);
