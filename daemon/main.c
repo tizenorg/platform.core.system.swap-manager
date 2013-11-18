@@ -42,9 +42,7 @@
 #include <unistd.h>			// for unlink
 #include <fcntl.h>			// for open, fcntl
 #include <stdbool.h>
-#ifndef LOCALTEST
 #include <attr/xattr.h>		// for fsetxattr
-#endif
 #include "daemon.h"
 #include "da_protocol.h"
 #include "sys_stat.h"
@@ -332,10 +330,8 @@ static int initializeManager(FILE *portfile)
 static int finalizeManager()
 {
 	LOGI("Finalize daemon\n");
-#ifndef LOCALTEST
 	LOGI("finalize system info\n");
 	finalize_system_info();
-#endif
 
 	// close host client socket
 	if(manager.host.control_socket != -1){

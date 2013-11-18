@@ -47,23 +47,15 @@
 #include <inttypes.h>
 #include <stdint.h>
 
-#ifndef LOCALTEST
 #include <system_info.h>
 #include <runtime_info.h>
 #include <telephony_network.h>
 #include <call.h>
-#endif
 
 #include "da_protocol.h"
 #include "da_data.h"
 
-#ifndef LOCALTEST
-#define USE_VCONF
-#endif
-
-#ifdef USE_VCONF
 #include "vconf.h"
-#endif
 
 #include "sys_stat.h"
 #include "daemon.h"
@@ -114,8 +106,6 @@ static unsigned long probe_so_size = 0;
 int get_file_status_no_open(int pfd, const char *filename)
 {
 	int status = 0;
-
-#ifndef LOCALTEST
 	char buf[STATUS_STRING_MAX];
 
 	if (unlikely(pfd < 0)) {
@@ -130,7 +120,6 @@ int get_file_status_no_open(int pfd, const char *filename)
 		status =  -(errno);
 	else
 		status = atoi(buf);
-#endif
 
 	return status;
 }
@@ -140,7 +129,6 @@ int get_file_status(int *pfd, const char *filename)
 {
 	int status = 0;
 
-#ifndef LOCALTEST
 	if (likely(pfd != NULL)) {
 		//open if is not open
 		if (unlikely(*pfd < 0)) {
@@ -158,7 +146,6 @@ int get_file_status(int *pfd, const char *filename)
 		}
 
 	}
-#endif
 
 	return status;
 }
@@ -170,21 +157,8 @@ static int get_wifi_status()
 {
 	int wifi_status = 0;
 
-#ifndef LOCALTEST
-	#ifdef USE_VCONF
-		if (unlikely(vconf_get_int(VCONFKEY_WIFI_STATE, &wifi_status) < 0))
-		{
+	if (unlikely(vconf_get_int(VCONFKEY_WIFI_STATE, &wifi_status) < 0))
 			wifi_status = VCONFKEY_WIFI_OFF;
-		}
-	#else
-		if (unlikely(runtime_info_get_value_int(
-					RUNTIME_INFO_KEY_WIFI_STATUS, &wifi_status) < 0))
-		{
-			wifi_status = RUNTIME_INFO_WIFI_STATUS_DISABLED;
-		}
-	#endif	// USE_VCONF
-#endif
-
 	return wifi_status;
 }
 
@@ -192,20 +166,8 @@ static int get_bt_status()
 {
 	int bt_status = false;
 
-#ifndef LOCALTEST
-	#ifdef USE_VCONF
-		if (unlikely(vconf_get_int(VCONFKEY_BT_STATUS, &bt_status) < 0))
-		{
-			bt_status = VCONFKEY_BT_STATUS_OFF;
-		}
-	#else
-		if (unlikely(runtime_info_get_value_bool(
-				RUNTIME_INFO_KEY_BLUETOOTH_ENABLED, (bool*)&bt_status) < 0))
-		{
-			bt_status = 0;
-		}
-	#endif	// USE_VCONF
-#endif
+	if (unlikely(vconf_get_int(VCONFKEY_BT_STATUS, &bt_status) < 0))
+		bt_status = VCONFKEY_BT_STATUS_OFF;
 
 	return bt_status;
 }
@@ -214,93 +176,48 @@ static int get_gps_status()
 {
 	int gps_status = 0;
 
-#ifndef LOCALTEST
-	#ifdef USE_VCONF
-		if(unlikely(vconf_get_bool(VCONFKEY_LOCATION_ENABLED, &gps_status) < 0))
-		{
+	if (unlikely(vconf_get_bool(VCONFKEY_LOCATION_ENABLED,
+				    &gps_status) < 0)) {
+		gps_status = VCONFKEY_LOCATION_GPS_OFF;
+	} else if (gps_status != 0) {
+		if (unlikely(vconf_get_int(VCONFKEY_LOCATION_GPS_STATE,
+					   &gps_status) < 0)) {
 			gps_status = VCONFKEY_LOCATION_GPS_OFF;
 		}
-		else if(gps_status != 0)
-		{
-			if (unlikely(vconf_get_int(VCONFKEY_LOCATION_GPS_STATE, &gps_status) < 0))
-			{
-				gps_status = VCONFKEY_LOCATION_GPS_OFF;
-			}
-		}
-	#else
-		if (unlikely(runtime_info_get_value_bool(
-					RUNTIME_INFO_KEY_LOCATION_SERVICE_ENABLED, (bool*)&gps_status) < 0))
-		{
-			gps_status = 0;
-		}
-		else if(gps_status != 0)
-		{
-			if (unlikely(runtime_info_get_value_bool(
-					RUNTIME_INFO_KEY_LOCATION_ADVANCED_GPS_ENABLED, (bool*)&gps_status) < 0))
-			{
-				gps_status = 0;
-			}
-			else if(gps_status != 0)
-			{
-				if(unlikely(runtime_info_get_value_int(
-								RUNTIME_INFO_KEY_GPS_STATUS, &gps_status) < 0))
-				{
-					gps_status = 0;
-				}
-				else
-				{
-					// do nothing (gps_status is real gps status)
-				}
-			}
-			else
-			{
-				// do nothing (gps_status == 0)
-			}
-		}
-		else
-		{
-			 // do nothing (gps_status == 0)
-		}
-	#endif	// USE_VCONF
-#endif
+	}
 
 	return gps_status;
 }
 
 static void init_brightness_status()
 {
-#ifndef LOCALTEST
-	#ifdef DEVICE_ONLY
-		DIR* dir_info;
-		struct dirent* dir_entry;
-		char fullpath[PATH_MAX];
+#ifdef DEVICE_ONLY
+	DIR *dir_info;
+	struct dirent *dir_entry;
+	char fullpath[PATH_MAX];
 
-		dir_info = opendir(BRIGHTNESS_PARENT_DIR);
-		if (dir_info != NULL)
-		{
-			while((dir_entry = readdir(dir_info)) != NULL)
-			{
-				if (strcmp(dir_entry->d_name, ".") == 0 ||
-						strcmp(dir_entry->d_name, "..") == 0)
-					continue;
-				else	// first directory
-				{
-					sprintf(fullpath,
-							BRIGHTNESS_PARENT_DIR "/%s/" BRIGHTNESS_FILENAME,
-							dir_entry->d_name);
-					get_file_status(&manager.fd.brightness, fullpath);
-				}
+	dir_info = opendir(BRIGHTNESS_PARENT_DIR);
+	if (dir_info != NULL) {
+		while ((dir_entry = readdir(dir_info)) != NULL) {
+			if (strcmp(dir_entry->d_name, ".") == 0 ||
+			    strcmp(dir_entry->d_name, "..") == 0)
+				continue;
+			else { /* first directory */
+				sprintf(fullpath,
+					BRIGHTNESS_PARENT_DIR "/%s/"
+					BRIGHTNESS_FILENAME,
+					dir_entry->d_name);
+				get_file_status(&manager.fd.brightness,
+						fullpath);
 			}
-			closedir(dir_info);
 		}
-		else
-		{
-			// do nothing
-		}
-	#else
-		get_file_status(&manager.fd.brightness, EMUL_BRIGHTNESSFD);
-	#endif
-#endif	// LOCALTEST
+		closedir(dir_info);
+	} else {
+		/* do nothing */
+	}
+#else
+	get_file_status(&manager.fd.brightness, EMUL_BRIGHTNESSFD);
+#endif
 }
 
 static int get_brightness_status()
@@ -313,60 +230,48 @@ static int get_max_brightness()
 	int maxbrightnessfd = -1;
 	static int max_brightness = -1;
 
-#ifndef LOCALTEST
-	if(__builtin_expect(max_brightness < 0, 0))
-	{
-	#ifdef DEVICE_ONLY
+	if (__builtin_expect(max_brightness < 0, 0)) {
+#ifdef DEVICE_ONLY
 		DIR* dir_info;
 		struct dirent* dir_entry;
 		char fullpath[PATH_MAX];
 
 		dir_info = opendir(BRIGHTNESS_PARENT_DIR);
-		if(dir_info != NULL)
-		{
-			while((dir_entry = readdir(dir_info)) != NULL)
-			{
+		if (dir_info != NULL) {
+			while((dir_entry = readdir(dir_info)) != NULL) {
 				if (strcmp(dir_entry->d_name, ".") == 0 ||
-						strcmp(dir_entry->d_name, "..") == 0)
+				    strcmp(dir_entry->d_name, "..") == 0)
 					continue;
-				else	// first directory
-				{
+				else { /* first */
 					sprintf(fullpath,
-							BRIGHTNESS_PARENT_DIR "/%s/" MAX_BRIGHTNESS_FILENAME,
-							dir_entry->d_name);
+						BRIGHTNESS_PARENT_DIR "/%s/" MAX_BRIGHTNESS_FILENAME,
+						dir_entry->d_name);
 					max_brightness = get_file_status(&maxbrightnessfd, fullpath);
 				}
 			}
 			closedir(dir_info);
-		}
-		else
-		{
+		} else {
 			// do nothing
 		}
-	#else
+#else /* DEVICE_ONLY */
 		max_brightness = get_file_status(&maxbrightnessfd, EMUL_MAX_BRIGHTNESSFD);
-	#endif
+#endif /* DEVICE_ONLY */
 	}
 
-	if(maxbrightnessfd != -1)
+	if (maxbrightnessfd != -1)
 		close(maxbrightnessfd);
-#endif	// LOCALTEST
 
 	return max_brightness;
 }
 
 static void init_video_status()
 {
-#ifndef LOCALTEST
 	manager.fd.video = fopen(MFCFD, "r");
-#endif
 }
 
 static int get_video_status()
 {
 	int video_status = 0;
-
-#ifndef LOCALTEST
 	int ret;
 	FILE *video_fp = manager.fd.video;
 	char stat[256];
@@ -383,140 +288,54 @@ static int get_video_status()
 		if(strncmp(stat,"active",6) == 0)
 			video_status = 1;
 
-#endif
-
 	return video_status;
 }
 
 static int get_rssi_status()
 {
-#ifndef LOCALTEST
+
 	int flightmode_status;
+	int rssi_status;
 
-	#ifdef USE_VCONF
-		int rssi_status;
-		if(unlikely(vconf_get_bool(VCONFKEY_SETAPPL_FLIGHT_MODE_BOOL,
-						&flightmode_status) < 0))
-		{
-			flightmode_status = 0;
-		}
+	if (unlikely(vconf_get_bool(VCONFKEY_SETAPPL_FLIGHT_MODE_BOOL,
+				    &flightmode_status) < 0)) {
+		flightmode_status = 0;
+	}
 
-		if(!flightmode_status)
-		{
-			if(unlikely(vconf_get_int(VCONFKEY_TELEPHONY_RSSI, &rssi_status) < 0))
-			{
-				rssi_status = VCONFKEY_TELEPHONY_RSSI_0;
-			}
-		}
-		else
-		{
+	if (!flightmode_status) {
+		if (unlikely(vconf_get_int(VCONFKEY_TELEPHONY_RSSI,
+					   &rssi_status) < 0)) {
 			rssi_status = VCONFKEY_TELEPHONY_RSSI_0;
 		}
+	} else {
+		rssi_status = VCONFKEY_TELEPHONY_RSSI_0;
+	}
 
-		return rssi_status;
-	#else
-		network_info_rssi_e rssi_status;
+	return rssi_status;
 
-		if(unlikely(runtime_info_get_value_bool(
-				RUNTIME_INFO_KEY_FLIGHT_MODE_ENABLED, (bool*)&flightmode_status) < 0))
-		{
-			flightmode_status = 0;
-		}
 
-		if(!flightmode_status)
-		{
-			if(unlikely(network_info_get_rssi(&rssi_status) < 0))
-			{
-				rssi_status = NETWORK_INFO_RSSI_0;
-			}
-		}
-		else
-		{
-			rssi_status = NETWORK_INFO_RSSI_0;
-		}
-
-		return (int)rssi_status;
-	#endif	// USE_VCONF
-#else
 	return 0;
-#endif
 }
 
 static int get_call_status()
 {
 	int call_status = 0;
 
-#ifndef LOCALTEST
-	#ifdef USE_VCONF
-		if(unlikely(vconf_get_int(VCONFKEY_CALL_STATE, &call_status) < 0))
-		{
-			call_status = VCONFKEY_CALL_OFF;
-		}
-	#else
-		call_state_e call_state;
-		if(unlikely(call_get_voice_call_state(&call_state) < 0))
-		{
-			if(unlikely(call_get_video_call_state(&call_state) < 0))
-			{
-				call_status = 0;	// call idle
-			}
-			else
-			{
-				// return video call state
-				if(call_state == CALL_STATE_CONNECTING)
-					call_status = 3;
-				else if(call_state == CALL_STATE_ACTIVE)
-					call_status = 4;
-			}
-		}
-		else if(call_state == CALL_STATE_IDLE)	// voice call state is idle
-		{
-			if(unlikely(call_get_video_call_state(&call_state) < 0))
-			{
-				call_status = 0;
-			}
-			else
-			{
-				// return video call state
-				if(call_state == CALL_STATE_CONNECTING)
-					call_status = 3;
-				else if(call_state == CALL_STATE_ACTIVE)
-					call_status = 4;
-			}
-		}
-		else
-		{
-			// return voice call state
-			if(call_state == CALL_STATE_CONNECTING)
-					call_status = 1;
-			else if(call_state == CALL_STATE_ACTIVE)
-					call_status = 2;
-		}
-	#endif	// USE_VCONF
-#endif
+	if (unlikely(vconf_get_int(VCONFKEY_CALL_STATE, &call_status) < 0))
+		call_status = VCONFKEY_CALL_OFF;
 
 	return call_status;
 }
 
-// dnet means 3G?
+/* dnet means 3G? */
 static int get_dnet_status()
 {
 	int dnet_status = false;
 
-#ifndef LOCALTEST
-	#ifdef USE_VCONF
-		if(unlikely(vconf_get_int(VCONFKEY_DNET_STATE, &dnet_status) < 0))
-		{
+		if (unlikely(vconf_get_int(VCONFKEY_DNET_STATE,
+					   &dnet_status) < 0)) {
 			dnet_status = VCONFKEY_DNET_OFF;
 		}
-	#else
-		if(unlikely(runtime_info_get_value_bool(
-				RUNTIME_INFO_KEY_PACKET_DATA_ENABLED, (bool*)&dnet_status) < 0))
-		{
-			dnet_status = 0;
-		}
-	#endif	// USE_VCONF
-#endif
 
 	return dnet_status;
 }
@@ -524,17 +343,6 @@ static int get_dnet_status()
 static int get_camera_status()
 {
 	int camera_status = 0;
-
-#ifndef LOCALTEST
-#if 0
-	#ifdef USE_VCONF
-	if(unlikely(vconf_get_int(VCONFKEY_CAMERA_STATE, &camera_status) < 0))
-	{
-		camera_status = VCONFKEY_CAMERA_OFF;
-	}
-	#endif	// USE_VCONF
-#endif
-#endif
 
 	return camera_status;
 }
@@ -544,48 +352,25 @@ static int get_sound_status()
 {
 	int sound_status = 0;
 
-#ifndef LOCALTEST
-	#ifdef USE_VCONF
-		if(unlikely(vconf_get_bool(VCONFKEY_SETAPPL_SOUND_STATUS_BOOL,
-						&sound_status) < 0))
-		{
-			sound_status = 0;
-		}
-	#else
-		if(unlikely(runtime_info_get_value_bool(
-				RUNTIME_INFO_KEY_SILENT_MODE_ENABLED, (bool*)&sound_status) < 0))
-		{
-			sound_status = 0;
-		}
-		else
-		{
-			sound_status = (sound_status == 1) ? 0 : 1;		// slient mode
-		}
-	#endif	// USE_VCONF
-#endif
+	if (unlikely(vconf_get_bool(VCONFKEY_SETAPPL_SOUND_STATUS_BOOL,
+				    &sound_status) < 0)) {
+		sound_status = 0;
+	}
 
 	return sound_status;
 }
 
 static void init_audio_status()
 {
-#ifndef LOCALTEST
-
 #ifdef DEVICE_ONLY
 	//first open
 	manager.fd.audio_status = fopen(AUDIOFD, "r");
 #endif
-
-#endif	// LOCALTEST
-
 }
 
 static int get_audio_status()
 {
 	int audio_state = 0;
-
-#ifndef LOCALTEST
-
 #ifdef DEVICE_ONLY
 	int ret = 0;
 	char dev[40];
@@ -615,9 +400,6 @@ static int get_audio_status()
 	}
 
 #endif
-
-#endif	// LOCALTEST
-
 	return audio_state;
 }
 
@@ -625,21 +407,10 @@ static int get_vibration_status()
 {
 	int vibration_status = 0;
 
-#ifndef LOCALTEST
-	#ifdef USE_VCONF
-		if(unlikely(vconf_get_bool(VCONFKEY_SETAPPL_VIBRATION_STATUS_BOOL,
-						&vibration_status) < 0))
-		{
-			vibration_status = 0;
-		}
-	#else
-		if(unlikely(runtime_info_get_value_bool(
-					RUNTIME_INFO_KEY_VIBRATION_ENABLED, (bool*)&vibration_status) < 0))
-		{
-			vibration_status = 0;
-		}
-	#endif	// USE_VCONF
-#endif
+	if (unlikely(vconf_get_bool(VCONFKEY_SETAPPL_VIBRATION_STATUS_BOOL,
+				    &vibration_status) < 0)) {
+		vibration_status = 0;
+	}
 
 	return vibration_status;
 }
@@ -1752,13 +1523,11 @@ static int get_device_availability_info(char* buf, int buflen)
 	char network_type[128];
 	int network_len;
 
-#ifndef LOCALTEST
 	system_info_get_platform_bool("tizen.org/feature/network.bluetooth", &blue_support);
 	camera_count = get_camera_count();
 	system_info_get_platform_bool("tizen.org/feature/location.gps", &gps_support);
 	network_len = get_device_network_type(networktype, 128);
 	system_info_get_platform_bool("tizen.org/feature/network.wifi", &wifi_support);
-#endif
 
 	loglen += sprintf(buf, "%d`,%d`,%d`,%d`,",
 			(int)blue_support,
@@ -2470,7 +2239,6 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 	LOGI_th_samp("start\n");
 	LOGI_th_samp("PID count : %d\n", pidcount);
 
-	// clean output structure
 	memset(sys_info, 0, sizeof(*sys_info));
 
 	// common (cpu, processes, memory)
@@ -2481,11 +2249,13 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 			LOGE("Failed to update process stat data\n");
 			goto fail_exit;
 		}
-
-		// this position is optimized position of timestamp.
-		// just before get system cpu data and just after get process cpu data
-		// because cpu data is changed so fast and variance is so remarkable
-		elapsed = get_elapsed(); // DO NOT MOVE THIS SENTENCE!
+		/**
+		 * This position is optimized position of timestamp. Just
+		 * before get system cpu data and just after get process cpu
+		 * data because cpu data is changed so fast and variance is so
+		 * remarkable
+		 */
+		elapsed = get_elapsed(); /* DO NOT MOVE THIS SENTENCE! */
 		factor = get_factor(elapsed);
 
 		if (update_system_cpu_data(event_num) < 0) {
@@ -2493,14 +2263,16 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 			goto fail_exit;
 		}
 
-		// update cpu freq
 		if (update_system_cpu_frequency(event_num) < 0) {
 			LOGE("Failed to update system cpu freq data\n");
 			goto fail_exit;
 		}
 
-		// memory data is changed slowly and variance is not remarkable
-		// so memory data is less related with timestamp then cpu data
+		/**
+		 * Memory data is changed slowly and variance is not
+		 * remarkable, so memory data is less related with timestamp
+		 * then cpu data
+		 */
 		if (update_process_data(pidarray, pidcount, PROCDATA_SMAPS) < 0) {
 			LOGE("Failed to update process smaps data\n");
 			goto fail_exit;
@@ -2517,19 +2289,18 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 			goto fail_exit;
 		}
 
-		// update cpus information
 		if (update_cpus_info(event_num, elapsed) < 0) {
 			LOGE("Failed to update cpus info\n");
 			goto fail_exit;
 		}
 
-		// calculate process load, memory, app_cpu_usage
+		/* calculate process load, memory, app_cpu_usage */
 		if (fill_system_processes_info(factor, sys_info) < 0) {
 			LOGE("Failed to fill processes info\n");
 			goto fail_exit;
 		}
 
-		// calculate thread load
+		/* calculate thread load */
 		if (fill_system_threads_info(factor, sys_info) < 0) {
 			LOGE("Failed to fill threads info\n");
 			goto fail_exit;
@@ -2541,17 +2312,14 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 		}
 	}
 
-	// memory (not full)
 	if (IS_OPT_SET(FL_MEMORY)) {
 		sys_info->total_alloc_size = get_total_alloc_size();
 		sys_info->system_memory_total = sysmemtotal;
 		sys_info->system_memory_used = sysmemused;
 	}
 
-	// Fill result strutcture
-	LOGI_th_samp("fill result structure\n");
-#ifndef LOCALTEST
-	// disk
+	LOGI_th_samp("Fill result structure\n");
+
 	if (IS_OPT_SET(FL_DISK)) {
 		sys_info->total_used_drive = get_total_used_drive();
 		peek_disk_stat_diff(&sys_info->disk_reads,
@@ -2560,12 +2328,10 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 				    &sys_info->disk_sectors_write);
 	}
 
-	// network
 	if (IS_OPT_SET(FL_NETWORK))
 		peek_network_stat_diff(&sys_info->network_send_size,
 				       &sys_info->network_receive_size);
 
-	// device
 	if (IS_OPT_SET(FL_DEVICE)) {
 		sys_info->wifi_status = get_wifi_status();
 		sys_info->bt_status = get_bt_status();
@@ -2581,40 +2347,10 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 		sys_info->call_status = get_call_status();
 		sys_info->dnet_status = get_dnet_status();
 	}
-#else /* LOCALTEST */
-	// disk
-	if (IS_OPT_SET(FL_DISK)) {
-		sys_info->disk_read_size = 0x20;
-		sys_info->disk_write_size = 0x21;
-	}
 
-	// network
-	if (IS_OPT_SET(FL_NETWORK)) {
-		sys_info->network_send_size = 0x22;
-		sys_info->network_receive_size = 0x23;
-	}
-
-	// device
-	if (IS_OPT_SET(FL_DEVICE)) {
-		sys_info->wifi_status = 2;
-		sys_info->bt_status = 3;
-		sys_info->gps_status = 4;
-		sys_info->brightness_status = 5;
-		sys_info->camera_status = 6;
-		sys_info->sound_status = 7;
-		sys_info->audio_status = 8;
-		sys_info->vibration_status = 9;
-		sys_info->voltage_status = 0xa;
-		sys_info->rssi_status = 0xb;
-		sys_info->video_status = 0xc;
-		sys_info->call_status = 0xd;
-		sys_info->dnet_status = 0xe;
-	}
-#endif /* LOCALTEST */
-	// energy
 	if (IS_OPT_SET(FL_ENERGY)) {
 		int i;
-		sys_info->energy = 0; // not implemented
+		sys_info->energy = 0; /* not implemented */
 		for (i = 0; i != supported_devices_count; ++i) {
 			sys_info->energy_per_device[i] =
 				pop_sys_energy_per_device(i);
@@ -2632,8 +2368,7 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 	return res;
 
 fail_exit:
-	//some data corrupted
-	//free allocated data
+	/* Some data corrupted. Free allocated data. */
 	reset_system_info(sys_info);
 	LOGI_th_samp("fail exit\n");
 	return -1;
@@ -2766,7 +2501,6 @@ int fill_target_info(struct target_info_t *target_info)
 	target_info->sys_mem_size = get_system_total_memory();
 	target_info->storage_size = stat_get_storageinfo(FSINFO_TYPE_TOTAL) *
 		1024 * 1024;
-#ifndef LOCALTEST
 
 	system_info_get_platform_bool("tizen.org/feature/network.bluetooth",
 									(_Bool *)&target_info->bluetooth_supp);
@@ -2783,7 +2517,6 @@ int fill_target_info(struct target_info_t *target_info)
 	get_device_network_type(target_info->network_type, NWTYPE_SIZE);
 
 
-#endif /* LOCALTEST */
 	target_info->max_brightness = get_max_brightness();
 	target_info->cpu_core_count = sysconf(_SC_NPROCESSORS_CONF);
 	return 0;

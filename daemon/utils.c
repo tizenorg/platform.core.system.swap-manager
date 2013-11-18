@@ -42,9 +42,7 @@
 #include <sys/stat.h>	// for open
 #include <fcntl.h>		// for open
 #include <grp.h>		// for setgroups
-#ifndef LOCALTEST
 #include <sys/smack.h>
-#endif
 #include "daemon.h"
 #include "utils.h"
 #include "debug.h"
@@ -54,9 +52,7 @@
 #define APP_GROUP_LIST		"/usr/share/privilege-control/app_group_list"
 #define SELF_LABEL_FILE		"/proc/self/attr/current"
 
-#ifndef LOCALTEST
 #define SMACK_LABEL_LEN		255
-#endif
 
 #define SID_APP				5000
 #define MANIFEST_PATH		"/info/manifest.xml"

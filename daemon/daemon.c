@@ -47,10 +47,8 @@
 
 #include <ctype.h>
 
-#ifndef LOCALTEST
 #include <attr/xattr.h>		// for fsetxattr
 #include <sys/smack.h>
-#endif
 
 #include <linux/input.h>
 #include <dirent.h>
@@ -450,9 +448,7 @@ int start_profiling()
 		LOGW("Failed to create directory for screenshot : %s\n",
 		     strerror(errno));
 
-#ifndef LOCALTEST
 	smack_lsetlabel(SCREENSHOT_DIR, "*", SMACK_LABEL_ACCESS);
-#endif
 
 	if (samplingStart() < 0) {
 		LOGE("Cannot start sampling\n");
