@@ -135,12 +135,14 @@ enum app_type {
 	AT_COMMON	=0x03
 };
 enum supported_device {
-  DEVICE_FLASH,
-  DEVICE_CPU
+	DEVICE_FLASH,
+	DEVICE_CPU,
+	DEVICE_LCD
 };
 static const char *supported_devices_strings[] = {
 	"FLASH",
-	"CPU"
+	"CPU",
+	"LCD"
 };
 #define array_size(x) (sizeof(x)/sizeof((x)[0]))
 enum { supported_devices_count = array_size(supported_devices_strings) };

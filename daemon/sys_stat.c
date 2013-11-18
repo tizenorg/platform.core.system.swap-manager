@@ -2373,9 +2373,9 @@ static uint64_t read_int64_from_file(const char *fname)
 // Stores mutable state in static variables.
 static uint32_t pop_sys_energy_per_device(enum supported_device dev)
 {
-	static uint64_t cpu_old, flash_old;
-	uint64_t cpu_new, flash_new;
-	uint64_t cpu_diff, flash_diff;
+	static uint64_t cpu_old, flash_old, lcd_old;
+	uint64_t cpu_new, flash_new, lcd_new;
+	uint64_t cpu_diff, flash_diff, lcd_diff;
 
 	switch (dev) {
 	case DEVICE_CPU:
@@ -2391,6 +2391,11 @@ static uint32_t pop_sys_energy_per_device(enum supported_device dev)
 		flash_diff = flash_new - flash_old;
 		flash_old = flash_new;
 		return (uint32_t)flash_diff;
+	case DEVICE_LCD:
+		lcd_new = swap_read_int64(lcd/maru/system);
+		lcd_diff = lcd_new - lcd_old;
+		lcd_old = lcd_new;
+		return (uint32_t)lcd_diff;
 	default:
 		assert(0 && "Unknown device. This should not happen");
 		return -41;
@@ -2417,6 +2422,12 @@ static uint32_t pop_app_energy_per_device(enum supported_device dev)
 		flash_diff = flash_new - flash_old;
 		flash_old = flash_new;
 		return (uint32_t)flash_diff;
+	case DEVICE_LCD:
+		/**
+		 * Per-application energy accounting
+		 * is not supported for LCD.
+		 */
+		return 0;
 	default:
 		assert(0 && "Unknown device. This should not happen");
 		return -41;
