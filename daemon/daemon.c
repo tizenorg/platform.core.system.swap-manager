@@ -459,10 +459,13 @@ int start_profiling()
 	if (IS_OPT_SET(FL_RECORDING))
 		epoll_add_input_events();
 
-	if (exec_app(app_info)) {
-		LOGE("Cannot exec app\n");
-		res = -1;
-		goto recording_stop;
+	while (app_info != NULL) {
+		if (exec_app(app_info)) {
+			LOGE("Cannot exec app\n");
+			res = -1;
+			goto recording_stop;
+		}
+		app_info = app_info_get_next(&app);
 	}
 
 	goto exit;
