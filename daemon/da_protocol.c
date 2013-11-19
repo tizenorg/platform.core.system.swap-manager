@@ -149,12 +149,12 @@ static char *msgErrStr(enum ErrorCode err)
 		to+=strlen( dstr(f) delim );	\
 	}
 #define print_feature_0(f) print_feature(f, feature0, to, ", \n\t")
-void feature_code_str(uint32_t feature0, uint32_t feature1, char *to)
+void feature_code_str(uint64_t feature0, uint64_t feature1, char *to)
 {
 	print_feature_0(FL_CPU);
 	print_feature_0(FL_MEMORY);
 	print_feature_0(FL_FUNCTION_PROFILING);
-	print_feature_0(FL_MEMORY_ALLCATION_PROBING);
+	print_feature_0(FL_MEMORY_ALLOC_PROBING);
 	print_feature_0(FL_FILE_API_PROBING);
 	print_feature_0(FL_THREAD_API_PROBING);
 	print_feature_0(FL_OSP_UI_API_PROBING);
@@ -170,7 +170,12 @@ void feature_code_str(uint32_t feature0, uint32_t feature1, char *to)
 	print_feature_0(FL_CONTEXT_SWITCH);
 	print_feature_0(FL_NETWORK_API_PROBING);
 	print_feature_0(FL_OPENGL_API_PROBING);
-
+	print_feature_0(FL_MEMORY_ALLOC_ALWAYS_PROBING);
+	print_feature_0(FL_FILE_API_ALWAYS_PROBING);
+	print_feature_0(FL_THREAD_API_ALWAYS_PROBING);
+	print_feature_0(FL_OSP_UI_API_ALWAYS_PROBING);
+	print_feature_0(FL_NETWORK_API_ALWAYS_PROBING);
+	print_feature_0(FL_OPENGL_API_ALWAYS_PROBING);
 }
 
 
@@ -1106,8 +1111,8 @@ int host_message_handler(struct msg_t *msg)
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		// send config message to target process
 		sendlog.type = MSG_OPTION;
-		sendlog.length = sprintf(sendlog.data, "%lu",
-				     (unsigned long int) prof_session.conf.use_features0);
+		sendlog.length = sprintf(sendlog.data, "%llu",
+				     (unsigned long long) prof_session.conf.use_features0);
 		for (target_index = 0; target_index < MAX_TARGET_COUNT; target_index++)
 		{
 			if(manager.target[target_index].socket != -1)
