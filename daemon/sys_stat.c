@@ -29,7 +29,7 @@
  *
  */
 
-
+#include <glob.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -2368,9 +2368,31 @@ static uint64_t read_int64_from_file(const char *fname)
 
 #define swap_sysfs_relpath(x) ("/sys/kernel/debug/swap/energy/" #x)
 #define swap_read_int64(x) (read_int64_from_file(swap_sysfs_relpath(x)))
+static uint64_t get_system_lcd_energy()
+{
+	static const char *PROC_LCD_ENERGY_FILES_GLOBPATTERN =
+		"/sys/kernel/debug/swap/energy/lcd/*/system";
+	uint64_t sum_energy = 0;
+	glob_t glob_buf;
+	size_t i;
+	const int err = glob(PROC_LCD_ENERGY_FILES_GLOBPATTERN, 0,
+			     NULL, &glob_buf);
 
-// Calculates difference between current and previous sample (system).
-// Stores mutable state in static variables.
+	if (err) {
+		LOGE("Globbing for LCD failed with error %d", err);
+		return 0;
+	}
+
+	for (i = 0; i < glob_buf.gl_pathc; ++i)
+		sum_energy += read_int64_from_file(glob_buf.gl_pathv[i]);
+
+	globfree(&glob_buf);
+	return sum_energy;
+}
+/*
+ * Calculates difference between current and previous sample (system).
+ * Stores mutable state in static variables.
+ */
 static uint32_t pop_sys_energy_per_device(enum supported_device dev)
 {
 	static uint64_t cpu_old, flash_old, lcd_old;
@@ -2392,7 +2414,7 @@ static uint32_t pop_sys_energy_per_device(enum supported_device dev)
 		flash_old = flash_new;
 		return (uint32_t)flash_diff;
 	case DEVICE_LCD:
-		lcd_new = swap_read_int64(lcd/maru/system);
+		lcd_new = get_system_lcd_energy();
 		lcd_diff = lcd_new - lcd_old;
 		lcd_old = lcd_new;
 		return (uint32_t)lcd_diff;
