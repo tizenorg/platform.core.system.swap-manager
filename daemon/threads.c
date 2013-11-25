@@ -152,11 +152,15 @@ static void* recvThread(void* data)
 			write_to_buf(msg);
 			free(msg);
 			break;
-		}
-		else if(log.type == MSG_MSG)
-		{
+		} else if (log.type == MSG_MSG) {
 			// don't send to host
-			LOGI("EXTRA MSG type=%d;len=%d;data='%s'\n", log.type, log.length, log.data);
+			LOGI("EXTRA MSG(%u) len=%u data='%s'\n", log.type,
+			     log.length, log.data);
+			continue;
+		} else if (log.type == MSG_ERROR) {
+			// don't send to host
+			LOGE("EXTRA MSG(%u) len=%u data='%s'\n", log.type,
+			     log.length, log.data);
 			continue;
 		}
 #ifdef PRINT_TARGET_LOG
