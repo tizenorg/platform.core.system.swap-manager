@@ -703,6 +703,31 @@ static void write_msg_error(const char *err_str)
 	free_msg_data(err_msg);
 }
 
+static enum HostMessageT get_ack_msg_id(const enum HostMessageT id)
+{
+	switch (id) {
+	case NMSG_KEEP_ALIVE:
+		return NMSG_KEEP_ALIVE_ACK;
+	case NMSG_START:
+		return NMSG_START_ACK;
+	case NMSG_STOP:
+		return NMSG_STOP_ACK;
+	case NMSG_CONFIG:
+		return NMSG_CONFIG_ACK;
+	case NMSG_BINARY_INFO:
+		return NMSG_BINARY_INFO_ACK;
+	case NMSG_GET_TARGET_INFO:
+		return NMSG_GET_TARGET_INFO_ACK;
+	case NMSG_SWAP_INST_ADD:
+		return NMSG_SWAP_INST_ADD_ACK;
+	case NMSG_SWAP_INST_REMOVE:
+		return NMSG_SWAP_INST_REMOVE_ACK;
+	default:
+		LOGE("Fatal: unknown message ID [0x%X]\n", id);
+		exit(EXIT_FAILURE);
+	}
+}
+
 int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 			char *payload, int payload_size)
 {
@@ -715,38 +740,7 @@ int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 		msg = malloc(loglen);
 		char *p = msg->payload;
 
-		//get ack message ID
-		switch (resp) {
-			case NMSG_KEEP_ALIVE:
-				resp = NMSG_KEEP_ALIVE_ACK;
-				break;
-			case NMSG_START:
-				resp = NMSG_START_ACK;
-				break;
-			case NMSG_STOP:
-				resp = NMSG_STOP_ACK;
-				break;
-			case NMSG_CONFIG:
-				resp = NMSG_CONFIG_ACK;
-				break;
-			case NMSG_BINARY_INFO:
-				resp = NMSG_BINARY_INFO_ACK;
-				break;
-			case NMSG_GET_TARGET_INFO:
-				resp = NMSG_GET_TARGET_INFO_ACK;
-				break;
-			case NMSG_SWAP_INST_ADD:
-				resp = NMSG_SWAP_INST_ADD_ACK;
-				break;
-			case NMSG_SWAP_INST_REMOVE:
-				resp = NMSG_SWAP_INST_REMOVE_ACK;
-				break;
-			default:
-				//TODO report error
-				LOGE("unknown message ID [0x%X]\n", resp);
-				free(msg);
-				return 1;
-		}
+		resp = get_ack_msg_id(resp);
 
 		//set message id
 		msg->id = resp;
