@@ -110,8 +110,8 @@ int check_conf_systrace_period(uint32_t system_trace_period)
 	if ((system_trace_period < CONF_SYSTRACE_PERIOD_MIN) ||
 		(system_trace_period > CONF_SYSTRACE_PERIOD_MAX))
 	{
-		LOGE("wrong system trace period value %lu (0x%08X)\n",
-				system_trace_period, system_trace_period);
+		LOGE("wrong system trace period value %u (0x%08X)\n",
+		     (unsigned int) system_trace_period, system_trace_period);
 		res = 0;
 	}
 
@@ -124,8 +124,8 @@ int check_conf_datamsg_period(uint32_t data_message_period)
 	if ((data_message_period < CONF_DATA_MSG_PERIOD_MIN) ||
 		(data_message_period > CONF_DATA_MSG_PERIOD_MAX))
 	{
-		LOGE("wrong data message period value %lu (0x%08X)\n",
-				data_message_period, data_message_period);
+		LOGE("wrong data message period value %u (0x%08X)\n",
+		     (unsigned int) data_message_period, data_message_period);
 		res = 0;
 	}
 
@@ -139,7 +139,8 @@ int check_us_app_count(uint32_t app_count)
 	if ((app_count < US_APP_COUNT_MIN) ||
 		(app_count > US_APP_COUNT_MAX))
 	{
-		LOGE("wrong user space app count %lu (0x%08X)\n", app_count, app_count);
+		LOGE("wrong user space app count %u (0x%08X)\n",
+		     (unsigned int)app_count, app_count);
 		res = 0;
 	}
 
@@ -152,8 +153,8 @@ int check_us_app_inst_func_count(uint32_t func_count)
 	if ((func_count < US_APP_INST_FUNC_MIN) ||
 		(func_count > US_APP_INST_FUNC_MAX))
 	{
-		LOGE("wrong US app inst func count %lu (0x%08X)\n",
-				func_count, func_count);
+		LOGE("wrong US app inst func count %u (0x%08X)\n",
+		     (unsigned int)func_count, func_count);
 		res = 0;
 	}
 
@@ -188,8 +189,8 @@ int check_lib_inst_count(uint32_t lib_count)
 	if ((lib_count < US_APP_INST_LIB_MIN) ||
 		(lib_count > US_APP_INST_LIB_MAX))
 	{
-		LOGE("wrong US app inst lib count %lu (0x%08X)\n",
-				lib_count, lib_count);
+		LOGE("wrong US app inst lib count %u (0x%08X)\n",
+		     (unsigned int)lib_count, lib_count);
 		res = 0;
 	}
 

@@ -47,6 +47,7 @@
 #include "ioctl_commands.h"
 #include "debug.h"
 #include "md5.h"
+#include "da_data.h"
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -540,7 +541,7 @@ static void running_status_off(struct prof_session_t *prof_session)
 	prof_session->running_status = 0;
 }
 
-int check_running_status(struct prof_session_t *prof_session)
+int check_running_status(const struct prof_session_t *prof_session)
 {
 	return prof_session->running_status;
 }
@@ -883,7 +884,7 @@ static size_t binary_ack_pack(char *s, const struct binary_ack *ba)
 
 static void get_file_md5sum(md5_byte_t digest[16], const char *filename)
 {
-	char buffer[1024];
+	md5_byte_t buffer[1024];
 	ssize_t size;
 	md5_state_t md5_state;
 	int fd = open(filename, O_RDONLY);
@@ -981,7 +982,7 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 	struct msg_t *msg_reply;
 	uint32_t serialized_time[2];
 
-	if (check_running_status(&prof_session.conf) == 1) {
+	if (check_running_status(&prof_session) == 1) {
 		LOGW("Profiling has already been started\n");
 		goto send_ack;
 	}
@@ -1025,7 +1026,7 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 
 	err_code = ERR_NO;
 send_ack:
-	get_serialized_time(&serialized_time);
+	get_serialized_time(serialized_time);
 	sendACKToHost(NMSG_START, err_code, (void *)&serialized_time,
 		      sizeof(serialized_time));
 
@@ -1063,7 +1064,6 @@ int process_msg_get_screenshot(struct msg_buf_t *msg_control)
 
 int host_message_handler(struct msg_t *msg)
 {
-	struct app_info_t app_info;
 	struct target_info_t target_info;
 	struct msg_t *msg_reply = NULL;
 	struct msg_buf_t msg_control;
@@ -1071,7 +1071,6 @@ int host_message_handler(struct msg_t *msg)
 	enum ErrorCode error_code = ERR_NO;
 
 	int target_index;
-	ssize_t sendlen;
 	msg_target_t sendlog;
 
 	LOGI("MY HANDLE %s (%X)\n", msg_ID_str(msg->id), msg->id);

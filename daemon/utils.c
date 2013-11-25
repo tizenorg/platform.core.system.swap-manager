@@ -43,6 +43,8 @@
 #include <fcntl.h>		// for open
 #include <grp.h>		// for setgroups
 #include <sys/smack.h>
+#include <attr/xattr.h>
+
 #include "daemon.h"
 #include "utils.h"
 #include "debug.h"

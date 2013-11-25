@@ -385,7 +385,7 @@ void stop_all_done(void);
 void reset_msg(struct msg_t *msg);
 void reset_replay_event_seq(struct replay_event_seq_t *res);
 void reset_system_info(struct system_info_t *sys);
-int check_running_status(struct prof_session_t *prof_session);
+int check_running_status(const struct prof_session_t *prof_session);
 
 extern struct prof_session_t prof_session;
 

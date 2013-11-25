@@ -135,7 +135,8 @@ void suffix_filename(char buf[PATH_MAX], const char *filename)
 {
 	char adj_filename[PATH_MAX];
 	sprintf(adj_filename, "%s.exe", filename);
-	char *use_filename = exist(adj_filename) ? adj_filename : filename;
+	const char *use_filename = exist(adj_filename) ? adj_filename
+						       : filename;
 	strcpy(buf, use_filename);
 }
 

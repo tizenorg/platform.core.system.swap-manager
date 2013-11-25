@@ -48,6 +48,7 @@
 #include "sys_stat.h"
 #include "buffer.h"
 #include "debug.h"
+#include "utils.h"
 
 #define SINGLETON_LOCKFILE			"/tmp/da_manager.lock"
 #define PORTFILE					"/tmp/port.da"

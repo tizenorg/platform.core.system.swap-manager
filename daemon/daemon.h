@@ -224,6 +224,7 @@ int samplingStop();
 
 
 // TODO maybe need move to other file
+int prepare_profiling();
 int start_profiling();
 void stop_profiling();
 int reconfigure();

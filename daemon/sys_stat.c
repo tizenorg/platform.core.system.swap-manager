@@ -2007,7 +2007,6 @@ static int get_partition_sector_size(const char * partition_name)
 static void get_disk_stat(uint32_t *reads, uint32_t *sec_reads,
 			  uint32_t *writes, uint32_t *sec_writes)
 {
-	int sec_size = 0;
 	enum { partition_name_maxlength = 128 };
 	FILE *fp = manager.fd.diskstats;
 	char master_partition[partition_name_maxlength] = { 0 };
