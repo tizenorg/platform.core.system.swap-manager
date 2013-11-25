@@ -241,16 +241,22 @@ static void setEmptyTargetSlot(int index)
 // =============================================================================
 
 //start application launch timer function
-static int start_app_launch_timer()
+static int start_app_launch_timer(int apps_count)
 {
 	int res = 0;
 	struct epoll_event ev;
+
+	if (apps_count <= 0) {
+		res = -1;
+		LOGE("Wrong apps_count!\n");
+		return res;
+	}
 
 	manager.app_launch_timerfd =
 	    timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC);
 	if (manager.app_launch_timerfd > 0) {
 		struct itimerspec ctime;
-		ctime.it_value.tv_sec = MAX_APP_LAUNCH_TIME;
+		ctime.it_value.tv_sec = MAX_APP_LAUNCH_TIME * apps_count;
 		ctime.it_value.tv_nsec = 0;
 		ctime.it_interval.tv_sec = 0;
 		ctime.it_interval.tv_nsec = 0;
@@ -291,6 +297,21 @@ static int stop_app_launch_timer()
 	close(manager.app_launch_timerfd);
 	manager.app_launch_timerfd = -1;
 	return 0;
+}
+
+static inline void inc_apps_to_run()
+{
+		manager.apps_to_run++;
+}
+
+static inline void dec_apps_to_run()
+{
+		manager.apps_to_run--;
+}
+
+static inline int get_apps_to_run()
+{
+		return manager.apps_to_run;
 }
 
 int kill_app_by_info(const struct app_info_t *app_info)
@@ -336,6 +357,8 @@ static int exec_app(const struct app_info_t *app_info)
 		if (exec_app_tizen(app_info->app_id, app_info->exe_path)) {
 			LOGE("Cannot exec tizen app %s\n", app_info->app_id);
 			res = -1;
+		} else {
+			inc_apps_to_run();
 		}
 		break;
 	case APP_TYPE_RUNNING:
@@ -346,6 +369,8 @@ static int exec_app(const struct app_info_t *app_info)
 		if (exec_app_common(app_info->exe_path)) {
 			LOGE("Cannot exec common app %s\n", app_info->exe_path);
 			res = -1;
+		} else {
+			inc_apps_to_run();
 		}
 		break;
 	default:
@@ -353,10 +378,6 @@ static int exec_app(const struct app_info_t *app_info)
 		res = -1;
 		break;
 	}
-
-	if (res == 0 && app_info->app_type != APP_TYPE_RUNNING)
-		if (start_app_launch_timer() < 0)
-			res = -1;
 
 	LOGI("ret=%d\n", res);
 	return res;
@@ -466,6 +487,11 @@ int start_profiling()
 			goto recording_stop;
 		}
 		app_info = app_info_get_next(&app);
+	}
+
+	if (start_app_launch_timer(get_apps_to_run()) < 0) {
+		res = -1;
+		goto recording_stop;
 	}
 
 	goto exit;
@@ -748,8 +774,9 @@ static int targetServerHandler(int efd)
 			goto TARGET_CONNECT_FAIL;
 		}
 
-		if (manager.app_launch_timerfd >= 0) {
-			LOGI("release launch timer\n");
+		dec_apps_to_run();
+
+		if ((manager.app_launch_timerfd > 0) && (get_apps_to_run() == 0)) {
 			if (stop_app_launch_timer() < 0)
 				LOGE("cannot stop app launch timer\n");
 		}

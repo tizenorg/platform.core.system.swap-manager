@@ -63,6 +63,7 @@ __da_manager manager =
 	.host_server_socket = -1,
 	.target_server_socket = -1,
 	.target_count = 0,
+	.apps_to_run = 0,
 	.config_flag = 0,
 	.app_launch_timerfd = -1,
 	.connect_timeout_timerfd = -1,
