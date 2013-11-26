@@ -268,6 +268,14 @@ struct process_info_t {
 	float load;
 };
 
+/**
+ * NOTE:
+ *
+ * Adding pointer memebers to struct %system_info_t REQUIRES updating code,
+ * calculating length of bytevector, suitable for serializing it. See
+ * msg_data_payload_length()
+ *
+ */
 struct system_info_t {
 	// system_cpu
 	float app_cpu_usage;

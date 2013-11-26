@@ -2532,19 +2532,14 @@ int sys_stat_prepare(void)
 	return 0;
 }
 
-struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
+static uint32_t msg_data_payload_length(const struct system_info_t *sys_info)
 {
-	struct msg_data_t *msg = NULL;
-	char *p = NULL;
-	int i = 0;
-	uint32_t len = 0;
+	uint32_t len = sizeof(*sys_info);
 
-	len += sizeof(*sys_info);
-
-	// num_of_cpu is unknown at compile time
+	/* num_of_cpu is unknown at compile time */
 	len += 2 * num_of_cpu * sizeof(float);
 
-	// subtract pointers
+	/* subtract pointers */
 	len -= sizeof(sys_info->cpu_frequency) + sizeof(sys_info->cpu_load);
 	len -= sizeof(sys_info->thread_load) + sizeof(sys_info->process_load);
 
@@ -2555,6 +2550,16 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	if (IS_OPT_SET(FL_PROCESSES))
 		len += sys_info->count_of_processes *
 			sizeof(*sys_info->process_load);
+
+	return len;
+}
+
+struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
+{
+	const int len = msg_data_payload_length(sys_info);
+	struct msg_data_t *msg = NULL;
+	char *p = NULL;
+	int i = 0;
 
 	msg = malloc(MSG_DATA_HDR_LEN + len);
 	if (!msg) {
