@@ -310,7 +310,7 @@ static int get_rssi_status()
 	int res = 0;
 
 	int rssi_status;
-	res = vconf_get_bool(VCONFKEY_SETAPPL_FLIGHT_MODE_BOOL,
+	res = vconf_get_bool(VCONFKEY_TELEPHONY_FLIGHT_MODE,
 					&flightmode_status);
 	if(unlikely(res < 0)) {
 		LOG_ONCE_W("get err #%d <%s>\n", res,
