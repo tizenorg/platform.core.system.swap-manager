@@ -65,6 +65,25 @@ void print_buf(char *buf, int len, const char *info);
 #define LOGE(...) do_log("ERR", __func__, __VA_ARGS__)
 #define LOGW(...) do_log("WRN", __func__, __VA_ARGS__)
 
+#ifdef USE_LOG_ONCE
+	#define TOKENPASTE(x, y) x ## y
+	#define TOKENPASTE2(x, y) TOKENPASTE(x, y)
+	#define LOG_ONCE_VAR TOKENPASTE2(log_once_var_, __LINE__)
+	#define INIT_LOG_ONCE static char LOG_ONCE_VAR = 0
+
+	#define LOG_ONCE(W_E,...)				\
+		INIT_LOG_ONCE;					\
+		if (LOG_ONCE_VAR == 0) {			\
+			TOKENPASTE2(LOG, W_E)(__VA_ARGS__);	\
+			LOG_ONCE_VAR = 1;			\
+		}
+	#define LOG_ONCE_E(...) LOG_ONCE(E, __VA_ARGS__)
+	#define LOG_ONCE_W(...) LOG_ONCE(W, __VA_ARGS__)
+#else
+	#define LOG_ONCE_W(...)
+	#define LOG_ONCE_E(...)
+#endif
+
 static inline void do_log(const char *prefix, const char *funcname, ...)
 {
 	va_list ap;
@@ -93,6 +112,9 @@ static inline void do_log(const char *prefix, const char *funcname, ...)
 	#define LOGI_(...)
 	#define LOGE(...)
 	#define LOGW(...)
+	#define LOG_ONCE_W(...)
+	#define LOG_ONCE_E(...)
+
 #endif
 
 

@@ -1,10 +1,11 @@
 CC :=gcc
-DEBUG_CPPFLAGS = 			\
-		-DDEBUG			\
-#		-DDEB_PRINTBUF		\#
-#		-DPARSE_DEBUG_ON	\#
+DEBUG_CPPFLAGS = 				\
+		-DDEBUG					\
+		-DUSE_LOG_ONCE			\
+#		-DDEB_PRINTBUF			\#
+#		-DPARSE_DEBUG_ON		\#
 #		-DTHREAD_SAMPLING_DEBUG	\#
-#		-THREAD_REPLAY_DEBUG	 #
+#		-DTHREAD_REPLAY_DEBUG	#
 
 CPPFLAGS := 	-I/usr/include		\
 		-I/usr/include/system 	\

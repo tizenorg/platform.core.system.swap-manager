@@ -156,18 +156,27 @@ int get_file_status(int *pfd, const char *filename)
 static int get_wifi_status()
 {
 	int wifi_status = 0;
+	int res = 0;
 
-	if (unlikely(vconf_get_int(VCONFKEY_WIFI_STATE, &wifi_status) < 0))
-			wifi_status = VCONFKEY_WIFI_OFF;
+	res = vconf_get_int(VCONFKEY_WIFI_STATE, &wifi_status);
+	if (unlikely(res < 0)) {
+		LOG_ONCE_W("get error #%d\n", res);
+		wifi_status = VCONFKEY_WIFI_OFF;
+	}
+
 	return wifi_status;
 }
 
 static int get_bt_status()
 {
 	int bt_status = false;
+	int res = 0;
 
-	if (unlikely(vconf_get_int(VCONFKEY_BT_STATUS, &bt_status) < 0))
+	res = vconf_get_int(VCONFKEY_BT_STATUS, &bt_status);
+	if (unlikely(res < 0)) {
+		LOG_ONCE_W("get error #%d\n", res);
 		bt_status = VCONFKEY_BT_STATUS_OFF;
+	}
 
 	return bt_status;
 }
@@ -175,13 +184,16 @@ static int get_bt_status()
 static int get_gps_status()
 {
 	int gps_status = 0;
+	int res = 0;
 
-	if (unlikely(vconf_get_bool(VCONFKEY_LOCATION_ENABLED,
-				    &gps_status) < 0)) {
+	res = vconf_get_int(VCONFKEY_LOCATION_ENABLED, &gps_status);
+	if(unlikely(res < 0)) {
+		LOG_ONCE_W("get error #%d\n", res);
 		gps_status = VCONFKEY_LOCATION_GPS_OFF;
-	} else if (gps_status != 0) {
-		if (unlikely(vconf_get_int(VCONFKEY_LOCATION_GPS_STATE,
-					   &gps_status) < 0)) {
+	} else if(gps_status != 0) {
+		res = vconf_get_int(VCONFKEY_LOCATION_GPS_STATE, &gps_status);
+		if (unlikely(res < 0)) {
+			LOG_ONCE_W("get error #%d\n", res);
 			gps_status = VCONFKEY_LOCATION_GPS_OFF;
 		}
 	}
@@ -295,16 +307,21 @@ static int get_rssi_status()
 {
 
 	int flightmode_status;
-	int rssi_status;
+	int res = 0;
 
-	if (unlikely(vconf_get_bool(VCONFKEY_SETAPPL_FLIGHT_MODE_BOOL,
-				    &flightmode_status) < 0)) {
+	int rssi_status;
+	res = vconf_get_bool(VCONFKEY_SETAPPL_FLIGHT_MODE_BOOL,
+					&flightmode_status);
+	if(unlikely(res < 0)) {
+		LOG_ONCE_W("get err #%d <%s>\n", res,
+			 VCONFKEY_TELEPHONY_FLIGHT_MODE);
 		flightmode_status = 0;
 	}
 
-	if (!flightmode_status) {
-		if (unlikely(vconf_get_int(VCONFKEY_TELEPHONY_RSSI,
-					   &rssi_status) < 0)) {
+	if(!flightmode_status) {
+		res = vconf_get_int(VCONFKEY_TELEPHONY_RSSI, &rssi_status);
+		if(unlikely(res < 0)) {
+			LOG_ONCE_W("rssi get err #%d\n", res);
 			rssi_status = VCONFKEY_TELEPHONY_RSSI_0;
 		}
 	} else {
@@ -313,16 +330,19 @@ static int get_rssi_status()
 
 	return rssi_status;
 
-
 	return 0;
 }
 
 static int get_call_status()
 {
 	int call_status = 0;
+	int res = 0;
 
-	if (unlikely(vconf_get_int(VCONFKEY_CALL_STATE, &call_status) < 0))
+	res = vconf_get_int(VCONFKEY_CALL_STATE, &call_status);
+	if(unlikely(res < 0)) {
+		LOG_ONCE_W("get err #%d\n", res);
 		call_status = VCONFKEY_CALL_OFF;
+	}
 
 	return call_status;
 }
@@ -331,11 +351,13 @@ static int get_call_status()
 static int get_dnet_status()
 {
 	int dnet_status = false;
+	int res = 0;
 
-		if (unlikely(vconf_get_int(VCONFKEY_DNET_STATE,
-					   &dnet_status) < 0)) {
-			dnet_status = VCONFKEY_DNET_OFF;
-		}
+	res = vconf_get_int(VCONFKEY_DNET_STATE, &dnet_status);
+	if(unlikely(res < 0)) {
+		LOG_ONCE_W("get err #%d <%s>\n", res, VCONFKEY_DNET_STATE);
+		dnet_status = VCONFKEY_DNET_OFF;
+	}
 
 	return dnet_status;
 }
@@ -351,9 +373,12 @@ static int get_camera_status()
 static int get_sound_status()
 {
 	int sound_status = 0;
+	int res = 0;
 
-	if (unlikely(vconf_get_bool(VCONFKEY_SETAPPL_SOUND_STATUS_BOOL,
-				    &sound_status) < 0)) {
+	res = vconf_get_bool(VCONFKEY_SETAPPL_SOUND_STATUS_BOOL,
+					&sound_status);
+	if (unlikely(res < 0)) {
+		LOG_ONCE_W("get err #%d\n", res);
 		sound_status = 0;
 	}
 
@@ -406,9 +431,12 @@ static int get_audio_status()
 static int get_vibration_status()
 {
 	int vibration_status = 0;
+	int res = 0;
 
-	if (unlikely(vconf_get_bool(VCONFKEY_SETAPPL_VIBRATION_STATUS_BOOL,
-				    &vibration_status) < 0)) {
+	res = vconf_get_bool(VCONFKEY_SETAPPL_VIBRATION_STATUS_BOOL,
+					&vibration_status);
+	if(unlikely(res < 0)) {
+		LOG_ONCE_W("get err #%d\n", res);
 		vibration_status = 0;
 	}
 
@@ -2148,7 +2176,7 @@ static uint64_t get_system_lcd_energy()
 			     NULL, &glob_buf);
 
 	if (err) {
-		LOGE("Globbing for LCD failed with error %d", err);
+		LOG_ONCE_E("Globbing for LCD failed with error %d\n", err);
 		return 0;
 	}
 
