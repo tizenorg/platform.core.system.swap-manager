@@ -173,7 +173,6 @@ typedef struct
 	int voltage;
 	int procmeminfo;
 	FILE *video;
-	FILE *audio_status;
 	FILE *procstat;
 	FILE *networkstat;
 	FILE *diskstats;

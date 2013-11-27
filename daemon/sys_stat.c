@@ -366,6 +366,10 @@ static int get_camera_status()
 {
 	int camera_status = 0;
 
+	if (unlikely(vconf_get_int(VCONFKEY_CAMERA_STATE, &camera_status) < 0)) {
+		camera_status = VCONFKEY_CAMERA_STATE_NULL;
+	}
+
 	return camera_status;
 }
 
@@ -376,7 +380,7 @@ static int get_sound_status()
 	int res = 0;
 
 	res = vconf_get_bool(VCONFKEY_SETAPPL_SOUND_STATUS_BOOL,
-					&sound_status);
+			     &sound_status);
 	if (unlikely(res < 0)) {
 		LOG_ONCE_W("get err #%d\n", res);
 		sound_status = 0;
@@ -385,46 +389,18 @@ static int get_sound_status()
 	return sound_status;
 }
 
-static void init_audio_status()
-{
-#ifdef DEVICE_ONLY
-	//first open
-	manager.fd.audio_status = fopen(AUDIOFD, "r");
-#endif
-}
-
 static int get_audio_status()
 {
 	int audio_state = 0;
-#ifdef DEVICE_ONLY
-	int ret = 0;
-	char dev[40];
-	char state[3];
-	FILE *audio_status_fp = manager.fd.audio_status;
-	if (audio_status_fp == NULL){
-		//file is not open
-		return -1;
-	} else {
-//		fseek(audio_status_fp, 0, SEEK_SET);
-		rewind(audio_status_fp);
-		fflush(audio_status_fp);
+	int res = 0;
+
+	res = vconf_get_int(VCONFKEY_SOUND_STATUS,
+			    &audio_state);
+	if (unlikely(res < 0)) {
+		LOG_ONCE_W("get err #%d\n", res);
+		audio_state = 0;
 	}
 
-	while(ret != EOF)
-	{
-		ret = fscanf(audio_status_fp, "%[^:] %*c %[^\n] ", dev, state);
-		if(strncmp(dev,"SPKR",4) == 0 && strncmp(state, "On",2) == 0)
-		{
-			audio_state = 1;
-		}
-		else if(ret == 2 && strncmp(dev,"Head",4) == 0 && strncmp(state, "On",2) == 0)
-		{
-			audio_state = 2;
-			break;
-		}
-	}
-
-#endif
 	return audio_state;
 }
 
@@ -2476,7 +2452,6 @@ void close_system_file_descriptors()
 	dtest_and_close(&manager.fd.procmeminfo);
 
 	dftest_and_close(&manager.fd.video);
-	dftest_and_close(&manager.fd.audio_status);
 	dftest_and_close(&manager.fd.procstat);
 	dftest_and_close(&manager.fd.networkstat);
 	dftest_and_close(&manager.fd.diskstats);
@@ -2490,7 +2465,6 @@ int init_system_file_descriptors()
 	init_update_system_memory_data();
 
 	init_video_status();
-	init_audio_status();
 	init_system_cpu_data();
 	init_network_stat();
 	init_disk_stat();
@@ -2504,8 +2478,6 @@ int init_system_file_descriptors()
 
 	if (manager.fd.video == NULL)
 		LOGW("video file not found\n");
-	if (manager.fd.audio_status == NULL)
-		LOGW("audio file not found\n");
 	if (manager.fd.procstat == NULL)
 		LOGW("procstat file not found\n");
 	if (manager.fd.networkstat == NULL)

@@ -88,7 +88,6 @@ __da_manager manager =
 		.voltage = -1,
 		.procmeminfo = -1,
 		.video = NULL,
-		.audio_status = NULL,
 		.procstat = NULL,
 		.networkstat = NULL,
 		.diskstats = NULL
