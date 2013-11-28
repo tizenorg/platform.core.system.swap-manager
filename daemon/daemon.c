@@ -308,6 +308,7 @@ static inline void inc_apps_to_run()
 
 static inline void dec_apps_to_run()
 {
+	if (manager.apps_to_run > 0)
 		manager.apps_to_run--;
 }
 
