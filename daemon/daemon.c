@@ -53,6 +53,9 @@
 #include <linux/input.h>
 #include <dirent.h>
 #include <fcntl.h>
+
+#include <assert.h>
+
 #include "daemon.h"
 #include "sys_stat.h"
 #include "utils.h"
@@ -246,11 +249,10 @@ static int start_app_launch_timer(int apps_count)
 	int res = 0;
 	struct epoll_event ev;
 
-	if (apps_count <= 0) {
-		res = -1;
-		LOGE("Wrong apps_count!\n");
+	assert(apps_count >= 0 && "negative apps count");
+
+	if (apps_count == 0)
 		return res;
-	}
 
 	manager.app_launch_timerfd =
 	    timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC);
