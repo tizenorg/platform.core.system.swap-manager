@@ -303,7 +303,7 @@ static int stop_app_launch_timer()
 
 static inline void inc_apps_to_run()
 {
-		manager.apps_to_run++;
+	manager.apps_to_run++;
 }
 
 static inline void dec_apps_to_run()
@@ -314,7 +314,7 @@ static inline void dec_apps_to_run()
 
 static inline int get_apps_to_run()
 {
-		return manager.apps_to_run;
+	return manager.apps_to_run;
 }
 
 int kill_app_by_info(const struct app_info_t *app_info)
