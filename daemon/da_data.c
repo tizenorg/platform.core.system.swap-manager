@@ -62,7 +62,7 @@ int print_sys_info(struct system_info_t * sys_info)
 	sys_info->shared_memory=0x20;
 
 	sys_info->pss_memory=0x21;
-	sys_info->total_alloc_size=(uint32_t)0x22;
+	sys_info->total_alloc_size=(uint64_t)0x22;
 	sys_info->system_memory_total=(uint64_t)0x23;
 	sys_info->system_memory_used=(uint64_t)0x24;
 	sys_info->total_used_drive=0x25;

@@ -2631,7 +2631,7 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 		pack_int32(p, sys_info->resident_memory);
 		pack_int32(p, sys_info->shared_memory);
 		pack_int32(p, sys_info->pss_memory);
-		pack_int32(p, sys_info->total_alloc_size);
+		pack_int64(p, sys_info->total_alloc_size);
 		pack_int64(p, sys_info->system_memory_total);
 		pack_int64(p, sys_info->system_memory_used);
 	} else {
@@ -2639,7 +2639,7 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 		pack_int32(p, 0); /* pack resident_memory */
 		pack_int32(p, 0); /* pack shared_memory */
 		pack_int32(p, 0); /* pack pss_memory */
-		pack_int32(p, 0); /* pack total_alloc_size */
+		pack_int64(p, (uint64_t) 0); /* pack total_alloc_size */
 		pack_int64(p, (uint64_t) 0); /* pack system_memory_total */
 		pack_int64(p, (uint64_t) 0); /* pack system_memory_used */
 	}

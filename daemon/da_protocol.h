@@ -293,7 +293,7 @@ struct system_info_t {
 	uint32_t resident_memory;
 	uint32_t shared_memory;
 	uint32_t pss_memory;
-	uint32_t total_alloc_size;
+	uint64_t total_alloc_size;
 	uint64_t system_memory_total;
 	uint64_t system_memory_used;
 
