@@ -45,6 +45,8 @@
 #include <sys/smack.h>
 #include <attr/xattr.h>
 
+#include <sys/wait.h> /* waitpid */
+
 #include "daemon.h"
 #include "utils.h"
 #include "debug.h"
@@ -356,6 +358,10 @@ int exec_app_tizen(const char *app_id, const char *exec_path)
 		return -1;
 
 	if (pid > 0) { /* parent */
+		int status, ret;
+		do
+			ret = waitpid(pid, &status, 0);
+		while (ret == -1 && errno == EINTR);
 		return 0;
 	} else { /* child */
 		execl(LAUNCH_APP_PATH, LAUNCH_APP_NAME, app_id, LAUNCH_APP_SDK,
