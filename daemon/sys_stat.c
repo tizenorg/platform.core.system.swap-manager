@@ -401,7 +401,7 @@ static int get_audio_status()
 		audio_state = 0;
 	}
 
-	return audio_state;
+	return !!audio_state;
 }
 
 static int get_vibration_status()
