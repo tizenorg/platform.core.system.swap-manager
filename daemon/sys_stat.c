@@ -2357,8 +2357,9 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 		for (i = 0; i != supported_devices_count; ++i) {
 			sys_info->energy_per_device[i] =
 				pop_sys_energy_per_device(i);
-			sys_info->app_energy_per_device[i] =
-				pop_app_energy_per_device(i);
+			sys_info->app_energy_per_device[i] = (i == DEVICE_LCD)
+				? sys_info->energy_per_device[i]
+				: pop_app_energy_per_device(i);
 		}
 	}
 
