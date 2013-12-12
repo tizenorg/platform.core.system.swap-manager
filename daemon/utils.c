@@ -464,12 +464,34 @@ pid_t get_pid_by_path(const char *binary_path)
 	return pkg_pid;
 }
 
+static int find_alternative_bin_path(const char *binary_path, char *alter_bin_path) {
+	// alternative path may be /opt/apps/... or /opt/usr/apps/...)
+	if (strncmp(binary_path, APPDIR1, strlen(APPDIR1)) == 0) {
+		strcpy(alter_bin_path, APPDIR2);
+		strcat(alter_bin_path, binary_path + strlen(APPDIR1));
+	} else if (strncmp(binary_path, APPDIR2, strlen(APPDIR2)) == 0) {
+		strcpy(alter_bin_path, APPDIR1);
+		strcat(alter_bin_path, binary_path + strlen(APPDIR2));
+	} else {
+		return 1;
+	}
+	return 0;
+}
+
 int kill_app(const char *binary_path)
 {
 	pid_t pkg_pid;
+	char alter_bin_path[PATH_MAX];
 
 	LOGI("kill %s (%d)\n", binary_path, SIGKILL);
+
 	pkg_pid = get_pid_by_path(binary_path);
+
+	if (pkg_pid == 0) {
+		if (find_alternative_bin_path(binary_path, alter_bin_path) == 0)
+			pkg_pid = get_pid_by_path(alter_bin_path);
+	}
+
 	if (pkg_pid != 0) {
 		if (kill(pkg_pid, SIGTERM) == -1) {
 			LOGE("cannot kill %d -%d err<%s>\n", pkg_pid, SIGKILL,
