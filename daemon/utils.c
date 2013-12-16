@@ -222,56 +222,6 @@ int get_smack_label(const char* execpath, char* buffer, int buflen)
 		return -1;
 }
 
-int get_appid(const char* execpath, char* buffer, int buflen)
-{
-	int i, ret = 0;
-	char* temp;
-	if(strncmp(execpath, APPDIR1, strlen(APPDIR1)) == 0)
-	{
-		execpath = execpath + strlen(APPDIR1);
-		temp = strchr(execpath, '/');
-		for(i = 0; i < strlen(execpath); i++)
-		{
-			if(execpath + i == temp)
-				break;
-			buffer[i] = execpath[i];
-		}
-		buffer[i] = '.';
-		buffer[i+1] = '\0';
-		temp = strrchr(execpath, '/');
-		if(temp != NULL)
-		{
-			temp++;
-			strcat(buffer, temp);
-		}
-	}
-	else if(strncmp(execpath, APPDIR2, strlen(APPDIR2)) == 0)
-	{
-		execpath = execpath + strlen(APPDIR2);
-		temp = strchr(execpath, '/');
-		for(i = 0; i < strlen(execpath); i++)
-		{
-			if(execpath + i == temp)
-				break;
-			buffer[i] = execpath[i];
-		}
-		buffer[i] = '.';
-		buffer[i+1] = '\0';
-		temp = strrchr(execpath, '/');
-		if(temp != NULL)
-		{
-			temp++;
-			strcat(buffer, temp);
-		}
-	}
-	else
-	{
-		ret = -1;
-	}
-
-	return ret;
-}
-
 // return 0 if succeed
 // return -1 if error occured
 int remove_indir(const char *dirname)
@@ -301,18 +251,6 @@ int remove_indir(const char *dirname)
 	closedir(dir);
 
 	return 0;
-}
-
-// get application name from executable binary path
-char* get_app_name(char* binary_path)
-{
-	char* pos;
-
-	pos = strrchr(binary_path, '/');
-	if(pos != NULL)
-		pos++;
-
-	return pos;
 }
 
 // return 0 to normal case
