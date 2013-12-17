@@ -88,6 +88,9 @@
 #define CAMCORDER_FILE		"/usr/etc/mmfw_camcorder.ini"
 #define CAMERA_COUNT_STR	"DeviceCount"
 
+// define for correct difference of system feature vars
+#define val_diff(v_new, v_old) ((v_new < v_old) ? v_new : v_new - v_old)
+
 enum PROCESS_DATA
 {
 	PROCDATA_STAT,
@@ -1954,7 +1957,7 @@ static void get_network_stat(uint32_t *recv, uint32_t *send)
 			skip_tokens(fp, 16);
 }
 
-static void peek_network_stat_diff(uint32_t *recv, uint32_t *send)
+static void peek_network_val_diff(uint32_t *recv, uint32_t *send)
 {
 	static uint32_t irecv_old, isend_old;
 	uint32_t tmp;
@@ -1962,11 +1965,11 @@ static void peek_network_stat_diff(uint32_t *recv, uint32_t *send)
 	get_network_stat(recv, send);
 
 	tmp = *recv;
-	*recv = tmp - irecv_old;
+	*recv = val_diff(tmp, irecv_old);
 	irecv_old = tmp;
 
 	tmp = *send;
-	*send = tmp - isend_old;
+	*send = val_diff(tmp, isend_old);
 	isend_old = tmp;
 
 }
@@ -2075,7 +2078,7 @@ static void get_disk_stat(uint32_t *reads, uint32_t *sec_reads,
 
 }
 
-static void peek_disk_stat_diff(uint32_t *reads, uint32_t *sec_reads,
+static void peek_disk_val_diff(uint32_t *reads, uint32_t *sec_reads,
 			        uint32_t *writes, uint32_t *sec_writes)
 {
 	static uint32_t reads_old;
@@ -2089,19 +2092,19 @@ static void peek_disk_stat_diff(uint32_t *reads, uint32_t *sec_reads,
 	get_disk_stat(reads, sec_reads, writes, sec_writes);
 
 	tmp = *reads;
-	*reads = tmp - reads_old;
+	*reads = val_diff(tmp, reads_old);
 	reads_old = tmp;
 
 	tmp = *writes;
-	*writes = tmp - writes_old;
+	*writes = val_diff(tmp, writes_old);
 	writes_old = tmp;
 
 	tmp = *sec_reads;
-	*sec_reads = tmp - sec_reads_old;
+	*sec_reads = val_diff(tmp, sec_reads_old);
 	sec_reads_old = tmp;
 
 	tmp = *sec_writes;
-	*sec_writes = tmp - sec_writes_old;
+	*sec_writes = val_diff(tmp, sec_writes_old);
 	sec_writes_old = tmp;
 
 }
@@ -2175,19 +2178,19 @@ static uint32_t pop_sys_energy_per_device(enum supported_device dev)
 	case DEVICE_CPU:
 		cpu_new = swap_read_int64(cpu_idle/system) +
 			swap_read_int64(cpu_running/system);
-		cpu_diff = cpu_new - cpu_old;
+		cpu_diff = val_diff(cpu_new, cpu_old);
 		cpu_old = cpu_new;
 		return (uint32_t)cpu_diff;
 
 	case DEVICE_FLASH:
 		flash_new = swap_read_int64(flash_read/system) +
 			swap_read_int64(flash_write/system);
-		flash_diff = flash_new - flash_old;
+		flash_diff = val_diff(flash_new, flash_old);
 		flash_old = flash_new;
 		return (uint32_t)flash_diff;
 	case DEVICE_LCD:
 		lcd_new = get_system_lcd_energy();
-		lcd_diff = lcd_new - lcd_old;
+		lcd_diff = val_diff(lcd_new, lcd_old);
 		lcd_old = lcd_new;
 		return (uint32_t)lcd_diff;
 	default:
@@ -2207,13 +2210,13 @@ static uint32_t pop_app_energy_per_device(enum supported_device dev)
 	switch (dev) {
 	case DEVICE_CPU:
 		cpu_new = swap_read_int64(cpu_running/apps);
-		cpu_diff = cpu_new - cpu_old;
+		cpu_diff = val_diff(cpu_new, cpu_old);
 		cpu_old = cpu_new;
 		return (uint32_t)cpu_diff;
 	case DEVICE_FLASH:
 		flash_new = swap_read_int64(flash_read/apps) +
 			swap_read_int64(flash_write/apps);
-		flash_diff = flash_new - flash_old;
+		flash_diff = val_diff(flash_new, flash_old);
 		flash_old = flash_new;
 		return (uint32_t)flash_diff;
 	case DEVICE_LCD:
@@ -2325,14 +2328,14 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 
 	if (IS_OPT_SET(FL_DISK)) {
 		sys_info->total_used_drive = get_total_used_drive();
-		peek_disk_stat_diff(&sys_info->disk_reads,
+		peek_disk_val_diff(&sys_info->disk_reads,
 				    &sys_info->disk_sectors_read,
 				    &sys_info->disk_writes,
 				    &sys_info->disk_sectors_write);
 	}
 
 	if (IS_OPT_SET(FL_NETWORK))
-		peek_network_stat_diff(&sys_info->network_send_size,
+		peek_network_val_diff(&sys_info->network_send_size,
 				       &sys_info->network_receive_size);
 
 	if (IS_OPT_SET(FL_DEVICE)) {
@@ -2527,8 +2530,8 @@ int sys_stat_prepare(void)
 	uint32_t reads, writes, sec_reads, sec_writes;
 	uint32_t recv, send;
 
-	peek_disk_stat_diff(&reads, &writes, &sec_reads, &sec_writes);
-	peek_network_stat_diff(&recv, &send);
+	peek_disk_val_diff(&reads, &writes, &sec_reads, &sec_writes);
+	peek_network_val_diff(&recv, &send);
 
 	return 0;
 }
