@@ -88,6 +88,9 @@
 #define CAMCORDER_FILE		"/usr/etc/mmfw_camcorder.ini"
 #define CAMERA_COUNT_STR	"DeviceCount"
 
+// define for correct difference of state vars
+#define stat_diff(new, old) ((new < old) ? new : new - old)
+
 enum PROCESS_DATA
 {
 	PROCDATA_STAT,
@@ -1962,11 +1965,11 @@ static void peek_network_stat_diff(uint32_t *recv, uint32_t *send)
 	get_network_stat(recv, send);
 
 	tmp = *recv;
-	*recv = tmp - irecv_old;
+	*recv = stat_diff(tmp, irecv_old);
 	irecv_old = tmp;
 
 	tmp = *send;
-	*send = tmp - isend_old;
+	*send = stat_diff(tmp, isend_old);
 	isend_old = tmp;
 
 }
@@ -2089,19 +2092,19 @@ static void peek_disk_stat_diff(uint32_t *reads, uint32_t *sec_reads,
 	get_disk_stat(reads, sec_reads, writes, sec_writes);
 
 	tmp = *reads;
-	*reads = tmp - reads_old;
+	*reads = stat_diff(tmp, reads_old);
 	reads_old = tmp;
 
 	tmp = *writes;
-	*writes = tmp - writes_old;
+	*writes = stat_diff(tmp, writes_old);
 	writes_old = tmp;
 
 	tmp = *sec_reads;
-	*sec_reads = tmp - sec_reads_old;
+	*sec_reads = stat_diff(tmp, sec_reads_old);
 	sec_reads_old = tmp;
 
 	tmp = *sec_writes;
-	*sec_writes = tmp - sec_writes_old;
+	*sec_writes = stat_diff(tmp, sec_writes_old);
 	sec_writes_old = tmp;
 
 }
@@ -2175,19 +2178,19 @@ static uint32_t pop_sys_energy_per_device(enum supported_device dev)
 	case DEVICE_CPU:
 		cpu_new = swap_read_int64(cpu_idle/system) +
 			swap_read_int64(cpu_running/system);
-		cpu_diff = cpu_new - cpu_old;
+		cpu_diff = stat_diff(cpu_new, cpu_old);
 		cpu_old = cpu_new;
 		return (uint32_t)cpu_diff;
 
 	case DEVICE_FLASH:
 		flash_new = swap_read_int64(flash_read/system) +
 			swap_read_int64(flash_write/system);
-		flash_diff = flash_new - flash_old;
+		flash_diff = stat_diff(flash_new, flash_old);
 		flash_old = flash_new;
 		return (uint32_t)flash_diff;
 	case DEVICE_LCD:
 		lcd_new = get_system_lcd_energy();
-		lcd_diff = lcd_new - lcd_old;
+		lcd_diff = stat_diff(lcd_new, lcd_old);
 		lcd_old = lcd_new;
 		return (uint32_t)lcd_diff;
 	default:
@@ -2207,13 +2210,13 @@ static uint32_t pop_app_energy_per_device(enum supported_device dev)
 	switch (dev) {
 	case DEVICE_CPU:
 		cpu_new = swap_read_int64(cpu_running/apps);
-		cpu_diff = cpu_new - cpu_old;
+		cpu_diff = stat_diff(cpu_new, cpu_old);
 		cpu_old = cpu_new;
 		return (uint32_t)cpu_diff;
 	case DEVICE_FLASH:
 		flash_new = swap_read_int64(flash_read/apps) +
 			swap_read_int64(flash_write/apps);
-		flash_diff = flash_new - flash_old;
+		flash_diff = stat_diff(flash_new, flash_old);
 		flash_old = flash_new;
 		return (uint32_t)flash_diff;
 	case DEVICE_LCD:
