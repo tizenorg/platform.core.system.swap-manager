@@ -246,16 +246,12 @@ void* samplingThread(void* data)
 		}
 
 		if (signo == SIGALRM) {
-			int pidarr[MAX_TARGET_COUNT];
+			int pidarr[1024]; /* ugly hardcode */
 			int pidcount = 0;
 			struct system_info_t sys_info;
 			struct msg_data_t *msg;
 
-			for (i = 0; i < MAX_TARGET_COUNT; i++) {
-				if (manager.target[i].socket != -1 &&
-				    manager.target[i].pid != -1)
-					pidarr[pidcount++] = manager.target[i].pid;
-			}
+			pidcount = get_pid_array(pidarr);
 
 			if (get_system_info(&sys_info, pidarr, pidcount) == -1) {
 				LOGE("Cannot get system info\n");
