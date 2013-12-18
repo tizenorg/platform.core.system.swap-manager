@@ -149,6 +149,7 @@ struct target_info_t {
 	uint32_t cpu_core_count;
 };
 
+int get_pid_array(int pidarr[]);
 int get_system_info(struct system_info_t *sys_info, int *pidarray, int pidcount);
 
 int get_device_info(char* buffer, int buffer_len);

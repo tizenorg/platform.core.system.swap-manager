@@ -2231,6 +2231,49 @@ static uint32_t pop_app_energy_per_device(enum supported_device dev)
 	}
 }
 
+int get_pid_array(int arr[])
+{
+	DIR *d = opendir("/proc");
+	struct dirent *dirent;
+	int count = 0;
+
+	if (!d) {
+		LOGW("Cannot open /proc dir (%s)\n", strerror(errno));
+		return 0;
+	}
+
+	while (dirent = readdir(d)) {
+		if (dirent->d_type == DT_DIR) {
+			char *tmp;
+			pid_t pid = strtol(dirent->d_name, &tmp, 10);
+			if (*tmp == '\0')
+				arr[count++] = pid;
+		}
+	}
+
+	closedir(d);
+
+	return count;
+}
+
+static pid_t get_first_target_process(void)
+{
+	pid_t pid = -1;
+	int i;
+
+	for (i = 0; i < MAX_TARGET_COUNT; i++) {
+		if (manager.target[i].socket != -1 &&
+		    manager.target[i].pid != -1) {
+			pid = manager.target[i].pid;
+			break;
+		}
+	}
+	/* Calling code must guarantee this */
+	assert(pid != -1);
+
+	return pid;
+}
+
 // return log length (>0) for normal case
 // return negative value for error
 int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
@@ -2285,7 +2328,7 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 		}
 
 		if (pidcount > 0)
-			if (update_thread_data(pidarray[0]) < 0) {
+			if (update_thread_data(get_first_target_process()) < 0) {
 				LOGE("Failed to update thread stat data\n");
 				goto fail_exit;
 			}
