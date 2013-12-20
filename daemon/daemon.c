@@ -50,10 +50,6 @@
 #include <attr/xattr.h>		// for fsetxattr
 #include <sys/smack.h>
 
-#include <linux/input.h>
-#include <dirent.h>
-#include <fcntl.h>
-
 #include <assert.h>
 
 #include "daemon.h"
@@ -62,6 +58,7 @@
 #include "da_protocol.h"
 #include "da_inst.h"
 #include "da_data.h"
+#include "input.h"
 #include "debug.h"
 
 #define DA_WORK_DIR			"/home/developer/sdk_tools/da/"
@@ -72,132 +69,8 @@
 #define MAX_APP_LAUNCH_TIME		60
 #define MAX_CONNECT_TIMEOUT_TIME	5*60
 
-#define MAX_DEVICE			10
 #define MAX_FILENAME			128
 #define BUF_SIZE			1024
-#define ARRAY_END			(-11)
-
-input_dev g_key_dev[MAX_DEVICE];
-input_dev g_touch_dev[MAX_DEVICE];
-
-// return bytes size of readed data
-// return 0 if no data readed or error occurred
-static int _file_read(FILE *fp, char *buffer, int size)
-{
-	int ret = 0;
-
-	if (fp != NULL && size > 0) {
-		ret = fread((void *)buffer, sizeof(char), size, fp);
-		buffer[ret] = '\0';
-	} else {
-		// fp is null
-		if (size > 0)
-			buffer[0] = '\0';
-		ret = 0;	// error case
-	}
-
-	return ret;
-}
-
-// get input id of given input device
-static int get_input_id(char *inputname)
-{
-	static int query_cmd_type = 0;	// 1 if /lib/udev/input_id, 2 if udevadm
-	FILE *cmd_fp = NULL;
-	char buffer[BUF_SIZE];
-	char command[MAX_FILENAME];
-	int ret = -1;
-
-	// determine input_id query command
-	if (unlikely(query_cmd_type == 0)) {
-		if (access("/lib/udev/input_id", F_OK) == 0) {
-			// there is /lib/udev/input_id
-			query_cmd_type = 1;
-		} else {
-			// there is not /lib/udev/input_id
-			query_cmd_type = 2;
-		}
-	}
-	// make command string
-	if (query_cmd_type == 1) {
-		sprintf(command, "/lib/udev/input_id /class/input/%s",
-			inputname);
-	} else {
-		sprintf(command,
-			"udevadm info --name=input/%s --query=property",
-			inputname);
-	}
-
-	// run command
-	cmd_fp = popen(command, "r");
-	if (_file_read(cmd_fp, buffer, BUF_SIZE) < 0) {
-		LOGE("Failed to read input_id\n");
-		if (cmd_fp != NULL)
-			pclose(cmd_fp);
-		return ret;
-	}
-	// determine input id
-	if (strstr(buffer, INPUT_ID_STR_KEY)) {
-		// key
-		ret = INPUT_ID_KEY;
-	} else if (strstr(buffer, INPUT_ID_STR_TOUCH)) {
-		// touch
-		ret = INPUT_ID_TOUCH;
-	} else if (strstr(buffer, INPUT_ID_STR_KEYBOARD)) {
-		// keyboard
-		ret = INPUT_ID_KEY;
-	} else if (strstr(buffer, INPUT_ID_STR_TABLET)) {
-		// touch (emulator)
-		ret = INPUT_ID_TOUCH;
-	}
-
-	if (cmd_fp != NULL)
-		pclose(cmd_fp);
-	return ret;
-}
-
-// get filename and fd of given input type devices
-static void _get_fds(input_dev *dev, int input_id)
-{
-	DIR *dp;
-	struct dirent *d;
-	int count = 0;
-
-	dp = opendir("/sys/class/input");
-
-	if (dp != NULL) {
-		while ((d = readdir(dp)) != NULL) {
-			if (!strncmp(d->d_name, "event", 5)) {
-				// start with "event"
-				// event file
-				if (input_id == get_input_id(d->d_name)) {
-					sprintf(dev[count].fileName,
-						"/dev/input/%s", d->d_name);
-					dev[count].fd =
-					    open(dev[count].fileName,
-						 O_RDWR | O_NONBLOCK);
-					count++;
-				}
-			}
-		}
-
-		closedir(dp);
-	}
-	dev[count].fd = ARRAY_END;	// end of input_dev array
-}
-
-//static
-void _device_write(input_dev *dev, struct input_event *in_ev)
-{
-	int i;
-	for (i = 0; dev[i].fd != ARRAY_END; i++) {
-		if (dev[i].fd >= 0) {
-			write(dev[i].fd, in_ev, sizeof(struct input_event));
-			LOGI("write(%d, %d, %d)\n",
-			     dev[i].fd, (int)in_ev, sizeof(struct input_event));
-		}
-	}
-}
 
 uint64_t get_total_alloc_size()
 {
@@ -426,9 +299,6 @@ int launch_timer_start()
 	return res;
 }
 
-static void epoll_add_input_events();
-static void epoll_del_input_events();
-
 int prepare_profiling()
 {
 	struct app_list_t *app = NULL;
@@ -481,7 +351,7 @@ int start_profiling()
 	}
 
 	if (IS_OPT_SET(FL_RECORDING))
-		epoll_add_input_events();
+		register_input_events();
 
 	while (app_info != NULL) {
 		if (exec_app(app_info)) {
@@ -501,7 +371,7 @@ int start_profiling()
 
  recording_stop:
 	if (IS_OPT_SET(FL_RECORDING))
-		epoll_del_input_events();
+		unregister_input_events();
 	samplingStop();
 
  exit:
@@ -512,7 +382,7 @@ int start_profiling()
 void stop_profiling(void)
 {
 	if (IS_OPT_SET(FL_RECORDING))
-		epoll_del_input_events();
+		unregister_input_events();
 	samplingStop();
 }
 
@@ -524,12 +394,12 @@ static void reconfigure_recording(struct conf_t conf)
 	uint64_t to_disable = (new_features ^ old_features) & old_features;
 
 	if (IS_OPT_SET_IN(FL_RECORDING, to_disable)) {
-		epoll_del_input_events();
+		unregister_input_events();
 		prof_session.conf.use_features0 &= ~FL_RECORDING;
 	}
 
 	if (IS_OPT_SET_IN(FL_RECORDING, to_enable)) {
-		epoll_add_input_events();
+		register_input_events();
 		prof_session.conf.use_features0 |= FL_RECORDING;
 	}
 
@@ -605,38 +475,6 @@ static void terminate_error(char *errstr, int send_to_host)
 		}
 	}
 	terminate_all();
-}
-
-#define MAX_EVENTS_NUM 10
-static int deviceEventHandler(input_dev *dev, int input_type)
-{
-	int ret = 0;
-	ssize_t size = 0;
-	int count = 0;
-	struct input_event in_ev[MAX_EVENTS_NUM];
-	struct msg_data_t *log;
-
-	if (input_type == INPUT_ID_TOUCH || input_type == INPUT_ID_KEY) {
-		do {
-			size = read(dev->fd, &in_ev[count], sizeof(*in_ev));
-			if (size > 0)
-				count++;
-		} while (count < MAX_EVENTS_NUM && size > 0);
-
-		if (count) {
-			LOGI("read %d %s events\n",
-			     count,
-			     input_type == INPUT_ID_KEY ? STR_KEY : STR_TOUCH);
-			log = gen_message_event(in_ev, count, input_type);
-			printBuf((char *)log, MSG_DATA_HDR_LEN + log->len);
-			write_to_buf(log);
-			free_msg_data(log);
-		}
-	} else {
-		LOGW("unknown input_type\n");
-		ret = 1;	// it is not error
-	}
-	return ret;
 }
 
 static int target_event_pid_handler(int index, uint64_t msg)
@@ -897,53 +735,91 @@ static int controlSocketHandler(int efd)
 	return res;
 }
 
-static void epoll_add_input_events()
+#define MAX_FDS_NUM 1024
+struct handler_struct {
+	int fd;
+	int (*handler)(int);
+};
+static struct handler_struct handlers[MAX_FDS_NUM] = { {0, NULL} };
+
+int register_event_handler(int fd, int (*handler)(int))
 {
-	struct epoll_event ev;
 	int i;
 
-	// add device fds to epoll event pool
-	ev.events = EPOLLIN;
-	for (i = 0; g_key_dev[i].fd != ARRAY_END; i++) {
-		if (g_key_dev[i].fd >= 0) {
-			ev.data.fd = g_key_dev[i].fd;
-			if (epoll_ctl(manager.efd,
-				      EPOLL_CTL_ADD, g_key_dev[i].fd, &ev) < 0
-				      && errno != EEXIST)
-				LOGE("keyboard device file epoll_ctl error: %s\n", strerror(errno));
+	if (fd == 0) {
+		LOGE("Cannot register null descriptor\n");
+		return -1;
+	}
+
+	for (i = 0; i < MAX_FDS_NUM; i++) {
+		if (handlers[i].fd == 0) {
+			struct epoll_event ev;
+			ev.events = EPOLLIN;
+			ev.data.fd = fd;
+			if (epoll_ctl(manager.efd, EPOLL_CTL_ADD, fd, &ev) == -1
+			    && errno != EEXIST) {
+				LOGE("Cannot add event: %s\n", strerror(errno));
+				return -1;
+			}
+			handlers[i].fd = fd;
+			handlers[i].handler = handler;
+			return 0;
 		}
 	}
 
-	ev.events = EPOLLIN;
-	for (i = 0; g_touch_dev[i].fd != ARRAY_END; i++) {
-		if (g_touch_dev[i].fd >= 0) {
-			ev.data.fd = g_touch_dev[i].fd;
-			if (epoll_ctl(manager.efd,
-				      EPOLL_CTL_ADD,
-				      g_touch_dev[i].fd, &ev) < 0
-				      && errno != EEXIST)
-				LOGE("touch device file epoll_ctl error: %s\n", strerror(errno));
-		}
-	}
+	LOGE("No free descriptors to register event\n");
+
+	return -1;
 }
 
-static void epoll_del_input_events()
+int unregister_event_handler(int fd)
 {
 	int i;
 
-	// remove device fds from epoll event pool
-	for (i = 0; g_key_dev[i].fd != ARRAY_END; i++)
-		if (g_key_dev[i].fd >= 0)
-			if (epoll_ctl(manager.efd,
-				      EPOLL_CTL_DEL, g_key_dev[i].fd, NULL) < 0)
-				LOGE("keyboard device file epoll_ctl error: %s\n", strerror(errno));
+	if (fd == 0) {
+		LOGE("Cannot unregister null descriptor\n");
+		return -1;
+	}
 
-	for (i = 0; g_touch_dev[i].fd != ARRAY_END; i++)
-		if (g_touch_dev[i].fd >= 0)
-			if (epoll_ctl(manager.efd,
-				      EPOLL_CTL_DEL,
-				      g_touch_dev[i].fd, NULL) < 0)
-				LOGE("touch device file epoll_ctl error: %s\n", strerror(errno));
+	for (i = 0; i < MAX_FDS_NUM; i++) {
+		if (handlers[i].fd == fd) {
+			if (epoll_ctl(manager.efd, EPOLL_CTL_DEL,
+				      fd, NULL) == -1) {
+				LOGE("Cannot remove event: %s\n",
+				     strerror(errno));
+				return -1;
+			}
+			handlers[i].fd = 0;
+			handlers[i].handler = NULL;
+			return 0;
+		}
+	}
+
+	LOGE("Descriptor %d is not registered\n", fd);
+
+	return -1;
+}
+
+static int process_event(int fd)
+{
+	int i;
+
+	if (fd == 0) {
+		LOGE("Could not process null event\n");
+		return -1;
+	}
+
+	for (i = 0; i < MAX_FDS_NUM; i++) {
+		if (handlers[i].fd == fd) {
+			if (handlers[i].handler(fd))
+				LOGW("Handler for %d failed\n", fd);
+			return 0;
+		}
+	}
+
+	LOGE("Descriptor %d is not registered\n", fd);
+
+	return -1;
 }
 
 static bool initialize_epoll_events(void)
@@ -978,8 +854,7 @@ int daemonLoop()
 	int return_value = 0;
 	struct epoll_event *events = malloc(EPOLL_SIZE * sizeof(*events));
 
-	_get_fds(g_key_dev, INPUT_ID_KEY);
-	_get_fds(g_touch_dev, INPUT_ID_TOUCH);
+	init_input();
 
 	if (!events) {
 		LOGE("Out of memory when allocate epoll event pool\n");
@@ -1011,6 +886,11 @@ int daemonLoop()
 		}
 
 		for (i = 0; i < numevent; i++) {
+			if (process_event(events[i].data.fd)) {
+				LOGE("Cannot process event\n");
+				continue;
+			}
+
 			// check for request from event fd
 			for (k = 0; k < MAX_TARGET_COUNT; k++) {
 				if (manager.target[k].socket != -1 &&
@@ -1031,38 +911,6 @@ int daemonLoop()
 			}
 
 			if (k != MAX_TARGET_COUNT)
-				continue;
-
-			// check for request from device fd
-			for (k = 0; g_touch_dev[k].fd != ARRAY_END; k++) {
-				if (g_touch_dev[k].fd >= 0 &&
-				    events[i].data.fd == g_touch_dev[k].fd) {
-					if (deviceEventHandler(&g_touch_dev[k],
-					    INPUT_ID_TOUCH) < 0) {
-						LOGE("Internal DA framework error, "
-						     "Please re-run the profiling (touch dev)\n");
-						continue;
-					}
-					break;
-				}
-			}
-
-			if (g_touch_dev[k].fd != ARRAY_END)
-				continue;
-
-			for (k = 0; g_key_dev[k].fd != ARRAY_END; k++) {
-				if (g_key_dev[k].fd >= 0 &&
-				    events[i].data.fd == g_key_dev[k].fd) {
-					if (deviceEventHandler(&g_key_dev[k], INPUT_ID_KEY) < 0) {
-						LOGE("Internal DA framework error, "
-						     "Please re-run the profiling (key dev)\n");
-						continue;
-					}
-					break;
-				}
-			}
-
-			if (g_key_dev[k].fd != ARRAY_END)
 				continue;
 
 			// connect request from target

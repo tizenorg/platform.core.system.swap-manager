@@ -54,16 +54,6 @@ extern "C" {
 #define MAX_DEVICE				10
 #define MAX_FILENAME			128
 
-#define INPUT_ID_TOUCH			0
-#define INPUT_ID_KEY			1
-#define STR_TOUCH				"TOUCH"
-#define STR_KEY					"KEY"
-#define INPUT_ID_STR_KEY		"ID_INPUT_KEY=1"
-#define INPUT_ID_STR_TOUCH		"ID_INPUT_TOUCHSCREEN=1"
-#define INPUT_ID_STR_KEYBOARD	"ID_INPUT_KEYBOARD=1"
-#define INPUT_ID_STR_TABLET		"ID_INPUT_TABLET=1"
-
-
 /*
 enum ErrorCode
 {
@@ -199,16 +189,6 @@ typedef struct
 	char appPath[128]; // application executable path
 } __da_manager;
 
-
-typedef struct _input_dev
-{
-	int fd;
-	char fileName[MAX_FILENAME];
-} input_dev;
-
-extern input_dev g_key_dev[MAX_DEVICE];
-extern input_dev g_touch_dev[MAX_DEVICE];
-
 extern __da_manager manager;
 
 void initialize_log();
@@ -230,7 +210,9 @@ void stop_profiling();
 int reconfigure();
 int sendACKCodeToHost(enum HostMessageType resp, int msgcode);
 void terminate_all();
-void _device_write(input_dev *dev, struct input_event* in_ev);
+
+int register_event_handler(int fd, int (*handler)(int));
+int unregister_event_handler(int fd);
 
 
 #ifdef __cplusplus
