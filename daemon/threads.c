@@ -387,22 +387,7 @@ static void *replay_thread(void *arg)
 		LOGI_th_rep("%d) sleep %d\n", i, ms);
 		usleep(ms);
 
-		/* filter touch and key events here
-		   and process them separately */
-		switch (pevent->id)
-		{
-		case INPUT_ID_TOUCH:
-			LOGI_th_rep("event -> %s\n", INPUT_ID_STR_TOUCH);
-			_device_write(g_touch_dev, &pevent->ev);
-			break;
-
-		case INPUT_ID_KEY:
-			LOGI_th_rep("event -> %s\n", INPUT_ID_STR_KEY);
-			_device_write(g_key_dev, &pevent->ev);
-			break;
-		default:
-			LOGE("event -> UNKNOWN INPUT ID");
-		}
+		write_input_event(pevent->id, &pevent->ev);
 
 		prev_event_offset = event_offset;
 
