@@ -80,77 +80,60 @@
 input_dev g_key_dev[MAX_DEVICE];
 input_dev g_touch_dev[MAX_DEVICE];
 
-// return bytes size of readed data
-// return 0 if no data readed or error occurred
-static int _file_read(FILE *fp, char *buffer, int size)
+const char *input_key_devices[] = {
+	"gpio-keys",		//device
+	"melfas-touchkey",	//device
+	"Maru Virtio Hwkey",	//virtual
+	NULL			//array tail
+};
+
+const char *input_touch_devices[] = {
+	"sec_touchscreen",		//device
+	"Maru Virtio Touchscreen",	//virtual
+	NULL				//array tail
+};
+
+
+static int check_input(char *inputname, int input_id)
 {
-	int ret = 0;
-
-	if (fp != NULL && size > 0) {
-		ret = fread((void *)buffer, sizeof(char), size, fp);
-		buffer[ret] = '\0';
-	} else {
-		// fp is null
-		if (size > 0)
-			buffer[0] = '\0';
-		ret = 0;	// error case
-	}
-
-	return ret;
-}
-
-// get input id of given input device
-static int get_input_id(char *inputname)
-{
-	static int query_cmd_type = 0;	// 1 if /lib/udev/input_id, 2 if udevadm
+	int ret = 1;
 	FILE *cmd_fp = NULL;
 	char buffer[BUF_SIZE];
 	char command[MAX_FILENAME];
-	int ret = -1;
+	char **name_arr;
+	size_t bytes_count;
 
-	// determine input_id query command
-	if (unlikely(query_cmd_type == 0)) {
-		if (access("/lib/udev/input_id", F_OK) == 0) {
-			// there is /lib/udev/input_id
-			query_cmd_type = 1;
-		} else {
-			// there is not /lib/udev/input_id
-			query_cmd_type = 2;
-		}
-	}
-	// make command string
-	if (query_cmd_type == 1) {
-		sprintf(command, "/lib/udev/input_id /class/input/%s",
-			inputname);
-	} else {
-		sprintf(command,
-			"udevadm info --name=input/%s --query=property",
-			inputname);
-	}
-
+	sprintf(command, "/sys/class/input/%s/device/name", inputname);
 	// run command
-	cmd_fp = popen(command, "r");
-	if (_file_read(cmd_fp, buffer, BUF_SIZE) < 0) {
+	cmd_fp = fopen(command, "r");
+	if (cmd_fp == NULL)
+		goto exit;
+
+	buffer[0] = '\0';
+	bytes_count = fread(buffer, 1, BUF_SIZE, cmd_fp);
+	if (bytes_count <= 1) {
 		LOGE("Failed to read input_id\n");
-		if (cmd_fp != NULL)
-			pclose(cmd_fp);
-		return ret;
-	}
-	// determine input id
-	if (strstr(buffer, INPUT_ID_STR_KEY)) {
-		// key
-		ret = INPUT_ID_KEY;
-	} else if (strstr(buffer, INPUT_ID_STR_TOUCH)) {
-		// touch
-		ret = INPUT_ID_TOUCH;
-	} else if (strstr(buffer, INPUT_ID_STR_KEYBOARD)) {
-		// keyboard
-		ret = INPUT_ID_KEY;
-	} else if (strstr(buffer, INPUT_ID_STR_TABLET)) {
-		// touch (emulator)
-		ret = INPUT_ID_TOUCH;
+		goto exit;
+	} else {
+		buffer[bytes_count - 1] = '\0';
 	}
 
+	if (input_id == INPUT_ID_KEY)
+		name_arr = input_key_devices;
+	else if (input_id == INPUT_ID_TOUCH)
+		name_arr = input_touch_devices;
+	else
+		goto exit;
+
+	while (*name_arr != NULL) {
+		if (strcmp(buffer, *name_arr) == 0) {
+			ret = 0;
+			goto exit;
+		}
+		name_arr++;
+	}
+
+exit:
 	if (cmd_fp != NULL)
 		pclose(cmd_fp);
 	return ret;
@@ -170,7 +153,7 @@ static void _get_fds(input_dev *dev, int input_id)
 			if (!strncmp(d->d_name, "event", 5)) {
 				// start with "event"
 				// event file
-				if (input_id == get_input_id(d->d_name)) {
+				if (!check_input(d->d_name, input_id)) {
 					sprintf(dev[count].fileName,
 						"/dev/input/%s", d->d_name);
 					dev[count].fd =
@@ -979,7 +962,17 @@ int daemonLoop()
 	struct epoll_event *events = malloc(EPOLL_SIZE * sizeof(*events));
 
 	_get_fds(g_key_dev, INPUT_ID_KEY);
+	if (g_key_dev[0].fd == ARRAY_END) {
+		LOGE("No key devices found.\n");
+		return_value = -1;
+		goto END_EVENT;
+	}
 	_get_fds(g_touch_dev, INPUT_ID_TOUCH);
+	if (g_touch_dev[0].fd == ARRAY_END) {
+		LOGE("No touch devices found.\n");
+		return_value = -1;
+		goto END_EVENT;
+	}
 
 	if (!events) {
 		LOGE("Out of memory when allocate epoll event pool\n");
