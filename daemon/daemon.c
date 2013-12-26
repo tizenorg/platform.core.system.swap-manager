@@ -81,15 +81,26 @@ input_dev g_key_dev[MAX_DEVICE];
 input_dev g_touch_dev[MAX_DEVICE];
 
 const char *input_key_devices[] = {
-	"gpio-keys",		//device
-	"melfas-touchkey",	//device
-	"Maru Virtio Hwkey",	//virtual
+	/* target: Emulator, kernel: 3.4, all buttons */
+	"Maru Virtio Hwkey",
+	/* target: M0, kernel: 3.0, buttons: volume +/-, home, power */
+	"gpio-keys",
+	/* target: M0, kernel: 3.0, buttons: menu, back */
+	"melfas-touchkey",
+	/* target: M0, kernel: 3.10, buttons: menu, back */
+	"MELFAS MCS Touchkey",
+	/* target: M0, kernel: 3.10, buttons: volume +/-, home, power */
+	"gpio-keys.5",
 	NULL			//array tail
 };
 
 const char *input_touch_devices[] = {
-	"sec_touchscreen",		//device
-	"Maru Virtio Touchscreen",	//virtual
+	/* target: Emulator, kernel: 3.0 */
+	"Maru Virtio Touchscreen",
+	/* target: M0, kernel: 3.0 */
+	"sec_touchscreen",
+	/* target: M0, kernel: 3.10 */
+	"MELPAS MMS114 Touchscreen",
 	NULL				//array tail
 };
 
