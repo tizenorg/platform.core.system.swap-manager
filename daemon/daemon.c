@@ -1027,10 +1027,8 @@ int daemonLoop()
 						// maybe closed, but ignoring is more safe then
 						// removing fd from epoll list
 					} else {
-						if (-11 == target_event_handler(manager.efd, k, u)) {
+						if (-11 == target_event_handler(manager.efd, k, u))
 							LOGI("all target process is closed\n");
-							continue;
-						}
 					}
 					break;
 				}
