@@ -17,8 +17,8 @@ ifeq (arm, $(findstring arm, $(shell uname -sm)))
 endif
 
 COMMON_LIBS := -lglib-2.0 -lpthread
-TARGET_LIBS := $(COMMON_LIBS) -lvconf -lsmack -lcapi-system-info
-CFLAGS := -Wall -pthread -g -O0
+TARGET_LIBS := $(COMMON_LIBS) -lvconf -lsmack -lcapi-system-info -lecore -leina -lpthread
+CFLAGS := -Wall -pthread -g -O0 -I/usr/include/ecore-1 -I/usr/include/eina-1 -I/usr/include/eina-1/eina
 
 DAEMON_SRCS =			\
 	buffer.c		\
@@ -37,7 +37,8 @@ DAEMON_SRCS =			\
 	transfer_thread.c	\
 	utils.c			\
 	da_protocol_check.c     \
-	md5.c
+	md5.c			\
+	input_events.c
 
 DAEMON_OBJS = $(patsubst %.c,%.o, $(DAEMON_SRCS))
 
