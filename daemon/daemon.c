@@ -40,7 +40,6 @@
 #include <sys/socket.h>		// for accept
 #include <sys/stat.h>		// for mkdir
 #include <sys/eventfd.h>	// for eventfd
-#include <sys/epoll.h>		// for epoll apis
 #include <sys/timerfd.h>	// for timerfd
 #include <unistd.h>		// for access, sleep
 #include <stdbool.h>
@@ -50,11 +49,11 @@
 #include <attr/xattr.h>		// for fsetxattr
 #include <sys/smack.h>
 
-#include <linux/input.h>
-#include <dirent.h>
 #include <fcntl.h>
 
 #include <assert.h>
+
+#include <Ecore.h>
 
 #include "daemon.h"
 #include "sys_stat.h"
@@ -62,138 +61,15 @@
 #include "da_protocol.h"
 #include "da_inst.h"
 #include "da_data.h"
+#include "input_events.h"
 #include "debug.h"
 
 #define DA_WORK_DIR			"/home/developer/sdk_tools/da/"
 #define DA_READELF_PATH			"/home/developer/sdk_tools/da/readelf"
 #define SCREENSHOT_DIR			"/tmp/da"
 
-#define EPOLL_SIZE			10
 #define MAX_APP_LAUNCH_TIME		60
 #define MAX_CONNECT_TIMEOUT_TIME	5*60
-
-#define MAX_DEVICE			10
-#define MAX_FILENAME			128
-#define BUF_SIZE			1024
-#define ARRAY_END			(-11)
-
-input_dev g_key_dev[MAX_DEVICE];
-input_dev g_touch_dev[MAX_DEVICE];
-
-const char *input_key_devices[] = {
-	/* target: Emulator, kernel: 3.4, all buttons */
-	"Maru Virtio Hwkey",
-	/* target: M0, kernel: 3.0, buttons: volume +/-, home, power */
-	"gpio-keys",
-	/* target: M0, kernel: 3.0, buttons: menu, back */
-	"melfas-touchkey",
-	/* target: M0, kernel: 3.10, buttons: menu, back */
-	"MELFAS MCS Touchkey",
-	/* target: M0, kernel: 3.10, buttons: volume +/-, home, power */
-	"gpio-keys.5",
-	NULL			//array tail
-};
-
-const char *input_touch_devices[] = {
-	/* target: Emulator, kernel: 3.0 */
-	"Maru Virtio Touchscreen",
-	/* target: M0, kernel: 3.0 */
-	"sec_touchscreen",
-	/* target: M0, kernel: 3.10 */
-	"MELPAS MMS114 Touchscreen",
-	NULL				//array tail
-};
-
-
-static int check_input(char *inputname, int input_id)
-{
-	int ret = -1;
-	FILE *cmd_fp = NULL;
-	char buffer[BUF_SIZE];
-	char command[MAX_FILENAME];
-	char **name_arr;
-	size_t bytes_count;
-
-	sprintf(command, "/sys/class/input/%s/device/name", inputname);
-	// run command
-	cmd_fp = fopen(command, "r");
-	if (cmd_fp == NULL)
-		goto exit;
-
-	buffer[0] = '\0';
-	bytes_count = fread(buffer, 1, BUF_SIZE, cmd_fp);
-	if (bytes_count <= 1) {
-		LOGE("Failed to read input_id\n");
-		goto exit;
-	} else {
-		buffer[bytes_count - 1] = '\0';
-	}
-
-	if (input_id == INPUT_ID_KEY)
-		name_arr = input_key_devices;
-	else if (input_id == INPUT_ID_TOUCH)
-		name_arr = input_touch_devices;
-	else
-		goto exit;
-
-	while (*name_arr != NULL) {
-		if (strcmp(buffer, *name_arr) == 0) {
-			ret = 0;
-			goto exit;
-		}
-		name_arr++;
-	}
-
-exit:
-	if (cmd_fp != NULL)
-		pclose(cmd_fp);
-	return ret;
-}
-
-// get filename and fd of given input type devices
-static void _get_fds(input_dev *dev, int input_id)
-{
-	DIR *dp;
-	struct dirent *d;
-	int count = 0;
-
-	dp = opendir("/sys/class/input");
-
-	if (dp == NULL)
-		goto exit;
-
-	while ((d = readdir(dp)) != NULL) {
-		if (!strncmp(d->d_name, "event", 5)) {
-			// start with "event"
-			// event file
-			if (!check_input(d->d_name, input_id)) {
-				sprintf(dev[count].fileName,
-					"/dev/input/%s", d->d_name);
-				dev[count].fd = open(dev[count].fileName,
-						     O_RDWR | O_NONBLOCK);
-				count++;
-			}
-		}
-	}
-
-	closedir(dp);
-
-exit:
-	dev[count].fd = ARRAY_END;	// end of input_dev array
-}
-
-//static
-void _device_write(input_dev *dev, struct input_event *in_ev)
-{
-	int i;
-	for (i = 0; dev[i].fd != ARRAY_END; i++) {
-		if (dev[i].fd >= 0) {
-			write(dev[i].fd, in_ev, sizeof(struct input_event));
-			LOGI("write(%d, %d, %d)\n",
-			     dev[i].fd, (int)in_ev, sizeof(struct input_event));
-		}
-	}
-}
 
 uint64_t get_total_alloc_size()
 {
@@ -239,11 +115,30 @@ static void setEmptyTargetSlot(int index)
 // start and terminate control functions
 // =============================================================================
 
+static Ecore_Fd_Handler *launch_timer_handler;
+
+//stop application launch timer
+static int stop_app_launch_timer()
+{
+	close(manager.app_launch_timerfd);
+	manager.app_launch_timerfd = -1;
+
+	return 0;
+}
+
+static Eina_Bool launch_timer_cb(void *data, Ecore_Fd_Handler *fd_handler)
+{
+	LOGE("Failed to launch application\n");
+	if (stop_app_launch_timer() < 0)
+		LOGE("cannot stop app launch timer\n");
+
+	return ECORE_CALLBACK_CANCEL;
+}
+
 //start application launch timer function
 static int start_app_launch_timer(int apps_count)
 {
 	int res = 0;
-	struct epoll_event ev;
 
 	assert(apps_count >= 0 && "negative apps count");
 
@@ -260,19 +155,18 @@ static int start_app_launch_timer(int apps_count)
 		ctime.it_interval.tv_nsec = 0;
 		if (timerfd_settime(manager.app_launch_timerfd, 0, &ctime, NULL) < 0) {
 			LOGE("fail to set app launch timer\n");
-			close(manager.app_launch_timerfd);
-			manager.app_launch_timerfd = -1;
+			stop_app_launch_timer();
 			res = -1;
 		} else {
-			// add event fd to epoll list
-			ev.events = EPOLLIN;
-			ev.data.fd = manager.app_launch_timerfd;
-			if (epoll_ctl(manager.efd, EPOLL_CTL_ADD,
-				      manager.app_launch_timerfd, &ev) < 0) {
-				// fail to add event fd
-				LOGE("fail to add app launch timer fd to epoll list\n");
-				close(manager.app_launch_timerfd);
-				manager.app_launch_timerfd = -1;
+			launch_timer_handler =
+				ecore_main_fd_handler_add(manager.app_launch_timerfd,
+							  ECORE_FD_READ,
+							  launch_timer_cb,
+							  NULL,
+							  NULL, NULL);
+			if (!launch_timer_handler) {
+				LOGE("fail to add app launch timer fd to \n");
+				stop_app_launch_timer();
 				res = -2;
 			} else {
 				LOGI("application launch time started\n");
@@ -284,17 +178,6 @@ static int start_app_launch_timer(int apps_count)
 	}
 
 	return res;
-}
-
-//stop application launch timer
-static int stop_app_launch_timer()
-{
-	if (0 > epoll_ctl(manager.efd, EPOLL_CTL_DEL,
-			  manager.app_launch_timerfd, NULL))
-		LOGW("fail to EPOLL DEL of app launch timerfd\n");
-	close(manager.app_launch_timerfd);
-	manager.app_launch_timerfd = -1;
-	return 0;
 }
 
 static inline void inc_apps_to_run()
@@ -382,169 +265,6 @@ static int exec_app(const struct app_info_t *app_info)
 	return res;
 }
 
-int launch_timer_start()
-{
-	static struct epoll_event ev;
-	int res = 0;
-
-	manager.connect_timeout_timerfd =
-	    timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC);
-	if (manager.connect_timeout_timerfd > 0) {
-		struct itimerspec ctime;
-		ctime.it_value.tv_sec = MAX_CONNECT_TIMEOUT_TIME;
-		ctime.it_value.tv_nsec = 0;
-		ctime.it_interval.tv_sec = 0;
-		ctime.it_interval.tv_nsec = 0;
-		if (timerfd_settime(manager.connect_timeout_timerfd, 0, &ctime, NULL) < 0) {
-			LOGE("fail to set connect timeout timer\n");
-			close(manager.connect_timeout_timerfd);
-			manager.connect_timeout_timerfd = -1;
-		} else {
-			// add event fd to epoll list
-			ev.events = EPOLLIN;
-			ev.data.fd = manager.connect_timeout_timerfd;
-			if (epoll_ctl(manager.efd, EPOLL_CTL_ADD,
-				      manager.connect_timeout_timerfd, &ev) < 0)
-			{
-				// fail to add event fd
-				LOGE("fail to add app connection timeout timer fd to epoll list\n");
-				close(manager.connect_timeout_timerfd);
-				manager.connect_timeout_timerfd = -1;
-			} else {
-				LOGI("connection timeout timer started\n");
-			}
-		}
-	} else {
-		LOGE("cannot create connection timeout timer\n");
-	}
-
-	LOGI("ret=%d\n", res);
-	return res;
-}
-
-static void epoll_add_input_events();
-static void epoll_del_input_events();
-
-int prepare_profiling()
-{
-	struct app_list_t *app = NULL;
-	const struct app_info_t *app_info = NULL;
-
-	app_info = app_info_get_first(&app);
-	if (app_info == NULL) {
-		LOGE("No app info found\n");
-		return -1;
-	}
-
-	//all apps
-	while (app_info != NULL) {
-		if (kill_app_by_info(app_info) != 0) {
-			LOGE("kill app failed\n");
-			return -1;
-		}
-		app_info = app_info_get_next(&app);
-	}
-	//init rw for systeminfo
-	//init recv send network systeminfo
-	sys_stat_prepare();
-	return 0;
-
-}
-
-int start_profiling()
-{
-	struct app_list_t *app = NULL;
-	const struct app_info_t *app_info = NULL;
-	int res = 0;
-
-	app_info = app_info_get_first(&app);
-	if (app_info == NULL) {
-		LOGE("No app info found\n");
-		return -1;
-	}
-	// remove previous screen capture files
-	remove_indir(SCREENSHOT_DIR);
-	if (mkdir(SCREENSHOT_DIR, 0777) == -1 && errno != EEXIST)
-		LOGW("Failed to create directory for screenshot : %s\n",
-		     strerror(errno));
-
-	smack_lsetlabel(SCREENSHOT_DIR, "*", SMACK_LABEL_ACCESS);
-
-	if (samplingStart() < 0) {
-		LOGE("Cannot start sampling\n");
-		res = -1;
-		goto exit;
-	}
-
-	if (IS_OPT_SET(FL_RECORDING))
-		epoll_add_input_events();
-
-	while (app_info != NULL) {
-		if (exec_app(app_info)) {
-			LOGE("Cannot exec app\n");
-			res = -1;
-			goto recording_stop;
-		}
-		app_info = app_info_get_next(&app);
-	}
-
-	if (start_app_launch_timer(get_apps_to_run()) < 0) {
-		res = -1;
-		goto recording_stop;
-	}
-
-	goto exit;
-
- recording_stop:
-	if (IS_OPT_SET(FL_RECORDING))
-		epoll_del_input_events();
-	samplingStop();
-
- exit:
-	LOGI("return %d\n", res);
-	return res;
-}
-
-void stop_profiling(void)
-{
-	if (IS_OPT_SET(FL_RECORDING))
-		epoll_del_input_events();
-	samplingStop();
-}
-
-static void reconfigure_recording(struct conf_t conf)
-{
-	uint64_t old_features = prof_session.conf.use_features0;
-	uint64_t new_features = conf.use_features0;
-	uint64_t to_enable = (new_features ^ old_features) & new_features;
-	uint64_t to_disable = (new_features ^ old_features) & old_features;
-
-	if (IS_OPT_SET_IN(FL_RECORDING, to_disable)) {
-		epoll_del_input_events();
-		prof_session.conf.use_features0 &= ~FL_RECORDING;
-	}
-
-	if (IS_OPT_SET_IN(FL_RECORDING, to_enable)) {
-		epoll_add_input_events();
-		prof_session.conf.use_features0 |= FL_RECORDING;
-	}
-
-}
-
-int reconfigure(struct conf_t conf)
-{
-	reconfigure_recording(conf);
-
-	samplingStop();
-	memcpy(&prof_session.conf, &conf, sizeof(conf));
-	if (samplingStart() < 0) {
-		LOGE("Cannot start sampling\n");
-		return -1;
-	}
-
-	return 0;
-}
-
 // just send stop message to all target process
 static void terminate_all_target()
 {
@@ -603,37 +323,180 @@ static void terminate_error(char *errstr, int send_to_host)
 	terminate_all();
 }
 
-#define MAX_EVENTS_NUM 10
-static int deviceEventHandler(input_dev *dev, int input_type)
+static Ecore_Fd_Handler *connect_timer_handler;
+
+static Eina_Bool connect_timer_cb(void *data, Ecore_Fd_Handler *fd_handler)
 {
-	int ret = 0;
-	ssize_t size = 0;
-	int count = 0;
-	struct input_event in_ev[MAX_EVENTS_NUM];
-	struct msg_data_t *log;
+	terminate_error("no incoming connections", 1);
+	close(manager.connect_timeout_timerfd);
+	manager.connect_timeout_timerfd = -1;
+	LOGE("No connection in %d sec. shutdown.\n",
+	     MAX_CONNECT_TIMEOUT_TIME);
+	ecore_main_loop_quit();
 
-	if (input_type == INPUT_ID_TOUCH || input_type == INPUT_ID_KEY) {
-		do {
-			size = read(dev->fd, &in_ev[count], sizeof(*in_ev));
-			if (size > 0)
-				count++;
-		} while (count < MAX_EVENTS_NUM && size > 0);
+	return ECORE_CALLBACK_CANCEL;
+}
 
-		if (count) {
-			LOGI("read %d %s events\n",
-			     count,
-			     input_type == INPUT_ID_KEY ? STR_KEY : STR_TOUCH);
-			log = gen_message_event(in_ev, count, input_type);
-			printBuf((char *)log, MSG_DATA_HDR_LEN + log->len);
-			write_to_buf(log);
-			free_msg_data(log);
+int launch_timer_start()
+{
+	int res = 0;
+
+	manager.connect_timeout_timerfd =
+	    timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC);
+	if (manager.connect_timeout_timerfd > 0) {
+		struct itimerspec ctime;
+		ctime.it_value.tv_sec = MAX_CONNECT_TIMEOUT_TIME;
+		ctime.it_value.tv_nsec = 0;
+		ctime.it_interval.tv_sec = 0;
+		ctime.it_interval.tv_nsec = 0;
+		if (timerfd_settime(manager.connect_timeout_timerfd, 0, &ctime, NULL) < 0) {
+			LOGE("fail to set connect timeout timer\n");
+			close(manager.connect_timeout_timerfd);
+			manager.connect_timeout_timerfd = -1;
+		} else {
+			connect_timer_handler =
+				ecore_main_fd_handler_add(manager.connect_timeout_timerfd,
+							  ECORE_FD_READ,
+							  connect_timer_cb,
+							  NULL,
+							  NULL, NULL);
+			if (!connect_timer_handler) {
+				LOGE("fail to add app connection timeout timer fd\n");
+				close(manager.connect_timeout_timerfd);
+				manager.connect_timeout_timerfd = -1;
+			} else {
+				LOGI("connection timeout timer started\n");
+			}
 		}
 	} else {
-		LOGW("unknown input_type\n");
-		ret = 1;	// it is not error
+		LOGE("cannot create connection timeout timer\n");
 	}
-	return ret;
+
+	LOGI("ret=%d\n", res);
+	return res;
 }
+
+int prepare_profiling()
+{
+	struct app_list_t *app = NULL;
+	const struct app_info_t *app_info = NULL;
+
+	app_info = app_info_get_first(&app);
+	if (app_info == NULL) {
+		LOGE("No app info found\n");
+		return -1;
+	}
+
+	//all apps
+	while (app_info != NULL) {
+		if (kill_app_by_info(app_info) != 0) {
+			LOGE("kill app failed\n");
+			return -1;
+		}
+		app_info = app_info_get_next(&app);
+	}
+	//init rw for systeminfo
+	//init recv send network systeminfo
+	sys_stat_prepare();
+	return 0;
+
+}
+
+int start_profiling()
+{
+	struct app_list_t *app = NULL;
+	const struct app_info_t *app_info = NULL;
+	int res = 0;
+
+	app_info = app_info_get_first(&app);
+	if (app_info == NULL) {
+		LOGE("No app info found\n");
+		return -1;
+	}
+	// remove previous screen capture files
+	remove_indir(SCREENSHOT_DIR);
+	if (mkdir(SCREENSHOT_DIR, 0777) == -1 && errno != EEXIST)
+		LOGW("Failed to create directory for screenshot : %s\n",
+		     strerror(errno));
+
+	smack_lsetlabel(SCREENSHOT_DIR, "*", SMACK_LABEL_ACCESS);
+
+	if (samplingStart() < 0) {
+		LOGE("Cannot start sampling\n");
+		res = -1;
+		goto exit;
+	}
+
+	if (IS_OPT_SET(FL_RECORDING))
+		add_input_events();
+
+	while (app_info != NULL) {
+		if (exec_app(app_info)) {
+			LOGE("Cannot exec app\n");
+			res = -1;
+			goto recording_stop;
+		}
+		app_info = app_info_get_next(&app);
+	}
+
+	if (start_app_launch_timer(get_apps_to_run()) < 0) {
+		res = -1;
+		goto recording_stop;
+	}
+
+	goto exit;
+
+ recording_stop:
+	if (IS_OPT_SET(FL_RECORDING))
+		del_input_events();
+	samplingStop();
+
+ exit:
+	LOGI("return %d\n", res);
+	return res;
+}
+
+void stop_profiling(void)
+{
+	if (IS_OPT_SET(FL_RECORDING))
+		del_input_events();
+	samplingStop();
+}
+
+static void reconfigure_recording(struct conf_t conf)
+{
+	uint64_t old_features = prof_session.conf.use_features0;
+	uint64_t new_features = conf.use_features0;
+	uint64_t to_enable = (new_features ^ old_features) & new_features;
+	uint64_t to_disable = (new_features ^ old_features) & old_features;
+
+	if (IS_OPT_SET_IN(FL_RECORDING, to_disable)) {
+		del_input_events();
+		prof_session.conf.use_features0 &= ~FL_RECORDING;
+	}
+
+	if (IS_OPT_SET_IN(FL_RECORDING, to_enable)) {
+		add_input_events();
+		prof_session.conf.use_features0 |= FL_RECORDING;
+	}
+
+}
+
+int reconfigure(struct conf_t conf)
+{
+	reconfigure_recording(conf);
+
+	samplingStop();
+	memcpy(&prof_session.conf, &conf, sizeof(conf));
+	if (samplingStart() < 0) {
+		LOGE("Cannot start sampling\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+static Ecore_Fd_Handler *target_handlers[MAX_TARGET_COUNT];
 
 static int target_event_pid_handler(int index, uint64_t msg)
 {
@@ -668,7 +531,7 @@ static int target_event_pid_handler(int index, uint64_t msg)
 	return 0;
 }
 
-static int target_event_stop_handler(int epollfd, int index, uint64_t msg)
+static int target_event_stop_handler(int index, uint64_t msg)
 {
 	LOGI("target close, socket(%d), pid(%d) : (remaining %d target)\n",
 	     manager.target[index].socket, manager.target[index].pid,
@@ -677,9 +540,7 @@ static int target_event_stop_handler(int epollfd, int index, uint64_t msg)
 	if (index == 0)		// main application
 		stop_replay();
 
-	if (0 > epoll_ctl(epollfd, EPOLL_CTL_DEL,
-			  manager.target[index].event_fd, NULL))
-		LOGW("fail to EPOLL DEL of event fd(%d)\n", index);
+	ecore_main_fd_handler_del(target_handlers[index]);
 
 	setEmptyTargetSlot(index);
 	// all target client are closed
@@ -697,7 +558,7 @@ static int target_event_stop_handler(int epollfd, int index, uint64_t msg)
 // return plus value if non critical error occur
 // return minus value if critical error occur
 // return -11 if all target process closed
-static int target_event_handler(int epollfd, int index, uint64_t msg)
+static int target_event_handler(int index, uint64_t msg)
 {
 	int err = 0;
 	if (msg & EVENT_PID)
@@ -706,9 +567,28 @@ static int target_event_handler(int epollfd, int index, uint64_t msg)
 		return err;
 
 	if (msg & EVENT_STOP || msg & EVENT_ERROR)
-		err = target_event_stop_handler(epollfd, index, msg);
+		err = target_event_stop_handler(index, msg);
 
 	return err;
+}
+
+static Eina_Bool target_event_cb(void *data, Ecore_Fd_Handler *fd_handler)
+{
+	uint64_t u;
+	ssize_t recvLen;
+	int index = (int)data;
+
+	recvLen = read(manager.target[index].event_fd, &u, sizeof(uint64_t));
+	if (recvLen != sizeof(uint64_t)) {
+		// maybe closed, but ignoring is more safe then
+		// removing fd from event loop
+	} else {
+		if (-11 == target_event_handler(index, u)) {
+			LOGI("all target process is closed\n");
+		}
+	}
+
+	return ECORE_CALLBACK_RENEW;
 }
 
 /**
@@ -716,10 +596,9 @@ static int target_event_handler(int epollfd, int index, uint64_t msg)
  * return plus value if non critical error occur
  * return minus value if critical error occur
  */
-static int targetServerHandler(int efd)
+static int targetServerHandler(void)
 {
 	msg_target_t log;
-	struct epoll_event ev;
 
 	int index = getEmptyTargetSlot();
 	if (index == MAX_TARGET_COUNT) {
@@ -744,7 +623,7 @@ static int targetServerHandler(int efd)
 			LOGE("fail to send data to target index(%d)\n", index);
 
 		// make event fd
-		manager.target[index].event_fd = eventfd(0, EFD_NONBLOCK);
+		manager.target[index].event_fd = eventfd(EFD_CLOEXEC, EFD_NONBLOCK);
 		if (manager.target[index].event_fd == -1) {
 			// fail to make event fd
 			LOGE("fail to make event fd for socket (%d)\n",
@@ -752,12 +631,14 @@ static int targetServerHandler(int efd)
 			goto TARGET_CONNECT_FAIL;
 		}
 
-		// add event fd to epoll list
-		ev.events = EPOLLIN;
-		ev.data.fd = manager.target[index].event_fd;
-		if (epoll_ctl(efd, EPOLL_CTL_ADD, manager.target[index].event_fd, &ev) < 0) {
-			// fail to add event fd
-			LOGE("fail to add event fd to epoll list for socket (%d)\n",
+		target_handlers[index] =
+			ecore_main_fd_handler_add(manager.target[index].event_fd,
+						  ECORE_FD_READ,
+						  target_event_cb,
+						  (void *)index,
+						  NULL, NULL);
+		if (!target_handlers[index]) {
+			LOGE("fail to add event fd for socket (%d)\n",
 			     manager.target[index].socket);
 			goto TARGET_CONNECT_FAIL;
 		}
@@ -767,9 +648,7 @@ static int targetServerHandler(int efd)
 			// fail to make recv thread
 			LOGE("fail to make recv thread for socket (%d)\n",
 			     manager.target[index].socket);
-			if (0 > epoll_ctl(efd, EPOLL_CTL_DEL,
-					  manager.target[index].event_fd, NULL))
-				LOGW("fail to EPOLL DEL of event fd(%d)\n", index);
+			ecore_main_fd_handler_del(target_handlers[index]);
 			goto TARGET_CONNECT_FAIL;
 		}
 
@@ -801,53 +680,12 @@ static int targetServerHandler(int efd)
 	}
 }
 
-// return 0 if normal case
-// return plus value if non critical error occur
-// return minus value if critical error occur
-static int hostServerHandler(int efd)
-{
-	static int hostserverorder = 0;
-	int csocket;
-	struct epoll_event ev;
-
-	if (hostserverorder > 1)	// control and data socket connected already
-		return 1;		// ignore
-
-	csocket = accept(manager.host_server_socket, NULL, NULL);
-
-	if (csocket >= 0) {
-		// accept succeed
-		ev.events = EPOLLIN;
-		ev.data.fd = csocket;
-		if (epoll_ctl(efd, EPOLL_CTL_ADD, csocket, &ev) < 0) {
-			// consider as accept fail
-			LOGE("Failed to add socket fd to epoll list\n");
-			close(csocket);
-			return -1;
-		}
-
-		if (hostserverorder == 0) {
-			manager.host.control_socket = csocket;
-			unlink_portfile();
-			LOGI("host control socket connected = %d\n", csocket);
-		} else {
-			manager.host.data_socket = csocket;
-			LOGI("host data socket connected = %d\n", csocket);
-		}
-
-		hostserverorder++;
-		return 0;
-	} else {
-		// accept error
-		LOGE("Failed to accept from host server socket\n");
-		return -1;
-	}
-}
+static Ecore_Fd_Handler *host_ctrl_handler;
+static Ecore_Fd_Handler *host_data_handler;
 
 // return plus value if non critical error occur
 // return minus value if critical error occur
 // return -11 if socket closed
-
 static int controlSocketHandler(int efd)
 {
 	ssize_t recv_len;
@@ -857,9 +695,6 @@ static int controlSocketHandler(int efd)
 
 	if (manager.connect_timeout_timerfd >= 0) {
 		LOGI("release connect timeout timer\n");
-		if (0 > epoll_ctl(efd, EPOLL_CTL_DEL,
-				  manager.connect_timeout_timerfd, NULL))
-			LOGW("fail to EPOLL DEL of timeout timer fd\n");
 		close(manager.connect_timeout_timerfd);
 		manager.connect_timeout_timerfd = -1;
 	}
@@ -893,78 +728,150 @@ static int controlSocketHandler(int efd)
 	return res;
 }
 
-static void epoll_add_input_events()
+static Eina_Bool host_ctrl_cb(void *data, Ecore_Fd_Handler *fd_handler)
 {
-	struct epoll_event ev;
-	int i;
-
-	// add device fds to epoll event pool
-	ev.events = EPOLLIN;
-	for (i = 0; g_key_dev[i].fd != ARRAY_END; i++) {
-		if (g_key_dev[i].fd >= 0) {
-			ev.data.fd = g_key_dev[i].fd;
-			if (epoll_ctl(manager.efd,
-				      EPOLL_CTL_ADD, g_key_dev[i].fd, &ev) < 0
-				      && errno != EEXIST)
-				LOGE("keyboard device file epoll_ctl error: %s\n", strerror(errno));
-		}
+	int result = controlSocketHandler(manager.efd);
+	if (result == -11) {
+		// socket close
+		//if the host disconnected.
+		//In all other cases daemon must report an error and continue the loop
+		//close connect_timeoutt and host socket and quit
+		LOGI("Connection closed. Termination. (%d)\n",
+		     manager.host.control_socket);
+		ecore_main_loop_quit();
+	} else if (result < 0) {
+		LOGE("Control socket handler.\n");
 	}
 
-	ev.events = EPOLLIN;
-	for (i = 0; g_touch_dev[i].fd != ARRAY_END; i++) {
-		if (g_touch_dev[i].fd >= 0) {
-			ev.data.fd = g_touch_dev[i].fd;
-			if (epoll_ctl(manager.efd,
-				      EPOLL_CTL_ADD,
-				      g_touch_dev[i].fd, &ev) < 0
-				      && errno != EEXIST)
-				LOGE("touch device file epoll_ctl error: %s\n", strerror(errno));
+	return ECORE_CALLBACK_RENEW;
+}
+
+static Eina_Bool host_data_cb(void *data, Ecore_Fd_Handler *fd_handler)
+{
+	ssize_t recvLen;
+	char recvBuf[32];
+
+	recvLen = recv(manager.host.data_socket, recvBuf, 32, MSG_DONTWAIT);
+	if (recvLen == 0) {
+		// close data socket
+		ecore_main_fd_handler_del(host_data_handler);
+		close(manager.host.data_socket);
+		manager.host.data_socket = -1;
+		// TODO: finish transfer thread
+	}
+
+	LOGI("host message from data socket %d\n", recvLen);
+
+	return ECORE_CALLBACK_RENEW;
+}
+
+// return 0 if normal case
+// return plus value if non critical error occur
+// return minus value if critical error occur
+static int hostServerHandler(void)
+{
+	static int hostserverorder = 0;
+	int csocket;
+
+	if (hostserverorder > 1)	// control and data socket connected already
+		return 1;		// ignore
+
+	csocket = accept(manager.host_server_socket, NULL, NULL);
+
+	if (csocket >= 0) {
+		// accept succeed
+
+		if (hostserverorder == 0) {
+			manager.host.control_socket = csocket;
+			unlink_portfile();
+			LOGI("host control socket connected = %d\n", csocket);
+			host_ctrl_handler =
+				ecore_main_fd_handler_add(manager.host.control_socket,
+							  ECORE_FD_READ,
+							  host_ctrl_cb,
+							  NULL,
+							  NULL, NULL);
+			if (!host_ctrl_handler) {
+				LOGE("Failed to add host control socket fd\n");
+				close(csocket);
+				return -1;
+			}
+		} else {
+			manager.host.data_socket = csocket;
+			LOGI("host data socket connected = %d\n", csocket);
+
+			host_data_handler =
+				ecore_main_fd_handler_add(manager.host.data_socket,
+							  ECORE_FD_READ,
+							  host_data_cb,
+							  NULL,
+							  NULL, NULL);
+			if (!host_data_handler) {
+				LOGE("Failed to add host data socket fd\n");
+				close(csocket);
+				return -1;
+			}
 		}
+
+		hostserverorder++;
+		return 0;
+	} else {
+		// accept error
+		LOGE("Failed to accept from host server socket\n");
+		return -1;
 	}
 }
 
-static void epoll_del_input_events()
+static Ecore_Fd_Handler *host_connect_handler;
+static Ecore_Fd_Handler *target_connect_handler;
+
+static Eina_Bool host_connect_cb(void *data, Ecore_Fd_Handler *fd_handler)
 {
-	int i;
+	// connect request from host
+	int result = hostServerHandler();
+	if (result < 0) {
+		LOGE("Internal DA framework error (hostServerHandler)\n");
+	}
 
-	// remove device fds from epoll event pool
-	for (i = 0; g_key_dev[i].fd != ARRAY_END; i++)
-		if (g_key_dev[i].fd >= 0)
-			if (epoll_ctl(manager.efd,
-				      EPOLL_CTL_DEL, g_key_dev[i].fd, NULL) < 0)
-				LOGE("keyboard device file epoll_ctl error: %s\n", strerror(errno));
-
-	for (i = 0; g_touch_dev[i].fd != ARRAY_END; i++)
-		if (g_touch_dev[i].fd >= 0)
-			if (epoll_ctl(manager.efd,
-				      EPOLL_CTL_DEL,
-				      g_touch_dev[i].fd, NULL) < 0)
-				LOGE("touch device file epoll_ctl error: %s\n", strerror(errno));
+	return ECORE_CALLBACK_RENEW;
 }
 
-static bool initialize_epoll_events(void)
+static Eina_Bool target_connect_cb(void *data, Ecore_Fd_Handler *fd_handler)
 {
-	struct epoll_event ev;
+	if (targetServerHandler() < 0) {
+		// critical error
+		terminate_error("Internal DA framework error, "
+				"Please re-run the profiling "
+				"(targetServerHandler)\n", 1);
+	}
 
-	if ((manager.efd = epoll_create1(0)) < 0) {
-		LOGE("epoll creation error\n");
+	return ECORE_CALLBACK_RENEW;
+}
+
+static bool initialize_events(void)
+{
+	host_connect_handler =
+		ecore_main_fd_handler_add(manager.host_server_socket,
+					  ECORE_FD_READ,
+					  host_connect_cb,
+					  NULL,
+					  NULL, NULL);
+	if (!host_connect_handler) {
+		LOGE("Host server socket add error\n");
 		return false;
 	}
-	// add server sockets to epoll event pool
-	ev.events = EPOLLIN;
-	ev.data.fd = manager.host_server_socket;
-	if (epoll_ctl(manager.efd, EPOLL_CTL_ADD,
-		      manager.host_server_socket, &ev) < 0) {
-		LOGE("Host server socket epoll_ctl error\n");
+
+	target_connect_handler =
+		ecore_main_fd_handler_add(manager.target_server_socket,
+					  ECORE_FD_READ,
+					  target_connect_cb,
+					  NULL,
+					  NULL, NULL);
+	if (!target_connect_handler) {
+		LOGE("Target server socket add error\n");
 		return false;
 	}
-	ev.events = EPOLLIN;
-	ev.data.fd = manager.target_server_socket;
-	if (epoll_ctl(manager.efd, EPOLL_CTL_ADD,
-		      manager.target_server_socket, &ev) < 0) {
-		LOGE("Target server socket epoll_ctl error\n");
-		return false;
-	}
+
 	return true;
 }
 
@@ -972,27 +879,15 @@ static bool initialize_epoll_events(void)
 int daemonLoop()
 {
 	int return_value = 0;
-	struct epoll_event *events = malloc(EPOLL_SIZE * sizeof(*events));
 
-	_get_fds(g_key_dev, INPUT_ID_KEY);
-	if (g_key_dev[0].fd == ARRAY_END) {
-		LOGE("No key devices found.\n");
-		return_value = -1;
-		goto END_EVENT;
-	}
-	_get_fds(g_touch_dev, INPUT_ID_TOUCH);
-	if (g_touch_dev[0].fd == ARRAY_END) {
-		LOGE("No touch devices found.\n");
+	ecore_init();
+
+	if (init_input_events() == -1) {
 		return_value = -1;
 		goto END_EVENT;
 	}
 
-	if (!events) {
-		LOGE("Out of memory when allocate epoll event pool\n");
-		return_value = -1;
-		goto END_EVENT;
-	}
-	if (!initialize_epoll_events()) {
+	if (!initialize_events()) {
 		return_value = -1;
 		goto END_EFD;
 	}
@@ -1005,151 +900,12 @@ int daemonLoop()
 
 	init_prof_session(&prof_session);
 
-	// handler loop
-	while (1) {
-		int i, k;
-		ssize_t recvLen;
-		// number of occured events
-		int numevent = epoll_wait(manager.efd, events, EPOLL_SIZE, -1);
-		if (numevent <= 0) {
-			LOGE("Failed to epoll_wait : num of event(%d), errno(%d)\n", numevent, errno);
-			continue;
-		}
-
-		for (i = 0; i < numevent; i++) {
-			// check for request from event fd
-			for (k = 0; k < MAX_TARGET_COUNT; k++) {
-				if (manager.target[k].socket != -1 &&
-				    events[i].data.fd == manager.target[k].event_fd) {
-					uint64_t u;
-					recvLen = read(manager.target[k].event_fd, &u, sizeof(uint64_t));
-					if (recvLen != sizeof(uint64_t)) {
-						// maybe closed, but ignoring is more safe then
-						// removing fd from epoll list
-					} else {
-						if (-11 == target_event_handler(manager.efd, k, u))
-							LOGI("all target process is closed\n");
-					}
-					break;
-				}
-			}
-
-			if (k != MAX_TARGET_COUNT)
-				continue;
-
-			// check for request from device fd
-			for (k = 0; g_touch_dev[k].fd != ARRAY_END; k++) {
-				if (g_touch_dev[k].fd >= 0 &&
-				    events[i].data.fd == g_touch_dev[k].fd) {
-					if (deviceEventHandler(&g_touch_dev[k],
-					    INPUT_ID_TOUCH) < 0) {
-						LOGE("Internal DA framework error, "
-						     "Please re-run the profiling (touch dev)\n");
-						continue;
-					}
-					break;
-				}
-			}
-
-			if (g_touch_dev[k].fd != ARRAY_END)
-				continue;
-
-			for (k = 0; g_key_dev[k].fd != ARRAY_END; k++) {
-				if (g_key_dev[k].fd >= 0 &&
-				    events[i].data.fd == g_key_dev[k].fd) {
-					if (deviceEventHandler(&g_key_dev[k], INPUT_ID_KEY) < 0) {
-						LOGE("Internal DA framework error, "
-						     "Please re-run the profiling (key dev)\n");
-						continue;
-					}
-					break;
-				}
-			}
-
-			if (g_key_dev[k].fd != ARRAY_END)
-				continue;
-
-			// connect request from target
-			if (events[i].data.fd == manager.target_server_socket) {
-				if (targetServerHandler(manager.efd) < 0) {
-					// critical error
-					terminate_error("Internal DA framework error, "
-							"Please re-run the profiling "
-							"(targetServerHandler)\n", 1);
-					continue;
-				}
-			} else if (events[i].data.fd == manager.host_server_socket) {
-			// connect request from host
-				int result = hostServerHandler(manager.efd);
-				if (result < 0) {
-					LOGE("Internal DA framework error (hostServerHandler)\n");
-					continue;
-				}
-			} else if (events[i].data.fd == manager.host.control_socket) {
-			// control message from host
-				int result = controlSocketHandler(manager.efd);
-				if (result == -11) {
-					// socket close
-					//if the host disconnected.
-					//In all other cases daemon must report an error and continue the loop
-					//close connect_timeoutt and host socket and quit
-					LOGI("Connection closed. Termination. (%d)\n",
-					      manager.host.control_socket);
-					return_value = 0;
-					goto END_EFD;
-				} else if (result < 0) {
-					LOGE("Control socket handler.\n");
-				}
-			} else if (events[i].data.fd == manager.host.data_socket) {
-				char recvBuf[32];
-				recvLen = recv(manager.host.data_socket, recvBuf, 32, MSG_DONTWAIT);
-				if (recvLen == 0) {
-					// close data socket
-					if (0 > epoll_ctl(manager.efd,
-							  EPOLL_CTL_DEL,
-							  manager.host.data_socket,
-							  NULL))
-						LOGW("fail to EPOLL DEL of host data socket\n");
-					close(manager.host.data_socket);
-					manager.host.data_socket = -1;
-					// TODO: finish transfer thread
-				}
-
-				LOGI("host message from data socket %d\n",
-				     recvLen);
-			} else if (events[i].data.fd == manager.app_launch_timerfd) {
-				// check for application launch timerfd
-				// send to host timeout error message for launching application
-				LOGE("Failed to launch application\n");
-				if (stop_app_launch_timer() < 0)
-					LOGE("cannot stop app launch timer\n");
-				continue;
-			} else if (events[i].data.fd == manager.connect_timeout_timerfd) {
-				// check for connection timeout timerfd
-				// send to host timeout error message for launching application
-				terminate_error("no incoming connections", 1);
-				if (0 > epoll_ctl(manager.efd, EPOLL_CTL_DEL,
-						  manager.connect_timeout_timerfd,
-						  NULL))
-					LOGW("fail to EPOLL DEL of timeout timer fd\n");
-				close(manager.connect_timeout_timerfd);
-				manager.connect_timeout_timerfd = -1;
-				LOGE("No connection in %d sec. shutdown.\n",
-				     MAX_CONNECT_TIMEOUT_TIME);
-				goto END_EFD;
-			} else {
-				// unknown socket
-				// never happened
-				LOGW("Unknown socket fd (%d)\n",
-				     events[i].data.fd);
-			}
-		}
-	}
+	ecore_main_loop_begin();
+	ecore_shutdown();
 
  END_EFD:
 	LOGI("close efd\n");
 	close(manager.efd);
  END_EVENT:
-	free(events);
 	return return_value;
 }
