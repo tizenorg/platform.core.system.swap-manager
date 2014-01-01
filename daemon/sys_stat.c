@@ -2425,7 +2425,7 @@ fail_exit:
 	return -1;
 }
 
-int initialize_system_info()
+int initialize_system_info(void)
 {
 	int i;
 
@@ -2455,7 +2455,7 @@ int initialize_system_info()
 	return 0;
 }
 
-int finalize_system_info()
+int finalize_system_info(void)
 {
 	int i;
 
@@ -2492,7 +2492,7 @@ static void ftest_and_close(FILE **fd)
 #define str(x) strr(x)
 #define dtest_and_close(fd) do {LOGI("CLOSE " str(fd) "\n");test_and_close(fd);} while(0)
 #define dftest_and_close(fd) do {LOGI("CLOSE " str(fd) "\n");ftest_and_close(fd);} while(0)
-void close_system_file_descriptors()
+void close_system_file_descriptors(void)
 {
 	dtest_and_close(&manager.fd.brightness);
 	dtest_and_close(&manager.fd.voltage);
@@ -2504,7 +2504,7 @@ void close_system_file_descriptors()
 	dftest_and_close(&manager.fd.diskstats);
 }
 
-int init_system_file_descriptors()
+int init_system_file_descriptors(void)
 {
 	//inits
 	init_brightness_status();

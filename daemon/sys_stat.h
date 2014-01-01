@@ -156,14 +156,14 @@ int get_device_info(char* buffer, int buffer_len);
 
 int get_file_status(int* pfd, const char* filename);
 
-int initialize_system_info();
+int initialize_system_info(void);
 
-int finalize_system_info();
+int finalize_system_info(void);
 
 int fill_target_info(struct target_info_t *target_info);
 
-int init_system_file_descriptors();
-void close_system_file_descriptors();
+int init_system_file_descriptors(void);
+void close_system_file_descriptors(void);
 int sys_stat_prepare(void);
 #ifdef __cplusplus
 }
