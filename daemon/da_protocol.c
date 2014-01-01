@@ -1037,7 +1037,7 @@ static int process_msg_get_screenshot(struct msg_buf_t *msg_control)
 
 	// send config message to target process
 	sendlog.type = MSG_CAPTURE_SCREEN;
-	sendlog.length = sprintf(sendlog.data, "");
+	sendlog.length = 0;
 	log_len = sizeof(sendlog.type) + sizeof(sendlog.length) + sendlog.length;
 
 	for (target_index = 0; target_index < MAX_TARGET_COUNT; target_index++) {
