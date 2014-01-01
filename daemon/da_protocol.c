@@ -62,7 +62,6 @@ static void inline free_msg(struct msg_t *msg)
 
 struct prof_session_t prof_session;
 
-static void print_app_info(struct app_info_t *app_info);
 static void print_conf(struct conf_t *conf);
 //DEBUG FUNCTIONS
 #define dstr(x) #x
@@ -278,53 +277,6 @@ int parse_int64(struct msg_buf_t *msg, uint64_t *val)
 	return 1;
 }
 
-static void strip_args(const char *cmd, char *path)
-{
-	char *bin_end = strchr(cmd, ' ');
-
-	if (!bin_end) {
-		strcpy(path, cmd);
-	} else {
-		size_t binname_len = bin_end - cmd;
-		memcpy(path, cmd, binname_len);
-		path[binname_len] = '\0';
-	}
-}
-
-static int parse_app_info(struct msg_buf_t *msg,
-			       struct app_info_t *app_info)
-{
-	char bin_path[MAX_FILENAME];
-
-	//Application type
-	parse_deb("parse_app_info\n");
-	if (!parse_int32(msg, &app_info->app_type) ||
-		!check_app_type(app_info->app_type))
-	{
-		LOGE("app type error\n");
-		return 0;
-	}
-	//Application ID
-	if (!parse_string(msg, &app_info->app_id) ||
-		!check_app_id(app_info->app_type, app_info->app_id))
-	{
-		LOGE("app id parsing error\n");
-		return 0;
-	}
-	//Applicaion exe path
-	if (!parse_string(msg, &app_info->exe_path)) {
-		LOGE("app info parsing error\n");
-		return 0;
-	}
-	strip_args(app_info->exe_path, bin_path);
-	if (!check_exec_path(bin_path)) {
-		LOGE("app info parsing error\n");
-		return 0;
-	}
-//	print_app_info(app_info);
-	return 1;
-}
-
 static int parse_conf(struct msg_buf_t *msg, struct conf_t *conf)
 {
 
@@ -473,13 +425,6 @@ int parse_replay_event_seq(struct msg_buf_t *msg,
 
 //*REPLAY EVENT PARSE
 
-int get_sys_mem_size(uint32_t *sys_mem_size){
-	struct sysinfo info;
-	sysinfo(&info);
-	*sys_mem_size = info.totalram;
-	return 0;
-}
-
 static int parse_msg_config(struct msg_buf_t *msg_payload,
 			      struct conf_t *conf)
 {
@@ -492,18 +437,6 @@ static int parse_msg_config(struct msg_buf_t *msg_payload,
 	return 1;
 }
 
-static int parse_msg_binary_info(struct msg_buf_t *msg_payload,
-			      struct app_info_t *app_info)
-{
-	if (!parse_app_info(msg_payload, app_info)) {
-		LOGE("app info parsing error\n");
-		return 0;
-	}
-
-	print_app_info(app_info);
-	return 1;
-}
-
 static void init_parse_control(struct msg_buf_t *buf, struct msg_t *msg)
 {
 	buf->payload = msg->payload;
@@ -512,23 +445,9 @@ static void init_parse_control(struct msg_buf_t *buf, struct msg_t *msg)
 	buf->cur_pos = msg->payload;
 }
 
-static void reset_app_info(struct app_info_t *app_info)
-{
-	if (app_info->app_id != NULL)
-		free(app_info->app_id);
-	if (app_info->exe_path != NULL)
-		free(app_info->exe_path);
-	memset(app_info, 0, sizeof(*app_info));
-}
-
 static void reset_target_info(struct target_info_t *target_info)
 {
 	return;
-}
-
-static void reset_conf(struct conf_t *conf)
-{
-	memset(conf, 0, sizeof(*conf));
 }
 
 static void running_status_on(struct prof_session_t *prof_session)
@@ -553,19 +472,6 @@ static void reset_app_inst(struct user_space_inst_t *us_inst)
 	us_inst->app_inst_list = NULL;
 }
 
-static void reset_lib_inst(struct user_space_inst_t *us_inst)
-{
-	free_data_list((struct data_list_t **)&us_inst->lib_inst_list);
-	us_inst->lib_num = 0;
-	us_inst->lib_inst_list = NULL;
-}
-
-static void reset_user_space_inst(struct user_space_inst_t *us_inst)
-{
-	reset_app_inst(us_inst);
-	reset_lib_inst(us_inst);
-}
-
 void reset_system_info(struct system_info_t *sys_info)
 {
 	if (sys_info->thread_load)
@@ -582,50 +488,6 @@ void reset_system_info(struct system_info_t *sys_info)
 void init_prof_session(struct prof_session_t *prof_session)
 {
 	memset(prof_session, 0, sizeof(*prof_session));
-}
-
-static void reset_prof_session(struct prof_session_t *prof_session)
-{
-	reset_conf(&prof_session->conf);
-	reset_user_space_inst(&prof_session->user_space_inst);
-	reset_replay_event_seq(&prof_session->replay_event_seq);
-	running_status_off(prof_session);
-}
-
-static struct msg_t *gen_binary_info_reply(struct app_info_t *app_info)
-{
-	uint32_t binary_type = get_binary_type(app_info->exe_path);
-	char binary_path[PATH_MAX];
-	struct msg_t *msg;
-	char *p = NULL;
-	uint32_t ret_id = ERR_NO;
-
-	get_build_dir(binary_path, app_info->exe_path);
-
-	if (binary_type == BINARY_TYPE_UNKNOWN) {
-		LOGE("Binary is neither relocatable, nor executable\n");
-		return NULL;
-	}
-
-	msg = malloc(sizeof(*msg) +
-			      sizeof(ret_id) +
-			      sizeof(binary_type) +
-			      strlen(binary_path) + 1);
-	if (!msg) {
-		LOGE("Cannot alloc bin info msg\n");
-		return NULL;
-	}
-
-	msg->id = NMSG_BINARY_INFO_ACK;
-	p = msg->payload;
-
-	pack_int32(p, ret_id);
-	pack_int32(p, binary_type);
-	pack_str(p, binary_path);
-
-	msg->len = p - msg->payload;
-
-	return msg;
 }
 
 static size_t str_array_getsize(const char **strings, size_t len)
@@ -1178,19 +1040,6 @@ send_ack:
 
 // testing
 
-static void print_app_info(struct app_info_t *app_info)
-{
-	LOGI("application info=\n");
-	LOGI("\tapp_type=<%d><0x%04X>\n"
-		 "\tapp_id=<%s>\n"
-		 "\texe_path=<%s>\n",
-		 app_info->app_type,
-		 app_info->app_type,
-		 app_info->app_id,
-		 app_info->exe_path
-	);
-}
-
 static void print_conf(struct conf_t *conf)
 {
 	char buf[1024];
@@ -1222,21 +1071,4 @@ void print_replay_event(struct replay_event_t *ev, uint32_t num, char *tab)
 		ev->ev.code,//u16
 		ev->ev.value//s32
 		);
-}
-
-void print_replay_event_seq(struct replay_event_seq_t *event_seq)
-{
-	uint32_t i = 0;
-	char *tab = "\t";
-
-	LOGI( "%senabled=0x%08X; "\
-		"time_start=0x%08X %08X; "\
-		"count=0x%08X\n",
-		tab,event_seq->enabled,
-		(unsigned int)event_seq->tv.tv_sec,
-		(unsigned int)event_seq->tv.tv_usec,
-		event_seq->event_num);
-	for (i=0;i<event_seq->event_num;i++)
-		print_replay_event(&event_seq->events[i], i+1, tab);
-
 }
