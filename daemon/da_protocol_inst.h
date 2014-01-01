@@ -26,13 +26,6 @@
 #ifndef __DA_PROTOCOL_INST__
 #define __DA_PROTOCOL_INST__
 
-int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest);
-
-int parse_func_inst_list(struct msg_buf_t *msg,
-				struct data_list_t *dest);
-
-int parse_inst_lib(struct msg_buf_t *msg, struct lib_list_t **dest);
-
 int parse_lib_inst_list(struct msg_buf_t *msg,
 			uint32_t *num,
 			struct lib_list_t **lib_list);
