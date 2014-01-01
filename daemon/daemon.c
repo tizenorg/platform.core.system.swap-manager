@@ -72,7 +72,7 @@
 #define MAX_APP_LAUNCH_TIME		60
 #define MAX_CONNECT_TIMEOUT_TIME	5*60
 
-uint64_t get_total_alloc_size()
+uint64_t get_total_alloc_size(void)
 {
 	int i;
 	uint64_t allocsize = 0;
@@ -340,7 +340,7 @@ static Eina_Bool connect_timer_cb(void *data, Ecore_Fd_Handler *fd_handler)
 	return ECORE_CALLBACK_CANCEL;
 }
 
-int launch_timer_start()
+static int launch_timer_start(void)
 {
 	int res = 0;
 
@@ -379,7 +379,7 @@ int launch_timer_start()
 	return res;
 }
 
-int prepare_profiling()
+int prepare_profiling(void)
 {
 	struct app_list_t *app = NULL;
 	const struct app_info_t *app_info = NULL;
@@ -405,7 +405,7 @@ int prepare_profiling()
 
 }
 
-int start_profiling()
+int start_profiling(void)
 {
 	struct app_list_t *app = NULL;
 	const struct app_info_t *app_info = NULL;
@@ -879,7 +879,7 @@ static bool initialize_events(void)
 }
 
 // return 0 for normal case
-int daemonLoop()
+int daemonLoop(void)
 {
 	int return_value = 0;
 

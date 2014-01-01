@@ -101,7 +101,7 @@ static void *transfer_thread(void *arg)
 	return NULL;
 }
 
-int start_transfer()
+int start_transfer(void)
 {
 	int saved_flags;
 
@@ -130,7 +130,7 @@ int start_transfer()
 	return 0;
 }
 
-void stop_transfer()
+void stop_transfer(void)
 {
 	int saved_flags;
 	int ret = 0;
