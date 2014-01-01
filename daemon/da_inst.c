@@ -108,7 +108,7 @@ static int data_list_make_hash(struct data_list_t *what)
 }
 
 //------------ create - destroy
-struct data_list_t *new_data()
+struct data_list_t *new_data(void)
 {
 	struct data_list_t *lib = malloc(sizeof(*lib));
 	lib->next = NULL;
@@ -119,7 +119,7 @@ struct data_list_t *new_data()
 	return lib;
 }
 
-struct lib_list_t *new_lib()
+struct lib_list_t *new_lib(void)
 {
 	struct lib_list_t *lib = (struct lib_list_t *)new_data();
 	lib->lib = malloc(sizeof(*lib->lib));
@@ -127,7 +127,7 @@ struct lib_list_t *new_lib()
 	return lib;
 }
 
-struct app_list_t *new_app()
+struct app_list_t *new_app(void)
 {
 	struct app_list_t *app = (struct app_list_t *)new_data();
 	app->app = malloc(sizeof(*app->app));
@@ -135,7 +135,7 @@ struct app_list_t *new_app()
 	return app;
 }
 
-struct probe_list_t *new_probe()
+struct probe_list_t *new_probe(void)
 {
 	struct probe_list_t *probe = malloc(sizeof(*probe));
 	probe->next = NULL;

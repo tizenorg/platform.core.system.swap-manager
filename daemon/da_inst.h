@@ -80,9 +80,9 @@ extern int msg_swap_inst_add(struct msg_buf_t *data, struct user_space_inst_t *u
 extern int msg_start(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 		     struct msg_t **msg, enum ErrorCode *err);
 
-struct probe_list_t *new_probe();
-struct lib_list_t *new_lib();
-struct app_list_t *new_app();
+struct probe_list_t *new_probe(void);
+struct lib_list_t *new_lib(void);
+struct app_list_t *new_app(void);
 int probe_list_append(struct data_list_t *to, struct probe_list_t *from);
 int data_list_append(struct data_list_t **to, struct data_list_t *from);
 void free_data_list(struct data_list_t **data);

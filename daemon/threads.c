@@ -297,7 +297,7 @@ void* samplingThread(void* data)
 // return 0 if normal case
 // return minus value if critical error
 // return plus value if non-critical error
-int samplingStart()
+int samplingStart(void)
 {
 	struct itimerval timerval;
 	time_t sec = prof_session.conf.system_trace_period / 1000;
@@ -327,7 +327,7 @@ int samplingStart()
 	return 0;
 }
 
-int samplingStop()
+int samplingStop(void)
 {
 	if(manager.sampling_thread != -1)
 	{

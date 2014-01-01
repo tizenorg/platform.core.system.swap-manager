@@ -191,25 +191,25 @@ typedef struct
 
 extern __da_manager manager;
 
-void initialize_log();
-int daemonLoop();
-uint64_t get_total_alloc_size();
+uint64_t get_total_alloc_size(void);
+void initialize_log(void);
+int daemonLoop(void);
 void unlink_portfile(void);
 
 int makeRecvThread(int index);
-int samplingStart();
-int samplingStop();
+int samplingStart(void);
+int samplingStop(void);
 
 
 
 
 // TODO maybe need move to other file
-int prepare_profiling();
-int start_profiling();
-void stop_profiling();
+int prepare_profiling(void);
+int start_profiling(void);
+void stop_profiling(void);
 int reconfigure();
 int sendACKCodeToHost(enum HostMessageType resp, int msgcode);
-void terminate_all();
+void terminate_all(void);
 
 #ifdef __cplusplus
 }
