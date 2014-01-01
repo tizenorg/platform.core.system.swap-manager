@@ -55,7 +55,7 @@
 
 static pthread_mutex_t stop_all_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-void inline free_msg(struct msg_t *msg)
+static void inline free_msg(struct msg_t *msg)
 {
 	free(msg);
 }
@@ -150,7 +150,7 @@ static char *msgErrStr(enum ErrorCode err)
 		to+=strlen( dstr(f) delim );	\
 	}
 #define print_feature_0(f) print_feature(f, feature0, to, ", \n\t")
-void feature_code_str(uint64_t feature0, uint64_t feature1, char *to)
+static void feature_code_str(uint64_t feature0, uint64_t feature1, char *to)
 {
 	print_feature_0(FL_CPU);
 	print_feature_0(FL_MEMORY);
@@ -181,12 +181,12 @@ void feature_code_str(uint64_t feature0, uint64_t feature1, char *to)
 
 
 //PARSE FUNCTIONS
-inline uint32_t get_avail_msg_size(struct msg_buf_t *msg)
+static inline uint32_t get_avail_msg_size(struct msg_buf_t *msg)
 {
 	return (uint32_t)(msg->end - msg->cur_pos);
 }
 
-inline uint32_t get_msg_cur_size(struct msg_buf_t *msg)
+static inline uint32_t get_msg_cur_size(struct msg_buf_t *msg)
 {
 	return (uint32_t) (msg->cur_pos - msg->payload);
 }
@@ -767,7 +767,7 @@ int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 		return 1;
 }
 
-struct msg_t *gen_stop_msg(void)
+static struct msg_t *gen_stop_msg(void)
 {
 	struct msg_t *res = malloc(sizeof(*res));
 	memset(res, 0, sizeof(*res));
@@ -1027,7 +1027,7 @@ send_ack:
 	return -(err_code != ERR_NO);
 }
 
-int process_msg_get_screenshot(struct msg_buf_t *msg_control)
+static int process_msg_get_screenshot(struct msg_buf_t *msg_control)
 {
 	int target_index;
 	int sock;

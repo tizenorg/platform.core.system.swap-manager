@@ -106,7 +106,7 @@ static CPU_t* cpus = NULL;
 static unsigned long probe_so_size = 0;
 
 
-int get_file_status_no_open(int pfd, const char *filename)
+static int get_file_status_no_open(int pfd, const char *filename)
 {
 	int status = 0;
 	char buf[STATUS_STRING_MAX];
@@ -1112,7 +1112,7 @@ static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 // return 0 for error case
 // return system total memory in MB
 //static
-unsigned long get_system_total_memory()
+static unsigned long get_system_total_memory(void)
 {
 	int meminfo_fd = manager.fd.procmeminfo;
 	char *head, *tail;
@@ -1460,7 +1460,7 @@ static void get_app_info(const char* binary_path, char* width,
 	close(fd);
 }
 */
-int get_camera_count()
+static int get_camera_count(void)
 {
 	FILE* fp;
 	int count = 0;
@@ -1580,7 +1580,7 @@ int get_device_info(char* buffer, int buffer_len)
 	return res;
 }
 
-int update_cpus_info(int event_num, float elapsed)
+static int update_cpus_info(int event_num, float elapsed)
 {
 	int i = 0;
 	CPU_t* cpuptr;
@@ -1698,7 +1698,7 @@ int update_cpus_info(int event_num, float elapsed)
 	return 0;
 }
 
-int fill_system_processes_info(float factor, struct system_info_t * sys_info)
+static int fill_system_processes_info(float factor, struct system_info_t * sys_info)
 {
 	procNode* proc;
 	int i = 0;
@@ -1776,7 +1776,7 @@ int fill_system_processes_info(float factor, struct system_info_t * sys_info)
 }
 
 // fill threads information
-int fill_system_threads_info(float factor, struct system_info_t * sys_info)
+static int fill_system_threads_info(float factor, struct system_info_t * sys_info)
 {
 	procNode* proc;
 	float thread_load;
@@ -1816,7 +1816,7 @@ int fill_system_threads_info(float factor, struct system_info_t * sys_info)
 }
 
 //fill system cpu information
-int fill_system_cpu_info(struct system_info_t *sys_info)
+static int fill_system_cpu_info(struct system_info_t *sys_info)
 {
 	float sys_usage = 0.0f;
 	int i = 0;

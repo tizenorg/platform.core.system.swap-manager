@@ -227,8 +227,7 @@ int makeRecvThread(int index)
 	return 0;
 }
 
-//static
-void* samplingThread(void* data)
+static void *samplingThread(void *data)
 {
 	int err, signo;
 	sigset_t waitsigmask;
