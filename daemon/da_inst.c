@@ -108,7 +108,7 @@ static int data_list_make_hash(struct data_list_t *what)
 }
 
 //------------ create - destroy
-struct data_list_t *new_data(void)
+static struct data_list_t *new_data(void)
 {
 	struct data_list_t *lib = malloc(sizeof(*lib));
 	lib->next = NULL;
@@ -166,7 +166,7 @@ static void free_probe_list(struct probe_list_t *probe)
 	}
 }
 
-void free_data(struct data_list_t *lib)
+static void free_data(struct data_list_t *lib)
 {
 	free_probe_list(lib->list);
 	free_data_element(lib);
