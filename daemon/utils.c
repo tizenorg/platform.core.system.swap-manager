@@ -108,27 +108,6 @@ int64_t str_to_int64(char* str)
 	return (res * factor);
 }
 
-int read_line(const int fd, char* ptr, const unsigned int maxlen)
-{
-	unsigned int n = 0;
-	char c[2];
-	int rc;
-
-	while(n != maxlen)
-	{
-		if((rc = read(fd, c, 1)) != 1)
-			return -1; // eof or read err
-
-		if(*c == '\n')
-		{
-			ptr[n] = 0;
-			return n;
-		}
-		ptr[n++] = *c;
-	}
-	return -1; // no space
-}
-
 int smack_set_label_for_self(const char *label)
 {
 	int len;
@@ -147,79 +126,6 @@ int smack_set_label_for_self(const char *label)
 	close(fd);
 
 	return (ret < 0) ? -1 : 0;
-}
-
-void set_appuser_groups(void)
-{
-	int fd = 0;
-	char buffer[5];
-	gid_t t_gid = -1;
-	gid_t groups[APP_GROUPS_MAX] = {0, };
-	int cnt = 0;
-
-	// groups[cnt++] = SID_DEVELOPER;
-	fd = open(APP_GROUP_LIST, O_RDONLY);
-	if(fd < 0)
-	{
-		LOGE("cannot get app's group lists from %s", APP_GROUP_LIST);
-		return;
-	}
-
-	for(;;)
-	{
-		if(read_line(fd, buffer, sizeof buffer) < 0)
-		{
-			break;
-		}
-
-		t_gid = strtoul(buffer, 0, 10);
-		errno = 0;
-		if(errno != 0)
-		{
-			LOGE("cannot change string to integer: [%s]\n", buffer);
-			continue;
-		}
-
-		if(t_gid)
-		{
-			if(cnt < APP_GROUPS_MAX)
-			{
-				groups[cnt++] = t_gid;
-			}
-			else
-			{
-				LOGE("cannot add groups more than %d", APP_GROUPS_MAX);
-				break;
-			}
-		}
-	}
-
-	if(cnt > 0)
-	{
-		if(setgroups(sizeof(groups) / sizeof(groups[0]), groups) != 0)
-		{
-			fprintf(stderr, "set groups failed errno: %d\n", errno);
-			close(fd);
-			exit(1);
-		}
-	}
-	close(fd);
-}
-
-int get_smack_label(const char* execpath, char* buffer, int buflen)
-{
-	char* appid = NULL;
-	int rc;
-
-	rc = smack_lgetlabel(execpath, &appid, SMACK_LABEL_ACCESS);
-	if(rc == 0 && appid != NULL)
-	{
-		strncpy(buffer, appid, (buflen < strlen(appid))? buflen:strlen(appid));
-		free(appid);
-		return 0;
-	}
-	else
-		return -1;
 }
 
 // return 0 if succeed
@@ -250,30 +156,6 @@ int remove_indir(const char *dirname)
 	}
 	closedir(dir);
 
-	return 0;
-}
-
-// return 0 to normal case
-// return non-zero to error case
-int get_manifest_path(const char* exec_path, char* buf, int buflen)
-{
-	char* chr;
-
-	strcpy(buf, exec_path);
-
-	chr = strrchr(buf, '/');
-	if(chr == NULL)
-		return -1;
-
-	*chr = '\0';
-
-	chr = strrchr(buf, '/');
-	if(chr == NULL)
-		return -1;
-
-	*chr = '\0';
-
-	strcat(buf, MANIFEST_PATH);
 	return 0;
 }
 
