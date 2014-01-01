@@ -109,7 +109,7 @@ static void write_int(FILE *fp, int code)
 // atexit functions
 // =============================================================================
 
-void _close_server_socket(void)
+static void _close_server_socket(void)
 {
 	LOGI("close_server_socket\n");
 	// close server socket
