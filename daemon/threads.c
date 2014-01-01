@@ -229,7 +229,7 @@ int makeRecvThread(int index)
 
 static void *samplingThread(void *data)
 {
-	int err, signo, i;
+	int err, signo;
 	sigset_t waitsigmask;
 
 	LOGI("sampling thread started\n");
