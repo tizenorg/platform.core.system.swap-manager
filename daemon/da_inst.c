@@ -42,52 +42,6 @@ char *packed_app_list = NULL;
 char *packed_lib_list = NULL;
 
 uint32_t libs_count;
-// ------------------ prints --------------
-void print_probe_debug(struct probe_list_t *p)
-{
-	LOGI("     size<%d> <0x%016llX, %s> <p=0x%08lX c=0x%08lX n=0x%08lX>\n",
-		p->size,
-		p->func->func_addr,
-		p->func->args,
-		(long unsigned int)p->prev,
-		(long unsigned int)p,
-		(long unsigned int)p->next
-		);
-}
-
-void print_probe_inst_list(struct probe_list_t *list)
-{
-	struct probe_list_t *p;
-
-	for (p = list; p != NULL; p = p->next)
-		print_probe_debug(p);
-}
-
-void print_lib_inst_list(struct lib_list_t *list)
-{
-	struct lib_list_t *p = list;
-
-	for (p = list; p != NULL; p = p->next) {
-		LOGI("lib <%s> size<%d> h0x%08lX\n",
-			p->lib->bin_path,
-			p->size,
-			(long unsigned int)p->hash);
-		print_probe_inst_list(p->list);
-	}
-}
-
-void print_app_inst_list(struct app_list_t *list)
-{
-	struct app_list_t *p;
-	for (p = list; p != NULL; p = p->next) {
-		LOGI("app <%s> size<%d> h0x%08lX\n",
-			p->app->exe_path,
-			p->size,
-			(long unsigned int)p->hash);
-		print_probe_inst_list(p->list);
-	}
-}
-
 
 //----------------------------------- lists ----------------------------------
 
@@ -356,15 +310,6 @@ static int cmp_libs(struct data_list_t *el_1, struct data_list_t *el_2)
 			) == 0);
 }
 
-// this function for future use
-static int cmp_apps(struct data_list_t *el_1, struct data_list_t *el_2)
-{
-	return (strcmp(
-			((struct app_list_t *)el_1)->app->exe_path,
-			((struct app_list_t *)el_2)->app->exe_path
-			) == 0);
-}
-
 ///////////////////////////////////////////////////////////////////////////
 // function removes from new list all probes which are already installed
 //
@@ -562,8 +507,6 @@ static int generate_msg(struct msg_t **msg, struct lib_list_t *lib_list, struct 
 		 apps_count = 0;
 	char	 *p = NULL;
 
-
-	// print_lib_inst_list(lib_list);
 	packed_lib_list = pack_lib_list_to_array(lib_list, &libs_size, &libs_count);
 	// print_buf(packed_lib_list, libs_size, "LIBS");
 
@@ -633,7 +576,7 @@ int msg_start(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 		LOGE("parse app inst\n");
 		return 1;
 	}
-	// print_app_inst_list(app_inst_list);
+
 	generate_msg(msg, us_inst->lib_inst_list, us_inst->app_inst_list);
 
 	if (*msg != NULL) {

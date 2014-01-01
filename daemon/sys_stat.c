@@ -1311,155 +1311,6 @@ static int update_thread_data(int pid)
 // overall information getter functions
 // ========================================================================
 
-// this code is not necessary anymore
-/*
-static void get_app_info(const char* binary_path, char* width,
-		char* height, char* theme, char* version,
-		char* scale, char* removable,
-		char* comment)
-{
-	int fd = 0;
-	int res = 0;
-	int i = 0;
-	int j = 0;
-	char pkg_info_path [PATH_MAX];
-	char buffer [BUFFER_MAX];
-
-	sprintf(pkg_info_path, "/opt/share/applications/%s.desktop", pkg_name);
-
-    fd = open(pkg_info_path, O_RDONLY);
-    if (fd < 0)
-	{
-		LOGE("Cannot open %s", pkg_info_path);
-		return;
-	}
-
-	fcntl( fd, F_SETFD, FD_CLOEXEC );
-
-	LOGI("get_app_info - After open pkg_info_path\n");
-
-	for (;;)
-	{
-		res = read(fd, buffer, BUFFER_MAX);
-		if (res == 0)
-		{
-			break;
-		}
-		if (res < 0)
-		{
-			if (errno == EINTR)
-				continue;
-			else
-				break;
-		}
-
-		LOGI("read buffer ===%s===\n", buffer);
-		for (i = 0; i < res; i++)
-		{
-			if (i < res - 22 && strncmp(&buffer[i], "X-SLP-BaseLayoutWidth=", 22) == 0)
-			{
-				for (j = 0; j < res; j ++)
-				{
-					if (buffer[i+j] == '\n' || buffer[i+j] == '\t')
-					{
-						LOGI("width :::: ");
-						strncpy(width, &(buffer[i+22]), j-22);
-						LOGI("%s\n", width);
-						break;
-					}
-				}
-				i = i + j;
-			}
-			else if (i < res - 23 && strncmp(&buffer[i], "X-SLP-BaseLayoutHeight=", 23) == 0)
-			{
-				for (j = 0; j < res; j ++)
-				{
-					if (buffer[i+j] == '\n' || buffer[i+j] == '\t')
-					{
-						LOGI("height :::: ");
-						strncpy(height, &(buffer[i+23]), j-23);
-						LOGI("%s\n", height);
-						break;
-					}
-				}
-				i = i + j;
-			}
-			else if (i < res - 6 && (strncmp(&buffer[i], "theme=", 6) == 0 || strncmp(&buffer[i], "Theme=", 6) == 0))
-			{
-				for (j = 0; j < res; j ++)
-				{
-					if (buffer[i+j] == '\n' || buffer[i+j] == '\t')
-					{
-						LOGI("theme :::: ");
-						strncpy(theme, &(buffer[i+6]), j-6);
-						LOGI("%s\n", theme);
-						break;
-					}
-				}
-				i = i + j;
-			}
-			else if (i < res - 8 && (strncmp(&buffer[i], "Version=", 8) == 0 || strncmp(&buffer[i], "version=", 8) == 0))
-			{
-				for (j = 0; j < res; j ++)
-				{
-					if (buffer[i+j] == '\n' || buffer[i+j] == '\t')
-					{
-						LOGI("version :::: ");
-						strncpy(version, &(buffer[i+8]), j-8);
-						LOGI("%s\n", version);
-						break;
-					}
-				}
-				i = i + j;
-			}
-			else if (i < res - 24 && strncmp(&buffer[i], "X-SLP-IsHorizontalScale=", 24) == 0)
-			{
-				for (j = 0; j < res; j ++)
-				{
-					if (buffer[i+j] == '\n' || buffer[i+j] == '\t')
-					{
-						LOGI("scale :::: ");
-						strncpy(scale, &(buffer[i+24]), j-24);
-						LOGI("%s\n", scale);
-						break;
-					}
-				}
-				i = i + j;
-			}
-			else if (i < res - 16 && strncmp(&buffer[i], "X-SLP-Removable=", 16) == 0)
-			{
-				for (j = 0; j < res; j ++)
-				{
-					if (buffer[i+j] == '\n' || buffer[i+j] == '\t')
-					{
-						LOGI("removable :::: ");
-						strncpy(removable, &(buffer[i+16]), j-16);
-						LOGI("%s\n", removable);
-						break;
-					}
-				}
-				i = i + j;
-			}
-			else if (i < res - 8 && (strncmp(&buffer[i], "Comment=", 8) == 0 || strncmp(&buffer[i], "comment=", 8) == 0))
-			{
-				for (j = 0; j < res; j ++)
-				{
-					if (buffer[i+j] == '\n' || buffer[i+j] == '\t')
-					{
-						LOGI("comments :::: ");
-						strncpy(comment, &(buffer[i+8]), j-8);
-						LOGI("%s\n", comment);
-						break;
-					}
-				}
-				i = i + j;
-			}
-		}
-	}
-
-	close(fd);
-}
-*/
 static int get_camera_count(void)
 {
 	FILE* fp;
@@ -1851,61 +1702,6 @@ static int fill_system_cpu_info(struct system_info_t *sys_info)
 	return 0;
 }
 
-
-//fill cpu frequency based on cpu tick count in different cpu frequence states
-int fill_cpu_frequecy(int event_num)
-{
-	// calculate for system cpu frequency
-	float sys_usage = 0.0f;
-	uint64_t ticks = 0, freqsum = 0;
-	int i, j;
-	CPU_t* cpuptr;
-
-	for(i = 0; i < num_of_cpu; i++)
-	{
-		cpuptr = &(cpus[i]);
-
-		if(cpuptr->cur_freq_index == event_num)
-		{
-			if(cpuptr->sav_freq_index == event_num - 1)
-			{
-				for(j = 0; j < num_of_freq; j++)
-				{
-					freqsum += (cpuptr->pfreq[j].freq *
-							(cpuptr->pfreq[j].tick - cpuptr->pfreq[j].tick_sav));
-					ticks += (cpuptr->pfreq[j].tick - cpuptr->pfreq[j].tick_sav);
-				}
-			}
-			else
-			{	// do nothing
-			}
-
-			for(j = 0; j < num_of_freq; j++)
-			{
-				cpuptr->pfreq[j].tick_sav = cpuptr->pfreq[j].tick;		// restore last tick value
-			}
-			cpuptr->sav_freq_index = cpuptr->cur_freq_index;
-		}
-
-#ifdef FOR_EACH_CPU
-		if(ticks != 0)
-		{
-			if(sys_usage == 0.0f)
-				sys_usage = (float)freqsum / (float)ticks;
-			// TODO use sys_usage as cpu #i core freq
-		}
-		else
-		{
-			//freqbufpos += sprintf(freqbuf + freqbufpos, "%.0f,", sys_usage);
-			// TODO ?
-		}
-		ticks = 0;
-		freqsum = 0;
-#endif
-	}
-	return -0;
-}
-
 static void skip_lines(FILE * fp, unsigned int count)
 {
 	char *buffer = NULL;
@@ -1979,34 +1775,6 @@ static void init_disk_stat(void)
 	manager.fd.diskstats = fopen("/proc/diskstats", "r");
 }
 
-//function return partition sector size
-// returns
-//  0 if error
-//  <size> if no errors
-static int get_partition_sector_size(const char * partition_name)
-{
-	int sec_size = 0;
-	FILE *sfp = 0;
-	char sec_size_buff[LARGE_BUFFER];
-
-	sprintf(sec_size_buff, "/sys/block/%s/queue/hw_sector_size", partition_name);
-	sfp = fopen(sec_size_buff, "r");
-	if (sfp == 0) {
-		LOGE("cannot detect sector size for <%s> (%s)\n",
-				partition_name, sec_size_buff);
-		return 0;
-	}
-	fscanf(sfp, "%d", &sec_size);
-	fclose(sfp);
-	if (sec_size <= 0){
-		LOGE("cannot detect sector size for <%s> (%s)\n",
-				partition_name, sec_size_buff);
-		return 0;
-	}
-
-	return sec_size;
-}
-
 static void get_disk_stat(uint32_t *reads, uint32_t *sec_reads,
 			  uint32_t *writes, uint32_t *sec_writes)
 {
@@ -2036,17 +1804,6 @@ static void get_disk_stat(uint32_t *reads, uint32_t *sec_reads,
 			/* subpartition */
 			skip_tokens(fp, 11);
 		} else {
-			// FIXME it is not good way call this func
-			// each time to get partition sector size
-			/*sec_size = get_partition_sector_size(partition);
-			if (sec_size <= 0){
-				*read = 0;
-				*write = 0;
-				LOGE("get RW error\n");
-				fclose(fp);
-				return;
-			}*/
-
 			//1
 			fscanf(fp, "%" SCNuMAX, &preads);
 			skip_tokens(fp, 1);
