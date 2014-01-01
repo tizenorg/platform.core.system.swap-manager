@@ -369,7 +369,7 @@ pid_t find_pid_from_path(const char* path)
 	return status;
 }
 
-pid_t get_pid_by_path(const char *binary_path)
+static pid_t get_pid_by_path(const char *binary_path)
 {
 	pid_t pkg_pid;
 	int len;
