@@ -46,7 +46,7 @@ static inline void close_on_exec_dup(int old, int new)
 	fcntl(new, F_SETFD, fcntl(new, F_GETFD) | FD_CLOEXEC);
 }
 
-void initialize_log()
+void initialize_log(void)
 {
 	int fd = open(DEBUG_LOGFILE, O_WRONLY | O_CREAT | O_TRUNC, 0777);
 	if (fd > 0) {
@@ -63,7 +63,7 @@ void initialize_log()
 }
 
 #else
-void initialize_log()
+void initialize_log(void)
 {
 }
 #endif
