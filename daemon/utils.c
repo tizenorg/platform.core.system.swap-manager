@@ -194,8 +194,6 @@ int exec_app_tizen(const char *app_id, const char *exec_path)
 int exec_app_common(const char* exec_path)
 {
 	pid_t pid;
-	int hw_acc = 0;
-	char manifest[PATH_MAX];
 	char command[PATH_MAX];
 
 	LOGI("exec %s\n", exec_path);
