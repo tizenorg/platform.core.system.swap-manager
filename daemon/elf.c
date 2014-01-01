@@ -131,7 +131,7 @@ static bool exist(const char *filename)
 	return stat(filename, &decoy) == 0;
 }
 
-void suffix_filename(char buf[PATH_MAX], const char *filename)
+static void suffix_filename(char buf[PATH_MAX], const char *filename)
 {
 	char adj_filename[PATH_MAX];
 	sprintf(adj_filename, "%s.exe", filename);

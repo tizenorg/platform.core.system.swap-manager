@@ -199,7 +199,7 @@ static inline int get_apps_to_run()
 	return manager.apps_to_run;
 }
 
-int kill_app_by_info(const struct app_info_t *app_info)
+static int kill_app_by_info(const struct app_info_t *app_info)
 {
 	int res = 0;
 
