@@ -207,7 +207,7 @@ int samplingStop(void);
 int prepare_profiling(void);
 int start_profiling(void);
 void stop_profiling(void);
-int reconfigure();
+int reconfigure(struct conf_t conf);
 int sendACKCodeToHost(enum HostMessageType resp, int msgcode);
 void terminate_all(void);
 
