@@ -156,6 +156,8 @@ int get_device_info(char* buffer, int buffer_len);
 
 int get_file_status(int* pfd, const char* filename);
 
+uint64_t get_total_alloc_size(void);
+
 int initialize_system_info(void);
 
 int finalize_system_info(void);
