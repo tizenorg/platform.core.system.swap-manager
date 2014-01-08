@@ -46,9 +46,6 @@
 
 #include <ctype.h>
 
-#include <attr/xattr.h>		// for fsetxattr
-#include <sys/smack.h>
-
 #include <fcntl.h>
 
 #include <assert.h>
@@ -62,6 +59,7 @@
 #include "da_inst.h"
 #include "da_data.h"
 #include "input_events.h"
+#include "smack.h"
 #include "debug.h"
 
 #define DA_WORK_DIR			"/home/developer/sdk_tools/da/"
@@ -422,7 +420,7 @@ int start_profiling(void)
 		LOGW("Failed to create directory for screenshot : %s\n",
 		     strerror(errno));
 
-	smack_lsetlabel(SCREENSHOT_DIR, "*", SMACK_LABEL_ACCESS);
+	set_label_for_all(SCREENSHOT_DIR);
 
 	if (samplingStart() < 0) {
 		LOGE("Cannot start sampling\n");
@@ -614,7 +612,7 @@ static int targetServerHandler(void)
 
 	if (manager.target[index].socket >= 0) {
 		/* accept succeed */
-		fd_setup_smack_attributes(manager.target[index].socket);
+		fd_setup_attributes(manager.target[index].socket);
 
 		/* send config message to target process */
 		log.type = MSG_OPTION;

@@ -42,22 +42,14 @@
 #include <sys/stat.h>	// for open
 #include <fcntl.h>		// for open
 #include <grp.h>		// for setgroups
-#include <sys/smack.h>
-#include <attr/xattr.h>
-
 #include <sys/wait.h> /* waitpid */
 
 #include "daemon.h"
 #include "utils.h"
+#include "smack.h"
 #include "debug.h"
 
 #define BUFFER_MAX			1024
-#define APP_GROUPS_MAX		100
-#define APP_GROUP_LIST		"/usr/share/privilege-control/app_group_list"
-#define SELF_LABEL_FILE		"/proc/self/attr/current"
-
-#define SMACK_LABEL_LEN		255
-
 #define SID_APP				5000
 #define MANIFEST_PATH		"/info/manifest.xml"
 
@@ -106,26 +98,6 @@ int64_t str_to_int64(char* str)
 	}
 
 	return (res * factor);
-}
-
-int smack_set_label_for_self(const char *label)
-{
-	int len;
-	int fd;
-	int ret;
-
-	len = strnlen(label, SMACK_LABEL_LEN + 1);
-	if (len > SMACK_LABEL_LEN)
-		return -1;
-
-	fd = open(SELF_LABEL_FILE, O_WRONLY);
-	if (fd < 0)
-		return -1;
-
-	ret = write(fd, label, len);
-	close(fd);
-
-	return (ret < 0) ? -1 : 0;
 }
 
 // return 0 if succeed
@@ -538,12 +510,6 @@ char *dereference_tizen_exe_path(const char *path, char *resolved)
 	}
 
 	return res;
-}
-
-void fd_setup_smack_attributes(int fd)
-{
-	fsetxattr(fd, "security.SMACK64IPIN", "*", 1, 0);
-	fsetxattr(fd, "security.SMACK64IPOUT", "*", 1, 0);
 }
 
 float get_uptime(void)
