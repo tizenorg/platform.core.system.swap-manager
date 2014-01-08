@@ -41,14 +41,15 @@
 #include <signal.h>			// for signal
 #include <unistd.h>			// for unlink
 #include <fcntl.h>			// for open, fcntl
+#include <errno.h>
 #include <stdbool.h>
-#include <attr/xattr.h>		// for fsetxattr
 #include "daemon.h"
 #include "da_protocol.h"
 #include "sys_stat.h"
 #include "buffer.h"
 #include "debug.h"
 #include "utils.h"
+#include "smack.h"
 
 #define SINGLETON_LOCKFILE			"/tmp/da_manager.lock"
 #define PORTFILE					"/tmp/port.da"
@@ -153,7 +154,7 @@ static int makeTargetServerSocket()
 		return -1;
 	}
 
-	fd_setup_smack_attributes(manager.target_server_socket);
+	fd_setup_attributes(manager.target_server_socket);
 
 	memset(&serverAddrUn, '\0', sizeof(serverAddrUn));
 	serverAddrUn.sun_family = AF_UNIX;
