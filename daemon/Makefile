@@ -38,7 +38,11 @@ DAEMON_SRCS =			\
 	utils.c			\
 	da_protocol_check.c     \
 	md5.c			\
-	input_events.c
+	input_events.c		\
+	device_vconf.c		\
+	device_system_info.c	\
+	device_camera.c		\
+	smack.c
 
 DAEMON_OBJS = $(patsubst %.c,%.o, $(DAEMON_SRCS))
 
