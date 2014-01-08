@@ -47,18 +47,13 @@
 #include <inttypes.h>
 #include <stdint.h>
 
-#include <system_info.h>
-#include <runtime_info.h>
-#include <telephony_network.h>
-#include <call.h>
-
 #include "da_protocol.h"
 #include "da_data.h"
-
-#include "vconf.h"
-
 #include "sys_stat.h"
 #include "daemon.h"
+#include "device_system_info.h"
+#include "device_vconf.h"
+#include "device_camera.h"
 #include "debug.h"
 
 // defines for runtime environment
@@ -85,8 +80,6 @@
 #define CPUMHZ		"cpu MHz"
 #define DA_PROBE_TIZEN_SONAME		"da_probe_tizen.so"
 #define DA_PROBE_OSP_SONAME			"da_probe_osp.so"
-#define CAMCORDER_FILE		"/usr/etc/mmfw_camcorder.ini"
-#define CAMERA_COUNT_STR	"DeviceCount"
 
 // define for correct difference of system feature vars
 #define val_diff(v_new, v_old) ((v_new < v_old) ? v_new : v_new - v_old)
@@ -156,53 +149,6 @@ int get_file_status(int *pfd, const char *filename)
 // =============================================================================
 // device status information getter functions
 // =============================================================================
-static int get_wifi_status()
-{
-	int wifi_status = 0;
-	int res = 0;
-
-	res = vconf_get_int(VCONFKEY_WIFI_STATE, &wifi_status);
-	if (unlikely(res < 0)) {
-		LOG_ONCE_W("get error #%d\n", res);
-		wifi_status = VCONFKEY_WIFI_OFF;
-	}
-
-	return wifi_status;
-}
-
-static int get_bt_status()
-{
-	int bt_status = false;
-	int res = 0;
-
-	res = vconf_get_int(VCONFKEY_BT_STATUS, &bt_status);
-	if (unlikely(res < 0)) {
-		LOG_ONCE_W("get error #%d\n", res);
-		bt_status = VCONFKEY_BT_STATUS_OFF;
-	}
-
-	return bt_status;
-}
-
-static int get_gps_status()
-{
-	int gps_status = 0;
-	int res = 0;
-
-	res = vconf_get_int(VCONFKEY_LOCATION_ENABLED, &gps_status);
-	if(unlikely(res < 0)) {
-		LOG_ONCE_W("get error #%d\n", res);
-		gps_status = VCONFKEY_LOCATION_GPS_OFF;
-	} else if(gps_status != 0) {
-		res = vconf_get_int(VCONFKEY_LOCATION_GPS_STATE, &gps_status);
-		if (unlikely(res < 0)) {
-			LOG_ONCE_W("get error #%d\n", res);
-			gps_status = VCONFKEY_LOCATION_GPS_OFF;
-		}
-	}
-
-	return gps_status;
-}
 
 static void init_brightness_status()
 {
@@ -304,122 +250,6 @@ static int get_video_status()
 			video_status = 1;
 
 	return video_status;
-}
-
-static int get_rssi_status()
-{
-
-	int flightmode_status;
-	int res = 0;
-
-	int rssi_status;
-	res = vconf_get_bool(VCONFKEY_TELEPHONY_FLIGHT_MODE,
-					&flightmode_status);
-	if(unlikely(res < 0)) {
-		LOG_ONCE_W("get err #%d <%s>\n", res,
-			 VCONFKEY_TELEPHONY_FLIGHT_MODE);
-		flightmode_status = 0;
-	}
-
-	if(!flightmode_status) {
-		res = vconf_get_int(VCONFKEY_TELEPHONY_RSSI, &rssi_status);
-		if(unlikely(res < 0)) {
-			LOG_ONCE_W("rssi get err #%d\n", res);
-			rssi_status = VCONFKEY_TELEPHONY_RSSI_0;
-		}
-	} else {
-		rssi_status = VCONFKEY_TELEPHONY_RSSI_0;
-	}
-
-	return rssi_status;
-
-	return 0;
-}
-
-static int get_call_status()
-{
-	int call_status = 0;
-	int res = 0;
-
-	res = vconf_get_int(VCONFKEY_CALL_STATE, &call_status);
-	if(unlikely(res < 0)) {
-		LOG_ONCE_W("get err #%d\n", res);
-		call_status = VCONFKEY_CALL_OFF;
-	}
-
-	return call_status;
-}
-
-/* dnet means 3G? */
-static int get_dnet_status()
-{
-	int dnet_status = false;
-	int res = 0;
-
-	res = vconf_get_int(VCONFKEY_DNET_STATE, &dnet_status);
-	if(unlikely(res < 0)) {
-		LOG_ONCE_W("get err #%d <%s>\n", res, VCONFKEY_DNET_STATE);
-		dnet_status = VCONFKEY_DNET_OFF;
-	}
-
-	return dnet_status;
-}
-
-static int get_camera_status()
-{
-	int camera_status = 0;
-
-	if (unlikely(vconf_get_int(VCONFKEY_CAMERA_STATE, &camera_status) < 0)) {
-		camera_status = VCONFKEY_CAMERA_STATE_NULL;
-	}
-
-	return camera_status;
-}
-
-// this means silent mode?
-static int get_sound_status()
-{
-	int sound_status = 0;
-	int res = 0;
-
-	res = vconf_get_bool(VCONFKEY_SETAPPL_SOUND_STATUS_BOOL,
-			     &sound_status);
-	if (unlikely(res < 0)) {
-		LOG_ONCE_W("get err #%d\n", res);
-		sound_status = 0;
-	}
-
-	return sound_status;
-}
-
-static int get_audio_status()
-{
-	int audio_state = 0;
-	int res = 0;
-
-	res = vconf_get_int(VCONFKEY_SOUND_STATUS,
-			    &audio_state);
-	if (unlikely(res < 0)) {
-		LOG_ONCE_W("get err #%d\n", res);
-		audio_state = 0;
-	}
-
-	return !!audio_state;
-}
-
-static int get_vibration_status()
-{
-	int vibration_status = 0;
-	int res = 0;
-
-	res = vconf_get_bool(VCONFKEY_SETAPPL_VIBRATION_STATUS_BOOL,
-					&vibration_status);
-	if(unlikely(res < 0)) {
-		LOG_ONCE_W("get err #%d\n", res);
-		vibration_status = 0;
-	}
-
-	return vibration_status;
 }
 
 static void init_voltage_status()
@@ -1311,124 +1141,41 @@ static int update_thread_data(int pid)
 // overall information getter functions
 // ========================================================================
 
-static int get_camera_count(void)
-{
-	FILE* fp;
-	int count = 0;
-	int size;
-	char buf[BUFFER_MAX];
-
-	fp = fopen(CAMCORDER_FILE, "r");
-	if(fp != NULL)
-	{
-		size = strlen(CAMERA_COUNT_STR);
-
-		while(fgets(buf, BUFFER_MAX, fp) != NULL)
-		{
-			if(strncmp(buf, CAMERA_COUNT_STR, size) == 0) {
-				sscanf(buf, CAMERA_COUNT_STR " = %d", &count);
-				break;
-			}
-		}
-
-		fclose(fp);
-	} else {
-		//can not open file
-	}
-
-	return count;
-}
-
 static int get_device_network_type(char* buf, int buflen)
 {
 	int len = 0;
-	bool bool_var;
 
-	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.cdma", &bool_var);
-	if(bool_var) len += sprintf(buf + len, "CDMA,");
-	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.edge", &bool_var);
-	if(bool_var) len += sprintf(buf + len, "EDGE,");
-	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.gprs", &bool_var);
-	if(bool_var) len += sprintf(buf + len, "GPRS,");
-	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.gsm", &bool_var);
-	if(bool_var) len += sprintf(buf + len, "GSM,");
-	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.hsdpa", &bool_var);
-	if(bool_var) len += sprintf(buf + len, "HSDPA,");
-	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.hspa", &bool_var);
-	if(bool_var) len += sprintf(buf + len, "HSPA,");
-	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.hsupa", &bool_var);
-	if(bool_var) len += sprintf(buf + len, "HSUPA,");
-	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.umts", &bool_var);
-	if(bool_var) len += sprintf(buf + len, "UMTS,");
-	system_info_get_platform_bool("tizen.org/feature/network.telephony.service.lte", &bool_var);
-	if(bool_var) len += sprintf(buf + len, "LTE,");
+	if (is_cdma_available())
+		len += sprintf(buf + len, "CDMA,");
 
-	if (len != 0) {
+	if (is_edge_available())
+		len += sprintf(buf + len, "EDGE,");
+
+	if (is_gprs_available())
+		len += sprintf(buf + len, "GPRS,");
+
+	if (is_gsm_available())
+		len += sprintf(buf + len, "GSM,");
+
+	if (is_hsdpa_available())
+		len += sprintf(buf + len, "HSDPA,");
+
+	if (is_hspa_available())
+		len += sprintf(buf + len, "HSPA,");
+
+	if (is_hsupa_available())
+		len += sprintf(buf + len, "HSUPA,");
+
+	if (is_umts_available())
+		len += sprintf(buf + len, "UMTS,");
+
+	if (is_lte_available())
+		len += sprintf(buf + len, "LTE,");
+
+	if (len != 0)
 		buf[--len] = 0;
-	}
+
 	return len;
-}
-
-
-static int get_device_availability_info(char* buf, int buflen)
-{
-	int camera_count = 0;
-	bool blue_support = false;
-	bool gps_support = false;
-	bool wifi_support = false;
-	char* networktype = NULL;
-	int loglen = 0;
-	char network_type[128];
-	int network_len;
-
-	system_info_get_platform_bool("tizen.org/feature/network.bluetooth", &blue_support);
-	camera_count = get_camera_count();
-	system_info_get_platform_bool("tizen.org/feature/location.gps", &gps_support);
-	network_len = get_device_network_type(networktype, 128);
-	system_info_get_platform_bool("tizen.org/feature/network.wifi", &wifi_support);
-
-	loglen += sprintf(buf, "%d`,%d`,%d`,%d`,",
-			(int)blue_support,
-			(int)gps_support,
-			(int)wifi_support,
-			camera_count);
-
-	if(network_type != NULL && network_len > 0) {
-		loglen += sprintf(buf + loglen, "%s", networktype);
-		free(networktype);
-	}
-
-	return loglen;
-}
-
-int get_device_info(char* buffer, int buffer_len)
-{
-	int res = 0;
-/*
-	char width[BUFFER_MAX];
-	char height[BUFFER_MAX];
-	char theme[BUFFER_MAX];
-	char version[BUFFER_MAX];
-	char scale[BUFFER_MAX];
-	char removable[BUFFER_MAX];
-	char comment[BUFFER_MAX * 2];
-
-	memset(width, 0, sizeof(width));
-	memset(height, 0, sizeof(height));
-	memset(theme, 0, sizeof(theme));
-	memset(version, 0, sizeof(version));
-	memset(scale, 0, sizeof(scale));
-	memset(removable, 0, sizeof(removable));
-	memset(comment, 0, sizeof(comment));
-*/
-	res += sprintf(buffer, "%lu`,%d`,", get_system_total_memory(), get_total_drive());
-	res += get_device_availability_info(buffer + res, buffer_len - res);
-	res += sprintf(buffer + res, "`,%d", get_max_brightness());
-
-	res += sprintf(buffer + res, "`,`,`,`,`,`,`,");
-//	res += sprintf(buffer + res, "`,%s`,%s`,%s`,%s`,%s`,%s`,%s", width, height, theme, version, scale, removable, comment);
-
-	return res;
 }
 
 static int update_cpus_info(int event_num, float elapsed)
@@ -2312,15 +2059,9 @@ int fill_target_info(struct target_info_t *target_info)
 	target_info->storage_size = stat_get_storageinfo(FSINFO_TYPE_TOTAL) *
 		1024 * 1024;
 
-	system_info_get_platform_bool("tizen.org/feature/network.bluetooth",
-									(_Bool *)&target_info->bluetooth_supp);
-
-
-	system_info_get_platform_bool("tizen.org/feature/location.gps",
-				   (_Bool *)&target_info->gps_supp);
-
-	system_info_get_platform_bool("tizen.org/feature/network.wifi",
-				   (_Bool *)&target_info->wifi_supp);
+	target_info->bluetooth_supp = is_bluetooth_available();
+	target_info->gps_supp = is_gps_available();
+	target_info->wifi_supp = is_wifi_available();
 
 	target_info->camera_count = get_camera_count();
 
