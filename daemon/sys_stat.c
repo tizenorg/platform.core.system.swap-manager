@@ -2231,7 +2231,7 @@ static uint32_t pop_app_energy_per_device(enum supported_device dev)
 	}
 }
 
-int get_pid_array(int arr[], const int n)
+static int get_pid_array(int arr[], const int n)
 {
 	DIR *d = opendir("/proc");
 	struct dirent *dirent;
@@ -2275,9 +2275,23 @@ static pid_t get_first_target_process(void)
 	return pid;
 }
 
+static int get_target_pid_count(void)
+{
+	int target_pidcount = 0;
+	int i;
+
+	for (i = 0; i < MAX_TARGET_COUNT; i++) {
+		if (manager.target[i].socket != -1 &&
+		    manager.target[i].pid != -1)
+			target_pidcount++;
+	}
+
+	return target_pidcount;
+}
+
 // return log length (>0) for normal case
 // return negative value for error
-int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
+int get_system_info(struct system_info_t *sys_info)
 {
 	static int event_num = 0;
 	uint64_t sysmemtotal = 0;
@@ -2285,6 +2299,11 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 	int res = 0;
 	float elapsed;
 	float factor;
+	const int max_pid_num = 1024; /* ugly hardcode */
+	int pidarray[max_pid_num];
+	int pidcount = 0;
+
+	pidcount = get_pid_array(pidarray, max_pid_num);
 
 	LOGI_th_samp("start\n");
 	LOGI_th_samp("PID count : %d\n", pidcount);
@@ -2295,6 +2314,7 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 	if (IS_OPT_SET(FL_CPU) ||
 	    IS_OPT_SET(FL_PROCESSES) ||
 	    IS_OPT_SET(FL_MEMORY)) {
+
 		if (update_process_data(pidarray, pidcount, PROCDATA_STAT) < 0) {
 			LOGE("Failed to update process stat data\n");
 			goto fail_exit;
@@ -2328,7 +2348,7 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 			goto fail_exit;
 		}
 
-		if (pidcount > 0)
+		if (get_target_pid_count() > 0)
 			if (update_thread_data(get_first_target_process()) < 0) {
 				LOGE("Failed to update thread stat data\n");
 				goto fail_exit;
