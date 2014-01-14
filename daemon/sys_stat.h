@@ -150,7 +150,7 @@ struct target_info_t {
 };
 
 int get_pid_array(int pidarr[], const int n);
-int get_system_info(struct system_info_t *sys_info, int *pidarray, int pidcount);
+int get_system_info(struct system_info_t *sys_info, int *pidarray, int pidcount, int target_pidcount);
 
 int get_device_info(char* buffer, int buffer_len);
 

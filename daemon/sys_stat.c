@@ -2277,7 +2277,7 @@ static pid_t get_first_target_process(void)
 
 // return log length (>0) for normal case
 // return negative value for error
-int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
+int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount, int target_pidcount)
 {
 	static int event_num = 0;
 	uint64_t sysmemtotal = 0;
@@ -2328,7 +2328,7 @@ int get_system_info(struct system_info_t *sys_info, int* pidarray, int pidcount)
 			goto fail_exit;
 		}
 
-		if (pidcount > 0)
+		if (target_pidcount > 0)
 			if (update_thread_data(get_first_target_process()) < 0) {
 				LOGE("Failed to update thread stat data\n");
 				goto fail_exit;
