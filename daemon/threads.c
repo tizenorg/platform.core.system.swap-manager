@@ -229,7 +229,7 @@ int makeRecvThread(int index)
 //static
 void* samplingThread(void* data)
 {
-	int err, signo, i;
+	int err, signo;
 	sigset_t waitsigmask;
 
 	LOGI("sampling thread started\n");
@@ -246,15 +246,10 @@ void* samplingThread(void* data)
 		}
 
 		if (signo == SIGALRM) {
-			const int max_pid_num = 1024; /* ugly hardcode */
-			int pidarr[max_pid_num];
-			int pidcount = 0;
 			struct system_info_t sys_info;
 			struct msg_data_t *msg;
 
-			pidcount = get_pid_array(pidarr, max_pid_num);
-
-			if (get_system_info(&sys_info, pidarr, pidcount) == -1) {
+			if (get_system_info(&sys_info) == -1) {
 				LOGE("Cannot get system info\n");
 				//do not send sys_info because
 				//it is corrupted
