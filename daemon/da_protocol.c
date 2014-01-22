@@ -686,9 +686,24 @@ void stop_all_done(void)
 	pthread_mutex_unlock(&stop_all_mutex);
 }
 
+static void stop_web_apps(void)
+{
+	const struct app_info_t *app_info;
+	struct app_list_t *app = NULL;
+
+	app_info = app_info_get_first(&app);
+	while (app_info) {
+		if (app_info->app_type == APP_TYPE_WEB)
+			kill_app_web(app_info->app_id);
+		app_info = app_info_get_next(&app);
+	}
+}
+
 enum ErrorCode stop_all(void)
 {
 	enum ErrorCode error_code = ERR_NO;
+
+	stop_web_apps();
 
 	pthread_mutex_lock(&stop_all_mutex);
 	error_code = stop_all_no_lock();

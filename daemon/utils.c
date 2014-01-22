@@ -190,6 +190,66 @@ int exec_app_common(const char* exec_path)
 	}
 }
 
+int exec_app_web(const char *app_id)
+{
+	pid_t pid;
+
+	LOGI("wrt-launcher path is %s,\n"
+	     "wrt-launcher name (%s), app_id (%s)\n",
+	     WRT_LAUNCHER_PATH, WRT_LAUNCHER_NAME, app_id);
+
+	pid = fork();
+	if (pid == -1)
+		return -1;
+
+	if (pid > 0) { /* parent */
+		int status, ret;
+		do
+			ret = waitpid(pid, &status, 0);
+		while (ret == -1 && errno == EINTR);
+		return 0;
+	} else { /* child */
+		execl(WRT_LAUNCHER_PATH,
+		      WRT_LAUNCHER_NAME,
+		      WRT_LAUNCHER_LAUNCH,
+		      app_id,
+		      NULL);
+		/* FIXME: If code flows here, it deserves greater attention */
+		LOGE("Cannot run exec!\n");
+		_Exit(EXIT_FAILURE);
+	}
+}
+
+void kill_app_web(const char *app_id)
+{
+	pid_t pid;
+
+	LOGI("wrt-launcher path is %s,\n"
+	     "wrt-launcher name (%s), app_id (%s)\n",
+	     WRT_LAUNCHER_PATH, WRT_LAUNCHER_NAME, app_id);
+
+	pid = fork();
+	if (pid == -1)
+		return;
+
+	if (pid > 0) { /* parent */
+		int status, ret;
+		do
+			ret = waitpid(pid, &status, 0);
+		while (ret == -1 && errno == EINTR);
+		return;
+	} else { /* child */
+		execl(WRT_LAUNCHER_PATH,
+		      WRT_LAUNCHER_NAME,
+		      WRT_LAUNCHER_KILL,
+		      app_id,
+		      NULL);
+		/* FIXME: If code flows here, it deserves greater attention */
+		LOGE("Cannot run exec!\n");
+		_Exit(EXIT_FAILURE);
+	}
+}
+
 // find process id from executable binary path
 pid_t find_pid_from_path(const char* path)
 {

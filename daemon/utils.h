@@ -42,6 +42,10 @@ extern "C" {
 #define LAUNCH_APP_PATH			"/usr/bin/launch_app"
 #define KILL_APP_PATH			"/usr/bin/pkill"
 #define LAUNCH_APP_NAME			"launch_app"
+#define	WRT_LAUNCHER_PATH		"/usr/bin/wrt-launcher"
+#define	WRT_LAUNCHER_NAME		"wrt-launcher"
+#define	WRT_LAUNCHER_LAUNCH		"-s"
+#define	WRT_LAUNCHER_KILL		"-k"
 #define LAUNCH_APP_SDK			"__AUL_SDK__"
 #define DA_PRELOAD_EXEC			"DYNAMIC_ANALYSIS"
 #define DA_PRELOAD(AppType)		AppType ? DA_PRELOAD_OSP : DA_PRELOAD_TIZEN
@@ -72,6 +76,8 @@ int is_same_app_process(char* appPath, int pid);
 
 int exec_app_tizen(const char *app_id, const char *exec_path);
 int exec_app_common(const char* exec_path);
+int exec_app_web(const char *app_id);
+void kill_app_web(const char *app_id);
 char *dereference_tizen_exe_path(const char *path, char *resolved);
 void fd_setup_smack_attributes(int fd);
 float get_uptime(void);

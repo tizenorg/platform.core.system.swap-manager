@@ -62,6 +62,9 @@ int check_app_id(uint32_t app_type, char *app_id)
 			if (!res)
 				LOGE("wrong app id for APP_COMMON\n");
 			break;
+		case APP_TYPE_WEB:
+			res = 1;
+			break;
 		default :
 			LOGE("wrong app type\n");
 			return 0;

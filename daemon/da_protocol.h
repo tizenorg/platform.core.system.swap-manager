@@ -195,6 +195,7 @@ enum app_type_t {
 	APP_TYPE_TIZEN = 1,
 	APP_TYPE_RUNNING = 2,
 	APP_TYPE_COMMON = 3,
+	APP_TYPE_WEB = 4
 };
 
 struct app_info_t {
