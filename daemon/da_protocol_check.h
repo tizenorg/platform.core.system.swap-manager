@@ -42,7 +42,7 @@
 #define US_APP_COUNT_MAX MAX_TARGET_COUNT
 
 #define US_APP_INST_FUNC_MIN 0
-#define US_APP_INST_FUNC_MAX 50000
+#define US_APP_INST_FUNC_MAX 100000
 
 #define US_FUNC_ARGS "bcdxpfw"
 #define US_FUNC_RETURN "vnbcdxpfw"
