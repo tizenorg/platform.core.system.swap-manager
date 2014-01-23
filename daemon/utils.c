@@ -211,7 +211,7 @@ int exec_app_web(const char *app_id)
 	} else { /* child */
 		execl(WRT_LAUNCHER_PATH,
 		      WRT_LAUNCHER_NAME,
-		      WRT_LAUNCHER_LAUNCH,
+		      WRT_LAUNCHER_START,
 		      app_id,
 		      NULL);
 		/* FIXME: If code flows here, it deserves greater attention */
