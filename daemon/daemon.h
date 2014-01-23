@@ -172,6 +172,7 @@ typedef struct
 {
 	int host_server_socket;
 	int target_server_socket;
+	int kernel_socket;
 	int target_count;
 	int apps_to_run;
 	unsigned int config_flag;
