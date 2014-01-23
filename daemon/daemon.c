@@ -215,7 +215,7 @@ static int kill_app_by_info(const struct app_info_t *app_info)
 		res = kill_app(app_info->exe_path);
 		break;
 	case APP_TYPE_WEB:
-		/* do nothing (it is restarted by itself */
+		/* do nothing (it is restarted by itself) */
 		break;
 	default:
 		LOGE("Unknown app type %d\n", app_info->app_type);

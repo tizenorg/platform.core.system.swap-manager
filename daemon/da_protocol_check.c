@@ -42,6 +42,21 @@ int check_app_type(uint32_t app_type)
 	}
 }
 
+static int is_pid_string_valid(const char *pid_str)
+{
+	char *tmp;
+	long pid;
+
+	if (pid_str[0] == '\0') /* no pid filtering */
+		return 1;
+
+	/* otherwise this should be a valid number */
+	pid = strtol(pid_str, &tmp, 10);
+
+	/* TODO: get max pid value from /proc/sys/kernel/pid_max */
+	return *tmp == '\0' && pid > 0 && pid <= 32768;
+}
+
 int check_app_id(uint32_t app_type, char *app_id)
 {
 	int res = 0;
@@ -51,11 +66,10 @@ int check_app_id(uint32_t app_type, char *app_id)
 			res = 1;
 			break;
 		case APP_TYPE_RUNNING:
-			strtol(app_id, &p, 10);
-			if ((*app_id != 0) && (*p == 0))
-				res = 1;
-			else
+			if (!is_pid_string_valid(app_id))
 				LOGE("wrong app id for APP_RUNNING\n");
+			else
+				res = 1;
 			break;
 		case APP_TYPE_COMMON:
 			res = (strlen(app_id) == 0);
