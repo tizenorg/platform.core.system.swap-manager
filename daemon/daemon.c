@@ -43,6 +43,8 @@
 #include <sys/timerfd.h>	// for timerfd
 #include <unistd.h>		// for access, sleep
 #include <stdbool.h>
+#include <linux/netlink.h>
+#include <linux/connector.h>
 
 #include <ctype.h>
 
@@ -60,6 +62,7 @@
 #include "da_data.h"
 #include "input_events.h"
 #include "smack.h"
+#include "us_interaction_msg.h"
 #include "debug.h"
 
 #define DA_WORK_DIR			"/home/developer/sdk_tools/da/"
@@ -820,8 +823,57 @@ static int hostServerHandler(void)
 	}
 }
 
+static int kernel_handler(void)
+{
+	int res, size, ret;
+	socklen_t optlen;
+	struct nlmsghdr *nlh;
+	struct cn_msg *msg;
+	ssize_t len;
+
+	/* Get buffer size */
+	optlen = sizeof(size);
+
+	/* We're using SOCK_DGRAM, so, get it maximum size */
+	res = getsockopt(manager.kernel_socket, SOL_SOCKET, SO_SNDBUF, &size,
+			 &optlen);
+
+	if (res == -1) {
+		LOGE("Get maximum buffer size failed\n");
+		return -1;
+	}
+
+	/* Alloc mem for nlh message struct and receive it */
+	nlh = malloc(size);
+	if (nlh == NULL)
+		return -1;
+	len = recv(manager.kernel_socket, nlh, size, 0);
+	if ((len <= 0) || (nlh->nlmsg_len == 0)) {
+		ret = -1;
+		goto free_and_end;
+	}
+
+	/* nlh data field contains connectors message */
+	msg = NLMSG_DATA(nlh);
+	if (msg->len == 0) {
+		ret = -1;
+		goto free_and_end;
+	}
+
+	/* Insert your message handler here */
+
+	ret = 0;
+
+free_and_end:
+	free(nlh);
+
+	return ret;
+}
+
+
 static Ecore_Fd_Handler *host_connect_handler;
 static Ecore_Fd_Handler *target_connect_handler;
+static Ecore_Fd_Handler *kernel_connect_handler;
 
 static Eina_Bool host_connect_cb(void *data, Ecore_Fd_Handler *fd_handler)
 {
@@ -841,6 +893,15 @@ static Eina_Bool target_connect_cb(void *data, Ecore_Fd_Handler *fd_handler)
 		terminate_error("Internal DA framework error, "
 				"Please re-run the profiling "
 				"(targetServerHandler)\n", 1);
+	}
+
+	return ECORE_CALLBACK_RENEW;
+}
+
+static Eina_Bool kernel_connect_cb(void *data, Ecore_Fd_Handler *fd_handler)
+{
+	if (kernel_handler() < 0) {
+		LOGE("Internal DA framework error (kernel_handler)\n");
 	}
 
 	return ECORE_CALLBACK_RENEW;
@@ -867,6 +928,17 @@ static bool initialize_events(void)
 					  NULL, NULL);
 	if (!target_connect_handler) {
 		LOGE("Target server socket add error\n");
+		return false;
+	}
+
+	kernel_connect_handler =
+	    ecore_main_fd_handler_add(manager.kernel_socket,
+				      ECORE_FD_READ,
+				      kernel_connect_cb,
+				      NULL,
+				      NULL, NULL);
+	if (!kernel_connect_handler) {
+		LOGE("Kernel socket add error\n");
 		return false;
 	}
 
