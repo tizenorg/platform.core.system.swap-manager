@@ -146,18 +146,13 @@ static void* recvThread(void* data)
 		}
 		else if(log.type == MSG_TERMINATE)
 		{
+			LOGI("MSG_TERMINATE arrived: pid[%d]\n", target->pid);
+
 			// send stop message to main thread
 			event = EVENT_STOP;
 			write(target->event_fd, &event,
 			      sizeof(uint64_t));
 
-			struct msg_data_t *msg = malloc(sizeof(*msg) + /* pid */
-						        sizeof(uint32_t));
-			fill_data_msg_head(msg, NMSG_TERMINATE, 0,
-					   sizeof(uint32_t));
-			*(uint32_t *) msg->payload = (uint32_t) target->pid;
-			write_to_buf(msg);
-			free(msg);
 			break;
 		} else if (log.type == MSG_MSG) {
 			// don't send to host
