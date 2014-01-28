@@ -53,6 +53,7 @@
 #include "utils.h"
 #include "smack.h"
 #include "us_interaction_msg.h"
+#include "freezing.h"
 
 #define SINGLETON_LOCKFILE			"/tmp/da_manager.lock"
 #define PORTFILE					"/tmp/port.da"
@@ -480,6 +481,12 @@ int main()
 	if (err)
 		return 1;
 
+	err = create_freezer_subgroup();
+	if (err) {
+		LOGE("cannot create freezer subgroup");
+		return 1;
+	}
+
 	//init all file descriptors
 	init_system_file_descriptors();
 	//daemon work
@@ -488,6 +495,7 @@ int main()
 	daemonLoop();
 	LOGI("daemon loop finished\n");
 	stop_all();
+	destroy_freezer_subgroup();
 	finalizeManager();
 
 	close_system_file_descriptors();
