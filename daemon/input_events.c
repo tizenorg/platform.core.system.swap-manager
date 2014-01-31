@@ -131,7 +131,7 @@ static int check_input(char *inputname, int input_id)
 
 exit:
 	if (cmd_fp != NULL)
-		pclose(cmd_fp);
+		fclose(cmd_fp);
 	return ret;
 }
 
