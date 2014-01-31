@@ -535,8 +535,7 @@ static int parse_proc_smaps_file_bypid(char *path, proc_t* P)
 			}
 			else if(strncmp(buf, "Shared", 6) == 0)	// line is started with "Shared"
 			{
-				char *p = buf;
-				p = strstr(buf, ":");
+				char *p = strstr(buf, ":");
 				if (p != 0) {
 					sscanf(p, ":%s kB", numbuf);
 					P->sh_mem += atoi(numbuf);
@@ -577,8 +576,7 @@ static int parse_proc_smaps_file_bypid(char *path, proc_t* P)
 			}
 			else if(strncmp(buf, "Shared", 6) == 0)	// line is started with "Shared"
 			{
-				char *p = buf;
-				p = strstr(buf, ":");
+				char *p = strstr(buf, ":");
 				if (p != 0) {
 					sscanf(p, ":%s kB", numbuf);
 					P->sh_mem += atoi(numbuf);
