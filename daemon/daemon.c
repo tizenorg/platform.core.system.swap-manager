@@ -729,8 +729,10 @@ static int controlSocketHandler(int efd)
 			// Receive payload (if exists)
 			recv_len = recv(manager.host.control_socket,
 					msg->payload, msg->len, MSG_WAITALL);
-			if (recv_len == -1)
+			if (recv_len == -1) {
+				free(msg);
 				return -11;
+			}
 		}
 		printBuf((char *)msg, MSG_CMD_HDR_LEN + msg->len);
 		res = host_message_handler(msg);
