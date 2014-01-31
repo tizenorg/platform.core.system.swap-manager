@@ -198,21 +198,16 @@ static struct probe_list_t *probe_list_rm_element(struct data_list_t *list, stru
 {
 	struct probe_list_t *prev = element->prev;
 	struct probe_list_t *next = element->next;
-	if (element != NULL) {
-		if (prev != NULL)
-			// prev != null, next == null
-			// prev != null, next != null
-			prev->next = next;
-		else
-			// prev == null, next == null
-			// prev == null, next != null
-			list->list = next;
 
-		if (next != NULL)
-			next->prev = prev;
+	if (prev != NULL)
+		prev->next = next;
+	else
+		list->list = next;
 
-		list->size -= element->size;
-	}
+	if (next != NULL)
+		next->prev = prev;
+
+	list->size -= element->size;
 
 	list->func_num--;
 	free_probe_element(element);
@@ -223,20 +218,19 @@ static struct data_list_t *data_list_unlink_data(struct data_list_t **list, stru
 {
 	struct data_list_t *prev = element->prev;
 	struct data_list_t *next = element->next;
-	if (element != NULL) {
-		if (prev != NULL)
-			// prev != null, next == null
-			// prev != null, next != null
-			prev->next = next;
-		else
-			// prev == null, next == null
-			// prev == null, next != null
-			*list = next;
 
-		if (next != NULL)
-			next->prev = (struct lib_list_t *)prev;
+	if (prev != NULL)
+		/* prev != null, next == null */
+		/* prev != null, next != null */
+		prev->next = next;
+	else
+		/* prev == null, next == null */
+		/* prev == null, next != null */
+		*list = next;
 
-	}
+	if (next != NULL)
+		next->prev = (struct lib_list_t *)prev;
+
 	element->prev = NULL;
 	element->next = NULL;
 
