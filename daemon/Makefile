@@ -17,7 +17,7 @@ ifeq (arm, $(findstring arm, $(shell uname -sm)))
 endif
 
 COMMON_LIBS := -lglib-2.0 -lpthread
-TARGET_LIBS := $(COMMON_LIBS) -lvconf -lsmack -lcapi-system-info -lecore -leina -lpthread
+TARGET_LIBS := $(COMMON_LIBS) -lvconf -lsmack -lcapi-system-info -lecore -leina -lpthread -lwebsockets -ljansson
 CFLAGS := -Wall -pthread -g -O0 -I/usr/include/ecore-1 -I/usr/include/eina-1 -I/usr/include/eina-1/eina
 
 DAEMON_SRCS =			\
@@ -42,7 +42,8 @@ DAEMON_SRCS =			\
 	device_vconf.c		\
 	device_system_info.c	\
 	device_camera.c		\
-	smack.c
+	smack.c			\
+	wsi.c
 
 DAEMON_OBJS = $(patsubst %.c,%.o, $(DAEMON_SRCS))
 
