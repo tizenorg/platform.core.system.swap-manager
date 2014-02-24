@@ -218,6 +218,8 @@ int parse_inst_app(struct msg_buf_t *msg, struct app_list_t **dest)
 	}
 	if (!parse_string(msg, &app_info->exe_path) ||
 	    ((app_info->app_type != APP_TYPE_WEB) &&
+	     ((app_info->app_type != APP_TYPE_RUNNING) ||
+	      (app_info->app_id[0] != '\0')) &&
 	     !check_exec_path(app_info->exe_path)))
 	{
 		LOGE("exec path parsing error\n");
