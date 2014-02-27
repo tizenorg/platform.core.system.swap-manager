@@ -48,6 +48,7 @@
 #include "debug.h"
 #include "md5.h"
 #include "da_data.h"
+#include "freezing.h"
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -647,6 +648,11 @@ enum ErrorCode stop_all_no_lock(void)
 	// stop all only if it has not been called yet
 	if (check_running_status(&prof_session)) {
 		msg = gen_stop_msg();
+		if(thaw_subgroup()) {
+			LOGE("Cannot thaw subgroup\n");
+			error_code = ERR_UNKNOWN;
+			goto stop_all_exit;
+		}
 		terminate_all();
 		stop_profiling();
 
