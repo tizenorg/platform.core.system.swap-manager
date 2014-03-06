@@ -944,15 +944,17 @@ static bool initialize_events(void)
 		return false;
 	}
 
-	kernel_connect_handler =
-	    ecore_main_fd_handler_add(manager.kernel_socket,
-				      ECORE_FD_READ,
-				      kernel_connect_cb,
-				      NULL,
-				      NULL, NULL);
-	if (!kernel_connect_handler) {
-		LOGE("Kernel socket add error\n");
-		return false;
+	if (manager.kernel_socket != -1) {
+		kernel_connect_handler =
+		    ecore_main_fd_handler_add(manager.kernel_socket,
+					      ECORE_FD_READ,
+					      kernel_connect_cb,
+					      NULL,
+					      NULL, NULL);
+		if (!kernel_connect_handler) {
+			LOGE("Kernel socket add error\n");
+			return false;
+		}
 	}
 
 	return true;

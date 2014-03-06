@@ -250,11 +250,11 @@ static int makeKernelSocket(void)
 	int ret;
 
 	if (manager.kernel_socket != -1)
-		return -1;	// should be never happend
+		return -1;	// should never happend
 
 	manager.kernel_socket = socket(PF_NETLINK, SOCK_DGRAM, NETLINK_CONNECTOR);
 	if (manager.kernel_socket < 0) {
-		LOGE("Kernel socket creation failed\n");
+		LOGW("Kernel socket creation failed: %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -346,8 +346,7 @@ static int initializeManager(FILE *portfile)
 		return -1;
 	}
 
-	if (makeKernelSocket() != 0)
-		return -1;
+	makeKernelSocket();
 
 	int port = makeHostServerSocket();
 	if (port < 0) {
