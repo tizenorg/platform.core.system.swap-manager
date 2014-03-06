@@ -218,6 +218,9 @@ static int kill_app_by_info(const struct app_info_t *app_info)
 	case APP_TYPE_COMMON:
 		res = kill_app(app_info->exe_path);
 		break;
+	case APP_TYPE_WEB:
+		/* do nothing (it is restarted by itself) */
+		break;
 	default:
 		LOGE("Unknown app type %d\n", app_info->app_type);
 		res = -1;
@@ -255,6 +258,12 @@ static int exec_app(const struct app_info_t *app_info)
 			res = -1;
 		} else {
 			inc_apps_to_run();
+		}
+		break;
+	case APP_TYPE_WEB:
+		if (exec_app_web(app_info->app_id)) {
+			LOGE("Cannot exec web app %s\n", app_info->app_id);
+			res = -1;
 		}
 		break;
 	default:
@@ -944,15 +953,17 @@ static bool initialize_events(void)
 		return false;
 	}
 
-	kernel_connect_handler =
-	    ecore_main_fd_handler_add(manager.kernel_socket,
-				      ECORE_FD_READ,
-				      kernel_connect_cb,
-				      NULL,
-				      NULL, NULL);
-	if (!kernel_connect_handler) {
-		LOGE("Kernel socket add error\n");
-		return false;
+	if (manager.kernel_socket != -1) {
+		kernel_connect_handler =
+		    ecore_main_fd_handler_add(manager.kernel_socket,
+					      ECORE_FD_READ,
+					      kernel_connect_cb,
+					      NULL,
+					      NULL, NULL);
+		if (!kernel_connect_handler) {
+			LOGE("Kernel socket add error\n");
+			return false;
+		}
 	}
 
 	return true;
