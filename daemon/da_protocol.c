@@ -562,7 +562,8 @@ static int send_reply(struct msg_t *msg)
 static void write_msg_error(const char *err_str)
 {
 	struct msg_data_t *err_msg = gen_message_error(err_str);
-	write_to_buf(err_msg);
+	if (write_to_buf(err_msg) != 0)
+		LOGE("write to buf fail\n");
 	free_msg_data(err_msg);
 }
 

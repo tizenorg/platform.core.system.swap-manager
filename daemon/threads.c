@@ -90,7 +90,8 @@ static void* recvThread(void* data)
 			recvLen = recv(target->socket,
 				       (char *)msg + MSG_DATA_HDR_LEN,
 				       msg->len, MSG_WAITALL);
-			write_to_buf(msg);
+			if (write_to_buf(msg) != 0)
+				LOGE("write to buf fail\n");
 			free(msg);
 			continue;
 		}
@@ -156,7 +157,8 @@ static void* recvThread(void* data)
 			fill_data_msg_head(msg, NMSG_TERMINATE, 0,
 					   sizeof(uint32_t));
 			*(uint32_t *) msg->payload = (uint32_t) target->pid;
-			write_to_buf(msg);
+			if (write_to_buf(msg) != 0)
+				LOGE("write to buf fail\n");
 			free(msg);
 			break;
 		} else if (log.type == MSG_MSG) {
@@ -263,7 +265,8 @@ static void *samplingThread(void *data)
 				continue;
 			}
 
-			write_to_buf(msg);
+			if (write_to_buf(msg) != 0)
+				LOGE("write to buf fail\n");
 
 			printBuf((char *)msg, MSG_DATA_HDR_LEN + msg->len);
 
