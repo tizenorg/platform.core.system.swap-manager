@@ -62,8 +62,8 @@ void print_buf(char *buf, int len, const char *info);
 #endif
 
 #ifdef DEBUG
-#define LOGE(...) do_log("ERR", __func__, __VA_ARGS__)
-#define LOGW(...) do_log("WRN", __func__, __VA_ARGS__)
+#define LOGE(...) do_log("ERR", __func__, __LINE__, __VA_ARGS__)
+#define LOGW(...) do_log("WRN", __func__, __LINE__, __VA_ARGS__)
 
 #ifdef USE_LOG_ONCE
 	#define TOKENPASTE(x, y) x ## y
@@ -84,11 +84,11 @@ void print_buf(char *buf, int len, const char *info);
 	#define LOG_ONCE_E(...)
 #endif
 
-static inline void do_log(const char *prefix, const char *funcname, ...)
+static inline void do_log(const char *prefix, const char *funcname, int line, ...)
 {
 	va_list ap;
 	const char *fmt;
-	fprintf(stderr, "[%s][%f] (%s):", prefix, get_uptime(), funcname);
+	fprintf(stderr, "[%s][%f] (%s:%d):", prefix, get_uptime(), funcname, line);
 
 	va_start(ap, funcname);
 	fmt = va_arg(ap, const char *);
@@ -100,7 +100,7 @@ static inline void do_log(const char *prefix, const char *funcname, ...)
 		#define LOGI(...)
 		#define LOGI_(...)
 	#else
-		#define LOGI(...) do_log("INF", __func__, __VA_ARGS__)
+		#define LOGI(...) do_log("INF", __func__, __LINE__, __VA_ARGS__)
 		#define LOGI_(...)	do {		\
 			fprintf(stderr, __VA_ARGS__);	\
 			fflush(stderr);			\
