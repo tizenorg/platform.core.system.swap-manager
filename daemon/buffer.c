@@ -128,7 +128,9 @@ void wake_up_buf(void)
 int write_to_buf(struct msg_data_t *msg)
 {
 	if (write(manager.user_ev_fd, msg, MSG_DATA_HDR_LEN + msg->len) == -1) {
-		LOGE("write to buf: %s\n", strerror(errno));
+		LOGE("write to buf: %s (user_ev_fd=%d, msg=%p, len=%d)\n",
+		     strerror(errno), manager.user_ev_fd, msg,
+		     MSG_DATA_HDR_LEN + msg->len);
 		return 1;
 	}
 	return 0;
