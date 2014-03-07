@@ -325,7 +325,8 @@ static void terminate_error(char *errstr, int send_to_host)
 	if (send_to_host != 0) {
 		msg = gen_message_error(errstr);
 		if (msg) {
-			write_to_buf(msg);
+			if (write_to_buf(msg) != 0)
+				LOGE("write to buf fail\n");
 			free_msg_data(msg);
 		} else {
 			LOGI("cannot generate error message\n");
