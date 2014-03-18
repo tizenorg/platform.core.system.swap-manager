@@ -478,10 +478,8 @@ int main()
 		return 1;
 
 	err = create_freezer_subgroup();
-	if (err) {
-		LOGE("cannot create freezer subgroup");
-		return 1;
-	}
+	if (err)
+		LOGW("cannot create freezer subgroup");
 
 	//init all file descriptors
 	init_system_file_descriptors();
