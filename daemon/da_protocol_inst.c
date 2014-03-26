@@ -63,41 +63,52 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 	//name       | type   | len       | info
 	//------------------------------------------
 	//func_addr  | uint64 | 8         |
-	//args       | string | len(args) |end with '\0'
-	//ret_type   | char   | 1         |
+	//probe_type | char   | 1         |
 
 	uint32_t size = 0;
-	struct us_func_inst_plane_t *func;
-	int par_count = 0;
-	char *ret_type = NULL;
+	struct us_func_inst_plane_t *func = NULL;
+	char type;
+	uint64_t addr;
 
-	par_count = strlen(msg->cur_pos + sizeof(func->func_addr));
-	size = sizeof(*func) + par_count + 1 +
-	       sizeof(char) /* sizeof(char) for ret_type */;
-	func = malloc(size);
-	if (!parse_int64(msg, &(func->func_addr))) {
+	size = sizeof(*func);
+
+	if (!parse_int64(msg, &addr)) {
 		LOGE("func addr parsing error\n");
+		return 0;
+	}
+
+	if (!parse_int8(msg, &type)) {
+		LOGE("func type parsing error\n");
+		return 0;
+	}
+
+	switch (type) {
+	case SWAP_RETPROBE:
+		size += strlen(msg->cur_pos) + 1 + sizeof(char);
+		break;
+	case SWAP_FBI_PROBE:
+		size += sizeof(uint32_t) + /* register number */
+			sizeof(uint64_t) + /* register offset */
+			sizeof(uint64_t) + /* data size */
+			sizeof(uint64_t) + /* var id */
+			sizeof(uint32_t);  /* pointer order */
+		break;
+	default:
+		LOGE("wrong probe type\n");
 		goto err_ret;
 	}
 
-	if (!parse_string_no_alloc(msg, func->args) ||
-	    !check_us_inst_func_args(func->args))
-	{
-		LOGE("args format parsing error\n");
-		goto err_ret;
+	func = malloc(size);
+	if (func == NULL) {
+		LOGE("no memory\n");
+		return 0;
 	}
 
-	//func->args type is char[0]
-	//and we need put ret_type after func->args
-	ret_type = func->args + par_count + 1;
-	if (!parse_int8(msg, (uint8_t *)ret_type) ||
-	    !check_us_inst_func_ret_type(*ret_type))
-	{
-		LOGE("return type parsing error\n");
-		goto err_ret;
-	} else {
-		parse_deb("ret type = <%c>\n", *ret_type);
-	}
+	func->probe_type = type;
+	func->func_addr = addr;
+
+	memcpy(&func->probe_info, msg->cur_pos, size - sizeof(*func));
+	msg->cur_pos += size - sizeof(*func);
 
 	*dest = new_probe();
 	if (*dest == NULL) {
@@ -107,6 +118,7 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 	(*dest)->size = size;
 	(*dest)->func = func;
 	return 1;
+
 err_ret:
 	free(func);
 	return 0;
