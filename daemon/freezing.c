@@ -15,7 +15,6 @@
 static FILE *f_tasks_fd = NULL, *f_state_fd = NULL, *f_us_man_fd = NULL;
 static const char *freezer_frozen = "FROZEN";
 static const char *freezer_thawed = "THAWED";
-static char freezer_enabled = 0;
 
 static int open_freezer_files(void)
 {
@@ -62,11 +61,6 @@ int create_freezer_subgroup(void)
 	}
 
 	res = open_freezer_files();
-	if (res)
-		return res;
-
-	freezer_enabled = 1;
-	LOGI("Freezer enabled\n");
 
 	return res;
 }
@@ -75,9 +69,6 @@ int destroy_freezer_subgroup(void)
 {
 	struct stat st;
 	int res = 0;
-
-	freezer_enabled = 0;
-	LOGI("Freezer disabled\n");
 
 	res = thaw_subgroup();
 	if (res)
@@ -97,9 +88,6 @@ static int add_tasks_to_freezer(void)
 {
 	ssize_t res;
 	pid_t pid;
-
-	if (!freezer_enabled)
-		return 0;
 
 	if (f_tasks_fd == NULL) {
 		LOGE("Tasks freezer subgroup file is closed\n");
@@ -128,9 +116,6 @@ int freeze_subgroup(void)
 	size_t len = strlen(freezer_frozen) + 1;
 	ssize_t res;
 
-	if (!freezer_enabled)
-		return 0;
-
 	if (f_state_fd == NULL) {
 		LOGE("Freezer.state subgroup file is closed\n");
 		return -1;
@@ -156,9 +141,6 @@ int thaw_subgroup(void)
 {
 	size_t len = strlen(freezer_thawed) + 1;
 	ssize_t res;
-
-	if (!freezer_enabled)
-		return 0;
 
 	if (f_state_fd == NULL) {
 		LOGE("Freezer.state subgroup file is closed\n");
