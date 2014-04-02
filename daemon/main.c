@@ -37,8 +37,6 @@
 #include <sys/socket.h>		// for socket
 #include <sys/un.h>			// for sockaddr_un
 #include <arpa/inet.h>		// for sockaddr_in, socklen_t
-#include <linux/netlink.h>
-#include <linux/connector.h>
 
 #include <signal.h>			// for signal
 #include <unistd.h>			// for unlink
@@ -52,7 +50,6 @@
 #include "debug.h"
 #include "utils.h"
 #include "smack.h"
-#include "us_interaction_msg.h"
 
 #define SINGLETON_LOCKFILE			"/tmp/da_manager.lock"
 #define PORTFILE					"/tmp/port.da"
@@ -67,7 +64,6 @@ __da_manager manager =
 {
 	.host_server_socket = -1,
 	.target_server_socket = -1,
-	.kernel_socket = -1,
 	.target_count = 0,
 	.apps_to_run = 0,
 	.config_flag = 0,
@@ -122,8 +118,6 @@ static void _close_server_socket(void)
 		close(manager.host_server_socket);
 	if(manager.target_server_socket != -1)
 		close(manager.target_server_socket);
-	if (manager.kernel_socket != -1)
-		close(manager.kernel_socket);
 }
 
 static void _unlink_files(void)
@@ -242,35 +236,6 @@ static int makeHostServerSocket()
 	return port;
 }
 
-// return 0 for normal case
-static int makeKernelSocket(void)
-{
-	struct sockaddr_nl nlAddr;
-	int ret;
-
-	if (manager.kernel_socket != -1)
-		return -1;	// should be never happend
-
-	manager.kernel_socket = socket(PF_NETLINK, SOCK_DGRAM, NETLINK_CONNECTOR);
-	if (manager.kernel_socket < 0) {
-		LOGE("Kernel socket creation failed\n");
-		return -1;
-	}
-
-	nlAddr.nl_family = AF_NETLINK;
-	nlAddr.nl_groups = CN_DAEMON_GROUP;
-	nlAddr.nl_pid = 0;
-
-	if (-1 == bind(manager.kernel_socket, (struct sockaddr*) &nlAddr,
-		   sizeof(nlAddr))) {
-		LOGE("Kernel socket binding failed\n");
-		return -1;
-	}
-
-	LOGI("Created KernelSock %d\n", manager.kernel_socket);
-	return 0;
-}
-
 // =============================================================================
 // initializing / finalizing functions
 // =============================================================================
@@ -344,9 +309,6 @@ static int initializeManager(FILE *portfile)
 		write_int(portfile, ERR_SIGNAL_MASK_SETTING_FAILED);
 		return -1;
 	}
-
-	if (makeKernelSocket() != 0)
-		return -1;
 
 	int port = makeHostServerSocket();
 	if (port < 0) {
