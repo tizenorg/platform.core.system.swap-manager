@@ -63,7 +63,6 @@
 #include "input_events.h"
 #include "smack.h"
 #include "us_interaction_msg.h"
-#include "freezing.h"
 #include "debug.h"
 
 #define DA_WORK_DIR			"/home/developer/sdk_tools/da/"
@@ -610,8 +609,7 @@ static Eina_Bool target_event_cb(void *data, Ecore_Fd_Handler *fd_handler)
  */
 static int targetServerHandler(void)
 {
-	msg_target_t log, pid_msg;
-	ssize_t recvlen;
+	msg_target_t log;
 
 	int index = getEmptyTargetSlot();
 	if (index == MAX_TARGET_COUNT) {
@@ -620,7 +618,7 @@ static int targetServerHandler(void)
 	}
 
 	manager.target[index].socket =
-		accept(manager.target_server_socket, NULL, NULL);
+	    accept(manager.target_server_socket, NULL, NULL);
 
 	if (manager.target[index].socket >= 0) {
 		/* accept succeed */
@@ -872,17 +870,6 @@ static int kernel_handler(void)
 	if (msg->len == 0) {
 		ret = -1;
 		goto free_and_end;
-	}
-
-	switch(*(enum us_interaction_k2u_msg_t *) msg->data) {
-	case US_INT_PAUSE_APPS:
-		freeze_subgroup();
-		break;
-	case US_INT_CONT_APPS:
-		thaw_subgroup();
-		break;
-	default:
-		LOGE("Unknown command\n");
 	}
 
 	/* Insert your message handler here */

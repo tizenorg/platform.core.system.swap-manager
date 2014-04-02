@@ -42,8 +42,7 @@ DAEMON_SRCS =			\
 	device_vconf.c		\
 	device_system_info.c	\
 	device_camera.c		\
-	smack.c \
-	freezing.c
+	smack.c
 
 DAEMON_OBJS = $(patsubst %.c,%.o, $(DAEMON_SRCS))
 
