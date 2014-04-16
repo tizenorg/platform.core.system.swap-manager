@@ -2,6 +2,7 @@ CC :=gcc
 DEBUG_CPPFLAGS = 				\
 		-DDEBUG					\
 		-DUSE_LOG_ONCE			\
+#		-DMALLOC_DEBUG_ON		\#
 #		-DDEB_PRINTBUF			\#
 #		-DPARSE_DEBUG_ON		\#
 #		-DTHREAD_SAMPLING_DEBUG	\#
@@ -42,7 +43,8 @@ DAEMON_SRCS =			\
 	device_vconf.c		\
 	device_system_info.c	\
 	device_camera.c		\
-	smack.c
+	smack.c					\
+	malloc_debug.c
 
 DAEMON_OBJS = $(patsubst %.c,%.o, $(DAEMON_SRCS))
 

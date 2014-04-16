@@ -851,7 +851,7 @@ static void get_serialized_time(uint32_t dst[2])
 static int process_msg_start(struct msg_buf_t *msg_control)
 {
 	enum ErrorCode err_code = ERR_CANNOT_START_PROFILING;
-	struct msg_t *msg_reply;
+	struct msg_t *msg_reply = NULL;
 	uint32_t serialized_time[2];
 
 	if (check_running_status(&prof_session) == 1) {
@@ -901,7 +901,8 @@ send_ack:
 	get_serialized_time(serialized_time);
 	sendACKToHost(NMSG_START, err_code, (void *)&serialized_time,
 		      sizeof(serialized_time));
-
+	if (msg_reply != NULL)
+		free(msg_reply);
 	return -(err_code != ERR_NO);
 }
 
