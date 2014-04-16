@@ -34,6 +34,7 @@
 #include <stdarg.h>
 
 #include "da_protocol.h"
+#include "malloc_debug.h"
 #include "utils.h"
 
 #ifdef __cplusplus

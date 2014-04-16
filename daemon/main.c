@@ -451,6 +451,12 @@ int main()
 
 	close_system_file_descriptors();
 
+	//DO NOT USE THIS FUNCTION FOR RELEASE IT IS TOO SLOW
+#ifdef MALLOC_DEBUG_ON
+	msg_swap_free_all_data(&prof_session.user_space_inst);
+#endif
+
 	LOGI("main finished\n");
+	print_malloc_list(NULL, 0);
 	return 0;
 }

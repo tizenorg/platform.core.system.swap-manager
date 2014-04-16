@@ -107,6 +107,7 @@ static void free_probe_element(struct probe_list_t *probe)
 
 static void free_data_element(struct data_list_t *lib)
 {
+	free(lib->data);
 	free(lib);
 }
 
@@ -128,8 +129,9 @@ static void free_data(struct data_list_t *lib)
 
 void free_data_list(struct data_list_t **data)
 {
+	struct data_list_t *next;
 	while (*data != NULL) {
-		struct data_list_t *next = (*data)->next;
+		next = (*data)->next;
 		free_data(*data);
 		*data = next;
 	}
@@ -468,7 +470,6 @@ static char *pack_data_list_to_array(struct data_list_t *list, uint32_t *len, ui
 		res = malloc(size);
 		to = res;
 		if (to != NULL) {
-			memset(to, '*', size);
 			pack_int32(to, cnt);
 			for (p = list; p != NULL; p = p->next)
 				to = pack_data_to_array(p, to, pack);
@@ -532,6 +533,9 @@ static int generate_msg(struct msg_t **msg, struct lib_list_t *lib_list, struct 
 		app_p += app->size;
 		app = app->next;
 	}
+
+	free(packed_lib_list);
+	free(packed_app_list);
 
 	// print_buf((char *)*msg, size, "ANSWER");
 	return 1;
@@ -656,4 +660,30 @@ int msg_swap_inst_remove(struct msg_buf_t *data, struct user_space_inst_t *us_in
 	new_lib_inst_list = NULL;
 	*err = ERR_NO;
 	return 0;
+}
+
+void msg_swap_free_all_data(struct user_space_inst_t *us_inst)
+{
+	LOGI("new_lib_inst_list %p\n", new_lib_inst_list);
+	if (new_lib_inst_list != NULL) {
+		LOGI("free new_lib_inst_list start\n");
+		free_data_list(&new_lib_inst_list);
+		new_lib_inst_list = NULL;
+		LOGI("free new_lib_inst_list finish\n");
+	}
+
+	LOGI("us_inst->lib_inst_list %p\n", us_inst->lib_inst_list);
+	if (us_inst->lib_inst_list != NULL) {
+		LOGI("free us_inst->lib_inst_list start\n");
+		free_data_list(&us_inst->lib_inst_list);
+		us_inst->lib_inst_list = NULL;
+		LOGI("free us_isnt->lib_inst_list finish\n");
+	}
+
+	LOGI("us_inst->app_inst_list %p\n", us_inst->app_inst_list);
+	if (us_inst->app_inst_list != NULL) {
+		LOGI("free us_inst->app_inst_list start\n");
+		free_data_list(&us_inst->app_inst_list);
+		LOGI("free us_inst->app_isnt_list finish\n");
+	}
 }
