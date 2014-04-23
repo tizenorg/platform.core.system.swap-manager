@@ -452,7 +452,7 @@ int main()
 	close_system_file_descriptors();
 
 	//DO NOT USE THIS FUNCTION FOR RELEASE IT IS TOO SLOW
-#ifdef MALLOC_DEBUG_ON
+#ifdef MALLOC_DEBUG_LEVEL
 	msg_swap_free_all_data(&prof_session.user_space_inst);
 #endif
 
