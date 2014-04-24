@@ -854,6 +854,9 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 	struct msg_t *msg_reply = NULL;
 	uint32_t serialized_time[2];
 
+	//get start profiling time
+	get_serialized_time(serialized_time);
+
 	if (check_running_status(&prof_session) == 1) {
 		LOGW("Profiling has already been started\n");
 		goto send_ack;
@@ -880,6 +883,9 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 		goto send_ack;
 	}
 
+	//get time right before ioctl for more accurate start time value
+	get_serialized_time(serialized_time);
+
 	if (ioctl_send_msg(msg_reply) != 0) {
 		LOGE("cannot send message to device\n");
 		goto send_ack;
@@ -898,7 +904,6 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 
 	err_code = ERR_NO;
 send_ack:
-	get_serialized_time(serialized_time);
 	sendACKToHost(NMSG_START, err_code, (void *)&serialized_time,
 		      sizeof(serialized_time));
 	if (msg_reply != NULL)
