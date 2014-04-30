@@ -15,6 +15,8 @@ BuildRequires:  capi-system-runtime-info-devel
 BuildRequires:  capi-telephony-network-info-devel
 BuildRequires:  capi-telephony-call-devel
 BuildRequires:  pkgconfig(ecore)
+BuildRequires:  swap-modules
+BuildRequires:  swap-probe
 Requires:	sdbd
 
 %description
