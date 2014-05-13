@@ -174,7 +174,7 @@ int exec_app_common(const char* exec_path)
 		return -1;
 	}
 
-	sprintf(command, "%s %s", DA_PRELOAD_OSP, exec_path);
+	sprintf(command, "%s %s", DA_PRELOAD_TIZEN, exec_path);
 	LOGI("cmd: %s\n", command);
 
 	pid = fork();

@@ -48,9 +48,7 @@ extern "C" {
 #define WRT_LAUNCHER_KILL		"-k"
 #define LAUNCH_APP_SDK			"__AUL_SDK__"
 #define DA_PRELOAD_EXEC			"DYNAMIC_ANALYSIS"
-#define DA_PRELOAD(AppType)		AppType ? DA_PRELOAD_OSP : DA_PRELOAD_TIZEN
 #define DA_PRELOAD_TIZEN		"LD_PRELOAD=/usr/lib/da_probe_tizen.so"
-#define DA_PRELOAD_OSP			"LD_PRELOAD=/usr/lib/da_probe_osp.so"
 #define BATT_LOG_FILE			"/home/developer/sdk_tools/da/battery/"
 #define SHELL_CMD				"/bin/sh"
 
