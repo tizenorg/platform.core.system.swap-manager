@@ -42,14 +42,14 @@
 
 static int open_buf_ctl(void)
 {
-	manager.buf_fd = open(BUF_FILENAME, O_RDONLY);
+	manager.buf_fd = open(BUF_FILENAME, O_RDONLY | O_CLOEXEC);
 	if (manager.buf_fd == -1) {
 		LOGE("Cannot open buffer: %s\n", strerror(errno));
 		return 1;
 	}
 	LOGI("buffer opened: %s, %d\n", BUF_FILENAME, manager.buf_fd);
 
-	manager.user_ev_fd = open(USER_EVENT_FILENAME, O_WRONLY);
+	manager.user_ev_fd = open(USER_EVENT_FILENAME, O_WRONLY | O_CLOEXEC);
 	if (manager.user_ev_fd == -1) {
 		LOGE("Cannot open user event sysfs file: %s\b", strerror(errno));
 		return 1;
