@@ -1738,7 +1738,6 @@ static int get_pid_array(int arr[], const int n)
 	DIR *d = opendir("/proc");
 	struct dirent *dirent;
 	int count = 0;
-	pid_t self_pid = getpid();
 
 	if (!d) {
 		LOGW("Cannot open /proc dir (%s)\n", strerror(errno));
@@ -1749,7 +1748,7 @@ static int get_pid_array(int arr[], const int n)
 		if (dirent->d_type == DT_DIR) {
 			char *tmp;
 			pid_t pid = strtol(dirent->d_name, &tmp, 10);
-			if (*tmp == '\0' && pid != self_pid)
+			if (*tmp == '\0')
 				arr[count++] = pid;
 		}
 	}
