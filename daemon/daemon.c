@@ -748,6 +748,7 @@ static Eina_Bool host_ctrl_cb(void *data, Ecore_Fd_Handler *fd_handler)
 		//close connect_timeoutt and host socket and quit
 		LOGI("Connection closed. Termination. (%d)\n",
 		     manager.host.control_socket);
+		manager.host.data_socket = -1; //splice will fail without that
 		ecore_main_loop_quit();
 	} else if (result < 0) {
 		LOGE("Control socket handler.\n");
