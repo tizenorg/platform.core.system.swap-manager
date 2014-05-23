@@ -110,6 +110,7 @@ typedef struct {
 	unsigned long sh_mem;
 	long res_memblock;
 	unsigned long pss;
+	float cpu_load;
 } proc_t;
 
 typedef struct {

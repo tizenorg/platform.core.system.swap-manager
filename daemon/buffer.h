@@ -33,6 +33,7 @@
 
 #define USER_EVENT_FILENAME "/sys/kernel/debug/swap/writer/raw"
 #define BUF_FILENAME "/dev/swap_device"
+#define INST_PID_FILENAME "/sys/kernel/debug/swap/us_manager/tasks"
 
 int init_buf(void);
 void exit_buf(void);
