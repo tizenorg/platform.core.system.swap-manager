@@ -166,6 +166,7 @@ typedef struct
 	FILE *procstat;
 	FILE *networkstat;
 	FILE *diskstats;
+	FILE *inst_tasks;
 } __file_descriptors;
 
 typedef struct
