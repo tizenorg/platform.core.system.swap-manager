@@ -151,8 +151,6 @@ static char *msgErrStr(enum ErrorCode err)
 #define print_feature_0(f) print_feature(f, feature0, to, ", \n\t")
 static void feature_code_str(uint64_t feature0, uint64_t feature1, char *to)
 {
-	print_feature_0(FL_CPU);
-	print_feature_0(FL_MEMORY);
 	print_feature_0(FL_FUNCTION_PROFILING);
 	print_feature_0(FL_MEMORY_ALLOC_PROBING);
 	print_feature_0(FL_FILE_API_PROBING);
@@ -170,12 +168,23 @@ static void feature_code_str(uint64_t feature0, uint64_t feature1, char *to)
 	print_feature_0(FL_CONTEXT_SWITCH);
 	print_feature_0(FL_NETWORK_API_PROBING);
 	print_feature_0(FL_OPENGL_API_PROBING);
+	print_feature_0(FL_FUNCTION_SAMPLING);
 	print_feature_0(FL_MEMORY_ALLOC_ALWAYS_PROBING);
 	print_feature_0(FL_FILE_API_ALWAYS_PROBING);
 	print_feature_0(FL_THREAD_API_ALWAYS_PROBING);
 	print_feature_0(FL_OSP_UI_API_ALWAYS_PROBING);
 	print_feature_0(FL_NETWORK_API_ALWAYS_PROBING);
 	print_feature_0(FL_OPENGL_API_ALWAYS_PROBING);
+	print_feature_0(FL_SYSTEM_CPU);
+	print_feature_0(FL_SYSTEM_MEMORY);
+	print_feature_0(FL_SYSTEM_PROCESS);
+	print_feature_0(FL_SYSTEM_THREAD_LOAD);
+	print_feature_0(FL_SYSTEM_PROCESSES_LOAD);
+	print_feature_0(FL_SYSTEM_FD);
+	print_feature_0(FL_SYSTEM_DISK);
+	print_feature_0(FL_SYSTEM_NETWORK);
+	print_feature_0(FL_SYSTEM_DEVICE);
+	print_feature_0(FL_SYSTEM_ENERGY);
 }
 
 
@@ -474,10 +483,6 @@ static void reset_app_inst(struct user_space_inst_t *us_inst)
 
 void reset_system_info(struct system_info_t *sys_info)
 {
-	if (sys_info->thread_load)
-		free(sys_info->thread_load);
-	if (sys_info->process_load)
-		free(sys_info->process_load);
 	if (sys_info->cpu_frequency)
 		free(sys_info->cpu_frequency);
 	if (sys_info->cpu_load)
@@ -979,6 +984,19 @@ int host_message_handler(struct msg_t *msg)
 			return -1;
 		}
 		//write to device
+
+		// TODO make it normal way
+		// Attention!!! convert feature to old format!!!
+		uint64_t feature0 = *((uint64_t *)msg->payload);
+		if (feature0 & FL_SYSTEM_ENERGY) {
+			feature0 &= ~FL_SYSTEM_ENERGY;
+			feature0 |= (1<<26);
+		} else {
+			feature0 &= ~FL_SYSTEM_ENERGY;
+			feature0 &= ~(1<<26);
+		}
+		*((uint64_t *)msg->payload) = feature0;
+
 		if (ioctl_send_msg(msg) != 0) {
 			LOGE("ioctl send error\n");
 			sendACKToHost(msg->id, ERR_UNKNOWN, 0, 0);
