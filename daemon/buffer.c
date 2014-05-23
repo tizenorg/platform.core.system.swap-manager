@@ -40,6 +40,28 @@
 #define SUBBUF_SIZE 64 * 1024
 #define SUBBUF_NUM 32 * 16
 
+static int open_tasks_dev(void)
+{
+	if (manager.fd.inst_tasks == NULL) {
+		manager.fd.inst_tasks = fopen(INST_PID_FILENAME, "r");
+		if (manager.fd.inst_tasks == NULL) {
+			LOGE("Cannot open tasks dev: %s\n", strerror(errno));
+			return 1;
+		}
+		LOGI("tasks dev opened: %s, %d\n", BUF_FILENAME, manager.buf_fd);
+	} else {
+		LOGW("tasks dev double open try: <%s>\n", INST_PID_FILENAME);
+	}
+
+	return 0;
+}
+
+static void close_tasks_dev(void)
+{
+	LOGI("close tasks dev (%d)\n", manager.fd.inst_tasks);
+	fclose(manager.fd.inst_tasks);
+}
+
 static int open_buf_ctl(void)
 {
 	manager.buf_fd = open(BUF_FILENAME, O_RDONLY | O_CLOEXEC);
@@ -101,6 +123,11 @@ int init_buf(void)
 		return 1;
 	}
 
+	if (open_tasks_dev() != 0) {
+		LOGE("Cannot open tasks: %s\n", strerror(errno));
+		return 1;
+	}
+
 	return 0;
 }
 
@@ -111,6 +138,7 @@ void exit_buf(void)
 		LOGW("Cannot uninit driver: %s\n", strerror(errno));
 
 	close_buf_ctl();
+	close_tasks_dev();
 }
 
 void flush_buf(void)
