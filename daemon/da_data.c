@@ -78,7 +78,9 @@ int print_sys_info(struct system_info_t * sys_info)
 	sys_info->network_receive_size=0x33;
 	*/
 
-	LOGI("isysinfo:\n\
+	// TODO do it
+	/*
+	LOGI("sysinfo:\n\
 \
 	energy = 0x%X\n\
 	wifi_status = 0x%X\n\
@@ -198,7 +200,7 @@ int print_sys_info(struct system_info_t * sys_info)
 	}
 //	char *p = sys_info;
 	printBuf((char*)sys_info, sizeof(*sys_info));
-
+*/
 	return 0;
 }
 
