@@ -91,45 +91,55 @@ enum ErrorCode{
 };
 
 enum feature_code{
-	FL_RESERVED1                	= 0x000000001,
-	FL_RESERVED2                	= 0x000000002,
-	FL_FUNCTION_PROFILING       	= 0x000000004, //On/Off the UserSpaceInst
-	FL_MEMORY_ALLOC_PROBING 	= 0x000000008, //memory allocation API (glibc)
-	FL_FILE_API_PROBING         	= 0x000000010, //file API (glibc, OSP)
-	FL_THREAD_API_PROBING       	= 0x000000020, //thread API (glibc, OSP)
-	FL_OSP_UI_API_PROBING       	= 0x000000040, //UI API (OSP)
-	FL_SCREENSHOT               	= 0x000000080, //Screenshot
-	FL_USER_EVENT               	= 0x000000100, //events of Touch, Gesture, Orientation, Key
-	FL_RECORDING                	= 0x000000200, //recording the user event
-	FL_SYSTCALL_FILE            	= 0x000000400, //File operation syscalls tracing
-	FL_SYSTCALL_IPC             	= 0x000000800, //IPC syscall tracing
-	FL_SYSTCALL_PROCESS         	= 0x000001000, //Process syscalls tracing
-	FL_SYSTCALL_SIGNAL          	= 0x000002000, //Signal syscalls tracing
-	FL_SYSTCALL_NETWORK         	= 0x000004000, //Network syscalls tracing
-	FL_SYSTCALL_DESC            	= 0x000008000, //Descriptor syscalls tracing
-	FL_CONTEXT_SWITCH           	= 0x000010000, //Context switch tracing
-	FL_NETWORK_API_PROBING      	= 0x000020000, //network API (glibc, OSP, libsoap, openssl)
-	FL_OPENGL_API_PROBING       	= 0x000040000, //openGL API
-	FL_FUNCTION_SAMPLING        	= 0x000080000, //Function sampling
-	FL_CPU                      	= 0x000100000, //CPU core load, frequency
-	FL_PROCESSES                	= 0x000200000, //Process load
-	FL_MEMORY                   	= 0x000400000, //Process size(VSS, PSS. RSS), heap usage(application, library), physical memory in use
-	FL_DISK                     	= 0x000800000,
-	FL_NETWORK                  	= 0x001000000,
-	FL_DEVICE                   	= 0x002000000,
-	FL_ENERGY                   	= 0x004000000,
-	FL_RESERVED3                	= 0x008000000,
-	FL_MEMORY_ALLOC_ALWAYS_PROBING	= 0x010000000, //memory allocation API (glibc) always
-	FL_FILE_API_ALWAYS_PROBING	= 0x020000000, //file API (glibc, OSP) always
-	FL_THREAD_API_ALWAYS_PROBING	= 0x040000000, //thread API (glibc, OSP) always
-	FL_OSP_UI_API_ALWAYS_PROBING	= 0x080000000, //UI API (OSP) always
-	FL_NETWORK_API_ALWAYS_PROBING	= 0x100000000ULL, //network API (glibc, OSP, libsoap, openssl) always
-	FL_OPENGL_API_ALWAYS_PROBING	= 0x200000000ULL, //openGL API always
+	FL_RESERVED1                	= 0x000000000001ULL,
+	FL_RESERVED2                	= 0x000000000002ULL,
+	FL_FUNCTION_PROFILING       	= 0x000000000004ULL, //On/Off the UserSpaceInst
+	FL_MEMORY_ALLOC_PROBING 	= 0x000000000008ULL, //memory allocation API (glibc)
+	FL_FILE_API_PROBING         	= 0x000000000010ULL, //file API (glibc, OSP)
+	FL_THREAD_API_PROBING       	= 0x000000000020ULL, //thread API (glibc, OSP)
+	FL_OSP_UI_API_PROBING       	= 0x000000000040ULL, //UI API (OSP)
+	FL_SCREENSHOT               	= 0x000000000080ULL, //Screenshot
+	FL_USER_EVENT               	= 0x000000000100ULL, //events of Touch, Gesture, Orientation, Key
+	FL_RECORDING                	= 0x000000000200ULL, //recording the user event
+	FL_SYSTCALL_FILE            	= 0x000000000400ULL, //File operation syscalls tracing
+	FL_SYSTCALL_IPC             	= 0x000000000800ULL, //IPC syscall tracing
+	FL_SYSTCALL_PROCESS         	= 0x000000001000ULL, //Process syscalls tracing
+	FL_SYSTCALL_SIGNAL          	= 0x000000002000ULL, //Signal syscalls tracing
+	FL_SYSTCALL_NETWORK         	= 0x000000004000ULL, //Network syscalls tracing
+	FL_SYSTCALL_DESC            	= 0x000000008000ULL, //Descriptor syscalls tracing
+	FL_CONTEXT_SWITCH           	= 0x000000010000ULL, //Context switch tracing
+	FL_NETWORK_API_PROBING      	= 0x000000020000ULL, //network API (glibc, OSP, libsoap, openssl)
+	FL_OPENGL_API_PROBING       	= 0x000000040000ULL, //openGL API
+	FL_FUNCTION_SAMPLING        	= 0x000000080000ULL, //Function sampling
+	FL_MEMORY_ALLOC_ALWAYS_PROBING	= 0x000010000000ULL, //memory allocation API (glibc) always
+	FL_FILE_API_ALWAYS_PROBING	= 0x000020000000ULL, //file API (glibc, OSP) always
+	FL_THREAD_API_ALWAYS_PROBING	= 0x000040000000ULL, //thread API (glibc, OSP) always
+	FL_OSP_UI_API_ALWAYS_PROBING	= 0x000080000000ULL, //UI API (OSP) always
+	FL_NETWORK_API_ALWAYS_PROBING	= 0x000100000000ULL, //network API (glibc, OSP, libsoap, openssl) always
+	FL_OPENGL_API_ALWAYS_PROBING	= 0x000200000000ULL, //openGL API always
+	FL_RESERVED3			= 0x000400000000ULL, //
+	FL_RESERVED4			= 0x000800000000ULL, //
 
-	FL_ALL_FEATURES            	= 0x3FFFFFFFFULL &
+	FL_SYSTEM_CPU               	= 0x001000000000ULL, //CPU core load, frequency
+	FL_SYSTEM_MEMORY            	= 0x002000000000ULL, //
+	FL_SYSTEM_PROCESS           	= 0x004000000000ULL, //Process load
+	FL_SYSTEM_THREAD_LOAD       	= 0x008000000000ULL, //
+	FL_SYSTEM_PROCESSES_LOAD    	= 0x010000000000ULL, //Process size(VSS, PSS. RSS), heap usage(application, library), physical memory in use
+	FL_SYSTEM_FD                	= 0x020000000000ULL,
+	FL_SYSTEM_DISK              	= 0x040000000000ULL,
+	FL_SYSTEM_NETWORK           	= 0x080000000000ULL,
+	FL_SYSTEM_DEVICE            	= 0x100000000000ULL,
+	FL_SYSTEM_ENERGY            	= 0x200000000000ULL,
+	FL_RESERVED5			= 0x400000000000ULL, //
+	FL_RESERVED6			= 0x800000000000ULL, //
+
+	FL_ALL_FEATURES            	= 0x3FFFFFFFFFFFULL &
 					(~FL_RESERVED1) &
 					(~FL_RESERVED2) &
-					(~FL_RESERVED3)
+					(~FL_RESERVED3) &
+					(~FL_RESERVED4) &
+					(~FL_RESERVED5) &
+					(~FL_RESERVED6)
 };
 
 #define IS_OPT_SET_IN(OPT, reg) (reg & (OPT))
@@ -264,10 +274,23 @@ struct thread_info_t {
 	float load;
 };
 
-struct process_info_t {
+struct other_process_info_t {
 	uint32_t id;
 	float load;
 };
+
+struct inst_process_info_t {
+	uint32_t id;
+	float load;
+	uint64_t virtual_memory;
+	uint64_t resident_memory;
+	uint64_t shared_memory;
+	uint64_t pss_memory;
+	uint64_t total_alloc_size;
+	uint32_t count_of_threads;
+
+};
+
 
 /**
  * NOTE:
@@ -279,24 +302,22 @@ struct process_info_t {
  */
 struct system_info_t {
 	// system_cpu
-	float app_cpu_usage;
 	float *cpu_frequency;
 	float *cpu_load;
-	uint32_t count_of_threads;
-	struct thread_info_t *thread_load;
 
-	// system_processes
-	uint32_t count_of_processes;
-	struct process_info_t *process_load;
+	// total thread count to calculate msg size
+	uint32_t count_of_threads;
 
 	// system_memory
-	uint32_t virtual_memory;
-	uint32_t resident_memory;
-	uint32_t shared_memory;
-	uint32_t pss_memory;
-	uint64_t total_alloc_size;
-	uint64_t system_memory_total;
 	uint64_t system_memory_used;
+
+	// system_processes
+	uint32_t count_of_inst_processes;
+	uint32_t count_of_other_processes;
+
+	//system fd
+	uint32_t fd_count;
+	uint32_t fd_peration_count;
 
 	// system_disk
 	uint32_t total_used_drive;
