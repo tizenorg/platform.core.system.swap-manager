@@ -69,17 +69,17 @@
 #define MAX_APP_LAUNCH_TIME		60
 #define MAX_CONNECT_TIMEOUT_TIME	5*60
 
-uint64_t get_total_alloc_size(void)
+uint64_t get_total_alloc_size_by_pid(pid_t pid)
 {
 	int i;
-	uint64_t allocsize = 0;
 
 	for (i = 0; i < MAX_TARGET_COUNT; i++) {
 		if (manager.target[i].socket != -1 &&
+		    manager.target[i].pid == pid &&
 		    manager.target[i].allocmem > 0)
-			allocsize += manager.target[i].allocmem;
+			return manager.target[i].allocmem;
 	}
-	return allocsize;
+	return 0;
 }
 
 static int getEmptyTargetSlot()

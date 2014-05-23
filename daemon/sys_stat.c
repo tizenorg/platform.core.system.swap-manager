@@ -317,14 +317,15 @@ static void get_cpu_frequency(float *freqs)
 // ========================================================================
 typedef struct _proc_node {
 	proc_t proc_data;
+	void *thread_prochead;
 	unsigned long long saved_utime;
 	unsigned long long saved_stime;
 	int found;
 	struct _proc_node *next;
 } procNode;
 
-static procNode *prochead = NULL;
-static procNode *thread_prochead = NULL;
+static procNode *inst_prochead = NULL;
+static procNode *other_prochead = NULL;
 
 static procNode* find_node(procNode *head, pid_t pid)
 {
@@ -351,6 +352,7 @@ static procNode* add_node(procNode **head, pid_t pid)
 		return NULL;
 	}
 
+	n->thread_prochead = NULL;
 	n->proc_data.pid = pid;
 	n->found = 1;
 	n->next = *head;
@@ -426,7 +428,7 @@ static int reset_found_node(procNode *head)
 
 // return 0 for normal case
 // return negative value for error case
-static int parse_proc_stat_file_bypid(char *path, proc_t* P)
+static int parse_proc_stat_file_bypid(char *path, proc_t* P, int is_inst_process)
 {
 	char filename[PROCPATH_MAX];
 	char buf[BUFFER_MAX];
@@ -465,29 +467,44 @@ static int parse_proc_stat_file_bypid(char *path, proc_t* P)
 	abuf = bbuf + 2;
 
 	// scan data
-
-	sscanf(abuf,
-		"%c "
-		"%d %d %d %d %d "
-		"%lu %lu %lu %lu %lu "
-		"%Lu %Lu %Lu %Lu "  // utime stime cutime cstime
-		"%ld %ld "
-		"%d "
-		"%ld "
-		"%Lu "  // start_time
-		"%lu "
-		"%ld",
-		&P->state,
-		&P->ppid, &P->pgrp, &P->sid, &P->tty_nr, &P->tty_pgrp,
-		&P->flags, &P->minor_fault, &P->cminor_fault, &P->major_fault, &P->cmajor_fault,
-		&P->utime, &P->stime, &P->cutime, &P->cstime,
-		&P->priority, &P->nice,
-		&P->numofthread,
-		&P->dummy,
-		&P->start_time,
-		&P->vir_mem,
-		&P->res_memblock
-		);
+	if (is_inst_process == 1) {
+		// TODO do not scan unnecessary params
+		sscanf(abuf,
+			"%c "
+			"%d %d %d %d %d "
+			"%lu %lu %lu %lu %lu "
+			"%Lu %Lu %Lu %Lu "  // utime stime cutime cstime
+			"%ld %ld "
+			"%d "
+			"%ld "
+			"%Lu "  // start_time
+			"%lu "
+			"%ld",
+			&P->state,
+			&P->ppid, &P->pgrp, &P->sid, &P->tty_nr, &P->tty_pgrp,
+			&P->flags, &P->minor_fault, &P->cminor_fault, &P->major_fault, &P->cmajor_fault,
+			&P->utime, &P->stime, &P->cutime, &P->cstime,
+			&P->priority, &P->nice,
+			&P->numofthread,
+			&P->dummy,
+			&P->start_time,
+			&P->vir_mem,
+			&P->res_memblock
+			);
+	} else {
+		// TODO do not scan unnecessary params
+		P->numofthread = 0;
+		sscanf(abuf,
+			"%c "
+			"%d %d %d %d %d "
+			"%lu %lu %lu %lu %lu "
+			"%Lu %Lu ",  // utime stime cutime cstime
+			&P->state,
+			&P->ppid, &P->pgrp, &P->sid, &P->tty_nr, &P->tty_pgrp,
+			&P->flags, &P->minor_fault, &P->cminor_fault, &P->major_fault, &P->cmajor_fault,
+			&P->utime, &P->stime
+			);
+	}
 
 	if(P->numofthread == 0)
 		P->numofthread = 1;
@@ -595,16 +612,15 @@ static int parse_proc_smaps_file_bypid(char *path, proc_t* P)
 // return 0 for normal case
 // return positive value for non critical case
 // return negative value for critical case
-static int update_process_data(int* pidarray, int pidcount, enum PROCESS_DATA datatype)
+static int update_process_data(procNode **prochead, pid_t* pidarray, int pidcount, enum PROCESS_DATA datatype, int is_inst_process)
 {
 	static struct stat sb;
-	int i, ret = 0;
+	int i, ret = 0, is_new_node = 0;
 	char buf[PROCPATH_MAX];
 	procNode* procnode;
 
 	for(i = 0; i < pidcount; i++)
 	{
-/* 		LOGI("#%d\n", i); */
 		if (pidarray[i] == 0)	// pid is invalid
 		{
 			ret = 1;
@@ -612,80 +628,48 @@ static int update_process_data(int* pidarray, int pidcount, enum PROCESS_DATA da
 		}
 
 		sprintf(buf, "/proc/%d", pidarray[i]);
-/* 		LOGI("#->%s\n", buf); */
 		if (unlikely(stat(buf, &sb) == -1))	// cannot access anymore
 		{
-/* 			LOGI("#del from prochead=%d\n", prochead); */
-			del_node(&prochead, pidarray[i]);
+			del_node(prochead, pidarray[i]);
 			ret = errno;
 			continue;
 		}
 
-/* 		LOGI("find node = %d\n", procnode); */
-		if ((procnode = find_node(prochead, pidarray[i])) == NULL)	// new process
-		{
-/* 			LOGI("proc node1 = %d\n", procnode); */
-			procnode = add_node(&prochead, pidarray[i]);
-			if(datatype == PROCDATA_STAT)
-			{
-				if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data))) < 0))
-				{
-					LOGE("Failed to get proc stat file by pid(%d)\n", pidarray[i]);
-				}
-				else
-				{
-					procnode->saved_utime = procnode->proc_data.utime;
-					procnode->saved_stime = procnode->proc_data.stime;
-				}
-			}
-			else if(datatype == PROCDATA_SMAPS)
-			{
-				if (unlikely((ret = parse_proc_smaps_file_bypid(buf, &(procnode->proc_data))) < 0))
-				{
-					LOGE("Failed to get proc smaps file by pid(%d)\n", pidarray[i]);
-				}
-				else
-				{	// do nothing
-				}
-			}
-			else
-			{	// impossible
-			}
+		if ((procnode = find_node(*prochead, pidarray[i])) == NULL) {
+			// new process
+			procnode = add_node(prochead, pidarray[i]);
+			is_new_node = 1;
 		}
-		else
-		{
-/* 			LOGI("proc node2 = %d\n", procnode); */
-			if(datatype == PROCDATA_STAT)
-			{
-				if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data))) < 0))
-				{
-					LOGE("Failed to get proc stat file by pid(%d)\n", pidarray[i]);
-				}
-				else
-				{	// do nothing
-				}
-			}
-			else if(datatype == PROCDATA_SMAPS)
-			{
-				if (unlikely((ret = parse_proc_smaps_file_bypid(buf, &(procnode->proc_data))) < 0))
-				{
-					LOGE("Failed to get proc smaps file by pid(%d)\n", pidarray[i]);
-				}
-				else
-				{	// do nothing
-				}
-			}
-			else
-			{	// impossible
-			}
-		}
-	}
-/* 	LOGI("del_notfound_node\n"); */
-	del_notfound_node(&prochead);
-/* 	LOGI("reset_found_node\n"); */
-	reset_found_node(prochead);
 
-/* 	LOGI("ret %d\n", ret); */
+		if (datatype == PROCDATA_STAT) {
+			ret = parse_proc_stat_file_bypid(buf,
+							 &(procnode->proc_data),
+							 is_inst_process);
+			if (unlikely(ret < 0)) {
+				//parse fail. log it
+				LOGE("Failed to get proc stat file by pid(%d)\n", pidarray[i]);
+			} else if (is_new_node == 1) {
+				//update data for new node
+				procnode->saved_utime = procnode->proc_data.utime;
+				procnode->saved_stime = procnode->proc_data.stime;
+			}
+
+		} else if (datatype == PROCDATA_SMAPS) {
+			//parse smaps
+			ret = parse_proc_smaps_file_bypid(buf,
+							  &(procnode->proc_data));
+
+			if (unlikely( ret < 0))
+				LOGE("Failed to get proc smaps file by pid(%d)\n", pidarray[i]);
+
+		} else {
+			// impossible
+		}
+
+	}
+	del_notfound_node(prochead);
+	reset_found_node(*prochead);
+
 	return ret;
 }
 
@@ -1081,6 +1065,8 @@ static int update_thread_data(int pid)
 	DIR *taskdir = NULL;
 	struct dirent *entry = NULL;
 	unsigned int tid;
+	procNode *node = NULL;
+	procNode **thread_prochead = NULL;
 
 	sprintf(path, "/proc/%d/task", pid);
 
@@ -1089,6 +1075,13 @@ static int update_thread_data(int pid)
 		LOGE("task not found '%s'\n", path);
 		return -1;
 	}
+
+	node = find_node(inst_prochead, pid);
+	if (node == NULL) {
+		LOGE("inst node task not found '%s' pid = %d\n", path, pid);
+		return -1;
+	}
+	thread_prochead = (procNode **)&(node->thread_prochead);
 
 	while((entry = readdir(taskdir)) != NULL)
 	{
@@ -1099,15 +1092,15 @@ static int update_thread_data(int pid)
 
 			if(unlikely(stat(buf, &sb) == -1))
 			{
-				del_node(&thread_prochead, tid);
+				del_node(thread_prochead, tid);
 				ret = errno;
 				continue;
 			}
 
-			if((procnode = find_node(thread_prochead, tid)) == NULL)
+			if((procnode = find_node(*thread_prochead, tid)) == NULL)
 			{
-				procnode = add_node(&thread_prochead, tid);
-				if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data))) < 0))
+				procnode = add_node(thread_prochead, tid);
+				if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data), 0)) < 0))
 				{
 					LOGE("Failed to get proc stat file by tid(%d). add node\n", tid);
 				}
@@ -1115,21 +1108,21 @@ static int update_thread_data(int pid)
 				{
 					procnode->saved_utime = procnode->proc_data.utime;
 					procnode->saved_stime = procnode->proc_data.stime;
-/* 					LOGI("data updated\n"); */
+					LOGI_th_samp("data created %s\n", buf);
 				}
 			}
 			else
 			{
-				if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data))) < 0))
-				{
+				if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data), 0)) < 0))
 					LOGE("Failed to get proc stat file by tid(%d). node exist\n", tid);
-				}
+				else
+					LOGI_th_samp("data updated %s\n", buf);
 			}
 		}
 	}
 
-	del_notfound_node(&thread_prochead);
-	reset_found_node(thread_prochead);
+	del_notfound_node(thread_prochead);
+	reset_found_node(*thread_prochead);
 
 	closedir(taskdir);
 	return ret;
@@ -1216,11 +1209,7 @@ static int update_cpus_info(int event_num, float elapsed)
 					cpuptr->cpu_usage = (1.0f - ((float)cpuptr->idle_ticks /
 								(float)cpuptr->total_ticks)) * 100.0f;
 				}
-//				if(i != num_of_cpu)
-//				{
-//					idle_tick_sum += cpuptr->idle_ticks;
-//					total_tick_sum += cpuptr->total_ticks;
-//				}
+
 				LOGI_th_samp("System cpu usage log : %d, %Ld, %Ld\n",
 						i, cpuptr->idle_ticks, cpuptr->total_ticks);
 				if(unlikely(cpuptr->cpu_usage < 0))
@@ -1267,61 +1256,22 @@ static int update_cpus_info(int event_num, float elapsed)
 		}
 	}
 
-	// calculate for cpu core load that failed to get tick information
-/*
-	if(failed_cpu != 0)
-	{
-		LOGI("ticks1 : %Ld, %Ld\n", idle_tick_sum, total_tick_sum);
-		idle_tick_sum = cpus[num_of_cpu].idle_ticks - idle_tick_sum;
-		total_tick_sum = cpus[num_of_cpu].total_ticks - total_tick_sum;
-		LOGI("ticks2 : %Ld, %Ld\n", idle_tick_sum, total_tick_sum);
-		if(total_tick_sum >= MIN_TICKS_FOR_LOAD)
-			sys_usage = (1.0f - ((float)idle_tick_sum / (float)total_tick_sum)) * 100.0f;
-		else
-			sys_usage = 0.0f;
-		if(sys_usage < 0.0f) sys_usage = 0.0f;
-		else if(sys_usage > 100.0f) sys_usage = 100.0f;
-
-		for(i = 0; i < num_of_cpu; i++)
-		{
-			if(failed_cpu & (1 << i))
-			{
-				cpus[i].cpu_usage = sys_usage;
-			}
-		}
-	}
-*/
 	return 0;
 }
 
-static int fill_system_processes_info(float factor, struct system_info_t * sys_info)
+static int fill_system_processes_info(procNode *prochead, float factor,
+				      struct system_info_t *sys_info,
+				      uint32_t *count)
 {
 	procNode* proc;
-	int i = 0;
 	float thread_load;
-	// data variable
-	unsigned long virtual = 0;
-	unsigned long resident = 0;
-	unsigned long shared = 0;
-	unsigned long pssmem = 0;
-	uint64_t ticks = 0;
-	float app_cpu_usage = 0.0;
+	uint32_t app_count = 0;
 
 	LOGI_th_samp("prochead = %X\n", (unsigned int)prochead);
-	for(proc = prochead; proc != NULL; proc = proc->next)
-	{
-		//increment process count
-		sys_info->count_of_processes++; //maybe wrong
-	}
-	sys_info->process_load = malloc (
-										sys_info->count_of_processes *
-										sizeof(*sys_info->process_load)
-									);
-	i = 0;
-	for(proc = prochead; proc != NULL; proc = proc->next)
-	{
+
+	for(proc = prochead; proc != NULL; proc = proc->next) {
 		LOGI_th_samp("proc#%d (%d %d),(%d %d) (%d) %f\n",
-				i,
+				app_count,
 				(unsigned int)proc->proc_data.utime, (unsigned int)proc->proc_data.stime ,
 				(unsigned int)proc->saved_utime, (unsigned int)proc->saved_stime,
 				(int)(proc->proc_data.utime + proc->proc_data.stime - proc->saved_utime - proc->saved_stime),
@@ -1335,38 +1285,16 @@ static int fill_system_processes_info(float factor, struct system_info_t * sys_i
 		if(thread_load > 100.0f)
 			thread_load = 100.0f;
 
-		//num_thread += proc->proc_data.numofthread;
-		virtual += proc->proc_data.vir_mem;					// Byte
-		resident += (proc->proc_data.res_memblock * 4);		// KByte
-		pssmem += (proc->proc_data.pss);					// KByte
-		shared += (proc->proc_data.sh_mem);					// KByte
-		ticks += (proc->proc_data.utime + proc->proc_data.stime -
-					proc->saved_utime - proc->saved_stime);
-
 		proc->saved_utime = proc->proc_data.utime;
 		proc->saved_stime = proc->proc_data.stime;
 
+		proc->proc_data.cpu_load = thread_load;
 
-		sys_info->process_load[i].id = proc->proc_data.pid;
-		sys_info->process_load[i].load = thread_load;
-		i++;
-
+		//increment process count
+		app_count++;
 	}
 
-	app_cpu_usage = (float)ticks * factor;
-	if(app_cpu_usage > 100.0f)
-		app_cpu_usage = 100.0f;
-	resident = resident * 1024;		// change to Byte
-	pssmem = pssmem * 1024;			// change to Byte
-	shared = shared * 1024;			// change to Byte
-
-	sys_info->virtual_memory = virtual;
-	sys_info->resident_memory = resident;
-	sys_info->shared_memory = shared;
-	sys_info->pss_memory = pssmem;
-
-	sys_info->app_cpu_usage = app_cpu_usage;
-
+	*count = app_count;
 	return 0;
 
 }
@@ -1374,39 +1302,26 @@ static int fill_system_processes_info(float factor, struct system_info_t * sys_i
 // fill threads information
 static int fill_system_threads_info(float factor, struct system_info_t * sys_info)
 {
+	procNode* inst_proc;
 	procNode* proc;
 	float thread_load;
 
-	for(proc = thread_prochead; proc != NULL; proc = proc->next)
-		//increment thread count
-		sys_info->count_of_threads++; //maybe wrong
+	for (inst_proc = inst_prochead; inst_proc != NULL; inst_proc = inst_proc->next)
+		for (proc = inst_proc->thread_prochead; proc != NULL; proc = proc->next) {
+			sys_info->count_of_threads++; //maybe wrong
 
-/* 	LOGI_th_samp("thread load\n"); */
-	struct thread_info_t *pthread;
-	if (sys_info->count_of_threads != 0)
-	{
-		sys_info->thread_load = malloc( sys_info->count_of_threads * sizeof(*sys_info->thread_load) );
-		pthread = sys_info->thread_load;
-	}
+			thread_load = (float)(proc->proc_data.utime +
+					      proc->proc_data.stime -
+					      proc->saved_utime -
+					      proc->saved_stime) * factor;
+			if(thread_load > 100.0f)
+				thread_load = 100.0f;
 
-	for(proc = thread_prochead; proc != NULL; proc = proc->next)
-	{
-		thread_load = (float)(proc->proc_data.utime + proc->proc_data.stime -
-								proc->saved_utime - proc->saved_stime)
-			* factor;
-		if(thread_load > 100.0f)
-			thread_load = 100.0f;
+			proc->proc_data.cpu_load = thread_load;
 
-		pthread->pid = proc->proc_data.pid;
-		pthread->load = thread_load;
-		pthread++;
-
-//		sprintf(thread_loadtmpbuf, "%d,%.1f,", proc->proc_data.pid, thread_load);
-//		strcat(thread_loadbuf, thread_loadtmpbuf);
-
-		proc->saved_utime = proc->proc_data.utime;
-		proc->saved_stime = proc->proc_data.stime;
-	}
+			proc->saved_utime = proc->proc_data.utime;
+			proc->saved_stime = proc->proc_data.stime;
+		}
 
 	return 0;
 }
@@ -1733,11 +1648,31 @@ static uint32_t pop_app_energy_per_device(enum supported_device dev)
 	}
 }
 
-static int get_pid_array(int arr[], const int n)
+static int get_inst_pid_array(pid_t *arr, const int n)
+{
+	int pid_count = 0;
+
+	if (manager.fd.inst_tasks == NULL)
+		return 0;
+
+	rewind(manager.fd.inst_tasks);
+	fflush(manager.fd.inst_tasks);
+
+	while (fscanf(manager.fd.inst_tasks, "%lu", arr) == 1) {
+		LOGI_th_samp("PID scaned %d\n", *arr);
+		arr++;
+		pid_count++;
+	}
+
+	return pid_count;
+}
+
+static int get_other_pid_array(pid_t inst_pid[], const int inst_n, pid_t arr[],
+			       const int n)
 {
 	DIR *d = opendir("/proc");
 	struct dirent *dirent;
-	int count = 0;
+	int count = 0, i = 0;
 
 	if (!d) {
 		LOGW("Cannot open /proc dir (%s)\n", strerror(errno));
@@ -1748,8 +1683,14 @@ static int get_pid_array(int arr[], const int n)
 		if (dirent->d_type == DT_DIR) {
 			char *tmp;
 			pid_t pid = strtol(dirent->d_name, &tmp, 10);
-			if (*tmp == '\0')
-				arr[count++] = pid;
+			if (*tmp == '\0') {
+				for (i = 0; i < inst_n; i++) {
+					if (inst_pid[i] == pid)
+						break;
+				}
+				if (i == inst_n || inst_n == 0)
+					arr[count++] = pid;
+			}
 		}
 	}
 
@@ -1784,27 +1725,45 @@ int get_system_info(struct system_info_t *sys_info)
 	int res = 0;
 	float elapsed;
 	float factor;
+	int i = 0;
 
 	LOGI_th_samp("start\n");
 
 	memset(sys_info, 0, sizeof(*sys_info));
 
 	// common (cpu, processes, memory)
-	if (IS_OPT_SET(FL_CPU) ||
-	    IS_OPT_SET(FL_PROCESSES) ||
-	    IS_OPT_SET(FL_MEMORY)) {
+	if (IS_OPT_SET(FL_SYSTEM_CPU) ||
+	    IS_OPT_SET(FL_SYSTEM_PROCESS) ||
+	    IS_OPT_SET(FL_SYSTEM_PROCESSES_LOAD) ||
+	    IS_OPT_SET(FL_SYSTEM_THREAD_LOAD) ||
+	    IS_OPT_SET(FL_SYSTEM_MEMORY)) {
 		const int max_pid_num = 1024; /* ugly hardcode */
-		int pidarray[max_pid_num];
-		int pidcount = 0;
-		pid_t first_target_pid = -1;
+		pid_t other_pidarray[max_pid_num];
+		int other_pidcount = 0;
+		pid_t inst_pidarray[max_pid_num];
+		int inst_pidcount = 0;
 
-		pidcount = get_pid_array(pidarray, max_pid_num);
-		LOGI_th_samp("PID count : %d\n", pidcount);
+		inst_pidcount = get_inst_pid_array(inst_pidarray,
+						   max_pid_num);
+		other_pidcount = get_other_pid_array(inst_pidarray,
+						     inst_pidcount,
+						     other_pidarray,
+						     max_pid_num);
+		LOGI_th_samp("PID count : inst %d, other %d\n", inst_pidcount,
+			     other_pidcount);
 
-		if (update_process_data(pidarray, pidcount, PROCDATA_STAT) < 0) {
-			LOGE("Failed to update process stat data\n");
+		if (update_process_data(&inst_prochead, inst_pidarray,
+					inst_pidcount, PROCDATA_STAT, 1) < 0) {
+			LOGE("Failed to update inst process stat data\n");
 			goto fail_exit;
 		}
+
+		if (update_process_data(&other_prochead, other_pidarray,
+					other_pidcount, PROCDATA_STAT, 0) < 0) {
+			LOGE("Failed to update other process stat data\n");
+			goto fail_exit;
+		}
+
 		/**
 		 * This position is optimized position of timestamp. Just
 		 * before get system cpu data and just after get process cpu
@@ -1829,14 +1788,20 @@ int get_system_info(struct system_info_t *sys_info)
 		 * remarkable, so memory data is less related with timestamp
 		 * then cpu data
 		 */
-		if (update_process_data(pidarray, pidcount, PROCDATA_SMAPS) < 0) {
-			LOGE("Failed to update process smaps data\n");
+		if (update_process_data(&inst_prochead, inst_pidarray,
+					inst_pidcount, PROCDATA_SMAPS, 1) < 0) {
+			LOGE("Failed to update inst process smaps data\n");
 			goto fail_exit;
 		}
-
-		first_target_pid = get_first_target_process();
-		if (first_target_pid > 0)
-			if (update_thread_data(first_target_pid) < 0) {
+/*
+		if (update_process_data(&other_prochead, other_pidarray,
+					other_pidcount, PROCDATA_SMAPS) < 0) {
+			LOGE("Failed to update other process smaps data\n");
+			goto fail_exit;
+		}
+*/
+		for (i = 0; i < inst_pidcount; i++)
+			if (update_thread_data(inst_pidarray[i]) < 0) {
 				LOGE("Failed to update thread stat data\n");
 				goto fail_exit;
 			}
@@ -1852,7 +1817,15 @@ int get_system_info(struct system_info_t *sys_info)
 		}
 
 		/* calculate process load, memory, app_cpu_usage */
-		if (fill_system_processes_info(factor, sys_info) < 0) {
+		if (fill_system_processes_info(inst_prochead, factor, sys_info,
+					       &(sys_info->count_of_inst_processes)) < 0) {
+			LOGE("Failed to fill processes info\n");
+			goto fail_exit;
+		}
+
+		/* calculate process load, memory, app_cpu_usage */
+		if (fill_system_processes_info(other_prochead, factor, sys_info,
+					       &(sys_info->count_of_other_processes)) < 0) {
 			LOGE("Failed to fill processes info\n");
 			goto fail_exit;
 		}
@@ -1869,15 +1842,12 @@ int get_system_info(struct system_info_t *sys_info)
 		}
 	}
 
-	if (IS_OPT_SET(FL_MEMORY)) {
-		sys_info->total_alloc_size = get_total_alloc_size();
-		sys_info->system_memory_total = sysmemtotal;
+	if (IS_OPT_SET(FL_SYSTEM_MEMORY))
 		sys_info->system_memory_used = sysmemused;
-	}
 
 	LOGI_th_samp("Fill result structure\n");
 
-	if (IS_OPT_SET(FL_DISK)) {
+	if (IS_OPT_SET(FL_SYSTEM_DISK)) {
 		sys_info->total_used_drive = get_total_used_drive();
 		peek_disk_stat_diff(&sys_info->disk_reads,
 				    &sys_info->disk_sectors_read,
@@ -1885,11 +1855,11 @@ int get_system_info(struct system_info_t *sys_info)
 				    &sys_info->disk_sectors_write);
 	}
 
-	if (IS_OPT_SET(FL_NETWORK))
+	if (IS_OPT_SET(FL_SYSTEM_NETWORK))
 		peek_network_stat_diff(&sys_info->network_send_size,
 				       &sys_info->network_receive_size);
 
-	if (IS_OPT_SET(FL_DEVICE)) {
+	if (IS_OPT_SET(FL_SYSTEM_DEVICE)) {
 		sys_info->wifi_status = get_wifi_status();
 		sys_info->bt_status = get_bt_status();
 		sys_info->gps_status = get_gps_status();
@@ -1905,7 +1875,7 @@ int get_system_info(struct system_info_t *sys_info)
 		sys_info->dnet_status = get_dnet_status();
 	}
 
-	if (IS_OPT_SET(FL_ENERGY)) {
+	if (IS_OPT_SET(FL_SYSTEM_ENERGY)) {
 		int i;
 		sys_info->energy = 0; /* not implemented */
 		for (i = 0; i != supported_devices_count; ++i) {
@@ -2090,25 +2060,31 @@ static uint32_t msg_data_payload_length(const struct system_info_t *sys_info)
 
 	/* subtract pointers */
 	len -= sizeof(sys_info->cpu_frequency) + sizeof(sys_info->cpu_load);
-	len -= sizeof(sys_info->thread_load) + sizeof(sys_info->process_load);
 
-	if (IS_OPT_SET(FL_CPU))
-		len += sys_info->count_of_threads *
-			sizeof(*sys_info->thread_load);
+	if (IS_OPT_SET(FL_SYSTEM_THREAD_LOAD))
+		len += sys_info->count_of_threads * sizeof(struct thread_info_t);
 
-	if (IS_OPT_SET(FL_PROCESSES))
-		len += sys_info->count_of_processes *
-			sizeof(*sys_info->process_load);
+	if (IS_OPT_SET(FL_SYSTEM_PROCESS))
+		len += sys_info->count_of_inst_processes *
+		       sizeof(struct inst_process_info_t);
+
+	if (IS_OPT_SET(FL_SYSTEM_PROCESSES_LOAD))
+		len += sys_info->count_of_other_processes *
+		       sizeof(struct other_process_info_t);
 
 	return len;
 }
 
 struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 {
-	const int len = msg_data_payload_length(sys_info);
+	const int len = msg_data_payload_length(sys_info) + 0x100;
 	struct msg_data_t *msg = NULL;
 	char *p = NULL;
+	procNode *proc = NULL;
+	procNode *thread_proc = NULL;
 	int i = 0;
+	int thread_count = 0;
+	char *thread_count_p;
 
 	msg = malloc(MSG_DATA_HDR_LEN + len);
 	if (!msg) {
@@ -2120,9 +2096,8 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	p = msg->payload;
 
 	// CPU
-	if (IS_OPT_SET(FL_CPU)) {
-		pack_float(p, sys_info->app_cpu_usage);
-
+	if (IS_OPT_SET(FL_SYSTEM_CPU)) {
+		//CPU frequency
 		for (i = 0; i < num_of_cpu; i++) {
 			if (sys_info->cpu_frequency)
 				pack_float(p, sys_info->cpu_frequency[i]);
@@ -2130,67 +2105,81 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 				pack_float(p, 0.0);
 		}
 
+		//CPU load
 		for (i = 0; i < num_of_cpu; i++) {
 			if (sys_info->cpu_load)
 				pack_float(p, sys_info->cpu_load[i]);
 			else
 				pack_float(p, 0.0);
 		}
-		// thread
-		pack_int32(p, sys_info->count_of_threads);
-		for (i = 0; i < sys_info->count_of_threads; i++) {
-			if (sys_info->thread_load) {
-				pack_int32(p, sys_info->thread_load[i].pid);
-				pack_float(p, sys_info->thread_load[i].load);
-			} else {
-				pack_int32(p, 0);
-				pack_float(p, 0.0);
-			}
-		}
 	} else {
-		pack_float(p, 0.0); /* pack app_cpu_usage */
-
 		for (i = 0; i < num_of_cpu; i++) {
 			pack_float(p, 0.0); /* pack cpu_frequency */
 			pack_float(p, 0.0); /* pack cpu_load */
 		}
-		/* thread */
-		pack_int32(p, 0); /* pack count_of_threads */
 	}
 
-	/* process */
-	if (IS_OPT_SET(FL_PROCESSES)) {
-		pack_int32(p, sys_info->count_of_processes);
-		for (i = 0; i < sys_info->count_of_processes; i++) {
-			if (sys_info->process_load) {
-				pack_int32(p, sys_info->process_load[i].id);
-				pack_float(p, sys_info->process_load[i].load);
+	/* memory */
+	pack_int64(p, sys_info->system_memory_used);
+
+	/* inst process / target process */
+	if (IS_OPT_SET(FL_SYSTEM_PROCESS)) {
+		pack_int32(p, sys_info->count_of_inst_processes);
+		proc = inst_prochead;
+		for (i = 0; i < sys_info->count_of_inst_processes; i++) {
+			pack_int32(p, (uint32_t)proc->proc_data.pid);
+			pack_float(p, proc->proc_data.cpu_load);
+			pack_int64(p, (uint64_t)proc->proc_data.vir_mem);
+			pack_int64(p, (uint64_t)proc->proc_data.res_memblock);
+			pack_int64(p, (uint64_t)proc->proc_data.sh_mem);
+			pack_int64(p, (uint64_t)proc->proc_data.pss);
+			/* TODO total alloc for not ld preloaded processes */
+			pack_int64(p, (uint64_t)get_total_alloc_size_by_pid(proc->proc_data.pid)); 
+			//pack threads
+
+			if (IS_OPT_SET(FL_SYSTEM_THREAD_LOAD)) {
+				thread_count_p = p; //save real thread_count position
+				pack_int32(p, 0); //dummy thread_count
+				thread_count = 0;
+				for (thread_proc = proc->thread_prochead;
+				     thread_proc != NULL;
+				     thread_proc = thread_proc->next) {
+					thread_count++;
+					pack_int32(p, thread_proc->proc_data.pid);
+					pack_float(p, thread_proc->proc_data.cpu_load);
+				}
+				//pack real thread count
+				pack_int32(thread_count_p, thread_count);
 			} else {
-				pack_int32(p, 0);
-				pack_float(p, 0.0);
+				pack_int32(p, 0); //thread_count
 			}
+			proc = proc->next;
 		}
+
 	} else {
 		pack_int32(p, 0); /* pack count_of_processes */
 	}
 
-	/* memory */
-	if (IS_OPT_SET(FL_MEMORY)) {
-		pack_int32(p, sys_info->virtual_memory);
-		pack_int32(p, sys_info->resident_memory);
-		pack_int32(p, sys_info->shared_memory);
-		pack_int32(p, sys_info->pss_memory);
-		pack_int64(p, sys_info->total_alloc_size);
-		pack_int64(p, sys_info->system_memory_total);
-		pack_int64(p, sys_info->system_memory_used);
+
+	/* other process */
+	if (IS_OPT_SET(FL_SYSTEM_PROCESSES_LOAD)) {
+		pack_int32(p, sys_info->count_of_other_processes);
+		proc = other_prochead;
+		for (i = 0; i < sys_info->count_of_other_processes; i++) {
+			pack_int32(p, proc->proc_data.pid);
+			pack_float(p, proc->proc_data.cpu_load);
+			proc = proc->next;
+		}
 	} else {
-		pack_int32(p, 0); /* pack virtual_memory */
-		pack_int32(p, 0); /* pack resident_memory */
-		pack_int32(p, 0); /* pack shared_memory */
-		pack_int32(p, 0); /* pack pss_memory */
-		pack_int64(p, (uint64_t) 0); /* pack total_alloc_size */
-		pack_int64(p, (uint64_t) 0); /* pack system_memory_total */
-		pack_int64(p, (uint64_t) 0); /* pack system_memory_used */
+		pack_int32(p, 0); /* pack count_of_processes */
+	}
+	/* FD count, FD operation count */
+	if (IS_OPT_SET(FL_SYSTEM_FD)) {
+		pack_int32(p, 0); /* pack fd count */
+		pack_int32(p, 0); /* pack fd operation count */
+	} else {
+		pack_int32(p, 0); /* pack fd count */
+		pack_int32(p, 0); /* pack fd operaion count */
 	}
 
 	pack_int32(p, sys_info->total_used_drive);
@@ -2217,9 +2206,9 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	pack_int32(p, sys_info->dnet_status);
 
 	pack_int32(p, sys_info->energy);
-	for (i = 0; i != supported_devices_count; ++i)
+	for (i = 0; i < supported_devices_count; i++)
 		pack_int32(p, sys_info->energy_per_device[i]);
-	for (i = 0; i != supported_devices_count; ++i)
+	for (i = 0; i < supported_devices_count; i++)
 		pack_int32(p, sys_info->app_energy_per_device[i]);
 
 	return msg;
