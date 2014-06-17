@@ -43,7 +43,7 @@
 static int open_tasks_dev(void)
 {
 	if (manager.fd.inst_tasks == NULL) {
-		manager.fd.inst_tasks = fopen(INST_PID_FILENAME, "r");
+		manager.fd.inst_tasks = fopen(INST_PID_FILENAME, "re");
 		if (manager.fd.inst_tasks == NULL) {
 			LOGE("Cannot open tasks dev: %s\n", strerror(errno));
 			return 1;
