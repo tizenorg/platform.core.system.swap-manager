@@ -159,8 +159,7 @@ int exec_app_tizen(const char *app_id, const char *exec_path)
 		while (ret == -1 && errno == EINTR);
 		return 0;
 	} else { /* child */
-		execl(LAUNCH_APP_PATH, LAUNCH_APP_NAME, app_id, LAUNCH_APP_SDK,
-		      DA_PRELOAD_EXEC, NULL);
+		execl(LAUNCH_APP_PATH, LAUNCH_APP_NAME, app_id, NULL);
 		/* FIXME: If code flows here, it deserves greater attention */
 		_Exit(EXIT_FAILURE);
 	}
@@ -177,7 +176,7 @@ int exec_app_common(const char* exec_path)
 		return -1;
 	}
 
-	sprintf(command, "%s %s", DA_PRELOAD_TIZEN, exec_path);
+	sprintf(command, "%s", exec_path);
 	LOGI("cmd: %s\n", command);
 
 	pid = fork();
