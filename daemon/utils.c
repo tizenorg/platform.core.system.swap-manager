@@ -159,8 +159,7 @@ int exec_app_tizen(const char *app_id, const char *exec_path)
 		while (ret == -1 && errno == EINTR);
 		return 0;
 	} else { /* child */
-		execl(LAUNCH_APP_PATH, LAUNCH_APP_NAME, app_id, LAUNCH_APP_SDK,
-		      DA_PRELOAD_EXEC, NULL);
+		execl(LAUNCH_APP_PATH, LAUNCH_APP_NAME, app_id, NULL);
 		/* FIXME: If code flows here, it deserves greater attention */
 		_Exit(EXIT_FAILURE);
 	}
@@ -169,7 +168,6 @@ int exec_app_tizen(const char *app_id, const char *exec_path)
 int exec_app_common(const char* exec_path)
 {
 	pid_t pid;
-	char command[PATH_MAX];
 
 	LOGI("exec %s\n", exec_path);
 	if (exec_path == NULL || !strlen(exec_path)) {
@@ -177,8 +175,7 @@ int exec_app_common(const char* exec_path)
 		return -1;
 	}
 
-	snprintf(command, sizeof(command), "%s %s", DA_PRELOAD_TIZEN, exec_path);
-	LOGI("cmd: %s\n", command);
+	LOGI("cmd: %s\n", exec_path);
 
 	pid = fork();
 	if (pid == -1)
@@ -187,7 +184,7 @@ int exec_app_common(const char* exec_path)
 	if (pid > 0) { /* parent */
 		return 0;
 	} else { /* child */
-		execl(SHELL_CMD, SHELL_CMD, "-c", command, NULL);
+		execl(SHELL_CMD, SHELL_CMD, "-c", exec_path, NULL);
 		/* FIXME: Again, such case deserve much more attention */
 		_Exit(EXIT_FAILURE);
 	}
