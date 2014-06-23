@@ -77,6 +77,10 @@ static const char *input_key_devices[] = {
 	"MELFAS MCS Touchkey",
 	/* target: M0, kernel: 3.10, buttons: volume +/-, home, power */
 	"gpio-keys.5",
+	/* target: Kiran, kernel: 3.10.17, buttons: volume +/-, home, power*/
+	"sci-keypad",
+	/* target: Kiran, kernel: 3.10.17, buttons: menu, back */
+	"ist30xx_ts_tinput",
 	NULL
 };
 
@@ -87,6 +91,8 @@ static const char *input_touch_devices[] = {
 	"sec_touchscreen",
 	/* target: M0, kernel: 3.10 */
 	"MELPAS MMS114 Touchscreen",
+	/* target: Kiran, kernel: 3.10.17 */
+	"ist30xx_ts_input",
 	NULL
 };
 
