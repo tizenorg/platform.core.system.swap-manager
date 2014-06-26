@@ -53,6 +53,9 @@
 #define SID_APP				5000
 #define MANIFEST_PATH		"/info/manifest.xml"
 
+#define PROC_FS			"/proc"
+#define PROC_CMDLINE		"/proc/%s/cmdline"
+
 #define APPDIR1				"/opt/apps/"
 #define APPDIR2				"/opt/usr/apps/"
 
@@ -251,34 +254,50 @@ void kill_app_web(const char *app_id)
 }
 
 // find process id from executable binary path
-pid_t find_pid_from_path(const char* path)
+pid_t find_pid_from_path(const char *path)
 {
-	pid_t status = 0;
+	char buf[BUFFER_MAX];
+	char cmdline[PATH_MAX];
+	DIR *proc;
+	FILE *fp;
+	struct dirent *entry;
+	int found, len = strlen(path);
+	pid_t pid = 0;
 
-	char buffer[BUFFER_MAX] = {0};
-	char command[BUFFER_MAX] = {0};
-
-	sprintf(command, "/bin/pidof %s", path);
 	LOGI("look for <%s>\n", path);
 
-	FILE *fp = popen(command, "r");
-	if (!fp)
-		return status;
+	proc = opendir(PROC_FS);
+	if (!proc)
+		goto out;
 
-	while (fgets(buffer, BUFFER_MAX, fp) != NULL)
-		LOGI("result of 'pidof' is %s\n", buffer);
+	while ((entry = readdir(proc)) != NULL) {
+		pid = (pid_t)atoi(entry->d_name);
+		if (pid == 0)
+			continue;
 
-	pclose(fp);
+		snprintf(cmdline, sizeof(cmdline), PROC_CMDLINE, entry->d_name);
 
-	if (strlen(buffer) > 0) {
-		if (sscanf(buffer, "%d\n", &status) != 1) {
-			LOGW("Failed to read result buffer of 'pidof',"
-			     " status(%d) with cmd '%s'\n", status, command);
-			return 0;
-		}
+		fp = fopen(cmdline, "r");
+		if (fp == NULL)
+			continue;
+
+		found = 0;
+		if (fscanf(fp, "%s", buf) != EOF) /* read only argv[0] */
+			found = (strncmp(path, buf, len) == 0);
+
+		fclose(fp);
+
+		if (found)
+			goto out_close_dir;
 	}
 
-	return status;
+	pid = 0;
+
+out_close_dir:
+	closedir(proc);
+
+out:
+	return pid;
 }
 
 static pid_t get_pid_by_path(const char *binary_path)
