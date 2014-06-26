@@ -48,7 +48,7 @@
 #define US_FUNC_RETURN "vnbcdxpfw"
 
 #define US_APP_INST_LIB_MIN 0
-#define US_APP_INST_LIB_MAX 100
+#define US_APP_INST_LIB_MAX 1000
 
 int check_app_type(uint32_t app_type);
 int check_app_id(uint32_t app_type, char *app_id);
