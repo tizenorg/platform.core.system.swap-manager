@@ -2,6 +2,7 @@
 	<define>
 		<domain name="swap" />
     <permit>
+		<smack permit="system::use_internet" type="rw" />
 		<smack permit="sdbd" type="rw" />
     </permit>
 	</define>
