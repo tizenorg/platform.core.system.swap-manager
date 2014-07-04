@@ -755,6 +755,7 @@ static size_t binary_ack_pack(char *s, const struct binary_ack *ba)
 		s += 2;
 	}
 	*s = '\0';
+
 	return sizeof(uint32_t) + len + 1 + 2*16 + 1;
 }
 
@@ -779,22 +780,32 @@ static const char* basename(const char *filename)
 	const char *p = strrchr(filename, '/');
 	return p ? p + 1 : NULL;
 }
+
 static struct binary_ack* binary_ack_alloc(const char *filename)
 {
 	struct binary_ack *ba = malloc(sizeof(*ba));
+	struct stat decoy;
 	char builddir[PATH_MAX];
 	char binpath[PATH_MAX];
 
-	ba->type = get_binary_type(filename);
+	if (stat(filename, &decoy) == 0) {
+		ba->type = get_binary_type(filename);
 
-	get_build_dir(builddir, filename);
+		get_build_dir(builddir, filename);
 
-	snprintf(binpath, sizeof(binpath), "%s/%s",
-		 builddir, basename(filename) ?: "");
+		if (builddir[0] != '\0')
+			snprintf(binpath, sizeof(binpath), "%s/%s",
+				 builddir, basename(filename) ?: "");
+		else
+			binpath[0] = '\0';
 
-	ba->binpath = strdup(binpath);
-
-	get_file_md5sum(ba->digest, filename);
+		ba->binpath = strdup(binpath);
+		get_file_md5sum(ba->digest, filename);
+	} else {
+		ba->type = BINARY_TYPE_FILE_NOT_EXIST;
+		ba->binpath = strdup(filename);
+		memset(ba->digest, 0x00, sizeof(ba->digest));
+	}
 
 	return ba;
 }
@@ -802,6 +813,9 @@ static struct binary_ack* binary_ack_alloc(const char *filename)
 static int process_msg_binary_info(struct msg_buf_t *msg)
 {
 	uint32_t i, bincount;
+	enum ErrorCode error_code = ERR_NO;
+
+	printBuf(msg->cur_pos, msg->len);
 
 	if (!parse_int32(msg, &bincount)) {
 		LOGE("MSG_BINARY_INFO error: No binaries count\n");
@@ -809,6 +823,7 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 	}
 
 	struct binary_ack *acks[bincount];
+	struct binary_ack *new;
 	size_t total_size = 0;
 	for (i = 0; i != bincount; ++i) {
 		const char *str = parse_string_inplace(msg);
@@ -816,8 +831,16 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 			LOGE("MSG_BINARY_INFO error: No enough binaries\n");
 			return -1;
 		}
-		acks[i] = binary_ack_alloc(str);
+		new = binary_ack_alloc(str);
 		total_size += binary_ack_size(acks[i]);
+		/* check for errors */
+		if (new->type == BINARY_TYPE_FILE_NOT_EXIST) {
+			error_code = ERR_WRONG_MESSAGE_DATA;
+			LOGW("binary file not exists <%s>\n", str);
+		}
+		if (new->binpath[0] == '\0')
+			LOGW("section '.debug_str' not found in <%s>\n", str);
+		acks[i] = new;
 	}
 	typedef uint32_t return_id;
 	typedef uint32_t binary_ack_count;
@@ -831,7 +854,7 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 	msg_reply->len = total_size + sizeof(return_id)
 				    + sizeof(binary_ack_count);
 
-	pack_int32(p, ERR_NO);
+	pack_int32(p, error_code);
 	pack_int32(p, bincount);
 
 	for (i = 0; i != bincount; ++i) {
