@@ -39,6 +39,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include "elf.h"
+#include "debug.h"
 
 #define SIZEOF_VOID_P 4
 #if SIZEOF_VOID_P == 8
@@ -164,8 +165,12 @@ void get_build_dir(char builddir[PATH_MAX], const char *filename)
 				}
 				p = 1 + memchr(p, '\0', debug_section_end - p);
 			}
+		} else {
+			LOGW("cannot debug_header <%s>\n", adj_filename);
 		}
 		munmap(filemem, len);
+	} else {
+		LOGW("cannot mmap file <%s>\n", adj_filename);
 	}
 	*builddir = '\0';
 }

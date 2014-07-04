@@ -95,6 +95,8 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 	{
 		LOGE("return type parsing error\n");
 		goto err_ret;
+	} else {
+		parse_deb("ret type = <%c>\n", *ret_type);
 	}
 
 	*dest = new_probe();
