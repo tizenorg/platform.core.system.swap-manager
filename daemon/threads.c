@@ -157,13 +157,15 @@ static void* recvThread(void* data)
 			break;
 		} else if (log.type == MSG_MSG) {
 			// don't send to host
-			LOGI("EXTRA MSG(%u) len=%u data='%s'\n", log.type,
-			     log.length, log.data);
+			LOGI("EXTRA '%s'\n", log.data);
 			continue;
 		} else if (log.type == MSG_ERROR) {
 			// don't send to host
-			LOGE("EXTRA MSG(%u) len=%u data='%s'\n", log.type,
-			     log.length, log.data);
+			LOGE("EXTRA '%s'\n", log.data);
+			continue;
+		} else if (log.type == MSG_WARNING) {
+			// don't send to host
+			LOGW("EXTRA '%s'\n", log.data);
 			continue;
 		}
 #ifdef PRINT_TARGET_LOG
