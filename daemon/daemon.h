@@ -82,7 +82,8 @@ enum TargetMessageType
 	MSG_PID = 8,
 	MSG_MSG = 9,
 	MSG_ALLOC = 10,
-	MSG_ERROR = 11
+	MSG_ERROR = 11,
+	MSG_WARNING = 12
 };
 #define IS_PROBE_MSG(type) (((type) & 0x0100) == 0x0100)
 
