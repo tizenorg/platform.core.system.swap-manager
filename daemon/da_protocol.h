@@ -325,9 +325,9 @@ struct system_info_t {
 	// system_disk
 	uint32_t total_used_drive;
 	uint32_t disk_reads;
-	uint32_t disk_sectors_read;
+	uint32_t disk_bytes_read;
 	uint32_t disk_writes;
-	uint32_t disk_sectors_write;
+	uint32_t disk_bytes_write;
 
 	// system_network
 	uint32_t network_send_size;

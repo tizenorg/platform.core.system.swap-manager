@@ -1437,20 +1437,61 @@ static void peek_network_stat_diff(uint32_t *recv, uint32_t *send)
 
 }
 
+/* function
+ * info: get sector size by partition name
+ * params:
+ *     char *partition_name - partition name to get sector size
+ * return
+ *     uint32_t - partition sector size
+ * */
+static uint32_t get_partition_sector_size(char *partition_name)
+{
+	char buf[MAX_FILENAME];
+	FILE *f = NULL;
+	uint32_t res = 0;
+
+	/* prepare partition sector size file name */
+	sprintf(buf, "/sys/block/%s/queue/hw_sector_size", partition_name);
+	f = fopen(buf, "r");
+
+	/* check file */
+	if (f != NULL) {
+		/* reset error code */
+		errno = 0;
+		/* scan partition sector size */
+		fscanf(f, "%d", &res);
+		/* check errors */
+		int errsv = errno;
+		if (errsv) {
+			LOGE("scan file <%s> error: %s\n", buf,
+			     strerror(errsv));
+			res = 0;
+		}
+		/* close source file */
+		fclose(f);
+	} else
+		LOGE("cannot get size for partition <%s> from file <%s>\n",
+		     partition_name, buf);
+
+	/* return result value */
+	return res;
+}
+
 static void init_disk_stat(void)
 {
 	manager.fd.diskstats = fopen("/proc/diskstats", "r");
 }
 
-static void get_disk_stat(uint32_t *reads, uint32_t *sec_reads,
-			  uint32_t *writes, uint32_t *sec_writes)
+static void get_disk_stat(uint32_t *reads, uint32_t *bytes_reads,
+			  uint32_t *writes, uint32_t *bytes_writes)
 {
 	enum { partition_name_maxlength = 128 };
 	FILE *fp = manager.fd.diskstats;
 	char master_partition[partition_name_maxlength] = { 0 };
+	uint32_t sector_size = 0;
 
 	*reads = *writes = 0;
-	*sec_reads = *sec_writes = 0;
+	*bytes_reads = *bytes_writes = 0;
 
 	if (fp == NULL)
 		return;
@@ -1486,34 +1527,33 @@ static void get_disk_stat(uint32_t *reads, uint32_t *sec_reads,
 
 			memcpy(master_partition, partition,
 			       partition_name_maxlength);
-			// FIXME rw size is in sectors
-			// actualy different disks - different partition sector size (?)
-			// maybe need convert to bytes like this:
-			//*read += pread * sec_size;
-			//*write += pwrite * sec_size;
+
+			/* get sector size */
+			sector_size = get_partition_sector_size(partition);
 
 			*reads += (uint32_t)preads;
 			*writes += (uint32_t)pwrites;
 
-			*sec_reads += (uint32_t)psec_read;
-			*sec_writes += (uint32_t)psec_write;
+			/* calculate read and write bytes data */
+			*bytes_reads += (uint32_t)psec_read * sector_size;
+			*bytes_writes += (uint32_t)psec_write * sector_size;
 		}
 	}
 
 }
 
-static void peek_disk_stat_diff(uint32_t *reads, uint32_t *sec_reads,
-			        uint32_t *writes, uint32_t *sec_writes)
+static void peek_disk_stat_diff(uint32_t *reads, uint32_t *bytes_reads,
+			        uint32_t *writes, uint32_t *bytes_writes)
 {
 	static uint32_t reads_old;
-	static uint32_t sec_reads_old;
+	static uint32_t bytes_reads_old;
 	static uint32_t writes_old;
-	static uint32_t sec_writes_old;
+	static uint32_t bytes_writes_old;
 
 	uint32_t tmp;
 
 	//get cur values
-	get_disk_stat(reads, sec_reads, writes, sec_writes);
+	get_disk_stat(reads, bytes_reads, writes, bytes_writes);
 
 	tmp = *reads;
 	*reads = val_diff(tmp, reads_old);
@@ -1523,13 +1563,13 @@ static void peek_disk_stat_diff(uint32_t *reads, uint32_t *sec_reads,
 	*writes = val_diff(tmp, writes_old);
 	writes_old = tmp;
 
-	tmp = *sec_reads;
-	*sec_reads = val_diff(tmp, sec_reads_old);
-	sec_reads_old = tmp;
+	tmp = *bytes_reads;
+	*bytes_reads = val_diff(tmp, bytes_reads_old);
+	bytes_reads_old = tmp;
 
-	tmp = *sec_writes;
-	*sec_writes = val_diff(tmp, sec_writes_old);
-	sec_writes_old = tmp;
+	tmp = *bytes_writes;
+	*bytes_writes = val_diff(tmp, bytes_writes_old);
+	bytes_writes_old = tmp;
 
 }
 
@@ -1857,9 +1897,9 @@ int get_system_info(struct system_info_t *sys_info)
 	if (IS_OPT_SET(FL_SYSTEM_DISK)) {
 		sys_info->total_used_drive = get_total_used_drive();
 		peek_disk_stat_diff(&sys_info->disk_reads,
-				    &sys_info->disk_sectors_read,
+				    &sys_info->disk_bytes_read,
 				    &sys_info->disk_writes,
-				    &sys_info->disk_sectors_write);
+				    &sys_info->disk_bytes_write);
 	}
 
 	if (IS_OPT_SET(FL_SYSTEM_NETWORK))
@@ -2051,10 +2091,10 @@ int fill_target_info(struct target_info_t *target_info)
 
 int sys_stat_prepare(void)
 {
-	uint32_t reads, writes, sec_reads, sec_writes;
+	uint32_t reads, writes, bytes_reads, bytes_writes;
 	uint32_t recv, send;
 
-	peek_disk_stat_diff(&reads, &writes, &sec_reads, &sec_writes);
+	peek_disk_stat_diff(&reads, &writes, &bytes_reads, &bytes_writes);
 	peek_network_stat_diff(&recv, &send);
 
 	return 0;
@@ -2186,9 +2226,9 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 
 	pack_int32(p, sys_info->total_used_drive);
 	pack_int32(p, sys_info->disk_reads);
-	pack_int32(p, sys_info->disk_sectors_read);
+	pack_int32(p, sys_info->disk_bytes_read);
 	pack_int32(p, sys_info->disk_writes);
-	pack_int32(p, sys_info->disk_sectors_write);
+	pack_int32(p, sys_info->disk_bytes_write);
 
 	pack_int32(p, sys_info->network_send_size);
 	pack_int32(p, sys_info->network_receive_size);
