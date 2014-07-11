@@ -90,6 +90,28 @@ enum PROCESS_DATA
 	PROCDATA_SMAPS
 };
 
+typedef unsigned long long tic_t;
+
+typedef struct {
+	unsigned long freq;
+	tic_t tick;
+	tic_t tick_sav;
+} cpufreq_t;
+
+typedef struct {
+	tic_t u, n, s, i, w, x, y, z;
+	tic_t u_sav, n_sav, s_sav, i_sav, w_sav, x_sav, y_sav, z_sav;
+	unsigned int id;		// cpu id
+	float cpu_usage;		// cpu load for this core
+	int sav_load_index;		// saved cpu load sampling index
+	int cur_load_index;		// current cpu load sampling index
+	cpufreq_t* pfreq;		// frequency information of cpu
+	int sav_freq_index;		// sav cpu frequency sampling index
+	int cur_freq_index;		// current cpu frequency sampling index
+	long long idle_ticks;
+	long long total_ticks;
+} CPU_t;	// for each cpu core
+
 // declared by greatim
 static int Hertz = 0;
 static int num_of_cpu = 0;
@@ -121,7 +143,7 @@ static int get_file_status_no_open(int pfd, const char *filename)
 }
 // daemon api : get status from file
 // pfd must not be null
-int get_file_status(int *pfd, const char *filename)
+static int get_file_status(int *pfd, const char *filename)
 {
 	int status = 0;
 
@@ -315,6 +337,36 @@ static void get_cpu_frequency(float *freqs)
 // ========================================================================
 // get cpu and memory info for each process and whole system
 // ========================================================================
+typedef struct {
+	unsigned int pid;
+	char command[MAXNAMESIZE];
+	char state;
+	int ppid;
+	int pgrp;
+	int sid;
+	int tty_nr;
+	int tty_pgrp;
+	unsigned long flags;
+	unsigned long minor_fault;
+	unsigned long cminor_fault;
+	unsigned long major_fault;
+	unsigned long cmajor_fault;
+	unsigned long long utime;
+	unsigned long long stime;
+	unsigned long long cutime;
+	unsigned long long cstime;
+	long priority;
+	long nice;
+	int numofthread;
+	long dummy;
+	unsigned long long start_time;
+	unsigned long vir_mem;
+	unsigned long sh_mem;
+	long res_memblock;
+	unsigned long pss;
+	float cpu_load;
+} proc_t;
+
 typedef struct _proc_node {
 	proc_t proc_data;
 	void *thread_prochead;
@@ -850,6 +902,11 @@ static void init_update_system_memory_data()
 
 static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 {
+	typedef struct _mem_t {
+		const char* name;	// memory slot name
+		unsigned long* slot;	// memory value slot
+	} mem_t;
+
 	int meminfo_fd = manager.fd.procmeminfo;
 	char *head, *tail;
 	int i, num;
