@@ -254,7 +254,7 @@ void kill_app_web(const char *app_id)
 }
 
 // find process id from executable binary path
-pid_t find_pid_from_path(const char *path)
+static pid_t find_pid_from_path(const char *path)
 {
 	char buf[BUFFER_MAX];
 	char cmdline[PATH_MAX];
@@ -379,153 +379,7 @@ int kill_app(const char *binary_path)
 	return 0;
 }
 
-int get_executable(char* appPath, char* buf, int buflen)
-{
-	int fd;
-
-	sprintf(buf, "%s.exe", appPath);
-	fd = open(buf, O_RDONLY);
-	if(fd != -1)
-	{
-		close(fd);
-	}
-	else
-	{
-		strcpy(buf, appPath);
-	}
-	return 0;
-}
-
-int get_app_install_path(char *strAppInstall, int length)
-{
-	FILE *fp;
-	char buf[BUFFER_MAX];
-	char *p;
-	int i;
-
-	if ((fp = fopen(DA_INSTALL_PATH, "r")) == NULL)
-	{
-		LOGE("Failed to open %s\n", DA_INSTALL_PATH);
-		return -1;
-	}
-
-	/*ex : <15>   DW_AT_comp_dir    : (indirect string, offset: 0x25f): /home/yt/workspace/templatetest/Debug-Tizen-Emulator	*/
-	while (fgets(buf, BUFFER_MAX, fp) != NULL)
-	{
-		//name
-		p = buf;
-		for (i = 0; i < BUFFER_MAX; i++)
-		{
-			if (*p == ':')
-				break;
-			p++;
-		}
-
-		if (*p != ':')
-			break;
-		else
-			p++;
-
-		//(...,offset:...)
-		for (; i < BUFFER_MAX; i++)
-		{
-			if (*p == '(')
-			{
-				while (*p != ')')
-				{
-					p++;
-				}
-			}
-			if (*p == ':')
-				break;
-			p++;
-		}
-
-		//find
-		if (*p != ':')
-			break;
-		for (; i < BUFFER_MAX - 1; i++)
-		{
-			if (*p == ':' || *p == ' ' || *p == '\t')
-				p++;
-			else
-				break;
-		}
-
-		//name
-		if (strlen(p) <= length)
-		{
-			sprintf(strAppInstall, "%s", p);
-			for (i = 0; i < strlen(p); i++)
-			{
-				if (strAppInstall[i] == '\n' || strAppInstall[i] == '\t')
-				{
-					strAppInstall[i] = '\0';
-					break;
-				}
-			}
-			fclose(fp);
-			return 1;
-		}
-	}
-	fclose(fp);
-	return -1;
-}
-
-int is_app_built_pie(void)
-{
-	int result;
-	FILE *fp;
-	char buf[BUFFER_MAX];
-
-	if((fp = fopen(DA_BUILD_OPTION, "r")) == NULL)
-	{
-		LOGE("Failed to open %s\n", DA_BUILD_OPTION);
-		return -1;
-	}
-
-	if(fgets(buf, BUFFER_MAX, fp) != NULL)
-	{
-		if(strcmp(buf, "DYN\n") == 0)
-			result = 1;
-		else if(strcmp(buf, "EXEC\n") == 0)
-			result = 0;
-		else
-			result = -1;
-	}
-	else
-	{
-		result = -1;
-	}
-	fclose(fp);
-
-	return result;
-}
-
-int get_app_base_address(int *baseAddress)
-{
-	int res;
-	FILE *fp;
-	char buf[BUFFER_MAX];
-
-	if((fp = fopen(DA_BASE_ADDRESS, "r")) == NULL)
-	{
-		LOGE("Failed to open %s\n", DA_BASE_ADDRESS);
-		return -1;
-	}
-
-	if(fgets(buf, BUFFER_MAX, fp) != NULL)
-	{
-		res = sscanf(buf, "%x", baseAddress);
-	}
-	else
-	{
-		res = -1;
-	}
-	fclose(fp);
-
-	return res;
-}
+static char *dereference_tizen_exe_path(const char *path, char *resolved);
 
 int is_same_app_process(char* appPath, int pid)
 {
@@ -575,7 +429,7 @@ int is_same_app_process(char* appPath, int pid)
 	return ret;
 }
 
-char *dereference_tizen_exe_path(const char *path, char *resolved)
+static char *dereference_tizen_exe_path(const char *path, char *resolved)
 {
 	char *res = NULL;
 	char tmp_path[PATH_MAX];

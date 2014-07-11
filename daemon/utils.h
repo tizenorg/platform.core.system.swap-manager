@@ -41,7 +41,6 @@ extern "C" {
 
 #define LAUNCH_APP_PATH			"/usr/bin/launch_app"
 #define DEBUG_LAUNCH_PRELOAD_PATH	"/usr/bin/debug_launchpad_preloading_preinitializing_daemon"
-#define KILL_APP_PATH			"/usr/bin/pkill"
 #define LAUNCH_APP_NAME			"launch_app"
 #define WRT_LAUNCHER_PATH		"/usr/bin/wrt-launcher"
 #define WRT_LAUNCHER_NAME		"wrt-launcher"
@@ -50,12 +49,8 @@ extern "C" {
 #define LAUNCH_APP_SDK			"__AUL_SDK__"
 #define DA_PRELOAD_EXEC			"DYNAMIC_ANALYSIS"
 #define DA_PRELOAD_TIZEN		"LD_PRELOAD=/usr/lib/da_probe_tizen.so"
-#define BATT_LOG_FILE			"/home/developer/sdk_tools/da/battery/"
 #define SHELL_CMD				"/bin/sh"
 
-#define DA_INSTALL_PATH		"/home/developer/sdk_tools/da/da_install_path"
-#define DA_BUILD_OPTION		"/home/developer/sdk_tools/da/da_build_option"
-#define DA_BASE_ADDRESS		"/home/developer/sdk_tools/da/da_base_address"
 
 uint64_t	str_to_uint64(char* str);
 int64_t		str_to_int64(char* str);
@@ -64,21 +59,12 @@ int remove_indir(const char *dirname);
 
 int kill_app(const char *binary_path);
 
-pid_t find_pid_from_path(const char* path);
-
-int get_app_type(char* appPath);
-int get_executable(char* appPath, char* buf, int buflen);
-int get_app_install_path(char *strAppInstall, int length);
-int is_app_built_pie(void);
-int get_app_base_address(int *baseAddress);
 int is_same_app_process(char* appPath, int pid);
 
 int exec_app_tizen(const char *app_id, const char *exec_path);
 int exec_app_common(const char* exec_path);
 int exec_app_web(const char *app_id);
 void kill_app_web(const char *app_id);
-char *dereference_tizen_exe_path(const char *path, char *resolved);
-void fd_setup_smack_attributes(int fd);
 float get_uptime(void);
 #ifdef __cplusplus
 }
