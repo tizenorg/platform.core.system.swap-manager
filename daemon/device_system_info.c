@@ -28,11 +28,8 @@
  *
  */
 
-
 #include <system_info.h>
 #include <runtime_info.h>
-#include <telephony_network.h>
-#include <call.h>
 #include "device_system_info.h"
 
 static int is_available(const char *path)

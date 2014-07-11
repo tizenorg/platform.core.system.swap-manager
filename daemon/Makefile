@@ -11,7 +11,6 @@ DEBUG_CPPFLAGS = 				\
 
 CPPFLAGS := 	-I/usr/include		\
 		-I/usr/include/system 	\
-		-I/usr/include/telephony\
 		-I/usr/include/vconf	\
 		$(DEBUG_CPPFLAGS)
 ifeq (arm, $(findstring arm, $(shell uname -sm)))
