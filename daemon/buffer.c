@@ -37,7 +37,7 @@
 #include "ioctl_commands.h"
 #include "debug.h"
 
-#define SUBBUF_SIZE 4 * 1024
+#define SUBBUF_SIZE 32 * 1024
 #define SUBBUF_NUM 8
 
 static int open_tasks_dev(void)
