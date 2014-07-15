@@ -166,6 +166,20 @@ static const char *supported_devices_strings[] = {
 #define array_size(x) (sizeof(x)/sizeof((x)[0]))
 enum { supported_devices_count = array_size(supported_devices_strings) };
 
+#define DA_MSG_MAX					4096
+#define RECV_BUF_MAX				4104	// = sizeof(msg_t)
+struct _msg_target_t {
+	unsigned int	type;
+	unsigned int	length;
+	char		data[0];
+};
+
+struct msg_target_t {
+	unsigned int	type;
+	unsigned int	length;
+	char		data[DA_MSG_MAX];
+};
+
 #define MAX_FILENAME 128
 
 #define MSG_DATA_HDR_LEN 20
@@ -421,6 +435,9 @@ void reset_system_info(struct system_info_t *sys);
 int check_running_status(const struct prof_session_t *prof_session);
 
 extern struct prof_session_t prof_session;
+
+extern int send_msg_to_target(int sock, struct msg_target_t *msg);
+extern int send_msg_to_all_targets(struct msg_target_t *msg);
 
 //debugs
 void print_replay_event(struct replay_event_t *ev, uint32_t num, char *tab);
