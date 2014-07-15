@@ -277,7 +277,7 @@ static void terminate_all_target()
 {
 	int i;
 	ssize_t sendlen;
-	msg_target_t sendlog;
+	struct msg_target_t sendlog;
 
 	sendlog.type = MSG_STOP;
 	sendlog.length = 0;
@@ -606,7 +606,7 @@ static Eina_Bool target_event_cb(void *data, Ecore_Fd_Handler *fd_handler)
  */
 static int targetServerHandler(void)
 {
-	msg_target_t log;
+	struct msg_target_t log;
 
 	int index = getEmptyTargetSlot();
 	if (index == MAX_TARGET_COUNT) {

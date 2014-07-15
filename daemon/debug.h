@@ -91,7 +91,7 @@ static inline void do_log(const char *prefix, const char *funcname, int line, ..
 	const char *fmt;
 	fprintf(stderr, "[%s][%f] (%s:%d):", prefix, get_uptime(), funcname, line);
 
-	va_start(ap, funcname);
+	va_start(ap, line);
 	fmt = va_arg(ap, const char *);
 	vfprintf(stderr, fmt, ap);
 	va_end(ap);
