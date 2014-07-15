@@ -35,7 +35,6 @@
 
 #include <stdint.h>		// for uint64_t, int64_t
 #include <pthread.h>	// for pthread_mutex_t
-
 #include "da_protocol.h"
 
 #ifdef __cplusplus
@@ -48,12 +47,9 @@ extern "C" {
 #define RUN_APP_LOADER
 
 #define MAX_TARGET_COUNT			8
-#define DA_MSG_MAX					4096
-#define RECV_BUF_MAX				4104	// = sizeof(msg_t)
 
 #define MAX_DEVICE				10
 #define MAX_FILENAME			128
-
 /*
 enum ErrorCode
 {
@@ -99,6 +95,7 @@ enum HostMessageType
 	MSG_BATT_START = 106,
 	MSG_BATT_STOP = 107,
 	MSG_CAPTURE_SCREEN = 108,
+	MSG_MAPS_INST_LIST = 109,
 	MSG_RECORD = 801,
 	MSG_REPLAY = 802,
 	MSG_OK = 901,
@@ -134,12 +131,7 @@ enum DAState
 #define EVENT_PID		0x00000002
 #define EVENT_ERROR		0x00000004
 
-typedef struct
-{
-	unsigned int	type;
-	unsigned int	length;
-	char			data[DA_MSG_MAX];
-} msg_target_t;
+
 
 typedef struct
 {

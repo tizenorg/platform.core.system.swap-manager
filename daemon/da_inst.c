@@ -28,18 +28,23 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+#include <linux/limits.h>
 
 #include "da_inst.h"
 #include "da_protocol.h"
 #include "da_protocol_inst.h"
 #include "debug.h"
-
+#include "daemon.h"
 
 struct lib_list_t *new_lib_inst_list = NULL;
 
 uint32_t app_count = 0;
 char *packed_app_list = NULL;
 char *packed_lib_list = NULL;
+
+static struct _msg_target_t *lib_maps_message = NULL;
+static pthread_mutex_t lib_inst_list_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t lib_maps_message_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 uint32_t libs_count;
 
@@ -541,6 +546,105 @@ static int generate_msg(struct msg_t **msg, struct lib_list_t *lib_list, struct 
 	return 1;
 }
 
+static void lock_lib_maps_message()
+{
+	pthread_mutex_lock(&lib_inst_list_mutex);
+}
+
+static void unlock_lib_maps_message()
+{
+	pthread_mutex_unlock(&lib_inst_list_mutex);
+}
+
+static void lock_lib_list()
+{
+	pthread_mutex_lock(&lib_maps_message_mutex);
+}
+
+static void unlock_lib_list()
+{
+	pthread_mutex_unlock(&lib_maps_message_mutex);
+}
+
+static void generate_maps_inst_msg(struct user_space_inst_t *us_inst)
+{
+	lock_lib_maps_message();
+
+	struct lib_list_t *lib = us_inst->lib_inst_list;
+	struct app_list_t *app = us_inst->app_inst_list;
+	char *p, *resolved;
+	uint32_t total_maps_count = 0;
+	uint32_t total_len = sizeof(total_maps_count) + sizeof(*lib_maps_message);
+	char real_path_buf[PATH_MAX];
+
+	/* total message len calculate */
+	while (lib != NULL) {
+		p = lib->lib->bin_path;
+		total_len += strlen(p) + 1;
+		total_maps_count++;
+		LOGI("lib #%u <%s>\n", total_maps_count, p);
+		lib = (struct lib_list_t *)lib->next;
+	}
+
+	while (app != NULL) {
+		p = app->app->exe_path;
+		resolved = realpath((const char *)p, real_path_buf);
+		if (resolved != NULL) {
+			total_len += strlen(p) + 1;
+			total_maps_count++;
+			LOGI("app #%u <%s>\n", total_maps_count, resolved);
+		} else {
+			LOGE("cannot resolve bin path <%s>", p);
+		}
+
+		app = (struct app_list_t *)app->next;
+	}
+
+	if (lib_maps_message != NULL)
+		free(lib_maps_message);
+
+	lib_maps_message = malloc(total_len);
+	lib_maps_message->type = MSG_MAPS_INST_LIST;
+	lib_maps_message->length = total_len;
+
+	/* pack data */
+	p = lib_maps_message->data;
+	pack_int32(p, total_maps_count);
+
+	lib = us_inst->lib_inst_list;
+	while (lib != NULL) {
+		pack_str(p, lib->lib->bin_path);
+		lib = (struct lib_list_t *)lib->next;
+	}
+
+	app = us_inst->app_inst_list;
+	while (app != NULL) {
+		resolved = realpath(app->app->exe_path, real_path_buf);
+		if (resolved != NULL)
+			pack_str(p, real_path_buf);
+		app = (struct app_list_t *)app->next;
+	}
+
+	LOGI("total_len = %u\n", total_len);
+	print_buf((char *)lib_maps_message, total_len, "lib_maps_message");
+
+	unlock_lib_maps_message();
+}
+
+void send_maps_inst_msg_to(int sock)
+{
+	lock_lib_maps_message();
+	send_msg_to_target(sock, (struct msg_target_t *)lib_maps_message);
+	unlock_lib_maps_message();
+}
+
+static void send_maps_inst_msg_to_all_targets()
+{
+	lock_lib_maps_message();
+	send_msg_to_all_targets(lib_maps_message);
+	unlock_lib_maps_message();
+}
+
 //-----------------------------------------------------------------------------
 struct app_info_t *app_info_get_first(struct app_list_t **app_list)
 {
@@ -567,12 +671,18 @@ struct app_info_t *app_info_get_next(struct app_list_t **app_list)
 int msg_start(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 	      struct msg_t **msg, enum ErrorCode *err)
 {
+	int res = 0;
 	char *p = NULL;
 	*msg = NULL;
+
+	/* lock list access */
+	lock_lib_list();
+
 	if (!parse_app_inst_list(data, &us_inst->app_num, &us_inst->app_inst_list)) {
 		*err = ERR_WRONG_MESSAGE_FORMAT;
 		LOGE("parse app inst\n");
-		return 1;
+		res = 1;
+		goto msg_start_exit;
 	}
 
 	generate_msg(msg, us_inst->lib_inst_list, us_inst->app_inst_list);
@@ -582,28 +692,42 @@ int msg_start(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 		pack_int32(p, NMSG_START);
 	} else {
 		*err = ERR_CANNOT_START_PROFILING;
-		return 1;
+		res = 1;
+		goto msg_start_exit;
 	}
-	return 0;
+
+	generate_maps_inst_msg(us_inst);
+
+msg_start_exit:
+	/* unlock list access */
+	unlock_lib_list();
+
+	return res;
 }
 
 int msg_swap_inst_add(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 		      struct msg_t **msg, enum ErrorCode *err)
 {
+	int res = 0;
 	uint32_t lib_num = 0;
 	char *p = NULL;
 
 	*err = ERR_UNKNOWN;
 
+	/* lock list access */
+	lock_lib_list();
+
 	if (!parse_lib_inst_list(data, &lib_num, &us_inst->lib_inst_list)) {
 		*err = ERR_WRONG_MESSAGE_FORMAT;
 		LOGE("parse lib inst list fail\n");
-		return 1;
+		res = 1;
+		goto msg_swap_inst_add_exit;
 	}
 	// rm probes from new if its presents in cur
 	if (!resolve_collisions_for_add_msg(&us_inst->lib_inst_list, &new_lib_inst_list)) {
 		LOGE("resolve collision\n");
-		return 1;
+		res = 1;
+		goto msg_swap_inst_add_exit;
 	};
 
 	// generate msg to send
@@ -619,38 +743,54 @@ int msg_swap_inst_add(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 		cmp_libs))
 	{
 		LOGE("data move\n");
-		return 1;
+		res = 1;
+		goto msg_swap_inst_add_exit;
 	};
 
 	// free new_list
 	free_data_list((struct data_list_t **)&new_lib_inst_list);
 	new_lib_inst_list = NULL;
 	*err = ERR_NO;
-	return 0;
+
+	generate_maps_inst_msg(us_inst);
+	send_maps_inst_msg_to_all_targets();
+
+msg_swap_inst_add_exit:
+	/* unlock list access */
+	unlock_lib_list();
+
+	return res;
 }
 
 int msg_swap_inst_remove(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 			 struct msg_t **msg, enum ErrorCode *err)
 {
+	int res = 0;
 	uint32_t lib_num = 0;
 	char *p = NULL;
 	*err = ERR_UNKNOWN;
 
+	/* lock list access */
+	lock_lib_list();
+
 	if (!parse_lib_inst_list(data, &lib_num, &new_lib_inst_list)) {
 		*err = ERR_WRONG_MESSAGE_FORMAT;
 		LOGE("parse lib inst\n");
-		return 1;
+		res = 1;
+		goto msg_swap_inst_remove_exit;
 	}
 
 	if (!resolve_collisions_for_rm_msg(&us_inst->lib_inst_list, &new_lib_inst_list)) {
 		LOGE("resolve collisions\n");
-		return 1;
+		res = 1;
+		goto msg_swap_inst_remove_exit;
 	}
 
 	if (us_inst->app_inst_list != NULL) {
 		if (!generate_msg(msg, new_lib_inst_list, us_inst->app_inst_list)) {
 			LOGE("generate msg\n");
-			return 1;
+			res = 1;
+			goto msg_swap_inst_remove_exit;
 		}
 		p = (char *)*msg;
 		pack_int32(p, NMSG_SWAP_INST_ADD);
@@ -659,7 +799,15 @@ int msg_swap_inst_remove(struct msg_buf_t *data, struct user_space_inst_t *us_in
 	free_data_list((struct data_list_t **)&new_lib_inst_list);
 	new_lib_inst_list = NULL;
 	*err = ERR_NO;
-	return 0;
+
+	generate_maps_inst_msg(us_inst);
+	send_maps_inst_msg_to_all_targets();
+
+msg_swap_inst_remove_exit:
+	/* unlock list access */
+	unlock_lib_list();
+
+	return res;
 }
 
 void msg_swap_free_all_data(struct user_space_inst_t *us_inst)

@@ -56,7 +56,7 @@ static void* recvThread(void* data)
 	int pass = 0;
 	uint64_t event;
 	ssize_t recvLen;
-	msg_target_t log;
+	struct msg_target_t log;
 
 	// initialize target variable
 	target->pid = -1;
@@ -143,6 +143,7 @@ static void* recvThread(void* data)
 				event = EVENT_PID;
 				write(target->event_fd, &event, sizeof(uint64_t));
 			}
+			send_maps_inst_msg_to(target->socket);
 			continue;		// don't send to host
 		}
 		else if(log.type == MSG_TERMINATE)
@@ -264,7 +265,9 @@ static void *samplingThread(void *data)
 			if (write_to_buf(msg) != 0)
 				LOGE("write to buf fail\n");
 
+#ifdef THREAD_SAMPLING_DEBUG
 			printBuf((char *)msg, MSG_DATA_HDR_LEN + msg->len);
+#endif
 
 			free_msg_data(msg);
 			reset_system_info(&sys_info);

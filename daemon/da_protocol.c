@@ -938,12 +938,38 @@ send_ack:
 	return -(err_code != ERR_NO);
 }
 
-static int process_msg_get_screenshot(struct msg_buf_t *msg_control)
+int send_msg_to_target(int sock, struct msg_target_t *msg)
+{
+	if (sock != -1) {
+		if (send(sock, msg, sizeof(struct _msg_target_t) + msg->length, MSG_NOSIGNAL) == -1)
+			LOGE("fail to send data to target socket(%d)\n", sock);
+		else
+			return 1;
+	}
+	return 0;
+}
+
+int send_msg_to_all_targets(struct msg_target_t *msg)
 {
 	int target_index;
 	int sock;
+	for (target_index = 0; target_index < MAX_TARGET_COUNT; target_index++) {
+		sock = manager.target[target_index].socket;
+		if (sock != -1) {
+			if (send(sock, msg, sizeof(struct _msg_target_t) + msg->length, MSG_NOSIGNAL) == -1)
+				LOGE("fail to send data to target index(%d)\n",
+				     target_index);
+			else
+				return 1;
+		}
+	}
+	return 0;
+}
+
+static int process_msg_get_screenshot(struct msg_buf_t *msg_control)
+{
 	uint32_t log_len;
-	msg_target_t sendlog;
+	struct msg_target_t sendlog;
 	enum ErrorCode err_code = ERR_UNKNOWN;
 
 	// send config message to target process
@@ -951,18 +977,8 @@ static int process_msg_get_screenshot(struct msg_buf_t *msg_control)
 	sendlog.length = 0;
 	log_len = sizeof(sendlog.type) + sizeof(sendlog.length) + sendlog.length;
 
-	for (target_index = 0; target_index < MAX_TARGET_COUNT; target_index++) {
-		sock = manager.target[target_index].socket;
-		if (sock != -1) {
-			if (send(sock, &sendlog, log_len, MSG_NOSIGNAL) == -1) {
-				LOGE("fail to send data to target index(%d)\n",
-				     target_index);
-			} else {
-				err_code = ERR_NO;
-				break;
-			}
-		}
-	}
+	if (send_msg_to_all_targets(&sendlog) == 1)
+		err_code = ERR_NO;
 
 	return -(err_code != ERR_NO);
 }
@@ -976,7 +992,7 @@ int host_message_handler(struct msg_t *msg)
 	enum ErrorCode error_code = ERR_NO;
 
 	int target_index;
-	msg_target_t sendlog;
+	struct msg_target_t sendlog;
 
 	LOGI("MY HANDLE %s (%X)\n", msg_ID_str(msg->id), msg->id);
 	init_parse_control(&msg_control, msg);
