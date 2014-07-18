@@ -739,16 +739,14 @@ static size_t binary_ack_size(const struct binary_ack *ba)
 
 static size_t binary_ack_pack(char *s, const struct binary_ack *ba)
 {
-	unsigned int len = strlen(ba->binpath);
+	unsigned int len = strlen(ba->binpath) + 1;
 	int i;
 	*(uint32_t *) s = ba->type;
 	s += sizeof(uint32_t);
 
 	if (len)
-		memmove(s, ba->binpath, len);
-
-	*(s += len) = '\0';
-	s += 1;
+		memcpy(s, ba->binpath, len);
+	s += len;
 
 	for (i = 0; i!= 16; ++i) {
 		sprintf(s, "%02x", ba->digest[i]);
@@ -756,7 +754,7 @@ static size_t binary_ack_pack(char *s, const struct binary_ack *ba)
 	}
 	*s = '\0';
 
-	return sizeof(uint32_t) + len + 1 + 2*16 + 1;
+	return sizeof(uint32_t) + len + 2*16 + 1;
 }
 
 static void get_file_md5sum(md5_byte_t digest[16], const char *filename)
@@ -832,7 +830,6 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 			return -1;
 		}
 		new = binary_ack_alloc(str);
-		total_size += binary_ack_size(acks[i]);
 		/* check for errors */
 		if (new->type == BINARY_TYPE_FILE_NOT_EXIST) {
 			error_code = ERR_WRONG_MESSAGE_DATA;
@@ -841,6 +838,7 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 		if (new->binpath[0] == '\0')
 			LOGW("section '.debug_str' not found in <%s>\n", str);
 		acks[i] = new;
+		total_size += binary_ack_size(new);
 	}
 	typedef uint32_t return_id;
 	typedef uint32_t binary_ack_count;
@@ -862,6 +860,7 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 		binary_ack_free(acks[i]);
 	}
 
+	printBuf(msg_reply, msg_reply->len + sizeof(*msg_reply));
 	int err = send_reply(msg_reply);
 	free(msg_reply);
 	return err;
