@@ -13,7 +13,9 @@ BuildRequires:  vconf-devel
 BuildRequires:  capi-system-info-devel
 BuildRequires:  capi-system-runtime-info-devel
 BuildRequires:  pkgconfig(ecore)
+%if "%_project" != "Kirana_SWA_OPEN:Build" && "%_project" != "Kirana_SWA_OPEN:Daily"
 Requires:  swap-modules
+%endif
 Requires:  swap-probe
 Requires:  sdbd
 
