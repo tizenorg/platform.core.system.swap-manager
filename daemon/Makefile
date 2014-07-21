@@ -50,6 +50,8 @@ DAEMON_OBJS = $(patsubst %.c,%.o, $(DAEMON_SRCS))
 
 TARGET = da_manager
 DASCRIPT = da_command
+START_SH = start.sh
+STOP_SH = stop.sh
 
 all: debug
 debug release: $(TARGET_LIBS)
@@ -58,9 +60,12 @@ debug release: $(DAEMON_OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $(TARGET)
 
 install: BINDIR = $(DESTDIR)/usr/bin
+install: OPTDIR = $(DESTDIR)/opt/swap/sdk
 install: $(TARGET)
 	mkdir -p $(BINDIR)
+	mkdir -p $(OPTDIR)
 	install $(TARGET) $(DASCRIPT) -t $(BINDIR)
+	install -m 755 $(START_SH) $(STOP_SH) -t $(OPTDIR)
 
 clean:
 	rm -f $(TARGET) $(DAEMON_OBJS)
