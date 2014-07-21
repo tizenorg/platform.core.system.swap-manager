@@ -40,6 +40,8 @@ cd daemon
 %defattr(-,root,root,-)
 %{_prefix}/bin/da_manager
 %{_prefix}/bin/da_command
+/opt/swap/sdk/start.sh
+/opt/swap/sdk/stop.sh
 
 %changelog
 
