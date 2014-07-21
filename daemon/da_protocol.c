@@ -78,6 +78,7 @@ char *msg_ID_str(enum HostMessageT ID)
 	check_and_return(NMSG_SWAP_INST_ADD);
 	check_and_return(NMSG_SWAP_INST_REMOVE);
 	check_and_return(NMSG_GET_SCREENSHOT);
+	check_and_return(NMSG_GET_PROCESS_ADD_INFO);
 
 	check_and_return(NMSG_KEEP_ALIVE_ACK);
 	check_and_return(NMSG_START_ACK);
@@ -589,6 +590,8 @@ static enum HostMessageT get_ack_msg_id(const enum HostMessageT id)
 		return NMSG_SWAP_INST_ADD_ACK;
 	case NMSG_SWAP_INST_REMOVE:
 		return NMSG_SWAP_INST_REMOVE_ACK;
+	case NMSG_GET_PROCESS_ADD_INFO:
+		return NMSG_GET_PROCESS_ADD_INFO_ACK;
 	default:
 		LOGE("Fatal: unknown message ID [0x%X]\n", id);
 		exit(EXIT_FAILURE);
@@ -982,6 +985,109 @@ static int process_msg_get_screenshot(struct msg_buf_t *msg_control)
 	return -(err_code != ERR_NO);
 }
 
+static char *get_process_cmd_line(uint32_t pid)
+{
+	char buf[MAX_FILENAME];
+	int f;
+	ssize_t count;
+
+	sprintf(buf, "/proc/%u/cmdline", pid);
+	f = open(buf, O_RDONLY);
+	if (f != -1) {
+		count = read(f, buf, sizeof(buf));
+		if (count == 0)
+			buf[0] = '\0';
+		close(f);
+	} else {
+		LOGE("file not found <%s>\n", buf);
+		buf[0] = '\0';
+	}
+	return strdup(buf);
+}
+
+static int process_msg_get_process_add_info(struct msg_buf_t *msg)
+{
+	uint32_t i, count, total_len;
+	uint32_t *pidarr = NULL;
+	char **cmd_line_arr = NULL;
+	char *payload, *p;
+	struct msg_target_t sendlog;
+	enum ErrorCode err_code = ERR_UNKNOWN;
+
+	/* get pid count */
+	if (!parse_int32(msg, &count)) {
+		LOGE("NMSG_GET_PROCESS_ADD_INFO error: No process count\n");
+		err_code = ERR_WRONG_MESSAGE_DATA;
+		goto send_ack;
+	}
+
+	/* alloc array for pids */
+	pidarr = malloc(count * sizeof(*pidarr));
+	cmd_line_arr = malloc(count * sizeof(*cmd_line_arr));
+	if (pidarr == NULL) {
+		LOGE("can not alloc pid array (%u)", count);
+		goto send_ack;
+	}
+	if (cmd_line_arr == NULL) {
+		LOGE("can not alloc cmd line array (%u)", count);
+		goto send_fail_parse;
+	}
+
+	/* parse all pids */
+	for (i = 0; i != count; i++) {
+		if (!parse_int32(msg, &pidarr[i])) {
+			LOGE("can not parse pid #%u", i);
+			goto send_fail_parse;
+		}
+	}
+
+	total_len = i * sizeof(*pidarr) + sizeof(count);
+	for (i = 0; i != count; i++) {
+		cmd_line_arr[i] = get_process_cmd_line(pidarr[i]);
+		total_len += strlen(cmd_line_arr[i]) + 1;
+	}
+
+	payload = malloc(total_len);
+	if (payload == NULL)
+		goto send_fail_payload;
+	/* pack payload data */
+	p = payload;
+	pack_int32(p, count);
+	for (i = 0; i != count; i++) {
+		pack_int32(p, pidarr[i]);
+		pack_str(p, cmd_line_arr[i]);
+		free(cmd_line_arr[i]);
+	}
+
+	/* success */
+	goto send_ack;
+
+send_fail_payload:
+	if (payload != NULL) {
+		free(payload);
+		payload = NULL;
+	}
+
+send_fail_parse:
+	/* fail */
+	if (pidarr != NULL) {
+		free(pidarr);
+		pidarr = NULL;
+	}
+
+	if (cmd_line_arr != NULL) {
+		free(cmd_line_arr);
+		cmd_line_arr = NULL;
+	}
+
+	total_len = 0;
+
+send_ack:
+	/* success */
+	sendACKToHost(NMSG_GET_PROCESS_ADD_INFO, err_code, payload, total_len);
+	return -(err_code != ERR_NO);
+}
+
 int host_message_handler(struct msg_t *msg)
 {
 	struct target_info_t target_info;
@@ -1101,6 +1207,8 @@ int host_message_handler(struct msg_t *msg)
 		break;
 	case NMSG_GET_SCREENSHOT:
 		return process_msg_get_screenshot(&msg_control);
+	case NMSG_GET_PROCESS_ADD_INFO:
+		return process_msg_get_process_add_info(&msg_control);
 	default:
 		LOGE("unknown message %d <0x%08X>\n", msg->id, msg->id);
 	}
