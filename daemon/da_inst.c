@@ -594,7 +594,7 @@ static void generate_maps_inst_msg(struct user_space_inst_t *us_inst)
 			total_maps_count++;
 			LOGI("app #%u <%s>\n", total_maps_count, resolved);
 		} else {
-			LOGE("cannot resolve bin path <%s>", p);
+			LOGE("cannot resolve bin path <%s>\n", p);
 		}
 
 		app = (struct app_list_t *)app->next;
