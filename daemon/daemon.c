@@ -630,6 +630,9 @@ static int targetServerHandler(void)
 			     MSG_NOSIGNAL))
 			LOGE("fail to send data to target index(%d)\n", index);
 
+		/* send current instrument maps */
+		send_maps_inst_msg_to(manager.target[index].socket);
+
 		// make event fd
 		manager.target[index].event_fd = eventfd(EFD_CLOEXEC, EFD_NONBLOCK);
 		if (manager.target[index].event_fd == -1) {
