@@ -590,7 +590,7 @@ static void generate_maps_inst_msg(struct user_space_inst_t *us_inst)
 		p = app->app->exe_path;
 		resolved = realpath((const char *)p, real_path_buf);
 		if (resolved != NULL) {
-			total_len += strlen(p) + 1;
+			total_len += strlen(real_path_buf) + 1;
 			total_maps_count++;
 			LOGI("app #%u <%s>\n", total_maps_count, resolved);
 		} else {
