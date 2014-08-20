@@ -623,8 +623,8 @@ static int targetServerHandler(void)
 
 		/* send config message to target process */
 		log.type = MSG_OPTION;
-		log.length = sprintf(log.data, "%llu",
-				     prof_session.conf.use_features0);
+		log.length = sprintf(log.data, "%llu\0",
+				     prof_session.conf.use_features0) + 1;
 		if (0 > send(manager.target[index].socket, &log,
 			     sizeof(log.type) + sizeof(log.length) + log.length,
 			     MSG_NOSIGNAL))
