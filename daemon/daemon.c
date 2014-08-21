@@ -615,7 +615,7 @@ static int targetServerHandler(void)
 	}
 
 	manager.target[index].socket =
-	    accept(manager.target_server_socket, NULL, NULL);
+	    accept4(manager.target_server_socket, NULL, NULL, SOCK_CLOEXEC);
 
 	if (manager.target[index].socket >= 0) {
 		/* accept succeed */
@@ -790,7 +790,7 @@ static int hostServerHandler(void)
 	if (hostserverorder > 1)	// control and data socket connected already
 		return 1;		// ignore
 
-	csocket = accept(manager.host_server_socket, NULL, NULL);
+	csocket = accept4(manager.host_server_socket, NULL, NULL, SOCK_CLOEXEC);
 
 	if (csocket >= 0) {
 		// accept succeed
