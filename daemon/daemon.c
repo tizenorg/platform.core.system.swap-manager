@@ -431,9 +431,19 @@ static void reconfigure_recording(struct conf_t conf)
 
 }
 
-int reconfigure(struct conf_t conf)
+static void reconfigure_ld_probes(struct conf_t conf, struct msg_t **msg_reply, struct msg_t **msg_reply_additional)
+{
+	uint64_t old_features = prof_session.conf.use_features0;
+	uint64_t new_features = conf.use_features0;
+	uint64_t to_enable = (new_features ^ old_features) & new_features;
+	uint64_t to_disable = (new_features ^ old_features) & old_features;
+	ld_add_probes_by_feature(to_enable, to_disable, &prof_session.user_space_inst, msg_reply, msg_reply_additional);
+}
+
+int reconfigure(struct conf_t conf, struct msg_t **msg_reply, struct msg_t **msg_reply_additional)
 {
 	reconfigure_recording(conf);
+	reconfigure_ld_probes(conf, msg_reply, msg_reply_additional);
 
 	samplingStop();
 	memcpy(&prof_session.conf, &conf, sizeof(conf));

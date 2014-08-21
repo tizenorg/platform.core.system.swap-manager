@@ -286,4 +286,100 @@ int parse_app_inst_list(struct msg_buf_t *msg,
 
 	return 1;
 }
+/* ld probes */
+#define NOFEATURE 0x123456
+#include "ld_preload_types.h"
+struct ld_preload_probe_t {
+	uint64_t orig_addr;
+	uint8_t probe_type;
+	uint64_t handler_addr;
+} __attribute__ ((packed));
 
+static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
+				      struct data_list_t *dest)
+{
+	uint32_t i = 0, num = 0;
+	struct probe_list_t *probe_el;
+	struct ld_preload_probe_t *func = NULL;
+
+	num = ld_lib.probe_count;
+
+	if (!check_us_app_inst_func_count(num)) {
+		LOGE("ld probe count is wrong\n");
+		return 0;
+	}
+	//parse user space function list
+
+	LOGI("app_int_num = %d\n", num);
+	for (i = 0; i < num; i++) {
+		parse_deb("app_int #%d\n", i);
+		probe_el = new_probe();
+		func = malloc(sizeof(struct ld_preload_probe_t));
+
+		func->orig_addr = ld_lib.probes[i].orig_addr;
+		func->probe_type = SWAP_LD_PROBE;
+		func->handler_addr = ld_lib.probes[i].handler_addr;
+
+		probe_el->size = sizeof(struct ld_preload_probe_t);
+		probe_el->func = (struct us_func_inst_plane_t *)func;
+
+		LOGI("app_int #%d size = %lu\n", i, dest->size);
+		probe_list_append(dest, probe_el);
+	}
+	dest->func_num = num;
+	return 1;
+}
+
+static int feature_add_inst_lib(struct ld_lib_list_el_t ld_lib,
+				struct lib_list_t **dest)
+{
+	*dest = new_lib();
+	if (*dest == NULL) {
+		LOGE("lib alloc error\n");
+		return 0;
+	};
+
+	if (!check_exec_path(ld_lib.lib_name)) {
+		LOGE("bin path parsing error\n");
+		return 0;
+	}
+
+	(*dest)->lib->bin_path = strdup(ld_lib.lib_name);
+
+	if (!feature_add_func_inst_list(ld_lib, (struct data_list_t *)*dest)) {
+		LOGE("funcs parsing error\n");
+		return 0;
+	}
+
+	(*dest)->size += strlen((*dest)->lib->bin_path) + 1 + sizeof((*dest)->func_num);
+	(*dest)->hash = calc_lib_hash((*dest)->lib);
+	return 1;
+
+}
+
+int feature_add_lib_inst_list(struct ld_feature_list_el_t *ld_lib_list,
+			      struct lib_list_t **lib_list)
+{
+
+	uint32_t i = 0, num;
+	struct lib_list_t *lib = NULL;
+
+	num = ld_lib_list->lib_count;
+	if (!check_lib_inst_count(num)) {
+		LOGE("lib num parsing error\n");
+		return 0;
+	}
+
+	for (i = 0; i < num; i++) {
+		LOGI(">add lib #%d <%s> probes_count=%lu\n", i, ld_lib_list->libs[i].lib_name, ld_lib_list->libs[i].probe_count);
+		if (!feature_add_inst_lib(ld_lib_list->libs[i], &lib)) {
+			// TODO maybe need free allocated memory up there
+			LOGE("add LD lib #%d failed\n", i + 1);
+			return 0;
+		}
+		data_list_append((struct data_list_t **)lib_list,
+				 (struct data_list_t *)lib);
+	}
+
+	return 1;
+}
