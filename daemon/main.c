@@ -148,7 +148,9 @@ static int makeTargetServerSocket()
 	// remove existed unix domain socket file
 	unlink(UDS_NAME);
 
-	if ((manager.target_server_socket = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+	manager.target_server_socket = socket(AF_UNIX,
+					      SOCK_STREAM | SOCK_CLOEXEC, 0);
+	if (manager.target_server_socket < 0)
 	{
 		LOGE("Target server socket creation failed\n");
 		return -1;
@@ -194,7 +196,10 @@ static int makeHostServerSocket()
 	if(manager.host_server_socket != -1)
 		return -1;	// should be never happened
 
-	if ((manager.host_server_socket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+	manager.host_server_socket = socket(PF_INET,
+					    SOCK_STREAM | SOCK_CLOEXEC,
+					    IPPROTO_TCP);
+	if (manager.host_server_socket < 0)
 	{
 		LOGE("Host server socket creation failed\n");
 		return -1;
