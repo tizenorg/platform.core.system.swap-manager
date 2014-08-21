@@ -150,7 +150,7 @@ static char *msgErrStr(enum ErrorCode err)
 		to+=strlen( dstr(f) delim );	\
 	}
 #define print_feature_0(f) print_feature(f, feature0, to, ", \n\t")
-static void feature_code_str(uint64_t feature0, uint64_t feature1, char *to)
+void feature_code_str(uint64_t feature0, uint64_t feature1, char *to)
 {
 	print_feature_0(FL_FUNCTION_PROFILING);
 	print_feature_0(FL_MEMORY_ALLOC_PROBING);
@@ -1092,6 +1092,7 @@ int host_message_handler(struct msg_t *msg)
 {
 	struct target_info_t target_info;
 	struct msg_t *msg_reply = NULL;
+	struct msg_t *msg_reply_additional = NULL;
 	struct msg_buf_t msg_control;
 	struct conf_t conf;
 	enum ErrorCode error_code = ERR_NO;
@@ -1116,15 +1117,17 @@ int host_message_handler(struct msg_t *msg)
 		}
 		break;
 	case NMSG_CONFIG:
-		error_code = ERR_NO;
+//		error_code = ERR_NO;
 		if (!parse_msg_config(&msg_control, &conf)) {
 			LOGE("config parsing error\n");
-			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
-			return -1;
+			error_code = ERR_WRONG_MESSAGE_FORMAT;
+			goto send_ack;
 		}
-		if (reconfigure(conf) != 0) {
+
+		if (reconfigure(conf, &msg_reply, &msg_reply_additional ) != 0) {
 			LOGE("Cannot change configuration\n");
-			return -1;
+			error_code = ERR_UNKNOWN;
+			goto send_ack;
 		}
 		//write to device
 
@@ -1141,10 +1144,30 @@ int host_message_handler(struct msg_t *msg)
 		*((uint64_t *)msg->payload) = feature0;
 
 		if (ioctl_send_msg(msg) != 0) {
+			LOGI("send probes\n");
 			LOGE("ioctl send error\n");
-			sendACKToHost(msg->id, ERR_UNKNOWN, 0, 0);
-			return -1;
+			error_code = ERR_UNKNOWN;
+			goto send_ack;
 		}
+
+		if (msg_reply != NULL) {
+			LOGI("send ld preload add probes\n");
+			if (ioctl_send_msg(msg_reply) != 0) {
+				error_code = ERR_UNKNOWN;
+				LOGE("ioclt send error\n");
+				goto send_ack;
+			}
+		}
+
+		if (msg_reply_additional != NULL) {
+			LOGI("send ld preload remove probes\n");
+			if (ioctl_send_msg(msg_reply_additional) != 0) {
+				error_code = ERR_UNKNOWN;
+				LOGE("ioclt send error\n");
+				goto send_ack;
+			}
+		}
+
 		//send ack to host
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		// send config message to target process
@@ -1219,6 +1242,10 @@ send_ack:
 	sendACKToHost(msg->id, error_code, 0, 0);
 	if (msg_reply != NULL)
 		free(msg_reply);
+
+	if (msg_reply_additional != NULL)
+		free(msg_reply_additional);
+
 	return (error_code == ERR_NO);
 }
 
