@@ -69,6 +69,22 @@
 #define MAX_APP_LAUNCH_TIME		60
 #define MAX_CONNECT_TIMEOUT_TIME	5*60
 
+
+int get_comm_pid(void)
+{
+	return manager.comm_pid;
+}
+
+void set_comm_pid(int pid)
+{
+	manager.comm_pid = pid;
+}
+
+void reset_comm_pid(void)
+{
+	set_comm_pid(no_comm_pid);
+}
+
 uint64_t get_total_alloc_size_by_pid(pid_t pid)
 {
 	int i;
@@ -310,6 +326,8 @@ void terminate_all()
 			LOGI("join recv thread %d. done\n", i);
 		}
 	}
+
+	reset_comm_pid();
 }
 
 // terminate all profiling by critical error
@@ -541,9 +559,15 @@ static int target_event_pid_handler(int index, uint64_t msg)
 
 static int target_event_stop_handler(int index, uint64_t msg)
 {
+	int cnt, comm_pid;
+
 	LOGI("target close, socket(%d), pid(%d) : (remaining %d target)\n",
 	     manager.target[index].socket, manager.target[index].pid,
 	     manager.target_count - 1);
+
+	comm_pid = get_comm_pid();
+	if (manager.target[index].pid == comm_pid)
+		reset_comm_pid();
 
 	if (index == 0)		// main application
 		stop_replay();
@@ -552,7 +576,8 @@ static int target_event_stop_handler(int index, uint64_t msg)
 
 	setEmptyTargetSlot(index);
 	// all target client are closed
-	if (0 == __sync_sub_and_fetch(&manager.target_count, 1)) {
+	cnt = __sync_sub_and_fetch(&manager.target_count, 1);
+	if (0 == cnt && -1 == comm_pid) {
 		LOGI("all targets are stopped\n");
 		if (stop_all() != ERR_NO)
 			LOGE("Stop failed\n");

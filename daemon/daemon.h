@@ -164,6 +164,7 @@ typedef struct
 
 typedef struct
 {
+	int comm_pid;
 	int host_server_socket;
 	int target_server_socket;
 	int target_count;
@@ -184,6 +185,14 @@ typedef struct
 } __da_manager;
 
 extern __da_manager manager;
+
+
+enum { no_comm_pid = -1 };
+
+int get_comm_pid(void);
+void set_comm_pid(int pid);
+void reset_comm_pid(void);
+
 
 uint64_t get_total_alloc_size(void);
 void initialize_log(void);

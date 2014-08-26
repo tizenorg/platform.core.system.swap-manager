@@ -185,6 +185,7 @@ int exec_app_common(const char* exec_path)
 		return -1;
 
 	if (pid > 0) { /* parent */
+		set_comm_pid(pid);
 		return 0;
 	} else { /* child */
 		execl(SHELL_CMD, SHELL_CMD, "-c", command, NULL);
