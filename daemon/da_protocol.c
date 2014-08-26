@@ -52,6 +52,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <ctype.h>
 
 static pthread_mutex_t stop_all_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -782,6 +783,22 @@ static const char* basename(const char *filename)
 	return p ? p + 1 : NULL;
 }
 
+/**
+ * Checks whether it is Windows-style path or not.
+ *
+ * @return 1 if path is Windows-style one, 0 otherwise.
+ */
+static int check_windows_path(const char *path)
+{
+	size_t len;
+
+	len = strlen(path);
+	if (len > 3 && isalpha(path[0]) && !(strncmp(&(path[1]), ":\\", 2)))
+		return 1;
+
+	return 0;
+}
+
 static struct binary_ack* binary_ack_alloc(const char *filename)
 {
 	struct binary_ack *ba = malloc(sizeof(*ba));
@@ -795,8 +812,8 @@ static struct binary_ack* binary_ack_alloc(const char *filename)
 		get_build_dir(builddir, filename);
 
 		if (builddir[0] != '\0')
-			snprintf(binpath, sizeof(binpath), "%s/%s",
-				 builddir, basename(filename) ?: "");
+			snprintf(binpath, sizeof(binpath), check_windows_path(builddir) ?
+				 "%s\\%s" : "%s/%s", builddir, basename(filename) ?: "");
 		else
 			binpath[0] = '\0';
 
