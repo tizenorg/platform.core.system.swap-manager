@@ -52,7 +52,7 @@
 
 static void* recvThread(void* data)
 {
-	__da_target_info *target = data;
+	struct target *target = data;
 	int pass = 0;
 	uint64_t event;
 	ssize_t recvLen;

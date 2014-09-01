@@ -268,7 +268,7 @@ static bool ensure_singleton(const char *lockfile)
 static void inititialize_manager_targets(__da_manager * mng)
 {
 	int index;
-	__da_target_info target_init_value = {
+	struct target target_init_value = {
 		.pid = -1,
 		.socket = -1,
 		.event_fd = -1,

@@ -36,6 +36,7 @@
 #include <stdint.h>		// for uint64_t, int64_t
 #include <pthread.h>	// for pthread_mutex_t
 #include "da_protocol.h"
+#include "target.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -142,18 +143,6 @@ typedef struct
 
 typedef struct
 {
-	int64_t			allocmem;		// written only by recv thread
-	pid_t				pid;			// written only by recv thread
-	pid_t			ppid;			// written only by recv thread
-	int				socket;			// written only by main thread
-	pthread_t		recv_thread;	// written only by main thread
-	int				event_fd;		// for thread communication (from recv thread to main thread)
-	int				initial_log;	// written only by main thread
-	enum app_type_t		app_type;
-} __da_target_info;
-
-typedef struct
-{
 	int brightness;
 	int voltage;
 	int procmeminfo;
@@ -180,7 +169,7 @@ typedef struct
 	int user_ev_fd;
 	int efd;
 	__da_host_info host;
-	__da_target_info target[MAX_TARGET_COUNT];
+	struct target target[MAX_TARGET_COUNT];
 	__file_descriptors fd;
 	char appPath[128]; // application executable path
 } __da_manager;

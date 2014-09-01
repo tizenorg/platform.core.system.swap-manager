@@ -561,7 +561,7 @@ static pid_t get_current_pid(void)
         return pid;
 }
 
-static void taget_set_type(__da_target_info *taget)
+static void taget_set_type(struct target *taget)
 {
 	if (get_current_pid() == taget->ppid) {
 		taget->app_type = APP_TYPE_COMMON;
