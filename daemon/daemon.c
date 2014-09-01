@@ -311,7 +311,7 @@ void terminate_all()
 		target = target_get(i);
 		if (target->recv_thread != -1) {
 			LOGI("join recv thread [%d] is started\n", i);
-			pthread_join(target->recv_thread, NULL);
+			target_wait(target);
 			LOGI("join recv thread %d. done\n", i);
 		}
 	}

@@ -3,6 +3,18 @@
 #include "daemon.h"	// for manager (it is need delete)
 
 
+int target_start(struct target *t, void *(*start_routine) (void *))
+{
+	return pthread_create(&t->recv_thread, NULL, start_routine, (void *)t);
+}
+
+int target_wait(struct target *t)
+{
+	return pthread_join(t->recv_thread, NULL);
+}
+
+
+
 
 
 static int target_cnt = 0;

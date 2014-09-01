@@ -21,6 +21,10 @@ struct target {
 };
 
 
+int target_start(struct target *t, void *(*start_routine) (void *));
+int target_wait(struct target *t);
+
+
 void target_cnt_set(int cnt);
 int target_cnt_get(void);
 int target_cnt_sub_and_fetch(void);

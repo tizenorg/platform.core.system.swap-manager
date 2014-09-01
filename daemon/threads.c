@@ -221,8 +221,7 @@ int makeRecvThread(int index)
 	if (target->socket == -1)
 		return -1;
 
-	if (pthread_create(&target->recv_thread,
-		NULL, recvThread, target) < 0)
+	if (target_start(target, recvThread) < 0)
 	{
 		LOGE("Failed to create recv thread for socket (%d)\n",
 				target->socket);
