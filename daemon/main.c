@@ -62,7 +62,6 @@
 // initialize global variable
 __da_manager manager =
 {
-	.comm_pid = no_comm_pid,
 	.host_server_socket = -1,
 	.target_server_socket = -1,
 	.target_count = 0,

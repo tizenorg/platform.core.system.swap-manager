@@ -117,14 +117,16 @@ static void* recvThread(void* data)
 		}
 		else if(log.type == MSG_PID)
 		{
-			LOGI("MSG_PID arrived : %s\n", log.data);
+			LOGI("MSG_PID arrived (pid ppid): %s\n", log.data);
 
 			// only when first MSG_PID is arrived
 			if(target->pid == -1)
 			{
-				char* barloc;
-				barloc = strchr(log.data, '|');
-				if(barloc == NULL)
+				int n;
+				pid_t pid, ppid;
+
+				n = sscanf(log.data, "%d %d", &pid, &ppid);
+				if (n != 2)
 				{
 					/**
 					 * TODO: complain to host about wrong
@@ -136,10 +138,12 @@ static void* recvThread(void* data)
 					      sizeof(uint64_t));
 					break;
 				}
-				barloc[0] = '\0';
-				barloc++;
 
-				target->pid = atoi(log.data);
+				/* set pid and ppid */
+				target->pid = pid;
+				target->ppid = ppid;
+
+				/* send event */
 				event = EVENT_PID;
 				write(target->event_fd, &event, sizeof(uint64_t));
 			}

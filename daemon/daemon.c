@@ -70,21 +70,6 @@
 #define MAX_CONNECT_TIMEOUT_TIME	5*60
 
 
-int get_comm_pid(void)
-{
-	return manager.comm_pid;
-}
-
-void set_comm_pid(int pid)
-{
-	manager.comm_pid = pid;
-}
-
-void reset_comm_pid(void)
-{
-	set_comm_pid(no_comm_pid);
-}
-
 uint64_t get_total_alloc_size_by_pid(pid_t pid)
 {
 	int i;
@@ -326,8 +311,6 @@ void terminate_all()
 			LOGI("join recv thread %d. done\n", i);
 		}
 	}
-
-	reset_comm_pid();
 }
 
 // terminate all profiling by critical error
@@ -524,10 +507,77 @@ int reconfigure(struct conf_t conf)
 
 static Ecore_Fd_Handler *target_handlers[MAX_TARGET_COUNT];
 
+
+static int file2str(const char *filename, char *buf, int len)
+{
+	int fd, num_read;
+
+	fd = open(filename, O_RDONLY, 0);
+	if (fd == -1)
+		return -1;
+
+	num_read = read(fd, buf, len - 1);
+
+	close(fd);
+
+	if (num_read <= 0)
+		return -1;
+
+	buf[num_read] = '\0';
+
+	return num_read;
+}
+
+static int get_lpad_pid(int pid)
+{
+	static pid_t lpad_pid = -1;
+	static const char lpad_path[] = DEBUG_LAUNCH_PRELOAD_PATH;
+	enum { lpad_path_len = sizeof(lpad_path) };
+
+	if (lpad_pid == -1) {
+		char fname[64];
+		char buf[lpad_path_len];
+
+		sprintf(fname, "/proc/%d/cmdline", pid);
+		if (-1 == file2str(fname, buf, lpad_path_len))
+			return lpad_pid;
+
+		buf[lpad_path_len - 1] = '\0';
+
+		if (strncmp(buf, lpad_path, lpad_path_len - 1) == 0)
+			lpad_pid = pid;
+	}
+
+	return lpad_pid;
+}
+
+static pid_t get_current_pid(void)
+{
+	static pid_t pid = -1;
+
+        if (pid == -1)
+                pid = getpid();
+
+        return pid;
+}
+
+static void taget_set_type(__da_target_info *taget)
+{
+	if (get_current_pid() == taget->ppid) {
+		taget->app_type = APP_TYPE_COMMON;
+	} else if (get_lpad_pid(taget->ppid) == taget->ppid) {
+		taget->app_type = APP_TYPE_TIZEN;
+	}
+}
+
+
 static int target_event_pid_handler(int index, uint64_t msg)
 {
 	struct app_list_t *app = NULL;
 	struct app_info_t *app_info = NULL;
+
+	taget_set_type(&manager.target[index]);
+
 	if (index == 0) {	// main application
 		app_info = app_info_get_first(&app);
 		if (app_info == NULL) {
@@ -559,15 +609,12 @@ static int target_event_pid_handler(int index, uint64_t msg)
 
 static int target_event_stop_handler(int index, uint64_t msg)
 {
-	int cnt, comm_pid;
+	int cnt;
 
 	LOGI("target close, socket(%d), pid(%d) : (remaining %d target)\n",
 	     manager.target[index].socket, manager.target[index].pid,
 	     manager.target_count - 1);
 
-	comm_pid = get_comm_pid();
-	if (manager.target[index].pid == comm_pid)
-		reset_comm_pid();
 
 	if (index == 0)		// main application
 		stop_replay();
@@ -577,11 +624,15 @@ static int target_event_stop_handler(int index, uint64_t msg)
 	setEmptyTargetSlot(index);
 	// all target client are closed
 	cnt = __sync_sub_and_fetch(&manager.target_count, 1);
-	if (0 == cnt && no_comm_pid == comm_pid) {
-		LOGI("all targets are stopped\n");
-		if (stop_all() != ERR_NO)
-			LOGE("Stop failed\n");
-		return -11;
+	if (0 == cnt) {
+		switch (manager.target[index].app_type) {
+		case APP_TYPE_TIZEN:
+		case APP_TYPE_COMMON:
+			LOGI("all targets are stopped\n");
+			if (stop_all() != ERR_NO)
+				LOGE("Stop failed\n");
+			return -11;
+		}
 	}
 
 	return 0;

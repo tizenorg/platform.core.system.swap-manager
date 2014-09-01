@@ -40,6 +40,7 @@ extern "C" {
 #endif
 
 #define LAUNCH_APP_PATH			"/usr/bin/launch_app"
+#define DEBUG_LAUNCH_PRELOAD_PATH	"/usr/bin/debug_launchpad_preloading_preinitializing_daemon"
 #define KILL_APP_PATH			"/usr/bin/pkill"
 #define LAUNCH_APP_NAME			"launch_app"
 #define WRT_LAUNCHER_PATH		"/usr/bin/wrt-launcher"

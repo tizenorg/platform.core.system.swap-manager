@@ -221,6 +221,7 @@ typedef uint32_t log_interval_t;
 
 //app, libs, probes
 enum app_type_t {
+	APP_TYPE_UNKNOWN = 0,
 	APP_TYPE_TIZEN = 1,
 	APP_TYPE_RUNNING = 2,
 	APP_TYPE_COMMON = 3,
