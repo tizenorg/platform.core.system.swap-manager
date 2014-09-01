@@ -70,46 +70,6 @@
 #define MAX_CONNECT_TIMEOUT_TIME	5*60
 
 
-uint64_t get_total_alloc_size_by_pid(pid_t pid)
-{
-	int i;
-
-	for (i = 0; i < MAX_TARGET_COUNT; i++) {
-		if (manager.target[i].socket != -1 &&
-		    manager.target[i].pid == pid &&
-		    manager.target[i].allocmem > 0)
-			return manager.target[i].allocmem;
-	}
-	return 0;
-}
-
-static int getEmptyTargetSlot()
-{
-	int i;
-	for (i = 0; i < MAX_TARGET_COUNT; i++) {
-		if (manager.target[i].socket == -1)
-			break;
-	}
-
-	return i;
-}
-
-static void setEmptyTargetSlot(int index)
-{
-	if (index >= 0 && index < MAX_TARGET_COUNT) {
-		manager.target[index].pid = -1;
-		manager.target[index].recv_thread = -1;
-		manager.target[index].allocmem = 0;
-		manager.target[index].initial_log = 0;
-		if (manager.target[index].event_fd != -1)
-			close(manager.target[index].event_fd);
-		manager.target[index].event_fd = -1;
-		if (manager.target[index].socket != -1)
-			close(manager.target[index].socket);
-		manager.target[index].socket = -1;
-	}
-}
-
 // =============================================================================
 // start and terminate control functions
 // =============================================================================
@@ -276,41 +236,21 @@ static int exec_app(const struct app_info_t *app_info)
 // just send stop message to all target process
 static void terminate_all_target()
 {
-	int i;
-	ssize_t sendlen;
-	struct msg_target_t sendlog;
+	struct msg_target_t msg = {
+		.type = MSG_STOP,
+		.length = 0
+	};
 
-	sendlog.type = MSG_STOP;
-	sendlog.length = 0;
-
-	for (i = 0; i < MAX_TARGET_COUNT; i++) {
-		if (manager.target[i].socket != -1) {
-			sendlen = send(manager.target[i].socket, &sendlog,
-				       sizeof(sendlog.type) +
-				       sizeof(sendlog.length), MSG_NOSIGNAL);
-			if (sendlen != -1) {
-				LOGI("TERMINATE send exit msg (socket %d) "
-				     "by terminate_all_target()\n",
-				     manager.target[i].socket);
-			}
-		}
-	}
+	target_send_msg_to_all(&msg);
 }
 
 // terminate all target and wait for threads
 void terminate_all()
 {
-	int i;
 	terminate_all_target();
 
 	// wait for all other thread exit
-	for (i = 0; i < MAX_TARGET_COUNT; i++) {
-		if (manager.target[i].recv_thread != -1) {
-			LOGI("join recv thread [%d] is started\n", i);
-			pthread_join(manager.target[i].recv_thread, NULL);
-			LOGI("join recv thread %d. done\n", i);
-		}
-	}
+	target_wait_all();
 }
 
 // terminate all profiling by critical error
@@ -505,8 +445,6 @@ int reconfigure(struct conf_t conf)
 	return 0;
 }
 
-static Ecore_Fd_Handler *target_handlers[MAX_TARGET_COUNT];
-
 
 static int file2str(const char *filename, char *buf, int len)
 {
@@ -528,13 +466,13 @@ static int file2str(const char *filename, char *buf, int len)
 	return num_read;
 }
 
-static int get_lpad_pid(int pid)
+static pid_t get_lpad_pid(pid_t pid)
 {
-	static pid_t lpad_pid = -1;
+	static pid_t lpad_pid = UNKNOWN_PID;
 	static const char lpad_path[] = DEBUG_LAUNCH_PRELOAD_PATH;
 	enum { lpad_path_len = sizeof(lpad_path) };
 
-	if (lpad_pid == -1) {
+	if (lpad_pid == UNKNOWN_PID) {
 		char fname[64];
 		char buf[lpad_path_len];
 
@@ -553,32 +491,34 @@ static int get_lpad_pid(int pid)
 
 static pid_t get_current_pid(void)
 {
-	static pid_t pid = -1;
+	static pid_t pid = UNKNOWN_PID;
 
-        if (pid == -1)
-                pid = getpid();
+	if (pid == UNKNOWN_PID)
+		pid = getpid();
 
-        return pid;
+	return pid;
 }
 
-static void taget_set_type(__da_target_info *taget)
+static void target_set_type(struct target *t)
 {
-	if (get_current_pid() == taget->ppid) {
-		taget->app_type = APP_TYPE_COMMON;
-	} else if (get_lpad_pid(taget->ppid) == taget->ppid) {
-		taget->app_type = APP_TYPE_TIZEN;
+	pid_t ppid = target_get_ppid(t);
+
+	if (get_current_pid() == ppid) {
+		t->app_type = APP_TYPE_COMMON;
+	} else if (get_lpad_pid(ppid) == ppid) {
+		t->app_type = APP_TYPE_TIZEN;
 	}
 }
 
 
-static int target_event_pid_handler(int index, uint64_t msg)
+static int target_event_pid_handler(struct target *target)
 {
 	struct app_list_t *app = NULL;
 	struct app_info_t *app_info = NULL;
 
-	taget_set_type(&manager.target[index]);
+	target_set_type(target);
 
-	if (index == 0) {	// main application
+	if (0) {	// main application (index == 0)
 		app_info = app_info_get_first(&app);
 		if (app_info == NULL) {
 			LOGE("No app info found\n");
@@ -587,14 +527,14 @@ static int target_event_pid_handler(int index, uint64_t msg)
 
 		while (app_info != NULL) {
 			if (is_same_app_process(app_info->exe_path,
-						manager.target[index].pid))
+						target_get_pid(target)))
 				break;
 			app_info = app_info_get_next(&app);
 		}
 
 		if (app_info == NULL) {
 			LOGE("pid %d not found in app list\n",
-			     manager.target[index].pid);
+			     target_get_pid(target));
 			return -1;
 		}
 
@@ -603,29 +543,30 @@ static int target_event_pid_handler(int index, uint64_t msg)
 			return -1;
 		}
 	}
-	manager.target[index].initial_log = 1;
+
+	target->initial_log = 1;
+
 	return 0;
 }
 
-static int target_event_stop_handler(int index, uint64_t msg)
+static int target_event_stop_handler(struct target *target)
 {
 	int cnt;
+	enum app_type_t app_type = target->app_type;
 
-	LOGI("target close, socket(%d), pid(%d) : (remaining %d target)\n",
-	     manager.target[index].socket, manager.target[index].pid,
-	     manager.target_count - 1);
+	LOGI("target[%p] close, pid(%d) : (remaining %d target)\n",
+	     target, target_get_pid(target), target_cnt_get() - 1);
 
-
-	if (index == 0)		// main application
+	if (0)		// main application (index == 0)
 		stop_replay();
 
-	ecore_main_fd_handler_del(target_handlers[index]);
+	ecore_main_fd_handler_del(target->handler);
 
-	setEmptyTargetSlot(index);
+	target_dtor(target);
 	// all target client are closed
-	cnt = __sync_sub_and_fetch(&manager.target_count, 1);
+	cnt = target_cnt_sub_and_fetch();
 	if (0 == cnt) {
-		switch (manager.target[index].app_type) {
+		switch (app_type) {
 		case APP_TYPE_TIZEN:
 		case APP_TYPE_COMMON:
 			LOGI("all targets are stopped\n");
@@ -642,16 +583,16 @@ static int target_event_stop_handler(int index, uint64_t msg)
 // return plus value if non critical error occur
 // return minus value if critical error occur
 // return -11 if all target process closed
-static int target_event_handler(int index, uint64_t msg)
+static int target_event_handler(struct target *t, uint64_t msg)
 {
 	int err = 0;
 	if (msg & EVENT_PID)
-		err = target_event_pid_handler(index, msg);
+		err = target_event_pid_handler(t);
 	if (err)
 		return err;
 
 	if (msg & EVENT_STOP || msg & EVENT_ERROR)
-		err = target_event_stop_handler(index, msg);
+		err = target_event_stop_handler(t);
 
 	return err;
 }
@@ -660,14 +601,14 @@ static Eina_Bool target_event_cb(void *data, Ecore_Fd_Handler *fd_handler)
 {
 	uint64_t u;
 	ssize_t recvLen;
-	int index = (int)data;
+	struct target *target = (struct target *)data;
 
-	recvLen = read(manager.target[index].event_fd, &u, sizeof(uint64_t));
+	recvLen = read(target->event_fd, &u, sizeof(uint64_t));
 	if (recvLen != sizeof(uint64_t)) {
 		// maybe closed, but ignoring is more safe then
 		// removing fd from event loop
 	} else {
-		if (-11 == target_event_handler(index, u)) {
+		if (-11 == target_event_handler(target, u)) {
 			LOGI("all target process is closed\n");
 		}
 	}
@@ -682,60 +623,53 @@ static Eina_Bool target_event_cb(void *data, Ecore_Fd_Handler *fd_handler)
  */
 static int targetServerHandler(void)
 {
+	int err;
 	struct msg_target_t log;
+	struct target *target;
 
-	int index = getEmptyTargetSlot();
-	if (index == MAX_TARGET_COUNT) {
-		LOGW("Max target number(8) reached, no more target can connected\n");
+	target = target_ctor();
+	if (target == NULL) {
+		LOGW("(target == NULL) no more target can connected\n");
 		return 1;
 	}
 
-	manager.target[index].socket =
-	    accept4(manager.target_server_socket, NULL, NULL, SOCK_CLOEXEC);
-
-	if (manager.target[index].socket >= 0) {
-		/* accept succeed */
-		fd_setup_attributes(manager.target[index].socket);
-
+	err = target_accept(target, manager.target_server_socket);
+	if (err == 0) {
 		/* send config message to target process */
 		log.type = MSG_OPTION;
 		log.length = sprintf(log.data, "%llu\0",
 				     prof_session.conf.use_features0) + 1;
-		if (0 > send(manager.target[index].socket, &log,
-			     sizeof(log.type) + sizeof(log.length) + log.length,
-			     MSG_NOSIGNAL))
-			LOGE("fail to send data to target index(%d)\n", index);
+		if (target_send_msg(target, &log) != 0)
+			LOGE("fail to send data to target %p\n", target);
 
 		/* send current instrument maps */
-		send_maps_inst_msg_to(manager.target[index].socket);
+		send_maps_inst_msg_to(target);
 
 		// make event fd
-		manager.target[index].event_fd = eventfd(EFD_CLOEXEC, EFD_NONBLOCK);
-		if (manager.target[index].event_fd == -1) {
+		target->event_fd = eventfd(EFD_CLOEXEC, EFD_NONBLOCK);
+		if (target->event_fd == -1) {
 			// fail to make event fd
-			LOGE("fail to make event fd for socket (%d)\n",
-			     manager.target[index].socket);
+			LOGE("fail to make event fd for target[%p]\n", target);
 			goto TARGET_CONNECT_FAIL;
 		}
 
-		target_handlers[index] =
-			ecore_main_fd_handler_add(manager.target[index].event_fd,
+		target->handler =
+			ecore_main_fd_handler_add(target->event_fd,
 						  ECORE_FD_READ,
 						  target_event_cb,
-						  (void *)index,
+						  (void *)target,
 						  NULL, NULL);
-		if (!target_handlers[index]) {
-			LOGE("fail to add event fd for socket (%d)\n",
-			     manager.target[index].socket);
+		if (!target->handler) {
+			LOGE("fail to add event fd for target[%p]\n", target);
 			goto TARGET_CONNECT_FAIL;
 		}
 
 		// make recv thread for target
-		if (makeRecvThread(index) != 0) {
+		if (makeRecvThread(target) != 0) {
 			// fail to make recv thread
-			LOGE("fail to make recv thread for socket (%d)\n",
-			     manager.target[index].socket);
-			ecore_main_fd_handler_del(target_handlers[index]);
+			LOGE("fail to make recv thread for target[%p]\n",
+			     target);
+			ecore_main_fd_handler_del(target->handler);
 			goto TARGET_CONNECT_FAIL;
 		}
 
@@ -746,10 +680,10 @@ static int targetServerHandler(void)
 				LOGE("cannot stop app launch timer\n");
 		}
 
-		LOGI("target connected = %d(running %d target)\n",
-		     manager.target[index].socket, manager.target_count + 1);
+		LOGI("target connected target[%p](running %d target)\n",
+		     target, target_cnt_get() + 1);
 
-		manager.target_count++;
+		target_cnt_set(target_cnt_get() + 1);
 		return 0;
 	} else {
 		// accept error
@@ -757,12 +691,12 @@ static int targetServerHandler(void)
 	}
 
  TARGET_CONNECT_FAIL:
-	if (manager.target_count == 0) {
+	if (target_cnt_get() == 0) {
 		// if this connection is main connection
 		return -1;
 	} else {
 		// if this connection is not main connection then ignore process by error
-		setEmptyTargetSlot(index);
+		target_dtor(target);
 		return 1;
 	}
 }

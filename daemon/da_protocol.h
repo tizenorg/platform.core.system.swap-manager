@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <stddef.h>
 #include <linux/input.h>
 
 enum HostMessageT {
@@ -181,6 +182,9 @@ struct msg_target_t {
 	unsigned int length;
 	char data[DA_MSG_MAX];
 };
+
+enum { MSG_HEADER_LEN = offsetof(struct msg_target_t, data) };
+
 
 #define MAX_FILENAME 128
 
@@ -439,8 +443,8 @@ int check_running_status(const struct prof_session_t *prof_session);
 
 extern struct prof_session_t prof_session;
 
-extern int send_msg_to_target(int sock, struct msg_target_t *msg);
-extern int send_msg_to_all_targets(struct msg_target_t *msg);
+int send_msg_to_sock(int sock, struct msg_target_t *msg);
+int recv_msg_from_sock(int sock, struct msg_target_t *msg);
 
 //debugs
 void print_replay_event(struct replay_event_t *ev, uint32_t num, char *tab);

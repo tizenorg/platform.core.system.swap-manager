@@ -90,6 +90,7 @@ void free_data_list(struct data_list_t **data);
 struct app_info_t *app_info_get_first(struct app_list_t **app_list);
 struct app_info_t *app_info_get_next(struct app_list_t **app_list);
 
-void send_maps_inst_msg_to(int sock);
+struct target; // move
+void send_maps_inst_msg_to(struct target *t);
 
 #endif /* __DA_INST_H__*/

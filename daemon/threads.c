@@ -46,67 +46,38 @@
 
 #include "da_protocol.h"
 #include "da_data.h"
+#include "da_inst.h"
 #include "debug.h"
 #include "buffer.h"
 #include "input_events.h"
 
 static void* recvThread(void* data)
 {
-	__da_target_info *target = data;
+	struct target *target = data;
 	int pass = 0;
 	uint64_t event;
-	ssize_t recvLen;
 	struct msg_target_t log;
+	int err;
 
 	// initialize target variable
-	target->pid = -1;
 	target->allocmem = 0;
 
-	while(1)
-	{
-		// read from target process
-		recvLen = recv(target->socket, &log,
-				sizeof(log.type) + sizeof(log.length),
-			       MSG_WAITALL);
-
-		if(unlikely(recvLen < sizeof(log.type) + sizeof(log.length)))
-		{	// disconnect
+	for (;;) {
+		err = target_recv_msg(target, &log);
+		if (err != 0) {
+			/* disconnect */
 			event = EVENT_STOP;
-			write(target->event_fd, &event, sizeof(uint64_t));
+			write(target->event_fd, &event, sizeof(event));
 			break;
 		}
+
 		if (IS_PROBE_MSG(log.type)) {
-			struct msg_data_t tmp_msg;
-			int offs = sizeof(log.type) + sizeof(log.length);
+			struct msg_data_t *msg_data = (struct msg_data_t *)&log;
 
-			recvLen = recv(target->socket,
-				       (char *)&log + offs,
-				       MSG_DATA_HDR_LEN - offs,
-				       MSG_WAITALL);
-			memcpy(&tmp_msg, &log, MSG_DATA_HDR_LEN);
-			struct msg_data_t *msg = malloc(MSG_DATA_HDR_LEN +
-							tmp_msg.len);
-			memcpy(msg, &tmp_msg, MSG_DATA_HDR_LEN);
-			recvLen = recv(target->socket,
-				       (char *)msg + MSG_DATA_HDR_LEN,
-				       msg->len, MSG_WAITALL);
-			if (write_to_buf(msg) != 0)
+			if (write_to_buf(msg_data) != 0)
 				LOGE("write to buf fail\n");
-			free(msg);
-			continue;
-		}
 
-		// send to host
-		if (likely(log.length > 0))
-		{
-			recvLen = recv(target->socket, log.data, log.length,
-				       MSG_WAITALL);
-			if(unlikely((recvLen == -1) || (recvLen != log.length)))	// consume as disconnect
-			{
-				event = EVENT_STOP;
-				write(target->event_fd, &event, sizeof(uint64_t));
-				break;
-			}
+			continue;
 		}
 
 		log.data[log.length] = '\0';
@@ -120,8 +91,7 @@ static void* recvThread(void* data)
 			LOGI("MSG_PID arrived (pid ppid): %s\n", log.data);
 
 			// only when first MSG_PID is arrived
-			if(target->pid == -1)
-			{
+			if (target_get_pid(target) == UNKNOWN_PID) {
 				int n;
 				pid_t pid, ppid;
 
@@ -140,19 +110,20 @@ static void* recvThread(void* data)
 				}
 
 				/* set pid and ppid */
-				target->pid = pid;
-				target->ppid = ppid;
+				target_set_pid(target, pid);
+				target_set_ppid(target, ppid);
 
 				/* send event */
 				event = EVENT_PID;
 				write(target->event_fd, &event, sizeof(uint64_t));
 			}
-			send_maps_inst_msg_to(target->socket);
+			send_maps_inst_msg_to(target);
 			continue;		// don't send to host
 		}
 		else if(log.type == MSG_TERMINATE)
 		{
-			LOGI("MSG_TERMINATE arrived: pid[%d]\n", target->pid);
+			LOGI("MSG_TERMINATE arrived: pid[%d]\n",
+			     target_get_pid(target));
 
 			// send stop message to main thread
 			event = EVENT_STOP;
@@ -214,16 +185,10 @@ static void* recvThread(void* data)
 	return NULL;
 }
 
-int makeRecvThread(int index)
+int makeRecvThread(struct target *target)
 {
-	if (manager.target[index].socket == -1)
-		return -1;
-
-	if (pthread_create(&(manager.target[index].recv_thread),
-		NULL, recvThread, &manager.target[index]) < 0)
-	{
-		LOGE("Failed to create recv thread for socket (%d)\n",
-				manager.target[index].socket);
+	if (target_start(target, recvThread) < 0) {
+		LOGE("Failed to create recv thread\n");
 		return -1;
 	}
 

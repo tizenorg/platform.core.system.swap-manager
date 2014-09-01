@@ -1803,22 +1803,6 @@ static int get_other_pid_array(pid_t inst_pid[], const int inst_n, pid_t arr[],
 	return count;
 }
 
-static pid_t get_first_target_process(void)
-{
-	pid_t pid = -1;
-	int i;
-
-	for (i = 0; i < MAX_TARGET_COUNT; i++) {
-		if (manager.target[i].socket != -1 &&
-		    manager.target[i].pid != -1) {
-			pid = manager.target[i].pid;
-			break;
-		}
-	}
-
-	return pid;
-}
-
 // return log length (>0) for normal case
 // return negative value for error
 int get_system_info(struct system_info_t *sys_info)
@@ -2241,7 +2225,7 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 			pack_int64(p, (uint64_t)proc->proc_data.pss);
 
 			/* TODO total alloc for not ld preloaded processes */
-			pack_int64(p, (uint64_t)get_total_alloc_size_by_pid(proc->proc_data.pid));
+			pack_int64(p, target_get_total_alloc(proc->proc_data.pid));
 			//pack threads
 
 			if (IS_OPT_SET(FL_SYSTEM_THREAD_LOAD)) {
