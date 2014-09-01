@@ -157,7 +157,6 @@ typedef struct
 {
 	int host_server_socket;
 	int target_server_socket;
-	int target_count;
 	int apps_to_run;
 	unsigned int config_flag;
 	int app_launch_timerfd;
@@ -169,7 +168,6 @@ typedef struct
 	int user_ev_fd;
 	int efd;
 	__da_host_info host;
-	struct target target[MAX_TARGET_COUNT];
 	__file_descriptors fd;
 	char appPath[128]; // application executable path
 } __da_manager;

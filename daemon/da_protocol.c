@@ -973,7 +973,7 @@ int send_msg_to_all_targets(struct msg_target_t *msg)
 	int target_index;
 	int sock;
 	for (target_index = 0; target_index < MAX_TARGET_COUNT; target_index++) {
-		sock = manager.target[target_index].socket;
+		sock = target_get(target_index)->socket;
 		if (sock != -1) {
 			if (send(sock, msg, sizeof(struct _msg_target_t) + msg->length, MSG_NOSIGNAL) == -1)
 				LOGE("fail to send data to target index(%d)\n",
@@ -1170,9 +1170,12 @@ int host_message_handler(struct msg_t *msg)
 				     (unsigned long long) prof_session.conf.use_features0);
 		for (target_index = 0; target_index < MAX_TARGET_COUNT; target_index++)
 		{
-			if(manager.target[target_index].socket != -1)
+			int sock;
+
+			sock = target_get(target_index)->socket;
+			if (sock != -1)
 			{
-				if (0 > send(manager.target[target_index].socket, &sendlog,
+				if (0 > send(sock, &sendlog,
 					sizeof(sendlog.type) + sizeof(sendlog.length) + sendlog.length,
 					     MSG_NOSIGNAL))
 					LOGE("fail to send data to target index(%d)\n", target_index);

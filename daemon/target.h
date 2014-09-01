@@ -21,4 +21,11 @@ struct target {
 };
 
 
+void target_cnt_set(int cnt);
+int target_cnt_get(void);
+int target_cnt_sub_and_fetch(void);
+
+struct target *target_get(int i);
+
+
 #endif /* _TARGER_H_ */

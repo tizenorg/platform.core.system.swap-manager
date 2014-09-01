@@ -64,7 +64,6 @@ __da_manager manager =
 {
 	.host_server_socket = -1,
 	.target_server_socket = -1,
-	.target_count = 0,
 	.apps_to_run = 0,
 	.config_flag = 0,
 	.app_launch_timerfd = -1,
@@ -82,9 +81,6 @@ __da_manager manager =
 		.data_socket_mutex = PTHREAD_MUTEX_INITIALIZER
 	},
 
-	.target = {
-		{0L, },
-	},
 	.fd = {
 		.brightness = -1,
 		.voltage = -1,
@@ -265,9 +261,10 @@ static bool ensure_singleton(const char *lockfile)
 	return locked;
 }
 
-static void inititialize_manager_targets(__da_manager * mng)
+static void inititialize_manager_targets(void)
 {
 	int index;
+	struct target *target;
 	struct target target_init_value = {
 		.pid = -1,
 		.socket = -1,
@@ -277,10 +274,12 @@ static void inititialize_manager_targets(__da_manager * mng)
 		.allocmem = 0
 	};
 
-	for (index = 0; index < MAX_TARGET_COUNT; index++)
-		mng->target[index] = target_init_value;
+	for (index = 0; index < MAX_TARGET_COUNT; index++) {
+		target = target_get(index);
+		*target = target_init_value;
+	}
 
-	manager.target_count = 0;
+	target_cnt_set(0);
 }
 
 static bool initialize_pthread_sigmask()
@@ -325,7 +324,7 @@ static int initializeManager(FILE *portfile)
 
 	LOGI("SUCCESS to write port\n");
 
-	inititialize_manager_targets(&manager);
+	inititialize_manager_targets();
 
 	// initialize sendMutex
 	pthread_mutex_init(&(manager.host.data_socket_mutex), NULL);

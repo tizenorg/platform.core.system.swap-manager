@@ -216,14 +216,16 @@ static void* recvThread(void* data)
 
 int makeRecvThread(int index)
 {
-	if (manager.target[index].socket == -1)
+	struct target *target = target_get(index);
+
+	if (target->socket == -1)
 		return -1;
 
-	if (pthread_create(&(manager.target[index].recv_thread),
-		NULL, recvThread, &manager.target[index]) < 0)
+	if (pthread_create(&target->recv_thread,
+		NULL, recvThread, target) < 0)
 	{
 		LOGE("Failed to create recv thread for socket (%d)\n",
-				manager.target[index].socket);
+				target->socket);
 		return -1;
 	}
 
