@@ -631,17 +631,17 @@ static void generate_maps_inst_msg(struct user_space_inst_t *us_inst)
 	unlock_lib_maps_message();
 }
 
-void send_maps_inst_msg_to(int sock)
+void send_maps_inst_msg_to(struct target *t)
 {
 	lock_lib_maps_message();
-	send_msg_to_target(sock, (struct msg_target_t *)lib_maps_message);
+	target_send_msg(t, (struct msg_target_t *)lib_maps_message);
 	unlock_lib_maps_message();
 }
 
 static void send_maps_inst_msg_to_all_targets()
 {
 	lock_lib_maps_message();
-	send_msg_to_all_targets(lib_maps_message);
+	target_send_msg_to_all(lib_maps_message);
 	unlock_lib_maps_message();
 }
 

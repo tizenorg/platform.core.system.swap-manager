@@ -38,6 +38,11 @@ extern "C" {
 #endif
 
 
+struct target;
+
+
+int makeRecvThread(struct target *target);
+
 
 #ifdef __cplusplus
 }

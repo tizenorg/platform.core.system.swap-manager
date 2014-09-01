@@ -957,31 +957,57 @@ send_ack:
 	return -(err_code != ERR_NO);
 }
 
-int send_msg_to_target(int sock, struct msg_target_t *msg)
+int send_msg_to_sock(int sock, struct msg_target_t *msg)
 {
-	if (sock != -1) {
-		if (send(sock, msg, sizeof(struct _msg_target_t) + msg->length, MSG_NOSIGNAL) == -1)
-			LOGE("fail to send data to target socket(%d)\n", sock);
-		else
-			return 1;
+	ssize_t ret;
+	size_t n;
+	int err = 0;
+
+	n = sizeof(struct _msg_target_t) + msg->length;
+	ret = send(sock, msg, n, MSG_NOSIGNAL);
+	if (ret != n) {
+		LOGE("fail to send data to socket(%d) n=%u, ret=%d\n",
+		     sock, n, ret);
+		err = 1;
 	}
-	return 0;
+
+	return err;
 }
 
-int send_msg_to_all_targets(struct msg_target_t *msg)
+int recv_msg_from_sock(int sock, struct msg_target_t *msg)
 {
-	int target_index;
-	int sock;
-	for (target_index = 0; target_index < MAX_TARGET_COUNT; target_index++) {
-		sock = manager.target[target_index].socket;
-		if (sock != -1) {
-			if (send(sock, msg, sizeof(struct _msg_target_t) + msg->length, MSG_NOSIGNAL) == -1)
-				LOGE("fail to send data to target index(%d)\n",
-				     target_index);
-			else
-				return 1;
-		}
+	ssize_t ret;
+
+	ret = recv(sock, msg, MSG_HEADER_LEN, MSG_WAITALL);
+	if (ret != MSG_HEADER_LEN)
+		return 1;
+
+	if (IS_PROBE_MSG(msg->type)) {
+		struct msg_data_t *msg_data = (struct msg_data_t *)msg;
+		size_t n = MSG_DATA_HDR_LEN - MSG_HEADER_LEN;
+
+		ret = recv(sock, (char *)msg_data + MSG_HEADER_LEN,
+			   n, MSG_WAITALL);
+		if (ret != n)
+			return 1;
+
+		/* TODO: check msg_data->len */
+		ret = recv(sock, msg_data->payload,
+			   msg_data->len, MSG_WAITALL);
+
+		if (ret != msg_data->len)
+			return 1;
+
+		return 0;
 	}
+
+	if (msg->length > 0) {
+		/* TODO: check msg->length */
+		ret = recv(sock, msg->data, msg->length, MSG_WAITALL);
+		if (ret != msg->length)
+			return 1;
+	}
+
 	return 0;
 }
 
@@ -996,7 +1022,7 @@ static int process_msg_get_screenshot(struct msg_buf_t *msg_control)
 	sendlog.length = 0;
 	log_len = sizeof(sendlog.type) + sizeof(sendlog.length) + sendlog.length;
 
-	if (send_msg_to_all_targets(&sendlog) == 1)
+	if (target_send_msg_to_all(&sendlog) == 1)
 		err_code = ERR_NO;
 
 	return -(err_code != ERR_NO);
@@ -1168,16 +1194,7 @@ int host_message_handler(struct msg_t *msg)
 		sendlog.type = MSG_OPTION;
 		sendlog.length = sprintf(sendlog.data, "%llu",
 				     (unsigned long long) prof_session.conf.use_features0);
-		for (target_index = 0; target_index < MAX_TARGET_COUNT; target_index++)
-		{
-			if(manager.target[target_index].socket != -1)
-			{
-				if (0 > send(manager.target[target_index].socket, &sendlog,
-					sizeof(sendlog.type) + sizeof(sendlog.length) + sendlog.length,
-					     MSG_NOSIGNAL))
-					LOGE("fail to send data to target index(%d)\n", target_index);
-			}
-		}
+		target_send_msg_to_all(&sendlog);
 		break;
 	case NMSG_BINARY_INFO:
 		return process_msg_binary_info(&msg_control);
