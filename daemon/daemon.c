@@ -295,20 +295,7 @@ static void terminate_all_target()
 	sendlog.type = MSG_STOP;
 	sendlog.length = 0;
 
-	for (i = 0; i < MAX_TARGET_COUNT; i++) {
-		target = target_get(i);
-		if (target->socket != -1) {
-			sendlen = send(target->socket, &sendlog,
-				       sizeof(sendlog.type) +
-				       sizeof(sendlog.length), MSG_NOSIGNAL);
-
-			if (sendlen != -1) {
-				LOGI("TERMINATE send exit msg (socket %d) "
-				     "by terminate_all_target()\n",
-				     target->socket);
-			}
-		}
-	}
+	send_msg_to_all_targets(&sendlog);
 }
 
 // terminate all target and wait for threads
