@@ -42,6 +42,7 @@ struct target;
 
 
 int makeRecvThread(struct target *target);
+int makeJSTraceRecvThread(void);
 
 
 #ifdef __cplusplus

@@ -69,6 +69,7 @@ install: $(TARGET)
 	mkdir -p $(OPTDIR)
 	install $(TARGET) $(DASCRIPT) -t $(BINDIR)
 	install -m 755 $(START_SH) $(STOP_SH) -t $(OPTDIR)
+	install -m 777 webappprepare.sh profile.js -t $(OPTDIR)
 
 clean:
 	rm -f $(TARGET) $(DAEMON_OBJS)

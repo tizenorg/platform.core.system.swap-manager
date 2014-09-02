@@ -42,6 +42,8 @@
 extern "C" {
 #endif
 
+#define JS_PREPARE_SCRIPT_PATH			"/opt/swap/sdk/webappprepare.sh"
+#define JS_TRACE_FILE				"/opt/swap/sdk/js_trace"
 
 #define PROTOCOL_VERSION			"2.1"
 
@@ -164,6 +166,8 @@ typedef struct
 	pthread_t sampling_thread;
 	pthread_t replay_thread;
 	pthread_t transfer_thread;
+	pthread_t jstrace_thread;
+	int jstrace_fd;
 	int buf_fd;
 	int user_ev_fd;
 	int efd;

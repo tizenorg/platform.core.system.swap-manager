@@ -198,6 +198,12 @@ struct msg_data_t {
 	char payload[0];
 };
 
+struct msg_jstrace_t {
+	unsigned short marker;
+	unsigned short length;
+	struct msg_data_t *msg;
+};
+
 #define MSG_CMD_HDR_LEN 8
 //conf
 struct msg_buf_t {

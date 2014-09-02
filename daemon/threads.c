@@ -195,6 +195,91 @@ int makeRecvThread(struct target *target)
 	return 0;
 }
 
+static void* jsThread(void)
+{
+#define BUF_SIZE		4096
+#define BUF_COUNT		(head - tail)
+#define BUF_AS_MARKER(PTR)	(((struct msg_jstrace_t *)(PTR))->marker)
+#define BUF_AS_LENGTH(PTR)	(((struct msg_jstrace_t *)(PTR))->length)
+#define MARKER			(0xface)
+#define INT_HEADER_SIZE		(sizeof(js_msg.marker) + sizeof(js_msg.length))
+
+	int rd;
+	int len;
+	char *buf = malloc(BUF_SIZE << 1);
+	char *head = buf;
+	char *tail = buf;
+	struct msg_jstrace_t js_msg;
+	typeof(js_msg.msg->seq_num) last_seq_num = 0;
+
+	if (!buf) {
+		LOGE("Can not allocate memory for javascript trace");
+		return;
+	}
+
+	while(1) {
+		rd = read(manager.jstrace_fd, head, BUF_SIZE >> 1);
+		if (!rd) {
+			sleep(1);
+			continue;
+		}
+		LOGI("js trace read: %d\n", rd);
+		head += rd;
+
+		while (BUF_COUNT > INT_HEADER_SIZE) {
+			if (!(BUF_AS_MARKER(tail) == MARKER &&
+			    (len = BUF_AS_LENGTH(tail)) &&
+			    BUF_COUNT >= len &&
+			    (BUF_AS_MARKER(tail + len) == MARKER ||
+			    len == BUF_COUNT))) {
+				if (BUF_COUNT < len)
+					break;
+				tail++;
+				continue;
+			}
+
+			js_msg.msg = tail + INT_HEADER_SIZE;
+			if (write_to_buf(js_msg.msg) != 0)
+				LOGE("write to buf fail\n");
+			if (js_msg.msg->seq_num - last_seq_num > 1)
+				LOGW("js trace package(s) lost: %d\n",
+				     js_msg.msg->seq_num -
+				     last_seq_num - 1);
+			last_seq_num = js_msg.msg->seq_num;
+			tail += len;
+		}
+
+		len = BUF_COUNT;
+		head = buf;
+		if (len) {
+			memcpy(buf, tail, len);
+			head += len;
+		}
+		tail = buf;
+	}
+
+}
+
+int makeJSTraceRecvThread(void)
+{
+	int err;
+
+	manager.jstrace_fd = open(JS_TRACE_FILE, O_RDONLY);
+
+	if(manager.jstrace_fd < 0) {
+		LOGE("Cannot open trace file \"%s\"\n", JS_TRACE_FILE);
+		return -1;
+	}
+
+	err = pthread_create(&(manager.jstrace_thread), NULL, jsThread, NULL);
+	if (err < 0) {
+		LOGE("Failed to create jstrace recv thread\n");
+		return -1;
+	}
+
+	return 0;
+}
+
 static void *samplingThread(void *data)
 {
 	int err, signo;
