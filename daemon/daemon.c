@@ -502,12 +502,15 @@ static pid_t get_current_pid(void)
 static void target_set_type(struct target *t)
 {
 	pid_t ppid = target_get_ppid(t);
+	enum app_type_t app_type = APP_TYPE_UNKNOWN;
 
 	if (get_current_pid() == ppid) {
-		t->app_type = APP_TYPE_COMMON;
+		app_type = APP_TYPE_COMMON;
 	} else if (get_lpad_pid(ppid) == ppid) {
-		t->app_type = APP_TYPE_TIZEN;
+		app_type = APP_TYPE_TIZEN;
 	}
+
+	t->app_type = app_type;
 }
 
 

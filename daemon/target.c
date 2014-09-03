@@ -44,6 +44,7 @@ struct target *target_ctor(void)
 
 	t = target_malloc();
 	if (t) {
+		t->app_type = APP_TYPE_UNKNOWN;
 		t->pid = UNKNOWN_PID;
 		t->socket = UNKNOWN_FD;
 		t->event_fd = UNKNOWN_FD;
