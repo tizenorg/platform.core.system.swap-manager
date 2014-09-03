@@ -792,6 +792,8 @@ static int controlSocketHandler(int efd)
 	if (recv_len == -1 || recv_len == 0)
 		return -11;
 	else {
+		if (msg_head.len > RECV_BUF_MAX)
+			return -1;
 		msg = malloc(MSG_CMD_HDR_LEN + msg_head.len);
 		if (!msg) {
 			LOGE("Cannot alloc msg\n");
