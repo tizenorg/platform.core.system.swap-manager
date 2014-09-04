@@ -392,7 +392,7 @@ int is_same_app_process(char* appPath, int pid)
 	char buf_res[PATH_MAX];
 	char tPath_res[PATH_MAX];
 
-	strcpy(tPath, appPath);
+	strncpy(tPath, appPath, PATH_MAX - 1);
 	tlen = strlen(tPath);
 	if(strcmp(tPath + tlen - 4, ".exe") == 0)
 	{
