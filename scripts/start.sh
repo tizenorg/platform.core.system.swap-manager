@@ -14,6 +14,8 @@ if [ ! -e /sys/kernel/debug/swap/writer/raw ]; then
     insmod swap_energy.ko || exit 1
     insmod swap_message_parser.ko || exit 1  # parser is loaded
     insmod swap_retprobe.ko || exit 1 # retprobe is loaded
+    insmod swap_task_data.ko || exit 1
+    insmod swap_preload.ko || exit 1
 
 fi
 
