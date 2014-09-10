@@ -86,6 +86,8 @@ TARGET = da_manager
 DASCRIPT = da_command
 START_SH = ../scripts/start.sh
 STOP_SH = ../scripts/stop.sh
+PRELOAD_SCRIPT = ../scripts/gen_preload_header.sh
+
 all: debug
 
 release: CFLAGS += -DNOLOGI=1
@@ -109,6 +111,7 @@ install: $(TARGET)
 	mkdir -p $(BINDIR)
 	mkdir -p $(OPTDIR)
 	install $(TARGET) -t $(BINDIR)
+	bash $(PRELOAD_SCRIPT) $(START_SH)
 	install -m 755 $(START_SH) $(STOP_SH) -t $(OPTDIR)
 
 clean:
