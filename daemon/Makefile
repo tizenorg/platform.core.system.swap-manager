@@ -82,10 +82,10 @@ OBJS_C := $(SRC_C:.c=.o)
 OBJS_CPP := $(SRC_CPP:.cpp=.o)
 OBJS := $(OBJS_C) $(OBJS_CPP)
 
-TARGET := da_manager
-DASCRIPT := da_command
-START_SH := start.sh
-STOP_SH := stop.sh
+TARGET = da_manager
+DASCRIPT = da_command
+START_SH = ../scripts/start.sh
+STOP_SH = ../scripts/stop.sh
 all: debug
 
 release: CFLAGS += -DNOLOGI=1
