@@ -54,8 +54,8 @@ DAEMON_OBJS = $(patsubst %.c,%.o, $(DAEMON_SRCS))
 
 TARGET = da_manager
 DASCRIPT = da_command
-START_SH = start.sh
-STOP_SH = stop.sh
+START_SH = ../scripts/start.sh
+STOP_SH = ../scripts/stop.sh
 
 all: debug
 debug release: $(TARGET_LIBS)
