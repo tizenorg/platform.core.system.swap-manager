@@ -257,7 +257,7 @@ uint64_t target_get_total_alloc(pid_t pid)
 		}
 	}
 unlock:
-	target_array_lock();
+	target_array_unlock();
 
 	return ret;
 }
