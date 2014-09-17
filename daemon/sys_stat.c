@@ -74,7 +74,7 @@
 #define MEM_SLOT_MAX		4
 
 #define MIN_TICKS_FOR_LOAD	8
-#define MIN_TOTAL_TICK		10
+#define MIN_TOTAL_TICK		1
 #define SYS_INFO_TICK		100	// TODO : change to (Hertz * profiling period)
 
 #define CPUMHZ		"cpu MHz"
