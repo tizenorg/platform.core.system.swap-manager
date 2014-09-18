@@ -521,31 +521,31 @@ static int target_event_pid_handler(struct target *target)
 
 	target_set_type(target);
 
-	if (0) {	// main application (index == 0)
-		app_info = app_info_get_first(&app);
-		if (app_info == NULL) {
-			LOGE("No app info found\n");
-			return -1;
-		}
-
-		while (app_info != NULL) {
-			if (is_same_app_process(app_info->exe_path,
-						target_get_pid(target)))
-				break;
-			app_info = app_info_get_next(&app);
-		}
-
-		if (app_info == NULL) {
-			LOGE("pid %d not found in app list\n",
-			     target_get_pid(target));
-			return -1;
-		}
-
-		if (start_replay() != 0) {
-			LOGE("Cannot start replay thread\n");
-			return -1;
-		}
+	/* posible need some process check right there before start_replay >> */
+	app_info = app_info_get_first(&app);
+	if (app_info == NULL) {
+		LOGE("No app info found\n");
+		return -1;
 	}
+
+	while (app_info != NULL) {
+		if (is_same_app_process(app_info->exe_path,
+					target_get_pid(target)))
+			break;
+		app_info = app_info_get_next(&app);
+	}
+
+	if (app_info == NULL) {
+		LOGE("pid %d not found in app list\n",
+		     target_get_pid(target));
+		return -1;
+	}
+
+	if (start_replay() != 0) {
+		LOGE("Cannot start replay thread\n");
+		return -1;
+	}
+	/* posible need some process check right there before start_replay << */
 
 	target->initial_log = 1;
 
@@ -559,9 +559,6 @@ static int target_event_stop_handler(struct target *target)
 
 	LOGI("target[%p] close, pid(%d) : (remaining %d target)\n",
 	     target, target_get_pid(target), target_cnt_get() - 1);
-
-	if (0)		// main application (index == 0)
-		stop_replay();
 
 	ecore_main_fd_handler_del(target->handler);
 

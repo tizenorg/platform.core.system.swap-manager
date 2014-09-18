@@ -658,6 +658,7 @@ enum ErrorCode stop_all_no_lock(void)
 		msg = gen_stop_msg();
 		terminate_all();
 		stop_profiling();
+		stop_replay();
 
 		if (msg == NULL) {
 			LOGE("cannot generate stop message\n");
