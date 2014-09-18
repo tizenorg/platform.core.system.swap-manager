@@ -1,0 +1,7 @@
+Code-Review+2: Dmitry Kovalenko <d.kovalenko@samsung.com>
+Verified+1: Vitaliy Andreevich <v.cherepanov@samsung.com>
+Submitted-by: Dmitry Kovalenko <d.kovalenko@samsung.com>
+Submitted-at: Wed, 17 Sep 2014 23:21:30 -0700
+Reviewed-on: https://review.tizen.org/gerrit/27672
+Project: platform/core/system/swap-manager
+Branch: refs/heads/prod_rel
