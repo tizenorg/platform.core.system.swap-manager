@@ -263,6 +263,7 @@ struct user_space_inst_t {
 };
 
 //replays
+
 struct replay_event_t {
 	uint32_t id;
 	struct input_event ev;
@@ -270,9 +271,7 @@ struct replay_event_t {
 
 struct replay_event_seq_t {
 	uint32_t enabled;
-	struct timeval tv;
-	uint32_t event_num;
-	struct replay_event_t *events;
+	char *replay_filename;
 };
 
 struct prof_session_t {
@@ -452,12 +451,16 @@ void print_replay_event(struct replay_event_t *ev, uint32_t num, char *tab);
 int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 			char *payload, int payload_size);
 
+void init_parse_control_buf(struct msg_buf_t *buf, char *payload, uint32_t len);
+
 int parse_int8(struct msg_buf_t *msg, uint8_t *val);
 int parse_int32(struct msg_buf_t *msg, uint32_t *val);
 int parse_int64(struct msg_buf_t *msg, uint64_t *val);
 int parse_string(struct msg_buf_t *msg, char **str);
 int parse_string_no_alloc(struct msg_buf_t *msg, char *str);
 int parse_replay_event_seq(struct msg_buf_t *msg, struct replay_event_seq_t *res);
+int parse_timeval(struct msg_buf_t *msg, struct timeval *tv);
+int parse_replay_event(struct msg_buf_t *msg, struct replay_event_t *re);
 
 void init_prof_session(struct prof_session_t *prof_session);
 #endif /* _DA_PROTOCOL_ */

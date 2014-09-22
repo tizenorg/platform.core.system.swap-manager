@@ -324,7 +324,7 @@ static int parse_conf(struct msg_buf_t *msg, struct conf_t *conf)
 }
 
 //REPLAY EVENTS PARSE
-static int parse_timeval(struct msg_buf_t *msg, struct timeval *tv)
+int parse_timeval(struct msg_buf_t *msg, struct timeval *tv)
 {
 	uint32_t nsec = 0;
 
@@ -344,8 +344,7 @@ static int parse_timeval(struct msg_buf_t *msg, struct timeval *tv)
 	return 1;
 }
 
-static int parse_replay_event(struct msg_buf_t *msg,
-				    struct replay_event_t *re)
+int parse_replay_event(struct msg_buf_t *msg, struct replay_event_t *re)
 {
 
 	if (!parse_timeval(msg, &re->ev.time)) {
@@ -379,10 +378,10 @@ static int parse_replay_event(struct msg_buf_t *msg,
 void reset_replay_event_seq(struct replay_event_seq_t *res)
 {
 	res->enabled = 0;
-	res->tv = (struct timeval){0, 0};
-	if (res->event_num != 0)
-		free(res->events);
-	res->event_num = 0;
+	if (res->replay_filename != NULL) {
+		free(res->replay_filename);
+		res->replay_filename = NULL;
+	}
 }
 
 int parse_replay_event_seq(struct msg_buf_t *msg,
@@ -400,40 +399,14 @@ int parse_replay_event_seq(struct msg_buf_t *msg,
 		return 1;
 	}
 
-	parse_deb("time main\n");
-	if (!parse_timeval(msg, &res->tv)) {
+	parse_deb("file_name\n");
+	if (!parse_string(msg, &res->replay_filename)) {
 		LOGE("time parsing error\n");
 		return 0;
 	}
 
-	parse_deb("count\n");
-	if (!parse_int32(msg, &res->event_num)) {
-		LOGE("event num parsing error\n");
-		return 0;
-	}
-	parse_deb("events num=%d\n", res->event_num);
-
-	res->events = (struct replay_event_t *)malloc(res->event_num *
-						      sizeof(*res->events));
-	if (!res->events) {
-		LOGE("events alloc error\n");
-		return 0;
-	}
-
-	for (i = 0; i < res->event_num; i++) {
-		parse_deb("sub_rep\n");
-		if (!parse_replay_event(msg, &res->events[i])) {
-			LOGE("event #%d parsing error\n", i + 1);
-			free(res->events);
-			res->event_num = 0;
-			return 0;
-		}
-	}
-
 	return 1;
 }
-
-//*REPLAY EVENT PARSE
 
 static int parse_msg_config(struct msg_buf_t *msg_payload,
 			      struct conf_t *conf)
@@ -447,12 +420,17 @@ static int parse_msg_config(struct msg_buf_t *msg_payload,
 	return 1;
 }
 
+void init_parse_control_buf(struct msg_buf_t *buf, char *payload, uint32_t len)
+{
+	buf->payload = payload;
+	buf->len = len;
+	buf->end = payload + len;
+	buf->cur_pos = payload;
+}
+
 static void init_parse_control(struct msg_buf_t *buf, struct msg_t *msg)
 {
-	buf->payload = msg->payload;
-	buf->len = msg->len;
-	buf->end = msg->payload + msg->len;
-	buf->cur_pos = msg->payload;
+	init_parse_control_buf(buf, msg->payload, msg->len);
 }
 
 static void reset_target_info(struct target_info_t *target_info)
