@@ -30,6 +30,7 @@
 
 #include "target.h"
 
+#include "thread.h"
 #include "daemon.h"	// for manager (it is need delete)
 #include "smack.h"
 #include "debug.h"
@@ -48,9 +49,14 @@ struct target *target_ctor(void)
 		t->pid = UNKNOWN_PID;
 		t->socket = UNKNOWN_FD;
 		t->event_fd = UNKNOWN_FD;
-		t->recv_thread = 0;
 		t->initial_log = 0;
 		t->allocmem = 0;
+
+		t->thread = thread_ctor();
+		if (t->thread == NULL) {
+			target_free(t);
+			t = NULL;
+		}
 	}
 
 	return t;
@@ -58,7 +64,6 @@ struct target *target_ctor(void)
 
 void target_dtor(struct target *t)
 {
-	t->recv_thread = -1;
 	t->allocmem = 0;
 	t->initial_log = 0;
 
@@ -70,6 +75,7 @@ void target_dtor(struct target *t)
 		close(t->socket);
 	t->socket = -1;
 
+	thread_dtor(t->thread);
 	target_free(t);
 }
 
@@ -103,12 +109,12 @@ int target_recv_msg(struct target *t, struct msg_target_t *msg)
 
 int target_start(struct target *t, void *(*start_routine) (void *))
 {
-	return pthread_create(&t->recv_thread, NULL, start_routine, (void *)t);
+	return thread_start(t->thread, start_routine, (void *)t);
 }
 
 int target_wait(struct target *t)
 {
-	return pthread_join(t->recv_thread, NULL);
+	return thread_wait(t->thread);
 }
 
 

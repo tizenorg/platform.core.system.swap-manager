@@ -181,7 +181,6 @@ static void* recvThread(void* data)
 		pass = 1;
 	}
 
-	target->recv_thread = -1;
 	return NULL;
 }
 

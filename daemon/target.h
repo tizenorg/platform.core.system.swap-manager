@@ -41,17 +41,21 @@
 #define UNKNOWN_FD		(-1)
 
 
+struct thread;
+
+
 struct target {
 	enum app_type_t app_type;	/* calculated when connecting */
 	int64_t	allocmem;		/* written only by recv thread */
 	pid_t pid;			/* written only by recv thread */
 	pid_t ppid;			/* written only by recv thread */
 	int socket;			/* written only by main thread */
-	pthread_t recv_thread;		/* written only by main thread */
 	int event_fd;			/* for thread communication
 					 * (from recv thread to main thread) */
 	int initial_log;		/* written only by main thread */
 	Ecore_Fd_Handler *handler;	/* calculated when connecting */
+
+	struct thread *thread;
 };
 
 
