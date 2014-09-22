@@ -562,6 +562,7 @@ static int target_event_stop_handler(struct target *target)
 
 	ecore_main_fd_handler_del(target->handler);
 
+	target_wait(target);
 	target_dtor(target);
 	// all target client are closed
 	cnt = target_cnt_sub_and_fetch();
