@@ -318,7 +318,7 @@ int samplingStop(void)
 
 static useconds_t time_diff_us(struct timeval *tv1, struct timeval *tv2)
 {
-	return (tv1->tv_sec - tv2->tv_sec) * 1000000 +
+	return (tv1->tv_sec - tv2->tv_sec) * 1000000ll +
 		((int)tv1->tv_usec - (int)tv2->tv_usec);
 }
 
@@ -332,41 +332,118 @@ static void exit_replay_thread()
 	pthread_mutex_unlock(&replay_thread_mutex);
 }
 
+#define REPLAY_FILE_HEADER_SIZE (\
+	sizeof(start_tv.tv_sec) + sizeof(start_tv.tv_usec) + /* time */\
+	sizeof(event_num) /* event count */\
+)
+
+#define REPLAY_FILE_EVENT_SIZE (\
+	sizeof(start_tv.tv_sec) + sizeof(start_tv.tv_usec) + /* time */\
+	sizeof(struct input_event)	/* event size */\
+)
+
 static void *replay_thread(void *arg)
 {
 	struct replay_event_seq_t *event_seq = (struct replay_event_seq_t *)arg;
-	int i = 0;
+	struct timeval start_tv;
+	uint32_t event_num = 0;
+	int fd = -1;
+	char buf[REPLAY_FILE_EVENT_SIZE * 10];
+	struct msg_buf_t msg;
+
+	int i = 0, size = 0;
+	uint32_t pos = 0;
 	useconds_t ms;
 	useconds_t prev_event_offset = 0;
 
-	struct replay_event_t * pevent = NULL;
+	struct replay_event_t event;
 
 	LOGI_th_rep("replay events thread started\n");
-	if (event_seq->event_num != 0)
-	{
-		pevent = event_seq->events;
+
+	/* check for enabled */
+	if (!event_seq->enabled) {
+		LOGI("replays disabled\n");
+		goto exit_thread;
 	}
 
-	for (i = 0; i < event_seq->event_num; i++) {
-		useconds_t event_offset = time_diff_us(&pevent->ev.time, &event_seq->tv);
-		if (event_offset >= prev_event_offset)
-			ms = event_offset - prev_event_offset;
-		else
-			ms = 0;
+	/* check replay file name*/
+	if (event_seq->replay_filename == NULL) {
+		LOGI("replay file name is NULL\n");
+		goto exit_thread;
+	}
+
+	fd = open(event_seq->replay_filename, O_RDONLY);
+
+	/* check replay file */
+	if (fd == -1) {
+		LOGE("can not open replay event file <%s>\n",
+		     event_seq->replay_filename);
+		goto exit_thread;
+	}
+
+	/* read replay file header */
+	size = read(fd, buf, REPLAY_FILE_HEADER_SIZE);
+
+	if (size != REPLAY_FILE_HEADER_SIZE) {
+		LOGE("replay file corrupred\n");
+		goto exit_thread_close_fd;
+	}
+
+	init_parse_control_buf(&msg, buf, REPLAY_FILE_HEADER_SIZE);
+
+	if (!parse_timeval(&msg, &start_tv)) {
+		LOGE("start time parsing error\n");
+		goto exit_thread_close_fd;
+	}
+
+	if (!parse_int32(&msg, &event_num)) {
+		LOGE("count parsing error\n");
+		goto exit_thread_close_fd;
+	}
+
+	LOGI_th_rep("\ttime=0x%08X %08X (%u.%u), count=%u\n",
+		    (unsigned int)start_tv.tv_sec,//timeval
+		    (unsigned int)start_tv.tv_usec,//timeval
+		    (unsigned int)start_tv.tv_sec,//timeval
+		    (unsigned int)start_tv.tv_usec,//timeval
+		    event_num
+		);
+
+	/* read replay file header */
+	while ( (size = read(fd, buf, sizeof(buf))) > 0 ) {
+
+		init_parse_control_buf(&msg, buf, size);
+
+
+		for (i = 0; i < size / REPLAY_FILE_EVENT_SIZE; i++) {
+			LOGW("sizeof(input_event)=%u", );
+			if (!parse_replay_event(&msg, &event)) {
+				LOGE("parse replay event #%u\n", pos);
+				goto exit_thread_close_fd;
+			}
+
+			useconds_t event_offset = time_diff_us(&(event.ev), &start_tv);
+			if (event_offset >= prev_event_offset)
+				ms = event_offset - prev_event_offset;
+			else
+				ms = 0;
 
 #ifdef THREAD_REPLAY_DEBUG
-		print_replay_event(pevent, i + 1, "\t");
+			print_replay_event(&event, pos + 1, "\t");
 #endif
-		LOGI_th_rep("%d) sleep %d\n", i, ms);
-		usleep(ms);
+			LOGI_th_rep("%d) usleep %dms\n", i, ms);
+			usleep(ms);
 
-		write_input_event(pevent->id, &pevent->ev);
+			write_input_event(event.id, &event.ev);
 
-		prev_event_offset = event_offset;
-
-		pevent++;
+			prev_event_offset = event_offset;
+			pos++;
+		}
 	}
 
+exit_thread_close_fd:
+	close(fd);
+exit_thread:
 	LOGI("replay events thread finished\n");
 
 	exit_replay_thread();
