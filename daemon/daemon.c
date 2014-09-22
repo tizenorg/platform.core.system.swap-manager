@@ -702,6 +702,33 @@ static int targetServerHandler(void)
 	}
 }
 
+static void recv_msg_tail(int fd, uint32_t len)
+{
+	char buf[512];
+	uint32_t blocks;
+	int recv_len;
+
+	for (blocks = len / sizeof(buf); blocks != 0; blocks--) {
+		recv_len = recv(fd, buf, sizeof(buf), MSG_WAITALL);
+		if (recv_len != sizeof(buf))
+			goto error_ret;
+	}
+
+	len = len % sizeof(buf);
+	if (len != 0) {
+		recv_len = recv(fd, buf, len, MSG_WAITALL);
+		if (recv_len == -1)
+			goto error_ret;
+	}
+
+	return;
+
+error_ret:
+	LOGE("error or close request from host. recv_len = %d\n",
+	     recv_len);
+	return;
+}
+
 static Ecore_Fd_Handler *host_ctrl_handler;
 static Ecore_Fd_Handler *host_data_handler;
 
@@ -723,15 +750,24 @@ static int controlSocketHandler(int efd)
 	// Receive header
 	recv_len = recv(manager.host.control_socket,
 			&msg_head, MSG_CMD_HDR_LEN, 0);
+
 	// error or close request from host
-	if (recv_len == -1 || recv_len == 0)
+	if (recv_len == -1 || recv_len == 0) {
+		LOGW("error or close request from host. "
+		     "MSG_ID = 0x%08X; recv_len = %d\n",
+		     msg_head.id, recv_len);
 		return -11;
-	else {
-		if (msg_head.len > RECV_BUF_MAX)
+	} else {
+		if (msg_head.len > HOST_CTL_MSG_MAX_LEN) {
+			LOGE("Too long message. size = %u\n", msg_head.len);
+			recv_msg_tail(manager.host.control_socket, msg_head.len);
+			sendACKToHost(msg_head.id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
 			return -1;
+		}
 		msg = malloc(MSG_CMD_HDR_LEN + msg_head.len);
 		if (!msg) {
 			LOGE("Cannot alloc msg\n");
+			recv_msg_tail(manager.host.control_socket, msg_head.len);
 			sendACKToHost(msg_head.id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
 			return -1;
 		}
@@ -742,6 +778,8 @@ static int controlSocketHandler(int efd)
 			recv_len = recv(manager.host.control_socket,
 					msg->payload, msg->len, MSG_WAITALL);
 			if (recv_len == -1) {
+				LOGE("error or close request from host. recv_len = %d\n",
+				     recv_len);
 				free(msg);
 				return -11;
 			}
@@ -767,7 +805,7 @@ static Eina_Bool host_ctrl_cb(void *data, Ecore_Fd_Handler *fd_handler)
 		manager.host.data_socket = -1; //splice will fail without that
 		ecore_main_loop_quit();
 	} else if (result < 0) {
-		LOGE("Control socket handler.\n");
+		LOGE("Control socket handler. err #%d\n", result);
 	}
 
 	return ECORE_CALLBACK_RENEW;
