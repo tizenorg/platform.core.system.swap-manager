@@ -413,6 +413,9 @@ int parse_replay_event_seq(struct msg_buf_t *msg,
 	}
 	parse_deb("events num=%d\n", res->event_num);
 
+	LOGI("Replay events: count = %u; total_size = %u\n",
+	     res->event_num, res->event_num * sizeof(*res->events));
+
 	res->events = (struct replay_event_t *)malloc(res->event_num *
 						      sizeof(*res->events));
 	if (!res->events) {
