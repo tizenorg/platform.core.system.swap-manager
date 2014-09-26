@@ -542,6 +542,7 @@ static struct msg_t *gen_target_info_reply(struct target_info_t *target_info)
 	pack_int32(p, target_info->bluetooth_supp);
 	pack_int32(p, target_info->gps_supp);
 	pack_int32(p, target_info->wifi_supp);
+	pack_int32(p, target_info->opengl_supp);
 	pack_int32(p, target_info->camera_count);
 	pack_str(p, target_info->network_type);
 	pack_int32(p, target_info->max_brightness);

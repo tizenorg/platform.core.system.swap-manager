@@ -46,6 +46,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <stdint.h>
+#include <sys/wait.h>
 
 #include "da_protocol.h"
 #include "da_data.h"
@@ -2101,6 +2102,35 @@ int init_system_file_descriptors(void)
 	return 0;
 }
 
+uint32_t get_opengl_support()
+{
+	pid_t my_pid, parent_pid, child_pid;
+	int status;
+	uint32_t da_opengl_support = 0;
+
+	if((child_pid = fork()) < 0 ) {
+		LOGE("fork failure\n");
+		return da_opengl_support;
+	}
+
+	if(child_pid == 0) {
+		execl(SHELL_CMD, SHELL_CMD, "-c", "list=`ls -lah /usr/lib/libGL* | grep dummy-gl`; if [ \"$list\" = \"\" ]; then echo 1; else echo 0;fi > /tmp/da_opengl_support", NULL);
+		LOGE("execl() failure!\n\n");
+		_exit(1);
+	} else {
+		/* parent process */
+		wait(&status);
+
+		FILE *f;
+		f = fopen("/tmp/da_opengl_support", "r");
+		if (f != NULL) {
+			fscanf(f, "%d", &da_opengl_support);
+			fclose(f);
+		}
+	}
+
+	return da_opengl_support;
+}
 //CMD SOCKET FUNCTIONS
 int fill_target_info(struct target_info_t *target_info)
 {
@@ -2109,6 +2139,7 @@ int fill_target_info(struct target_info_t *target_info)
 	target_info->bluetooth_supp = 0;
 	target_info->gps_supp = 0;
 	target_info->wifi_supp = 0;
+	target_info->opengl_supp = 0;
 	target_info->camera_count = 0;
 	target_info->network_type[0] = 0;
 
@@ -2119,6 +2150,7 @@ int fill_target_info(struct target_info_t *target_info)
 	target_info->bluetooth_supp = is_bluetooth_available();
 	target_info->gps_supp = is_gps_available();
 	target_info->wifi_supp = is_wifi_available();
+	target_info->opengl_supp = get_opengl_support();
 
 	target_info->camera_count = get_camera_count();
 

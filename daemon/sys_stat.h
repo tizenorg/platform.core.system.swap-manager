@@ -76,6 +76,7 @@ struct target_info_t {
 	uint32_t bluetooth_supp;
 	uint32_t gps_supp;
 	uint32_t wifi_supp;
+	uint32_t opengl_supp;
 	uint32_t camera_count;
 	char network_type[NWTYPE_SIZE];
 	uint32_t max_brightness;
