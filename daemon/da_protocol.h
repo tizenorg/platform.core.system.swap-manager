@@ -169,8 +169,9 @@ static const char *supported_devices_strings[] = {
 #define array_size(x) (sizeof(x)/sizeof((x)[0]))
 enum { supported_devices_count = array_size(supported_devices_strings) };
 
-#define DA_MSG_MAX					4096
-#define RECV_BUF_MAX				4104	// = sizeof(msg_t)
+#define TARGER_MSG_MAX_LEN			4096
+#define HOST_CTL_MSG_MAX_LEN			(10 * 1024 * 1024)
+
 struct _msg_target_t {
 	unsigned int type;
 	unsigned int length;
@@ -180,7 +181,7 @@ struct _msg_target_t {
 struct msg_target_t {
 	unsigned int type;
 	unsigned int length;
-	char data[DA_MSG_MAX];
+	char data[TARGER_MSG_MAX_LEN];
 };
 
 enum { MSG_HEADER_LEN = offsetof(struct msg_target_t, data) };
