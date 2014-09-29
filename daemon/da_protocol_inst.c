@@ -94,7 +94,8 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 			sizeof(uint32_t);  /* pointer order */
 		break;
 	case SWAP_LD_PROBE:
-		size += sizeof(uint64_t); /* ld preload handler addr */
+		size += sizeof(uint64_t) + /* ld preload handler addr */
+			sizeof(char);		  /* ld probe type */
 		break;
 	default:
 		LOGE("wrong probe type <%u>\n", type);
@@ -312,10 +313,11 @@ struct ld_preload_probe_t {
 	uint64_t orig_addr;
 	uint8_t probe_type;
 	uint64_t handler_addr;
+	uint8_t preload_type;
 } __attribute__ ((packed));
 
 static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
-				      struct data_list_t *dest)
+				      struct data_list_t *dest, int preload_probe_type)
 {
 	uint32_t i = 0, num = 0;
 	struct probe_list_t *probe_el;
@@ -338,6 +340,7 @@ static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
 		func->orig_addr = ld_lib.probes[i].orig_addr;
 		func->probe_type = SWAP_LD_PROBE;
 		func->handler_addr = ld_lib.probes[i].handler_addr;
+		func->preload_type = preload_probe_type;
 
 		probe_el->size = sizeof(struct ld_preload_probe_t);
 		probe_el->func = (struct us_func_inst_plane_t *)func;
@@ -350,7 +353,7 @@ static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
 }
 
 static int feature_add_inst_lib(struct ld_lib_list_el_t ld_lib,
-				struct lib_list_t **dest)
+				struct lib_list_t **dest, int preload_probe_type)
 {
 	*dest = new_lib();
 	if (*dest == NULL) {
@@ -365,7 +368,8 @@ static int feature_add_inst_lib(struct ld_lib_list_el_t ld_lib,
 
 	(*dest)->lib->bin_path = strdup(ld_lib.lib_name);
 
-	if (!feature_add_func_inst_list(ld_lib, (struct data_list_t *)*dest)) {
+	if (!feature_add_func_inst_list(ld_lib, (struct data_list_t *)*dest,
+	    preload_probe_type)) {
 		LOGE("funcs parsing error\n");
 		return 0;
 	}
@@ -377,7 +381,7 @@ static int feature_add_inst_lib(struct ld_lib_list_el_t ld_lib,
 }
 
 int feature_add_lib_inst_list(struct ld_feature_list_el_t *ld_lib_list,
-			      struct lib_list_t **lib_list)
+			      struct lib_list_t **lib_list, int preload_probe_type)
 {
 
 	uint32_t i = 0, num;
@@ -391,7 +395,8 @@ int feature_add_lib_inst_list(struct ld_feature_list_el_t *ld_lib_list,
 
 	for (i = 0; i < num; i++) {
 		LOGI(">add lib #%d <%s> probes_count=%lu\n", i, ld_lib_list->libs[i].lib_name, ld_lib_list->libs[i].probe_count);
-		if (!feature_add_inst_lib(ld_lib_list->libs[i], &lib)) {
+		if (!feature_add_inst_lib(ld_lib_list->libs[i], &lib,
+		    preload_probe_type)) {
 			// TODO maybe need free allocated memory up there
 			LOGE("add LD lib #%d failed\n", i + 1);
 			return 0;
