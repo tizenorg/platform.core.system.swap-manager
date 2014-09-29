@@ -877,7 +877,9 @@ void msg_swap_free_all_data(struct user_space_inst_t *us_inst)
 /******************************************************************************/
 /* TODO support feature_1. hi 64 bits */
 int ld_add_probes_by_feature(uint64_t to_enable_features_0,
+			     uint64_t to_enable_features_1,
 			     uint64_t to_disable_features_0,
+			     uint64_t to_disable_features_1,
 			     struct user_space_inst_t *us_inst,
 			     struct msg_t **msg_reply_add,
 			     struct msg_t **msg_reply_remove)
@@ -893,14 +895,25 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 	for (i = 0; i != feature_to_data_count; i++) {
 		f = feature_to_data[i];
 		LOGI("check feature %016X\n", f.feature_value);
-		if ((f.feature_value & to_enable_features_0) == f.feature_value) {
+		if ((f.feature_value & to_enable_features_0) |
+		    (f.feature_value & to_enable_features_1) == f.feature_value) {
+
+			int preload_probe_type = 0;
+
+			if ((f.feature_value & FL_FILE_API_ALWAYS_PROBING) ||
+			    (f.feature_value & FL_MEMORY_ALLOC_ALWAYS_PROBING) ||
+			    (f.feature_value & FL_NETWORK_API_ALWAYS_PROBING) ||
+			    (f.feature_value & FL_OPENGL_API_ALWAYS_PROBING) ||
+			    (f.feature_value & FL_OSP_UI_API_ALWAYS_PROBING))
+				preload_probe_type = 1;
 
 			buf[0] = '\0';
 
 			feature_code_str(f.feature_value, f.feature_value, &buf[0]);
 			LOGI("Set LD probes for %016LX <%s>\n", f.feature_value, &buf[0]);
 
-			feature_add_lib_inst_list(f.feature_ld, &us_inst->ld_lib_inst_list);
+			feature_add_lib_inst_list(f.feature_ld, &us_inst->ld_lib_inst_list,
+						  preload_probe_type);
 		}
 	}
 
