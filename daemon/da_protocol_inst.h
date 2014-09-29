@@ -38,5 +38,5 @@ int parse_app_inst_list(struct msg_buf_t *msg,
 			struct app_list_t **app_list);
 
 int feature_add_lib_inst_list(struct ld_feature_list_el_t *ld_lib_list,
-			      struct lib_list_t **lib_list);
+			      struct lib_list_t **lib_list, int preload_probe_type);
 #endif /* __DA_PROTOCOL_INST__ */
