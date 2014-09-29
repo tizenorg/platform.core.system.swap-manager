@@ -434,11 +434,17 @@ static void reconfigure_recording(struct conf_t conf)
 
 static void reconfigure_ld_probes(struct conf_t conf, struct msg_t **msg_reply, struct msg_t **msg_reply_additional)
 {
-	uint64_t old_features = prof_session.conf.use_features0;
-	uint64_t new_features = conf.use_features0;
-	uint64_t to_enable = (new_features ^ old_features) & new_features;
-	uint64_t to_disable = (new_features ^ old_features) & old_features;
-	ld_add_probes_by_feature(to_enable, to_disable, &prof_session.user_space_inst, msg_reply, msg_reply_additional);
+	uint64_t old_features0 = prof_session.conf.use_features0;
+	uint64_t old_features1 = prof_session.conf.use_features1;
+	uint64_t new_features0 = conf.use_features0;
+	uint64_t new_features1 = conf.use_features1;
+	uint64_t to_enable0 = (new_features0 ^ old_features0) & new_features0;
+	uint64_t to_enable1 = (new_features1 ^ old_features1) & new_features1;
+	uint64_t to_disable0 = (new_features0 ^ old_features0) & old_features0;
+	uint64_t to_disable1 = (new_features1 ^ old_features1) & old_features1;
+	ld_add_probes_by_feature(to_enable0, to_enable1, to_disable0, to_disable1,
+				 &prof_session.user_space_inst, msg_reply,
+				 msg_reply_additional);
 }
 
 int reconfigure(struct conf_t conf, struct msg_t **msg_reply, struct msg_t **msg_reply_additional)
