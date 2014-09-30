@@ -262,6 +262,7 @@ struct msg_data_t *gen_message_event(
 	p = data->payload;
 	pack_int32(p, events_count);
 
+	/* FIXME events[i].type, events[i].code should be uint16_t */
 	for (i=0; i<events_count; i++){
 		pack_int32(p,id);
 		pack_int32(p, (int32_t) events[i].type);
