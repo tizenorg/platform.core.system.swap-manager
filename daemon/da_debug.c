@@ -49,7 +49,7 @@ static inline void close_on_exec_dup(int old, int new)
 void initialize_log(void)
 {
 	int fd = open(DEBUG_LOGFILE, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-	if (fd > 0) {
+	if (fd != -1) {
 		close_on_exec_dup(fd, 1);
 		close_on_exec_dup(fd, 2);
 
