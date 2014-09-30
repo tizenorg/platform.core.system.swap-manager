@@ -347,6 +347,7 @@ static int parse_timeval(struct msg_buf_t *msg, struct timeval *tv)
 static int parse_replay_event(struct msg_buf_t *msg,
 				    struct replay_event_t *re)
 {
+	uint32_t dummy;
 
 	if (!parse_timeval(msg, &re->ev.time)) {
 		LOGE("time parsing error\n");
@@ -358,15 +359,18 @@ static int parse_replay_event(struct msg_buf_t *msg,
 		return 0;
 	}
 
-	if (!parse_int32(msg, (uint32_t *)&re->ev.type)) {
+	/* FIXME ev.type, ev.code should be uint16_t */
+	if (!parse_int32(msg, &dummy)) {
 		LOGE("type parsing error\n");
 		return 0;
 	}
+	re->ev.type = (uint16_t)dummy;
 
-	if (!parse_int32(msg, (uint32_t *)&re->ev.code)) {
+	if (!parse_int32(msg, &dummy)) {
 		LOGE("code parsing error\n");
 		return 0;
 	}
+	re->ev.code = (uint16_t)dummy;
 
 	if (!parse_int32(msg, (uint32_t *)&re->ev.value)) {
 		LOGE("value parsing error\n");
@@ -1042,8 +1046,9 @@ static char *get_process_cmd_line(uint32_t pid)
 	f = open(buf, O_RDONLY);
 	if (f != -1) {
 		count = read(f, buf, sizeof(buf));
-		if (count == 0)
-			buf[0] = '\0';
+		if (count >= sizeof(buf))
+			count = sizeof(buf) - 1;
+		buf[count] = '\0';
 		close(f);
 	} else {
 		LOGE("file not found <%s>\n", buf);
@@ -1065,7 +1070,7 @@ static int process_msg_get_process_add_info(struct msg_buf_t *msg)
 	if (!parse_int32(msg, &count)) {
 		LOGE("NMSG_GET_PROCESS_ADD_INFO error: No process count\n");
 		err_code = ERR_WRONG_MESSAGE_DATA;
-		goto send_ack;
+		goto send_fail;
 	}
 
 	/* alloc array for pids */
@@ -1073,18 +1078,18 @@ static int process_msg_get_process_add_info(struct msg_buf_t *msg)
 	cmd_line_arr = malloc(count * sizeof(*cmd_line_arr));
 	if (pidarr == NULL) {
 		LOGE("can not alloc pid array (%u)", count);
-		goto send_ack;
+		goto send_fail;
 	}
 	if (cmd_line_arr == NULL) {
 		LOGE("can not alloc cmd line array (%u)", count);
-		goto send_fail_parse;
+		goto send_fail;
 	}
 
 	/* parse all pids */
 	for (i = 0; i != count; i++) {
 		if (!parse_int32(msg, &pidarr[i])) {
 			LOGE("can not parse pid #%u", i);
-			goto send_fail_parse;
+			goto send_fail;
 		}
 	}
 
@@ -1096,7 +1101,7 @@ static int process_msg_get_process_add_info(struct msg_buf_t *msg)
 
 	payload = malloc(total_len);
 	if (payload == NULL)
-		goto send_fail_payload;
+		goto send_fail;
 	/* pack payload data */
 	p = payload;
 	pack_int32(p, count);
@@ -1109,14 +1114,20 @@ static int process_msg_get_process_add_info(struct msg_buf_t *msg)
 	/* success */
 	goto send_ack;
 
-send_fail_payload:
+send_fail:
+	/* fail */
+	total_len = 0;
+
+send_ack:
+	/* success */
+	sendACKToHost(NMSG_GET_PROCESS_ADD_INFO, err_code, payload, total_len);
+
+	/* free data */
 	if (payload != NULL) {
 		free(payload);
 		payload = NULL;
 	}
 
-send_fail_parse:
-	/* fail */
 	if (pidarr != NULL) {
 		free(pidarr);
 		pidarr = NULL;
@@ -1127,11 +1138,6 @@ send_fail_parse:
 		cmd_line_arr = NULL;
 	}
 
-	total_len = 0;
-
-send_ack:
-	/* success */
-	sendACKToHost(NMSG_GET_PROCESS_ADD_INFO, err_code, payload, total_len);
 	return -(err_code != ERR_NO);
 }
 

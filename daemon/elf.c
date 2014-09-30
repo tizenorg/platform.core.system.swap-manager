@@ -146,21 +146,24 @@ void get_build_dir(char builddir[PATH_MAX], const char *filename)
 	size_t len;
 	void *filemem;
 	char adj_filename[PATH_MAX];
+
 	suffix_filename(adj_filename, filename);
 
 	filemem = mmap_file(adj_filename, &len);
 	if (filemem) {
 		const Elf_Shdr *debug_header = elf_find_debug_header(filemem);
 		if (debug_header) {
-			const char *debug_section =
-			    filemem + debug_header->sh_offset;
-			const char *debug_section_end =
-			    debug_section + debug_header->sh_size;
-			const char *p = debug_section;
+			const char *debug_section, *debug_section_end, *p;
+
+			debug_section = filemem + debug_header->sh_offset;
+			debug_section_end = debug_section + debug_header->sh_size;
+			p = debug_section;
+
 			/* `is_like_absolute_path' checks three chars forward. */
 			while (p < debug_section_end - 3) {
 				if (is_like_absolute_path(p)) {
 					snprintf(builddir, PATH_MAX, "%s", p);
+					munmap(filemem, len);
 					return;
 				}
 				p = 1 + memchr(p, '\0', debug_section_end - p);
