@@ -1137,13 +1137,15 @@ static int update_thread_data(int pid)
 	if(!(taskdir = opendir(path)))
 	{
 		LOGE("task not found '%s'\n", path);
-		return -1;
+		ret = -1;
+		goto exit;
 	}
 
 	node = find_node(inst_prochead, pid);
 	if (node == NULL) {
 		LOGE("inst node task not found '%s' pid = %d\n", path, pid);
-		return -1;
+		ret = -1;
+		goto exit_close_dir;
 	}
 	thread_prochead = (procNode **)&(node->thread_prochead);
 
@@ -1188,7 +1190,9 @@ static int update_thread_data(int pid)
 	del_notfound_node(thread_prochead);
 	reset_found_node(*thread_prochead);
 
+exit_close_dir:
 	closedir(taskdir);
+exit:
 	return ret;
 }
 
