@@ -322,7 +322,12 @@ static void get_cpu_frequency(float *freqs)
 			freqs[cpu_n] = 0.0;
 		} else {
 			//core enabled, get frequency
-			fscanf(f, "%s", freq_str);
+			if (fscanf(f, "%s", freq_str) != 1) {
+				/* TODO return error code */
+				LOGE("scan fail\n");
+				return;
+			}
+
 			freqs[cpu_n] = atof(freq_str);
 			LOGI_th_samp("core #%d freq = %.0f\n", cpu_n, freqs[cpu_n]);
 			fclose(f);
@@ -1430,22 +1435,31 @@ static int fill_system_cpu_info(struct system_info_t *sys_info)
 	return 0;
 }
 
+/* TODO add return value to skip_lines */
 static void skip_lines(FILE * fp, unsigned int count)
 {
 	char *buffer = NULL;
 	size_t buflen;
 	unsigned int index;
-	for (index = 0; index != count; ++index)
-		getline(&buffer, &buflen, fp);
+	for (index = 0; index != count; ++index) {
+		if (getline(&buffer, &buflen, fp) < 0)
+			LOGE("file scan fail\n");
+	}
 	free(buffer);
 }
 
-static void skip_tokens(FILE * fp, unsigned int count)
+static int skip_tokens(FILE * fp, unsigned int count)
 {
+	int res;
 	unsigned int index;
 
-	for (index = 0; index != count; ++index)
-		fscanf(fp, "%*s");
+	for (index = 0; index != count; ++index) {
+		res = fscanf(fp, "%*s");
+		if (res == EOF && index != count - 1)
+			return -1;
+	}
+
+	return 0;
 }
 
 static void init_network_stat()
@@ -1469,16 +1483,24 @@ static void get_network_stat(uint32_t *recv, uint32_t *send)
 
 	while (fscanf(fp, "%s", ifname) != EOF)
 		if (strcmp("lo:", ifname)) {
-			fscanf(fp, "%" SCNuMAX, &irecv);
+			if (fscanf(fp, "%" SCNuMAX, &irecv) <= 0)
+				goto scan_error;
 			skip_tokens(fp, 7);
 
-			fscanf(fp, "%" SCNuMAX, &isend);
+			if (fscanf(fp, "%" SCNuMAX, &isend) <= 0)
+				goto scan_error;
 			skip_tokens(fp, 7);
 
 			*recv += irecv;
 			*send += isend;
 		} else
 			skip_tokens(fp, 16);
+
+	goto exit;
+scan_error:
+	LOGE("scan fail\n");
+exit:
+	return;
 }
 
 static void peek_network_stat_diff(uint32_t *recv, uint32_t *send)
@@ -1520,13 +1542,14 @@ static uint32_t get_partition_sector_size(char *partition_name)
 		/* reset error code */
 		errno = 0;
 		/* scan partition sector size */
-		fscanf(f, "%d", &res);
-		/* check errors */
-		int errsv = errno;
-		if (errsv) {
-			LOGE("scan file <%s> error: %s\n", buf,
-			     strerror(errsv));
-			res = 0;
+		if (fscanf(f, "%d", &res) != 1) {
+			/* check errors */
+			int errsv = errno;
+			if (errsv) {
+				LOGE("scan file <%s> error: %s\n", buf,
+				     strerror(errsv));
+				res = 0;
+			}
 		}
 		/* close source file */
 		fclose(f);
@@ -1565,25 +1588,33 @@ static void get_disk_stat(uint32_t *reads, uint32_t *bytes_reads,
 		char partition[partition_name_maxlength];
 		uintmax_t preads, pwrites;
 		uintmax_t psec_read, psec_write;
-		skip_tokens(fp, 2);
-		fscanf(fp, "%s", partition);
+		if (skip_tokens(fp, 2) < 0)
+			goto exit;
+
+		if (fscanf(fp, "%s", partition) != 1)
+			goto scan_error;
 		if (*master_partition
 		    && !strncmp(master_partition, partition,
 			       strlen(master_partition))) {
 			/* subpartition */
 			skip_tokens(fp, 11);
 		} else {
+			/* TODO add check err in skip_token func */
 			//1
-			fscanf(fp, "%" SCNuMAX, &preads);
+			if (fscanf(fp, "%" SCNuMAX, &preads) == EOF)
+				goto scan_error;
 			skip_tokens(fp, 1);
 			//3
-			fscanf(fp, "%" SCNuMAX, &psec_read);
+			if (fscanf(fp, "%" SCNuMAX, &psec_read) == EOF)
+				goto scan_error;
 			skip_tokens(fp, 1);
 			//5
-			fscanf(fp, "%" SCNuMAX, &pwrites);
+			if (fscanf(fp, "%" SCNuMAX, &pwrites) == EOF)
+				goto scan_error;
 			skip_tokens(fp, 1);
 			//7
-			fscanf(fp, "%" SCNuMAX, &psec_write);
+			if (fscanf(fp, "%" SCNuMAX, &psec_write) == EOF)
+				goto scan_error;
 			skip_tokens(fp, 4);
 
 			memcpy(master_partition, partition,
@@ -1601,6 +1632,11 @@ static void get_disk_stat(uint32_t *reads, uint32_t *bytes_reads,
 		}
 	}
 
+	goto exit;
+scan_error:
+	LOGE("scan fail\n");
+exit:
+	return;
 }
 
 static void peek_disk_stat_diff(uint32_t *reads, uint32_t *bytes_reads,

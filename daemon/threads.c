@@ -64,7 +64,7 @@ static void* recvThread(void* data)
 
 	for (;;) {
 		err = target_recv_msg(target, &log);
-		if (err != 0) {
+		if ((err != 0) || (log.length >= TARGER_MSG_MAX_LEN)) {
 			/* disconnect */
 			event = EVENT_STOP;
 			write(target->event_fd, &event, sizeof(event));

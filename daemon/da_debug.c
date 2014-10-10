@@ -36,14 +36,17 @@
 #include <unistd.h>
 
 #include "daemon.h"
+#include "debug.h"
 
 #define DEBUG_LOGFILE		"/tmp/daemonlog.da"
 
 #if DEBUG
 static inline void close_on_exec_dup(int old, int new)
 {
-	dup2(old, new);
-	fcntl(new, F_SETFD, fcntl(new, F_GETFD) | FD_CLOEXEC);
+	if (dup2(old, new) != -1)
+		fcntl(new, F_SETFD, fcntl(new, F_GETFD) | FD_CLOEXEC);
+	else
+		LOGE("dup2 fail\n");
 }
 
 void initialize_log(void)

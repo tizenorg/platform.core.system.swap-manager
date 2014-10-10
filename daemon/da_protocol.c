@@ -141,7 +141,6 @@ static char *msgErrStr(enum ErrorCode err)
 	default:
 		return "unknown error";
 	}
-	return "unknown error";
 }
 
 
@@ -777,12 +776,13 @@ static void get_file_md5sum(md5_byte_t digest[16], const char *filename)
 	int fd = open(filename, O_RDONLY);
 
 	md5_init(&md5_state);
-	if (fd > 0)
+	if (fd > 0) {
 		while ((size = read(fd, buffer, sizeof(buffer))) > 0)
 			md5_append(&md5_state, buffer, size);
+		close(fd);
+	}
 
 	md5_finish(&md5_state, digest);
-	close(fd);
 }
 
 static const char* basename(const char *filename)

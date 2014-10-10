@@ -55,7 +55,10 @@ typedef Elf32_Shdr Elf_Shdr;
 static size_t fsize(int fd)
 {
 	struct stat buf;
-	fstat(fd, &buf);
+	if (fstat(fd, &buf) != 0) {
+		LOGE("cannot get file size\n");
+		return 0;
+	}
 	return buf.st_size;
 }
 
