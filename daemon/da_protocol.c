@@ -90,6 +90,7 @@ char *msg_ID_str(enum HostMessageT ID)
 	check_and_return(NMSG_GET_TARGET_INFO_ACK);
 	check_and_return(NMSG_SWAP_INST_ADD_ACK);
 	check_and_return(NMSG_SWAP_INST_REMOVE_ACK);
+	check_and_return(NMSG_GET_PROCESS_ADD_INFO_ACK);
 
 	check_and_return(NMSG_PROCESS_INFO);
 	check_and_return(NMSG_TERMINATE);
@@ -1112,6 +1113,7 @@ static int process_msg_get_process_add_info(struct msg_buf_t *msg)
 	}
 
 	/* success */
+	err_code = ERR_NO;
 	goto send_ack;
 
 send_fail:
