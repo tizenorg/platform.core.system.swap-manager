@@ -32,6 +32,8 @@ make
 
 %install
 rm -rf ${RPM_BUILD_ROOT}
+mkdir -p %{buildroot}/usr/share/license
+cp LICENSE %{buildroot}/usr/share/license/%{name}
 cd daemon
 %make_install
 
