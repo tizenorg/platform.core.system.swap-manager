@@ -34,6 +34,8 @@ make
 rm -rf ${RPM_BUILD_ROOT}
 cd daemon
 %make_install
+mkdir -p %{buildroot}/usr/share/license
+cp LICENSE %{buildroot}/usr/share/license/%{name}
 
 %files
 %manifest swap-manager.manifest
