@@ -27,6 +27,8 @@
 // TODO check memory (malloc, free)
 
 #include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <sys/types.h>
 #include <linux/limits.h>
 
@@ -668,6 +670,96 @@ static void generate_maps_inst_msg(struct user_space_inst_t *us_inst)
 	unlock_lib_maps_message();
 }
 
+static inline bool is_always_probing_feature(enum feature_code fv)
+{
+	if ((fv & FL_FILE_API_ALWAYS_PROBING) ||
+	    (fv & FL_MEMORY_ALLOC_ALWAYS_PROBING) ||
+	    (fv & FL_NETWORK_API_ALWAYS_PROBING) ||
+	    (fv & FL_OPENGL_API_ALWAYS_PROBING) ||
+	    (fv & FL_OSP_UI_API_ALWAYS_PROBING))
+		return true;
+
+	return false;
+}
+
+#define PRELOAD_ADD_BIN "/sys/kernel/debug/swap/preload/target_binaries/bins_add"
+
+static int add_bins_to_preload(struct user_space_inst_t *us_inst)
+{
+	struct lib_list_t *lib = us_inst->lib_inst_list;
+	struct app_list_t *app = us_inst->app_inst_list;
+	uint32_t total_maps_count = 0;
+	char real_path_buf[PATH_MAX];
+	char *resolved, *p;
+	FILE *preload_p;
+
+	preload_p = fopen(PRELOAD_ADD_BIN, "w");
+	if (preload_p == NULL)
+		return -EINVAL;
+
+	while (lib != NULL) {
+		total_maps_count++;
+
+		p = lib->lib->bin_path;
+		fwrite(p, strlen(p) + 1, 1, preload_p);
+		fflush(preload_p);
+
+		LOGI("lib #%u <%s>\n", total_maps_count, lib->lib->bin_path);
+		lib = (struct lib_list_t *)lib->next;
+	}
+
+	while (app != NULL) {
+		resolved = realpath((const char *)app->app->exe_path, real_path_buf);
+		if (resolved != NULL) {
+			total_maps_count++;
+			fwrite(resolved, strlen(resolved) + 1, 1, preload_p);
+			fflush(preload_p);
+
+			LOGI("app #%u <%s>\n", total_maps_count, resolved);
+		}
+
+		app = (struct app_list_t *)app->next;
+	}
+
+	fclose(preload_p);
+
+	return 0;
+}
+
+#undef PRELOAD_ADD_BIN
+
+#define PRELOAD_CLEAN "/sys/kernel/debug/swap/preload/target_binaries/bins_remove"
+
+static int clean_bins_preload(void)
+{
+	FILE *preload_p;
+
+	preload_p = fopen(PRELOAD_CLEAN, "w");
+	if (preload_p == NULL)
+		return -EINVAL;
+
+	fwrite("c", strlen("c") + 1, 1, preload_p);
+
+	fclose(preload_p);
+
+	return 0;
+}
+
+#undef PRELOAD_CLEAN
+
+static int write_bins_to_preload(struct user_space_inst_t *us_inst)
+{
+	int ret;
+
+	ret = clean_bins_preload();
+	if (ret != 0)
+		return ret;
+
+	ret = add_bins_to_preload(us_inst);
+
+	return ret;
+}
+
 void send_maps_inst_msg_to(struct target *t)
 {
 	lock_lib_maps_message();
@@ -734,6 +826,8 @@ int msg_start(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 		goto msg_start_exit;
 	}
 
+	if (write_bins_to_preload(us_inst))
+		LOGE("Error adding binaries\n");
 	generate_maps_inst_msg(us_inst);
 
 msg_start_exit:
@@ -790,6 +884,8 @@ int msg_swap_inst_add(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 	new_lib_inst_list = NULL;
 	*err = ERR_NO;
 
+	if (write_bins_to_preload(us_inst))
+		LOGE("Error adding binaries\n");
 	generate_maps_inst_msg(us_inst);
 	send_maps_inst_msg_to_all_targets();
 
@@ -838,6 +934,8 @@ int msg_swap_inst_remove(struct msg_buf_t *data, struct user_space_inst_t *us_in
 	new_lib_inst_list = NULL;
 	*err = ERR_NO;
 
+	if (write_bins_to_preload(us_inst))
+		LOGE("Error adding binaries\n");
 	generate_maps_inst_msg(us_inst);
 	send_maps_inst_msg_to_all_targets();
 
@@ -875,7 +973,6 @@ void msg_swap_free_all_data(struct user_space_inst_t *us_inst)
 }
 
 /******************************************************************************/
-/* TODO support feature_1. hi 64 bits */
 int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 			     uint64_t to_enable_features_1,
 			     uint64_t to_disable_features_0,
@@ -900,11 +997,7 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 
 			int preload_probe_type = 0;
 
-			if ((f.feature_value & FL_FILE_API_ALWAYS_PROBING) ||
-			    (f.feature_value & FL_MEMORY_ALLOC_ALWAYS_PROBING) ||
-			    (f.feature_value & FL_NETWORK_API_ALWAYS_PROBING) ||
-			    (f.feature_value & FL_OPENGL_API_ALWAYS_PROBING) ||
-			    (f.feature_value & FL_OSP_UI_API_ALWAYS_PROBING))
+			if (is_always_probing_feature(f.feature_value))
 				preload_probe_type = 1;
 
 			buf[0] = '\0';
@@ -945,6 +1038,8 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 	free_data_list((struct data_list_t **)&new_lib_inst_list);
 	new_lib_inst_list = NULL;
 
+    if (write_bins_to_preload(us_inst))
+        LOGE("Error adding binaries\n");
 	generate_maps_inst_msg(us_inst);
 	send_maps_inst_msg_to_all_targets();
 
