@@ -13,22 +13,17 @@ print_usage()
 	echo "usage: da_command [options]"
 	echo "Options:"
 	echo "killmanager               terminate da_manager"
-#	echo "killapp apppath           terminate application"
 	echo "runmanager                execute da_manager"
 	echo "findunittest              find unittest project"
-	echo "getversion				get version"
-	echo "readlink filepath			get value of given symbolic link or canonical file name"
+	echo "getversion		get version"
+	echo "killvalgrind		kill valgrind process"
+	echo "readlink filepath		get value of given symbolic link or canonical file name"
 }
 
 kill_manager()
 {
 	$KILL $MANAGER
 	rm -f $PORTFILE
-}
-
-kill_app()
-{
-	$KILL $APPPATH
 }
 
 run_manager()
@@ -57,6 +52,12 @@ read_link()
 	$READLINK -f $FILEPATH
 }
 
+kill_valgrind()
+{
+        ps ax | grep "/home/developer/sdk_tools/valgrind/usr/bin/valgrind" | gre
+p -v grep | awk '{print "kill -3 " $1}' | sh
+}
+
 if test $# -gt 2 -o $# -lt 1; then
 	print_usage
 	exit 1
@@ -64,9 +65,6 @@ fi
 
 if test -n "$2"; then
 	case "$1" in
-#		killapp)
-#			APPPATH=$2
-#			;;
 		readlink)
 			FILEPATH=$2
 			;;
@@ -81,9 +79,6 @@ case "$1" in
 	killmanager)
 		kill_manager
 		;;
-#	killapp)
-#		kill_app
-#		;;
 	runmanager)
 		run_manager
 		;;
@@ -99,6 +94,9 @@ case "$1" in
 	readlink)
 		read_link
 		;;
+	killvalgrind)
+                kill_valgrind
+                ;;
 	*)
 		echo "Unknown option!"
 		print_usage
