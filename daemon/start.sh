@@ -7,7 +7,6 @@ if [ ! -e /sys/kernel/debug/swap/writer/raw ]; then
     insmod swap_driver.ko || exit 1  # driver is loaded
     insmod swap_writer.ko || exit 1
     insmod swap_kprobe.ko || exit 1  # kprobe is loaded
-    insmod swap_ks_manager.ko || exit 1  # ks_manager is loaded
     insmod swap_uprobe.ko || exit 1  # uprobe is loaded
     insmod swap_us_manager.ko || exit 1  # us_manager is loaded
     insmod swap_ks_features.ko || exit 1  # ks_features is loaded
