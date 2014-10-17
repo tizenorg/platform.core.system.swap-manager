@@ -294,13 +294,19 @@ static void get_cpu_frequency(float *freqs)
 	FILE *f;
 	int cpu_n = 0;
 
-	//clean data array
+	/* clean data array */
 	for (cpu_n = 0; cpu_n < num_of_cpu; cpu_n++)
 		freqs[cpu_n] = 0.0;
 
 	cpu_n = 0;
 	while (1) {
-		//is CPU present
+		/* TODO for targets with 1 cpu core
+		 * file "/sys/devices/system/cpu/cpu0/online" can be absent
+		 * so need lookup file /sys/devices/system/cpu/online
+		 * and parse it
+		 */
+
+		/* is CPU present */
 		snprintf(filename, MIDDLE_BUFFER,
 			 "/sys/devices/system/cpu/cpu%d/online", cpu_n);
 
@@ -311,25 +317,26 @@ static void get_cpu_frequency(float *freqs)
 		}
 		fclose(f);
 
-		//get CPU freq
+		/* get CPU freq */
 		snprintf(filename, MIDDLE_BUFFER,
 			 "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_cur_freq", cpu_n);
 		f = fopen(filename, "r");
 		if (!f)
 		{
-			//core is disabled
+			/* core is disabled */
 			LOGI_th_samp("core #%d diasabled\n", cpu_n);
 			freqs[cpu_n] = 0.0;
 		} else {
-			//core enabled, get frequency
+			/* core enabled, get frequency /*/
 			if (fscanf(f, "%s", freq_str) != 1) {
 				/* TODO return error code */
-				LOGE("scan fail\n");
-				return;
+				freqs[cpu_n] = 0.0f;
+				LOGE("scan cpu #%d freq fail\n", cpu_n);
+			} else {
+				freqs[cpu_n] = atof(freq_str);
+				LOGI_th_samp("core #%d freq = %.0f\n", cpu_n,
+					     freqs[cpu_n]);
 			}
-
-			freqs[cpu_n] = atof(freq_str);
-			LOGI_th_samp("core #%d freq = %.0f\n", cpu_n, freqs[cpu_n]);
 			fclose(f);
 		}
 
