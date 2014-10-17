@@ -37,24 +37,50 @@
 
 #include "daemon.h"
 #include "debug.h"
+#include <errno.h>
 
 #define DEBUG_LOGFILE		"/tmp/daemonlog.da"
 
 #if DEBUG
-static inline void close_on_exec_dup(int old, int new)
+static inline int close_on_exec_dup(int old, int new)
 {
-	if (dup2(old, new) != -1)
-		fcntl(new, F_SETFD, fcntl(new, F_GETFD) | FD_CLOEXEC);
-	else
+	int ret = -1;
+
+	if (dup2(old, new) != -1) {
+		unsigned long flags = fcntl(new, F_GETFD);
+		if (flags == -1) {
+			LOGE("can not get flags fd #%d <%s>\n", new,
+			     strerror(errno));
+			goto err_ret;
+		}
+
+		if (fcntl(new, F_SETFD, flags | FD_CLOEXEC) == -1) {
+			LOGE("can not get flags fd #%d <%s>\n", new,
+			     strerror(errno));
+			goto err_ret;
+		}
+	} else {
 		LOGE("dup2 fail\n");
+		goto err_ret;
+	}
+
+	/* success */
+	ret = 0;
+
+err_ret:
+	return ret;
 }
 
-void initialize_log(void)
+int initialize_log(void)
 {
+	int ret = 0;
 	int fd = open(DEBUG_LOGFILE, O_WRONLY | O_CREAT | O_TRUNC, 0777);
 	if (fd != -1) {
-		close_on_exec_dup(fd, 1);
-		close_on_exec_dup(fd, 2);
+		if (close_on_exec_dup(fd, 1) != 0 ||
+		    close_on_exec_dup(fd, 2) != 0) {
+			LOGE("duplicate fd fail\n");
+			ret = -1;
+		}
 
 		close(fd);
 	} else {
@@ -63,10 +89,12 @@ void initialize_log(void)
 	}
 
 	close(0);
+	return ret;
 }
 
 #else
-void initialize_log(void)
+int initialize_log(void)
 {
+	return 0;
 }
 #endif
