@@ -405,7 +405,12 @@ int main()
 	if (!ensure_singleton(SINGLETON_LOCKFILE))
 		return 1;
 
-	initialize_log();
+	if (initialize_log() != 0) {
+		LOGE("Init log failed. uninit\n");
+		terminate0();
+		LOGE("Daemon terminated\n");
+		exit(0);
+	}
 
 	LOGI("da_started\n");
 	atexit(terminate0);

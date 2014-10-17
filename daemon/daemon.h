@@ -176,7 +176,7 @@ extern __da_manager manager;
 
 
 uint64_t get_total_alloc_size(void);
-void initialize_log(void);
+int initialize_log(void);
 int daemonLoop(void);
 void unlink_portfile(void);
 
