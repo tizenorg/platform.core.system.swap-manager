@@ -59,7 +59,10 @@ static int open_tasks_dev(void)
 static void close_tasks_dev(void)
 {
 	LOGI("close tasks dev (%d)\n", manager.fd.inst_tasks);
-	fclose(manager.fd.inst_tasks);
+	if (manager.fd.inst_tasks != NULL)
+		fclose(manager.fd.inst_tasks);
+	else
+		LOGW("manager.fd.inst_tasks alredy closed or not opened\n");
 }
 
 static int open_buf_ctl(void)
