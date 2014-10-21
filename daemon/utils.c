@@ -177,7 +177,7 @@ int exec_app_common(const char* exec_path)
 		return -1;
 	}
 
-	sprintf(command, "%s %s", DA_PRELOAD_TIZEN, exec_path);
+	snprintf(command, sizeof(command), "%s %s", DA_PRELOAD_TIZEN, exec_path);
 	LOGI("cmd: %s\n", command);
 
 	pid = fork();
@@ -260,6 +260,8 @@ static pid_t find_pid_from_path(const char *path)
 	char cmdline[PATH_MAX];
 	DIR *proc;
 	FILE *fp;
+	static char dirent_buffer[ sizeof(struct dirent) + PATH_MAX + 1 ] = {0,};
+	static struct dirent *dirent_r = (struct dirent *)dirent_buffer;
 	struct dirent *entry;
 	int found, len = strlen(path);
 	pid_t pid = 0;
@@ -270,7 +272,7 @@ static pid_t find_pid_from_path(const char *path)
 	if (!proc)
 		goto out;
 
-	while ((entry = readdir(proc)) != NULL) {
+	while ((readdir_r(proc, dirent_r, &entry) == 0) && entry) {
 		pid = (pid_t)atoi(entry->d_name);
 		if (pid == 0)
 			continue;
@@ -333,14 +335,22 @@ static pid_t get_pid_by_path(const char *binary_path)
 	return pkg_pid;
 }
 
-static int find_alternative_bin_path(const char *binary_path, char *alter_bin_path) {
+static int find_alternative_bin_path(const char *binary_path, char *alter_bin_path,
+	   size_t  buflen)
+{
 	// alternative path may be /opt/apps/... or /opt/usr/apps/...)
+	char *add_fname;
+	char *p;
 	if (strncmp(binary_path, APPDIR1, strlen(APPDIR1)) == 0) {
-		strcpy(alter_bin_path, APPDIR2);
-		strcat(alter_bin_path, binary_path + strlen(APPDIR1));
+		strncpy(alter_bin_path, APPDIR2, buflen);
+		buflen -= strlen(alter_bin_path);
+		add_fname = binary_path + strlen(APPDIR1);
+		strncat(alter_bin_path, add_fname, buflen);
 	} else if (strncmp(binary_path, APPDIR2, strlen(APPDIR2)) == 0) {
-		strcpy(alter_bin_path, APPDIR1);
-		strcat(alter_bin_path, binary_path + strlen(APPDIR2));
+		strncpy(alter_bin_path, APPDIR1, buflen);
+		buflen -= strlen(alter_bin_path);
+		add_fname = binary_path + strlen(APPDIR2);
+		strncat(alter_bin_path, add_fname, buflen);
 	} else {
 		return 1;
 	}
@@ -357,14 +367,15 @@ int kill_app(const char *binary_path)
 	pkg_pid = get_pid_by_path(binary_path);
 
 	if (pkg_pid == 0) {
-		if (find_alternative_bin_path(binary_path, alter_bin_path) == 0)
+		if (find_alternative_bin_path(binary_path, alter_bin_path, PATH_MAX) == 0)
 			pkg_pid = get_pid_by_path(alter_bin_path);
 	}
 
 	if (pkg_pid != 0) {
 		if (kill(pkg_pid, SIGTERM) == -1) {
-			LOGE("cannot kill %d -%d err<%s>\n", pkg_pid, SIGKILL,
-			     strerror(errno));
+			GETSTRERROR(errno, err_buf);
+			LOGE("cannot kill %d -%d errno<%s>\n", pkg_pid, SIGKILL,
+			     err_buf);
 			return -1;
 		} else {
 			// we need sleep up there because kill() function
@@ -400,7 +411,7 @@ int is_same_app_process(char* appPath, int pid)
 		tPath[tlen - 4] = '\0';
 	}
 
-	sprintf(cmdPath, "/proc/%d/cmdline", pid);
+	snprintf(cmdPath, sizeof(cmdPath), "/proc/%d/cmdline", pid);
 
 	if((fp = fopen(cmdPath, "r")) == NULL)
 	{
@@ -436,7 +447,7 @@ static char *dereference_tizen_exe_path(const char *path, char *resolved)
 
 	resolved[0] = 0;
 	//try resolve <path>.exe
-	sprintf(tmp_path, "%s.exe", path);
+	snprintf(tmp_path, sizeof(tmp_path), "%s.exe", path);
 	if ((res = realpath(tmp_path, resolved)) == NULL) {
 		//try to resolve path <path>
 		res = realpath(path, resolved);

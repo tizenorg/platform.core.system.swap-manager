@@ -40,7 +40,8 @@ int ioctl_send_msg(struct msg_t *msg)
 {
 	LOGI("write to device\n");
 	if (ioctl(manager.buf_fd, SWAP_DRIVER_MSG, msg) == -1) {
-		LOGE("write to device: %s\n", strerror(errno));
+		GETSTRERROR(errno, buf);
+		LOGE("write to device: %s\n", buf);
 		return 1;
 	}
 	return 0;

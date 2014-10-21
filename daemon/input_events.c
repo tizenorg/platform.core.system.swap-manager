@@ -105,7 +105,9 @@ static int check_input(char *inputname, int input_id)
 	char **name_arr;
 	size_t bytes_count;
 
-	sprintf(command, "/sys/class/input/%s/device/name", inputname);
+	if (snprintf(command, sizeof(command), "/sys/class/input/%s/device/name",
+		     inputname) >= sizeof(command))
+		LOGE("too small buffer\n");
 	// run command
 	cmd_fp = fopen(command, "r");
 	if (cmd_fp == NULL)
@@ -147,19 +149,22 @@ static void _get_fds(input_dev *dev, int input_id)
 	DIR *dp;
 	struct dirent *d;
 	int count = 0;
+	static char dirent_buffer[ sizeof(struct dirent) + PATH_MAX + 1 ] = {0,};
+	static struct dirent *dirent_r = (struct dirent *)dirent_buffer;
+
 
 	dp = opendir("/sys/class/input");
 
 	if (dp == NULL)
 		goto exit;
 
-	while ((d = readdir(dp)) != NULL) {
+	while ((readdir_r(dp, dirent_r, &d) == 0) && d) {
 		if (!strncmp(d->d_name, "event", 5)) {
 			// start with "event"
 			// event file
 			if (!check_input(d->d_name, input_id)) {
-				sprintf(dev[count].fileName,
-					"/dev/input/%s", d->d_name);
+				snprintf(dev[count].fileName, MAX_FILENAME,
+					 "/dev/input/%s", d->d_name);
 				dev[count].fd = open(dev[count].fileName,
 						     O_RDWR | O_NONBLOCK);
 				count++;

@@ -156,7 +156,7 @@ static int makeTargetServerSocket()
 
 	memset(&serverAddrUn, '\0', sizeof(serverAddrUn));
 	serverAddrUn.sun_family = AF_UNIX;
-	sprintf(serverAddrUn.sun_path, "%s", UDS_NAME);
+	snprintf(serverAddrUn.sun_path, sizeof(serverAddrUn.sun_path), "%s", UDS_NAME);
 
 	if (-1 == bind(manager.target_server_socket, (struct sockaddr*) &serverAddrUn,
 					sizeof(serverAddrUn)))

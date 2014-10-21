@@ -138,10 +138,13 @@ static bool exist(const char *filename)
 static void suffix_filename(char buf[PATH_MAX], const char *filename)
 {
 	char adj_filename[PATH_MAX];
-	sprintf(adj_filename, "%s.exe", filename);
+	snprintf(adj_filename, sizeof(adj_filename), "%s.exe", filename);
 	const char *use_filename = exist(adj_filename) ? adj_filename
 						       : filename;
-	strcpy(buf, use_filename);
+	size_t len = strlen(use_filename) + 1;
+	strncpy(buf, use_filename, len);
+	if (len > strlen(buf) + 1)
+		LOGE("too small buf <%s>\n", buf);
 }
 
 void get_build_dir(char builddir[PATH_MAX], const char *filename)

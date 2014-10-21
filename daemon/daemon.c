@@ -364,9 +364,10 @@ int start_profiling(void)
 	}
 	// remove previous screen capture files
 	remove_indir(SCREENSHOT_DIR);
-	if (mkdir(SCREENSHOT_DIR, 0777) == -1 && errno != EEXIST)
-		LOGW("Failed to create directory for screenshot : %s\n",
-		     strerror(errno));
+	if (mkdir(SCREENSHOT_DIR, 0777) == -1 && errno != EEXIST) {
+		GETSTRERROR(errno, buf);
+		LOGW("Failed to create directory for screenshot : %s\n", buf);
+	}
 
 	set_label_for_all(SCREENSHOT_DIR);
 
@@ -476,7 +477,7 @@ static pid_t get_lpad_pid(pid_t pid)
 		char fname[64];
 		char buf[lpad_path_len];
 
-		sprintf(fname, "/proc/%d/cmdline", pid);
+		snprintf(fname, sizeof(fname), "/proc/%d/cmdline", pid);
 		if (-1 == file2str(fname, buf, lpad_path_len))
 			return lpad_pid;
 
@@ -638,8 +639,8 @@ static int targetServerHandler(void)
 	if (err == 0) {
 		/* send config message to target process */
 		log.type = MSG_OPTION;
-		log.length = sprintf(log.data, "%llu\0",
-				     prof_session.conf.use_features0) + 1;
+		log.length = snprintf(log.data, sizeof(log.data), "%llu",
+				      prof_session.conf.use_features0) + 1;
 		if (target_send_msg(target, &log) != 0)
 			LOGE("fail to send data to target %p\n", target);
 
