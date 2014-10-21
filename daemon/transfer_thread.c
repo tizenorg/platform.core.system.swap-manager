@@ -77,11 +77,13 @@ static void *transfer_thread(void *arg)
 			     fd_pipe[1], NULL,
 			     BUF_SIZE, 0);
 		if (nrd == -1) {
-			if (errno == EAGAIN) {
+			int errsv = errno;
+			if (errsv == EAGAIN) {
 				LOGI("No more data to read\n");
 				break;
 			}
-			LOGE("Cannot splice read: %s\n", strerror(errno));
+			GETSTRERROR(errsv, err_buf);
+			LOGE("Cannot splice read: %s\n", err_buf);
 			goto thread_exit;
 		}
 
@@ -90,7 +92,8 @@ static void *transfer_thread(void *arg)
 			     nrd, 0);
 
 		if (nwr == -1) {
-			LOGE("Cannot splice write: %s\n", strerror(errno));
+			GETSTRERROR(errno, buf);
+			LOGE("Cannot splice write: %s\n", buf);
 			goto thread_exit;
 		}
 		if (nwr != nrd) {

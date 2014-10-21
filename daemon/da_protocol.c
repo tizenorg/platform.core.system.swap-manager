@@ -145,14 +145,21 @@ static char *msgErrStr(enum ErrorCode err)
 }
 
 
-#define print_feature(f,in,to,delim)		\
-	if (f & in) {				\
-		sprintf(to, dstr(f) delim );	\
-		to+=strlen( dstr(f) delim );	\
+#define print_feature(f,in,to,delim)					\
+	if (f & in) {							\
+		if (strlen(dstr(f) delim) + 1 < buflen ) {		\
+			lenin = snprintf(to, buflen, dstr(f) delim );	\
+			to += lenin;					\
+			buflen -= lenin;				\
+		} else { 						\
+			goto err_exit;					\
+		}							\
 	}
 #define print_feature_0(f) print_feature(f, feature0, to, ", \n\t")
-static void feature_code_str(uint64_t feature0, uint64_t feature1, char *to)
+static void feature_code_str(uint64_t feature0, uint64_t feature1, char *to,
+			     uint32_t buflen)
 {
+	int lenin = 0;
 	print_feature_0(FL_FUNCTION_PROFILING);
 	print_feature_0(FL_MEMORY_ALLOC_PROBING);
 	print_feature_0(FL_FILE_API_PROBING);
@@ -186,6 +193,12 @@ static void feature_code_str(uint64_t feature0, uint64_t feature1, char *to)
 	print_feature_0(FL_SYSTEM_NETWORK);
 	print_feature_0(FL_SYSTEM_DEVICE);
 	print_feature_0(FL_SYSTEM_ENERGY);
+
+	goto exit;
+err_exit:
+	LOGE("Not enought mem to print\n");
+exit:
+	return;
 }
 
 
@@ -564,7 +577,8 @@ static int send_reply(struct msg_t *msg)
 	printBuf((char *)msg, msg->len + sizeof (*msg));
 	if (send(manager.host.control_socket,
 		 msg, MSG_CMD_HDR_LEN + msg->len, MSG_NOSIGNAL) == -1) {
-		LOGE("Cannot send reply : %s\n", strerror(errno));
+		GETSTRERROR(errno, buf);
+		LOGE("Cannot send reply : %s\n", buf);
 		return -1;
 	}
 
@@ -635,7 +649,8 @@ int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 
 		if (send(manager.host.control_socket, msg,
 			 loglen, MSG_NOSIGNAL) == -1) {
-			LOGE("Cannot send reply: %s\n", strerror(errno));
+			GETSTRERROR(errno, buf);
+			LOGE("Cannot send reply: %s\n", buf);
 			free(msg);
 			return 1;
 		}
@@ -761,7 +776,7 @@ static size_t binary_ack_pack(char *s, const struct binary_ack *ba)
 	s += len;
 
 	for (i = 0; i!= 16; ++i) {
-		sprintf(s, "%02x", ba->digest[i]);
+		snprintf(s, 2, "%02x", ba->digest[i]);
 		s += 2;
 	}
 	*s = '\0';
@@ -1045,7 +1060,7 @@ static char *get_process_cmd_line(uint32_t pid)
 	int f;
 	ssize_t count;
 
-	sprintf(buf, "/proc/%u/cmdline", pid);
+	snprintf(buf, sizeof(buf), "/proc/%u/cmdline", pid);
 	f = open(buf, O_RDONLY);
 	if (f != -1) {
 		count = read(f, buf, sizeof(buf));
@@ -1206,8 +1221,10 @@ int host_message_handler(struct msg_t *msg)
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		// send config message to target process
 		sendlog.type = MSG_OPTION;
-		sendlog.length = sprintf(sendlog.data, "%llu",
-				     (unsigned long long) prof_session.conf.use_features0);
+		sendlog.length = snprintf(sendlog.data, sizeof(sendlog.data),
+					  "%llu",
+					  (unsigned long long)
+					  prof_session.conf.use_features0) + 1;
 		target_send_msg_to_all(&sendlog);
 		break;
 	case NMSG_BINARY_INFO:
@@ -1276,7 +1293,7 @@ static void print_conf(struct conf_t *conf)
 {
 	char buf[1024];
 	memset(&buf[0], 0, 1024);
-	feature_code_str(conf->use_features0, conf->use_features1, buf);
+	feature_code_str(conf->use_features0, conf->use_features1, buf, sizeof(buf));
 	LOGI("conf = \n");
 	LOGI("\tuse_features = 0x%016LX : 0x%016LX \n(\t%s)\n",
 	     conf->use_features0, conf->use_features1, buf);

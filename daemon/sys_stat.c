@@ -178,18 +178,21 @@ static void init_brightness_status()
 	DIR *dir_info;
 	struct dirent *dir_entry;
 	char fullpath[PATH_MAX];
+	static char dirent_buffer[ sizeof(struct dirent) + PATH_MAX + 1 ] = {0,};
+	static struct dirent *dirent_r = (struct dirent *)dirent_buffer;
+
 
 	dir_info = opendir(BRIGHTNESS_PARENT_DIR);
 	if (dir_info != NULL) {
-		while ((dir_entry = readdir(dir_info)) != NULL) {
+		while ((readdir_r(dir_info, dirent_r, &dir_entry) == 0) && dir_entry) {
 			if (strcmp(dir_entry->d_name, ".") == 0 ||
 			    strcmp(dir_entry->d_name, "..") == 0)
 				continue;
 			else { /* first directory */
-				sprintf(fullpath,
-					BRIGHTNESS_PARENT_DIR "/%s/"
-					BRIGHTNESS_FILENAME,
-					dir_entry->d_name);
+				snprintf(fullpath, sizeof(fullpath),
+					 BRIGHTNESS_PARENT_DIR "/%s/"
+					 BRIGHTNESS_FILENAME,
+					 dir_entry->d_name);
 				get_file_status(&manager.fd.brightness,
 						fullpath);
 			}
@@ -212,6 +215,8 @@ static int get_max_brightness()
 {
 	int maxbrightnessfd = -1;
 	static int max_brightness = -1;
+	static char dirent_buffer[ sizeof(struct dirent) + PATH_MAX + 1 ] = {0,};
+	static struct dirent *dirent_r = (struct dirent *)dirent_buffer;
 
 	if (__builtin_expect(max_brightness < 0, 0)) {
 #ifdef DEVICE_ONLY
@@ -221,14 +226,14 @@ static int get_max_brightness()
 
 		dir_info = opendir(BRIGHTNESS_PARENT_DIR);
 		if (dir_info != NULL) {
-			while((dir_entry = readdir(dir_info)) != NULL) {
+			while ((readdir_r(dir_info, dirent_r, &dir_entry) == 0) && dir_entry) {
 				if (strcmp(dir_entry->d_name, ".") == 0 ||
 				    strcmp(dir_entry->d_name, "..") == 0)
 					continue;
 				else { /* first */
-					sprintf(fullpath,
-						BRIGHTNESS_PARENT_DIR "/%s/" MAX_BRIGHTNESS_FILENAME,
-						dir_entry->d_name);
+					snprintf(fullpath, sizeof(fullpath),
+						 BRIGHTNESS_PARENT_DIR "/%s/" MAX_BRIGHTNESS_FILENAME,
+						 dir_entry->d_name);
 					max_brightness = get_file_status(&maxbrightnessfd, fullpath);
 				}
 			}
@@ -500,7 +505,7 @@ static int parse_proc_stat_file_bypid(char *path, proc_t* P, int is_inst_process
 	char *abuf, *bbuf;
 
 	// read from stat file
-	sprintf(filename, "%s/stat", path);
+	snprintf(filename, sizeof(filename), "%s/stat", path);
 	fd = open(filename, O_RDONLY, 0);
 
 	if(unlikely(fd == -1)){
@@ -595,7 +600,7 @@ static int parse_proc_smaps_file_bypid(char *path, proc_t* P)
 	P->sh_mem = 0;
 
 	// read from smaps file
-	sprintf(filename, "%s/smaps", path);
+	snprintf(filename, sizeof(filename), "%s/smaps", path);
 	fp = fopen(filename, "r");
 
 	if(fp == NULL){
@@ -698,7 +703,7 @@ static int update_process_data(procNode **prochead, pid_t* pidarray, int pidcoun
 			continue;
 		}
 
-		sprintf(buf, "/proc/%d", pidarray[i]);
+		snprintf(buf, sizeof(buf), "/proc/%d", pidarray[i]);
 		if (unlikely(stat(buf, &sb) == -1))	// cannot access anymore
 		{
 			del_node(prochead, pidarray[i]);
@@ -778,7 +783,7 @@ static int update_system_cpu_frequency(int cur_index)
 		}
 	}
 
-	sprintf(filename, CPUNUM_OF_FREQ);
+	snprintf(filename, sizeof(filename), CPUNUM_OF_FREQ);
 	// update cpu frequency information
 	for(i = 0; i < num_of_cpu; i++)
 	{
@@ -1143,8 +1148,10 @@ static int update_thread_data(int pid)
 	unsigned int tid;
 	procNode *node = NULL;
 	procNode **thread_prochead = NULL;
+	static char dirent_buffer[ sizeof(struct dirent) + PATH_MAX + 1 ] = {0,};
+	static struct dirent *dirent_r = (struct dirent *)dirent_buffer;
 
-	sprintf(path, "/proc/%d/task", pid);
+	snprintf(path, sizeof(path), "/proc/%d/task", pid);
 
 	if(!(taskdir = opendir(path)))
 	{
@@ -1161,12 +1168,11 @@ static int update_thread_data(int pid)
 	}
 	thread_prochead = (procNode **)&(node->thread_prochead);
 
-	while((entry = readdir(taskdir)) != NULL)
-	{
+	while ((readdir_r(taskdir, dirent_r, &entry) == 0) && entry) {
 		if(*entry->d_name > '0' &&	*entry->d_name <= '9')
 		{
 			tid = atoi(entry->d_name);
-			sprintf(buf, "/proc/%d/task/%d", pid, tid);
+			snprintf(buf, sizeof(buf), "/proc/%d/task/%d", pid, tid);
 
 			if(unlikely(stat(buf, &sb) == -1))
 			{
@@ -1212,40 +1218,54 @@ exit:
 // overall information getter functions
 // ========================================================================
 
-static int get_device_network_type(char* buf, int buflen)
+#define print_to_buf(buf, buflen, str)				\
+do {								\
+	if (strlen(str) <= buflen) {				\
+		lenin = snprintf(buf, buflen, "CDMA,");		\
+		len += lenin;					\
+		buflen -= lenin;				\
+	} else {						\
+		LOGE("can not pack <%s>\n", str);		\
+		goto exit;					\
+	}							\
+} while(1)
+
+static int get_device_network_type(char* buf, size_t buflen)
 {
-	int len = 0;
+	int len = 0, lenin = 0;
+
 
 	if (is_cdma_available())
-		len += sprintf(buf + len, "CDMA,");
+		print_to_buf(buf, buflen, "CDMA,");
 
 	if (is_edge_available())
-		len += sprintf(buf + len, "EDGE,");
+		print_to_buf(buf, buflen, "EDGE,");
 
 	if (is_gprs_available())
-		len += sprintf(buf + len, "GPRS,");
+		print_to_buf(buf, buflen, "GPRS,");
 
 	if (is_gsm_available())
-		len += sprintf(buf + len, "GSM,");
+		print_to_buf(buf, buflen, "GSM,");
 
 	if (is_hsdpa_available())
-		len += sprintf(buf + len, "HSDPA,");
+		print_to_buf(buf, buflen, "HSDPA,");
 
 	if (is_hspa_available())
-		len += sprintf(buf + len, "HSPA,");
+		print_to_buf(buf, buflen, "HSPA,");
 
 	if (is_hsupa_available())
-		len += sprintf(buf + len, "HSUPA,");
+		print_to_buf(buf, buflen, "HSUPA,");
 
 	if (is_umts_available())
-		len += sprintf(buf + len, "UMTS,");
+		print_to_buf(buf, buflen, "UMTS,");
 
 	if (is_lte_available())
-		len += sprintf(buf + len, "LTE,");
+		print_to_buf(buf, buflen, "LTE,");
 
 	if (len != 0)
 		buf[--len] = 0;
 
+exit:
 	return len;
 }
 
@@ -1541,7 +1561,7 @@ static uint32_t get_partition_sector_size(char *partition_name)
 	uint32_t res = 0;
 
 	/* prepare partition sector size file name */
-	sprintf(buf, "/sys/block/%s/queue/hw_sector_size", partition_name);
+	snprintf(buf, MAX_FILENAME, "/sys/block/%s/queue/hw_sector_size", partition_name);
 	f = fopen(buf, "r");
 
 	/* check file */
@@ -1553,8 +1573,8 @@ static uint32_t get_partition_sector_size(char *partition_name)
 			/* check errors */
 			int errsv = errno;
 			if (errsv) {
-				LOGE("scan file <%s> error: %s\n", buf,
-				     strerror(errsv));
+				GETSTRERROR(errsv, errno_buf);
+				LOGE("scan file <%s> error: %s\n", buf, errno_buf);
 				res = 0;
 			}
 		}
@@ -1824,13 +1844,16 @@ static int get_other_pid_array(pid_t inst_pid[], const int inst_n, pid_t arr[],
 	DIR *d = opendir("/proc");
 	struct dirent *dirent;
 	int count = 0, i = 0;
+	static char dirent_buffer[ sizeof(struct dirent) + PATH_MAX + 1 ] = {0,};
+	static struct dirent *dirent_r = (struct dirent *)dirent_buffer;
 
 	if (!d) {
-		LOGW("Cannot open /proc dir (%s)\n", strerror(errno));
+		GETSTRERROR(errno, buf);
+		LOGW("Cannot open /proc dir (%s)\n", buf);
 		return 0;
 	}
 
-	while ((dirent = readdir(d)) && (count < n)) {
+	while ((readdir_r(d, dirent_r, &dirent) == 0) && dirent) {
 		if (dirent->d_type == DT_DIR) {
 			char *tmp;
 			pid_t pid = strtol(dirent->d_name, &tmp, 10);
