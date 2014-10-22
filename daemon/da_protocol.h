@@ -73,24 +73,24 @@ NMSG_CONTEXT_SWITCH_EXIT	=0x0011,	//N	irregular	swap instrumentation for kernel
 };
 #define MSG_MAX_NUM NMSG_SWAP_INST_REMOVE
 
-enum ErrorCode{
-	ERR_NO					=0,	//success
-	ERR_LOCKFILE_CREATE_FAILED		=-101,	//lock file create failed
-	ERR_ALREADY_RUNNING			=-102,	//already running
-	ERR_INITIALIZE_SYSTEM_INFO_FAILED	=-103,	//initialize system info failed
-	ERR_HOST_SERVER_SOCKET_CREATE_FAILED	=-104,	//host server socket create failed
-	ERR_TARGET_SERVER_SOCKET_CREATE_FAILED	=-105,	//target server socket create failed
+enum ErrorCode {
+	ERR_NO					= 0,	//success
+	ERR_LOCKFILE_CREATE_FAILED		= -101,	//lock file create failed
+	ERR_ALREADY_RUNNING			= -102,	//already running
+	ERR_INITIALIZE_SYSTEM_INFO_FAILED	= -103,	//initialize system info failed
+	ERR_HOST_SERVER_SOCKET_CREATE_FAILED	= -104,	//host server socket create failed
+	ERR_TARGET_SERVER_SOCKET_CREATE_FAILED	= -105,	//target server socket create failed
 
-	ERR_SIGNAL_MASK_SETTING_FAILED		=-106, //TODO del (old parametr)
+	ERR_SIGNAL_MASK_SETTING_FAILED		= -106, //TODO del (old parametr)
 
-	ERR_WRONG_MESSAGE_FORMAT		=-201,	//wrong message format
-	ERR_WRONG_MESSAGE_TYPE			=-202,	//wrong message type
-	ERR_WRONG_MESSAGE_DATA			=-203,	//wrong message data
-	ERR_CANNOT_START_PROFILING		=-204,	//cannot start profiling
-	ERR_SERV_SOCK_CREATE			=-900,	//server socket creation failed (written in /tmp/da.port file)
-	ERR_SERV_SOCK_BIND			=-901,	//server socket bind failed (written in /tmp/da.port file)
-	ERR_SERV_SOCK_LISTEN			=-902,	//server socket listen failed (written in /tmp/da.port file)
-	ERR_UNKNOWN				=-999	//unknown error
+	ERR_WRONG_MESSAGE_FORMAT		= -201,	//wrong message format
+	ERR_WRONG_MESSAGE_TYPE			= -202,	//wrong message type
+	ERR_WRONG_MESSAGE_DATA			= -203,	//wrong message data
+	ERR_CANNOT_START_PROFILING		= -204,	//cannot start profiling
+	ERR_SERV_SOCK_CREATE			= -900,	//server socket creation failed (written in /tmp/da.port file)
+	ERR_SERV_SOCK_BIND			= -901,	//server socket bind failed (written in /tmp/da.port file)
+	ERR_SERV_SOCK_LISTEN			= -902,	//server socket listen failed (written in /tmp/da.port file)
+	ERR_UNKNOWN				= -999	//unknown error
 };
 
 #define FL_SYSTEM_ENERGY_OLD (1<<26)
