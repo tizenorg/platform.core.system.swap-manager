@@ -931,6 +931,7 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 
 	if (check_running_status(&prof_session) == 1) {
 		LOGW("Profiling has already been started\n");
+		err_code = ERR_ALREADY_RUNNING;
 		goto send_ack;
 	}
 
@@ -1276,6 +1277,8 @@ int host_message_handler(struct msg_t *msg)
 		return process_msg_get_process_add_info(&msg_control);
 	default:
 		LOGE("unknown message %d <0x%08X>\n", msg->id, msg->id);
+		error_code = ERR_WRONG_MESSAGE_TYPE;
+		goto send_ack;
 	}
 
 	return 0;
