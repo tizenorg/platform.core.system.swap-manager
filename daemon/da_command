@@ -17,7 +17,6 @@ print_usage()
 	echo "findunittest              find unittest project"
 	echo "getversion		get version"
 	echo "killvalgrind		kill valgrind process"
-	echo "readlink filepath		get value of given symbolic link or canonical file name"
 }
 
 kill_manager()
@@ -47,11 +46,6 @@ get_version()
 	echo $VERSION
 }
 
-read_link()
-{
-	$READLINK -f $FILEPATH
-}
-
 kill_valgrind()
 {
         ps ax | grep "/home/developer/sdk_tools/valgrind/usr/bin/valgrin[d]" | awk '{print "kill -3 " $1}' | sh
@@ -63,15 +57,9 @@ if test $# -gt 2 -o $# -lt 1; then
 fi
 
 if test -n "$2"; then
-	case "$1" in
-		readlink)
-			FILEPATH=$2
-			;;
-		*)
-			print_usage
-			exit 1
-			;;
-	esac
+		print_usage
+		exit 1
+		;;
 fi
 
 case "$1" in
@@ -89,9 +77,6 @@ case "$1" in
 		;;
 	getversion)
 		get_version
-		;;
-	readlink)
-		read_link
 		;;
 	killvalgrind)
                 kill_valgrind
