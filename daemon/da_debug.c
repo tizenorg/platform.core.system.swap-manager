@@ -73,10 +73,21 @@ err_ret:
 
 int initialize_log(void)
 {
+	/* TODO fix problem with ecore and redirect stderr to DEBUG_LOGFILE back
+	 *
+	 * error sample
+	 * *** IN FUNCTION: _ecore_main_fdh_epoll_mark_active()
+	 * ERR<2328>:ecore ecore.c:572 _ecore_magic_fail()   Input handle has already been freed!
+	 * ERR<2328>:ecore ecore.c:581 _ecore_magic_fail() *** NAUGHTY PROGRAMMER!!!
+	 * *** SPANK SPANK SPANK!!!
+	 *
+	 */
 	int ret = 0;
 	int fd = open(DEBUG_LOGFILE, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-	if (fd != -1) {
-		if (close_on_exec_dup(fd, 1) != 0 ||
+	int fd_null = open("/dev/null", O_WRONLY | O_CREAT | O_TRUNC, 0777);
+
+	if (fd != -1 && fd_null != -1) {
+		if (close_on_exec_dup(fd_null, 1) != 0 ||
 		    close_on_exec_dup(fd, 2) != 0) {
 			LOGE("duplicate fd fail\n");
 			ret = -1;
