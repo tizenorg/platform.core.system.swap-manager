@@ -39,7 +39,7 @@
 void fd_setup_attributes(int fd)
 {
 	fsetxattr(fd, "security.SMACK64IPIN", "*", 1, 0);
-	fsetxattr(fd, "security.SMACK64IPOUT", "*", 1, 0);
+	fsetxattr(fd, "security.SMACK64IPOUT", "@", 1, 0);
 }
 
 void set_label_for_all(const char *path)
