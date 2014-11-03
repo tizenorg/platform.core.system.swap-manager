@@ -1221,7 +1221,12 @@ exit:
 #define print_to_buf(buf, buflen, str)				\
 do {								\
 	if (strlen(str) <= buflen) {				\
-		lenin = snprintf(buf, buflen, "CDMA,");		\
+		lenin = snprintf(buf + len, buflen, "CDMA,");	\
+		if (lenin <= 0) {				\
+			LOGE("can not pack <%s>\n", str);	\
+			goto exit;				\
+		}						\
+		lenin -= 1;					\
 		len += lenin;					\
 		buflen -= lenin;				\
 	} else {						\
@@ -1234,6 +1239,7 @@ static int get_device_network_type(char* buf, size_t buflen)
 {
 	int len = 0, lenin = 0;
 
+	buf[0] = '\0';
 
 	if (is_cdma_available())
 		print_to_buf(buf, buflen, "CDMA,");
@@ -1261,9 +1267,6 @@ static int get_device_network_type(char* buf, size_t buflen)
 
 	if (is_lte_available())
 		print_to_buf(buf, buflen, "LTE,");
-
-	if (len != 0)
-		buf[--len] = 0;
 
 exit:
 	return len;
