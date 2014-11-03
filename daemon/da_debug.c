@@ -83,8 +83,13 @@ int initialize_log(void)
 	 *
 	 */
 	int ret = 0;
-	int fd = open(DEBUG_LOGFILE, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-	int fd_null = open("/dev/null", O_WRONLY | O_CREAT | O_TRUNC, 0777);
+	int fd = -1;
+	int fd_null = -1;
+
+	remove(DEBUG_LOGFILE);
+
+	fd = open(DEBUG_LOGFILE, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+	fd_null = open("/dev/null", O_WRONLY | O_CREAT | O_TRUNC, 0777);
 
 	if (fd != -1 && fd_null != -1) {
 		if (close_on_exec_dup(fd_null, 1) != 0 ||
