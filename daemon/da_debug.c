@@ -92,13 +92,13 @@ int initialize_log(void)
 			LOGE("duplicate fd fail\n");
 			ret = -1;
 		}
-
-		close(fd);
 	} else {
 		close(1);
 		close(2);
 	}
 
+	close(fd_null);
+	close(fd);
 	close(0);
 	return ret;
 }
