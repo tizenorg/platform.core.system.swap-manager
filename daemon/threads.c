@@ -51,6 +51,34 @@
 #include "buffer.h"
 #include "input_events.h"
 
+static chsmack(const char *filename)
+{
+	int res = 1;
+	pid_t pid;
+	char cmd[1024];
+
+	pid = fork();
+	switch (pid) {
+	case -1:
+		/* fail to fork */
+		LOGE("cannot fork");
+		break;
+	case 0:
+		/* child */
+		snprintf(cmd, sizeof(cmd), "chsmack -a sdbd \"%s\"", filename);
+		execl(SHELL_CMD, SHELL_CMD, "-c", cmd, NULL);
+
+		/* exec fail */
+		LOGE("exec fail! <%s>\n", cmd);
+		break;
+	default:
+		/* parent */
+		waitpid(pid);
+		res = 0;
+	}
+
+	return res;
+}
 static void* recvThread(void* data)
 {
 	struct target *target = data;
@@ -143,6 +171,23 @@ static void* recvThread(void* data)
 			// don't send to host
 			LOGW("EXTRA '%s'\n", log.data);
 			continue;
+		} else if (log.type == MSG_IMAGE) {
+			/* need chsmak */
+			char *file_name = log.data;
+			LOGI("MSG_IMAGE> <%s>\n", file_name);
+
+			if (chsmack(file_name) == 0) {
+				/* exctract probe message */
+				file_name += strnlen(file_name, PATH_MAX) + 1;
+				struct msg_data_t *msg_data = (struct msg_data_t *)file_name;
+				if (write_to_buf(msg_data) != 0)
+					LOGE("write to buf fail\n");
+			} else {
+				LOGE("chsmack fail\n");
+			}
+
+
+			continue;
 		}
 #ifdef PRINT_TARGET_LOG
 		else if(log.type == MSG_LOG)
@@ -159,10 +204,6 @@ static void* recvThread(void* data)
 				default:
 					break;
 			}
-		}
-		else if(log.type == MSG_IMAGE)
-		{
-			LOGI("MSG_IMAGE received\n");
 		}
 		else 	// not MSG_LOG and not MSG_IMAGE
 		{
