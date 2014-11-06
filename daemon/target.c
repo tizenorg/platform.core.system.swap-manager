@@ -222,7 +222,7 @@ int target_send_msg_to_all(struct msg_target_t *msg)
 			continue;
 
 		t = target_get(i);
-		if (target_send_msg(t, msg))
+		if (target_send_msg(t, msg) != 0)
 			ret = 1;
 	}
 	target_array_unlock();
