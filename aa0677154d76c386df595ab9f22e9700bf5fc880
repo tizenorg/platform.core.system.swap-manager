@@ -1,0 +1,8 @@
+Code-Review+1: Alexander Aksenov <a.aksenov@samsung.com>
+Code-Review+2: Vyacheslav Cherkashin <v.cherkashin@samsung.com>
+Verified+1: Vyacheslav Cherkashin <v.cherkashin@samsung.com>
+Submitted-by: Vyacheslav Cherkashin <v.cherkashin@samsung.com>
+Submitted-at: Fri, 07 Nov 2014 03:16:58 -0800
+Reviewed-on: https://review.tizen.org/gerrit/30018
+Project: platform/core/system/swap-manager
+Branch: refs/heads/prod_rel
