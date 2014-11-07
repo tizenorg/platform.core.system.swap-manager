@@ -86,7 +86,9 @@ int initialize_log(void)
 	int fd = -1;
 	int fd_null = -1;
 
-	remove(DEBUG_LOGFILE);
+	if (remove(DEBUG_LOGFILE))
+		LOGE("remove(%s), return error, errno=%d\n",
+		     DEBUG_LOGFILE, errno);
 
 	fd = open(DEBUG_LOGFILE, O_WRONLY | O_CREAT | O_TRUNC, 0777);
 	fd_null = open("/dev/null", O_WRONLY | O_CREAT | O_TRUNC, 0777);
@@ -102,8 +104,12 @@ int initialize_log(void)
 		close(2);
 	}
 
-	close(fd_null);
-	close(fd);
+	if (fd_null == -1)
+		close(fd_null);
+
+	if (fd == -1)
+		close(fd);
+
 	close(0);
 	return ret;
 }
