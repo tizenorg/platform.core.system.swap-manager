@@ -104,10 +104,10 @@ int initialize_log(void)
 		close(2);
 	}
 
-	if (fd_null == -1)
+	if (fd_null != -1)
 		close(fd_null);
 
-	if (fd == -1)
+	if (fd != -1)
 		close(fd);
 
 	close(0);
