@@ -268,27 +268,14 @@ static struct data_list_t *data_list_find_data(struct data_list_t *whered, struc
 	return NULL;
 }
 
-// Check whether functions are equal. If so, returns first argument, otherwise - NULL
-static struct probe_list_t *probes_equal(struct probe_list_t *first, struct probe_list_t *second)
-{
-	if (first->size != second->size)
-		return NULL;
-
-	if (first->func->func_addr != second->func->func_addr)
-		return NULL;
-
-	if (first->func->probe_type != second->func->probe_type)
-		return NULL;
-
-	return first;
-}
-
 static struct probe_list_t *find_probe(struct data_list_t *where, struct probe_list_t *probe)
 {
 	struct probe_list_t *p ;
 	for (p = where->list; p != NULL; p = p->next)
-		if (probes_equal(p, probe))
-			break;
+		if (p->size == probe->size)
+			if (p->func->func_addr == probe->func->func_addr)
+				if (strcmp(p->func->args, probe->func->args) == 0)
+					break;
 
 	return p;
 }
