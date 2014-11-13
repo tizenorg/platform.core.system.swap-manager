@@ -148,12 +148,6 @@ enum feature_code{
 
 };
 
-enum probe_type {
-	SWAP_RETPROBE   = 0, //Common retprobe
-	SWAP_FBI_PROBE  = 1, //Function body instrumentation probe
-	SWAP_LD_PROBE   = 2  //Preloaded API probe
-};
-
 #define IS_OPT_SET_IN(OPT, reg) (reg & (OPT))
 #define IS_OPT_SET(OPT) IS_OPT_SET_IN((OPT), prof_session.conf.use_features0)
 
@@ -252,11 +246,11 @@ struct us_func_inst_plane_t {
 	//name       | type   | len       | info
 	//------------------------------------------
 	//func_addr  | uint64 | 8         |
-	//probe_type | char   | 1         |
+	//args       | string | len(args) |end with '\0'
+	//ret_type   | char   | 1         |
 	uint64_t func_addr;
-	char probe_type;
-	char probe_info[0];
-} __attribute__ ((packed));
+	char args[0];
+};
 
 struct us_lib_inst_t {
 	char *bin_path;
