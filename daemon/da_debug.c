@@ -49,14 +49,14 @@ static inline int close_on_exec_dup(int old, int new)
 	if (dup2(old, new) != -1) {
 		unsigned long flags = fcntl(new, F_GETFD);
 		if (flags == -1) {
-			LOGE("can not get flags fd #%d <%s>\n", new,
-			     strerror(errno));
+			LOGE("can not get flags fd #%d errno <%d>\n", new,
+			     errno);
 			goto err_ret;
 		}
 
 		if (fcntl(new, F_SETFD, flags | FD_CLOEXEC) == -1) {
-			LOGE("can not get flags fd #%d <%s>\n", new,
-			     strerror(errno));
+			LOGE("can not get flags fd #%d errno <%d>\n", new,
+			     errno);
 			goto err_ret;
 		}
 	} else {
