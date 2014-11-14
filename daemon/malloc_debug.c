@@ -19,6 +19,15 @@
 #define loge(...)
 #endif
 
+struct mlist_t {
+	void *next;
+	void *prev;
+	void *addr;
+	int line;
+	char *info;
+	uint32_t size;
+};
+
 struct mlist_t *files_list;
 
 int list_append(struct mlist_t **to, struct mlist_t *from)
