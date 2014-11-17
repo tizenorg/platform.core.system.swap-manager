@@ -1,5 +1,7 @@
 #!/bin/sh
 
+rmmod swap_webprobe
+rmmod swap_retprobe
 rmmod swap_message_parser
 rmmod swap_energy
 rmmod swap_sampler
@@ -11,12 +13,4 @@ rmmod swap_writer
 rmmod swap_driver
 rmmod swap_ksyms
 rmmod swap_buffer
-
-
-
-
-
-
-
-
 
