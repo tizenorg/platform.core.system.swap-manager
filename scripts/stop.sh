@@ -3,6 +3,7 @@
 rmmod swap_preload
 rmmod swap_task_data
 rmmod swap_webprobe
+rmmod swap_fbiprobe
 rmmod swap_retprobe
 rmmod swap_message_parser
 rmmod swap_energy
