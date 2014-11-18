@@ -1,6 +1,7 @@
 #!/bin/sh
 
 rmmod swap_webprobe
+rmmod swap_fbiprobe
 rmmod swap_retprobe
 rmmod swap_message_parser
 rmmod swap_energy
