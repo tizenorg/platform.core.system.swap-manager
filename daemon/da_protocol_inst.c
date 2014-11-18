@@ -66,7 +66,7 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 	//func_addr  | uint64 | 8         |
 	//probe_type | char   | 1         |
 
-	uint32_t size = 0;
+	uint32_t size = 0, tmp_size = 0;
 	struct us_func_inst_plane_t *func = NULL;
 	char type;
 	uint64_t addr;
@@ -88,11 +88,20 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 		size += strlen(msg->cur_pos) + 1 + sizeof(char);
 		break;
 	case SWAP_FBI_PROBE:
-		size += sizeof(uint32_t) + /* register number */
-			sizeof(uint64_t) + /* register offset */
-			sizeof(uint32_t) + /* data size */
-			sizeof(uint64_t) + /* var id */
-			sizeof(uint32_t);  /* pointer order */
+		tmp_size = sizeof(uint64_t) + /* var id */
+			   sizeof(uint64_t) + /* register offset */
+			   sizeof(uint8_t) +  /* register number */
+			   sizeof(uint32_t);  /* data size */
+
+		size += tmp_size;
+		size += (*(uint8_t *)(msg->cur_pos + tmp_size)) /* steps count */
+			* (		     /* step size: */
+			   sizeof(uint8_t) + /* pointer order*/
+			   sizeof(uint64_t)  /* data offset */
+			  );
+
+		size += sizeof(uint8_t);  /* steps count */
+
 		break;
 	case SWAP_LD_PROBE:
 		size += sizeof(uint64_t) + /* ld preload handler addr */
