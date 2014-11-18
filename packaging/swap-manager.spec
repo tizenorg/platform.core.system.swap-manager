@@ -42,7 +42,6 @@ cd daemon
 %manifest swap-manager.manifest
 %defattr(-,root,root,-)
 %{_prefix}/bin/da_manager
-%{_prefix}/bin/da_command
 /opt/swap/sdk/start.sh
 /opt/swap/sdk/stop.sh
 
