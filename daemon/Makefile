@@ -1,68 +1,109 @@
-CC :=gcc
-DEBUG_CPPFLAGS = 				\
-		-DDEBUG					\
-		-DUSE_LOG_ONCE			\
-#		-DMALLOC_DEBUG_LEVEL=1		\#
-#		-DMALLOC_DEBUG_LEVEL=2		\#
-#		-DDEB_PRINTBUF			\#
-#		-DPARSE_DEBUG_ON		\#
-#		-DTHREAD_SAMPLING_DEBUG	\#
-#		-DTHREAD_REPLAY_DEBUG	#
+CC := gcc
+CPP := g++
 
-CPPFLAGS := 	-I/usr/include		\
-		-I/usr/include/system 	\
-		-I/usr/include/capi-system-info	\
-		-I/usr/include/capi-system-runtime-info	\
-		-I/usr/include/vconf	\
-		$(DEBUG_CPPFLAGS)
+COMM_FLAGS := -Wall -g -O0
+
+DEBUG_FLAGS = \
+	-DDEBUG \
+	-DUSE_LOG_ONCE \
+#	-DMALLOC_DEBUG_LEVEL=1 \
+#	-DMALLOC_DEBUG_LEVEL=2 \
+#	-DDEB_PRINTBUF \
+#	-DPARSE_DEBUG_ON \
+#	-DTHREAD_SAMPLING_DEBUG \
+#	-DTHREAD_REPLAY_DEBUG \
+#	-DNOLOGI=1
+
+INCLUDE := \
+	-I/usr/include \
+	-I/usr/include/system \
+	-I/usr/include/capi-system-info \
+	-I/usr/include/capi-system-runtime-info \
+	-I/usr/include/vconf \
+	-I/usr/include/ecore-1 \
+	-I/usr/include/eina-1 \
+	-I/usr/include/eina-1/eina
+
+FLAGS := \
+	$(COMM_FLAGS) \
+	$(INCLUDE) \
+	$(DEBUG_FLAGS)
+
 ifeq (arm, $(findstring arm, $(shell uname -sm)))
-	CPPFLAGS += -DDEVICE_ONLY
+	FLAGS += -DDEVICE_ONLY
 endif
 
-COMMON_LIBS := -lglib-2.0 -lpthread
-TARGET_LIBS := $(COMMON_LIBS) -lvconf -lsmack -lcapi-system-info -lecore -leina -lpthread -lwebsockets -ljson
-CFLAGS := -Wall -pthread -g -O0 -I/usr/include/ecore-1 -I/usr/include/eina-1 -I/usr/include/eina-1/eina
 
-DAEMON_SRCS =			\
-	buffer.c		\
-	da_data.c		\
-	da_debug.c		\
-	da_protocol.c		\
-	da_protocol_inst.c	\
-	da_inst.c		\
-	daemon.c		\
-	debug.c			\
-	elf.c			\
-	ioctl_commands.c	\
-	main.c			\
-	sys_stat.c		\
-	threads.c		\
-	transfer_thread.c	\
-	utils.c			\
-	da_protocol_check.c     \
-	md5.c			\
-	input_events.c		\
-	device_vconf.c		\
-	device_system_info.c	\
-	device_camera.c		\
-	smack.c					\
+# compiler flags
+CFLAGS := $(FLAGS)
+CPPFLAGS := $(FLAGS)
+
+# linker flags
+LDFLAGS := \
+	-lpthread \
+	-lvconf \
+	-lsmack \
+	-lecore \
+	-lcapi-system-info \
+	-lwebsockets \
+	-ljson
+
+SRC_C := \
+	buffer.c \
+	da_data.c \
+	da_debug.c \
+	da_protocol.c \
+	da_protocol_inst.c \
+	da_inst.c \
+	daemon.c \
+	debug.c \
+	elf.c \
+	ioctl_commands.c \
+	main.c \
+	sys_stat.c \
+	threads.c \
+	transfer_thread.c \
+	utils.c \
+	da_protocol_check.c \
+	md5.c \
+	input_events.c \
+	device_vconf.c \
+	device_system_info.c \
+	device_camera.c \
+	smack.c \
 	malloc_debug.c \
 	target.c \
 	thread.c \
 	wsi.c
 
-DAEMON_OBJS = $(patsubst %.c,%.o, $(DAEMON_SRCS))
+SRC_CPP :=
 
-TARGET = da_manager
-DASCRIPT = da_command
-START_SH = start.sh
-STOP_SH = stop.sh
+OBJS_C := $(SRC_C:.c=.o)
+OBJS_CPP := $(SRC_CPP:.cpp=.o)
+OBJS := $(OBJS_C) $(OBJS_CPP)
+
+TARGET := da_manager
+DASCRIPT := da_command
+START_SH := start.sh
+STOP_SH := stop.sh
+
 
 all: debug
-debug release: $(TARGET_LIBS)
+
+release: CFLAGS += -DNOLOGI=1
 release: CPPFLAGS += -DNOLOGI=1
-debug release: $(DAEMON_OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $(TARGET)
+release: debug
+
+.c.o:
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+.cpp.o:
+	$(CPP) $(CPPFLAGS) -c -o $@ $<
+
+
+debug: $(OBJS)
+	$(CPP) $(LDFLAGS) $(OBJS) -o $(TARGET)
+
 
 install: BINDIR = $(DESTDIR)/usr/bin
 install: OPTDIR = $(DESTDIR)/opt/swap/sdk
@@ -72,7 +113,8 @@ install: $(TARGET)
 	install $(TARGET) $(DASCRIPT) -t $(BINDIR)
 	install -m 755 $(START_SH) $(STOP_SH) -t $(OPTDIR)
 
+
 clean:
-	rm -f $(TARGET) $(DAEMON_OBJS)
+	rm -f $(TARGET) $(OBJS)
 
 .PHONY: all debug release clean install
