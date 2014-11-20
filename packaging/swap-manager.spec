@@ -11,6 +11,7 @@ BuildRequires:  glib2-devel
 BuildRequires:  aul-devel
 BuildRequires:  vconf-devel
 BuildRequires:  capi-system-info-devel
+BuildRequires:  capi-appfw-application-devel
 BuildRequires:  capi-system-runtime-info-devel
 BuildRequires:  libwebsockets-devel
 BuildRequires:  libjson-devel

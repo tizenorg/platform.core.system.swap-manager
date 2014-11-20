@@ -1,5 +1,6 @@
 #!/bin/sh
 
+rmmod swap_elm_prof
 rmmod swap_webprobe
 rmmod swap_retprobe
 rmmod swap_message_parser

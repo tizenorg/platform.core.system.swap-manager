@@ -49,6 +49,7 @@
 #include "md5.h"
 #include "da_data.h"
 #include "wsi.h"
+#include "elm_prof.h"
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -927,6 +928,36 @@ static void get_serialized_time(uint32_t dst[2])
 	dst[1] = tv.tv_usec * 1000;
 }
 
+static int lifecycle_timing_on(const struct user_space_inst_t *us_inst)
+{
+	int ret;
+
+	struct app_list_t *p;
+	struct app_info_t *app;
+
+	for (p = us_inst->app_inst_list; p != NULL; p = p->next) {
+		app = p->app;
+		ret = elm_prof_add(app->exe_path, app->main, app->plt_aem);
+		if (ret)
+			goto unreg;
+	}
+
+	return 0;
+
+unreg:
+	for ( ; p != NULL; p = p->prev) {
+		app = p->app;
+		elm_prof_rm(app->exe_path);
+	}
+
+	return ret;
+}
+
+static void lifecycle_timing_off(void)
+{
+	elm_prof_rm_all();
+}
+
 static int process_msg_start(struct msg_buf_t *msg_control)
 {
 	enum ErrorCode err_code = ERR_CANNOT_START_PROFILING;
@@ -965,6 +996,9 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 
 	//get time right before ioctl for more accurate start time value
 	get_serialized_time(serialized_time);
+
+	if (IS_OPT_SET(FL_LIFECYCLE_TIMING))
+		lifecycle_timing_on(&prof_session.user_space_inst);
 
 	if (ioctl_send_msg(msg_reply) != 0) {
 		LOGE("cannot send message to device\n");
@@ -1189,6 +1223,7 @@ int host_message_handler(struct msg_t *msg)
 	case NMSG_START:
 		return process_msg_start(&msg_control);
 	case NMSG_STOP:
+		lifecycle_timing_off();
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		if (stop_all() != ERR_NO) {
 			LOGE("Stop failed\n");

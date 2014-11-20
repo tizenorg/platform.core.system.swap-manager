@@ -22,7 +22,8 @@ INCLUDE := \
 	-I/usr/include/vconf \
 	-I/usr/include/ecore-1 \
 	-I/usr/include/eina-1 \
-	-I/usr/include/eina-1/eina
+	-I/usr/include/eina-1/eina \
+	-I/usr/include/appfw/
 
 FLAGS := \
 	$(COMM_FLAGS) \
@@ -36,7 +37,7 @@ endif
 
 # compiler flags
 CFLAGS := $(FLAGS)
-CPPFLAGS := $(FLAGS)
+CPPFLAGS := $(FLAGS) -std=c++0x
 
 # linker flags
 LDFLAGS := \
@@ -76,7 +77,8 @@ SRC_C := \
 	thread.c \
 	wsi.c
 
-SRC_CPP :=
+SRC_CPP := \
+	elm_prof.cpp
 
 OBJS_C := $(SRC_C:.c=.o)
 OBJS_CPP := $(SRC_CPP:.cpp=.o)

@@ -219,6 +219,35 @@ int parse_lib_inst_list(struct msg_buf_t *msg,
 	return 1;
 }
 
+static int parse_inst_app_setup_addr_list(struct msg_buf_t *msg,
+					  struct app_info_t *app_info)
+{
+	switch (app_info->app_type) {
+	case APP_TYPE_TIZEN:
+		if (!parse_int64(msg, &app_info->main)) {
+			LOGE("main address parsing error\n");
+			return -EINVAL;
+		}
+
+		if (!parse_int64(msg, &app_info->plt_aem)) {
+			LOGE("app_efl_main@plt address parsing error\n");
+			return -EINVAL;
+		}
+
+		return 0;
+
+	case APP_TYPE_RUNNING:
+	case APP_TYPE_COMMON:
+	case APP_TYPE_WEB:
+		return 0;
+
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 int parse_inst_app(struct msg_buf_t *msg, struct app_list_t **dest)
 {
 	int res = 1;
@@ -261,6 +290,11 @@ int parse_inst_app(struct msg_buf_t *msg, struct app_list_t **dest)
 
 	if (!parse_func_inst_list(msg, (struct data_list_t *)*dest)) {
 		LOGE("funcs parsing error\n");
+		goto exit_free_err;
+	}
+
+	if (parse_inst_app_setup_addr_list(msg, app_info)) {
+		LOGE("setup address list parsing error\n");
 		goto exit_free_err;
 	}
 
