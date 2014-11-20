@@ -36,6 +36,12 @@
 #include <stddef.h>
 #include <linux/input.h>
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 enum HostMessageT {
 NMSG_KEEP_ALIVE			=0x0001,
 NMSG_START				=0x0002,
@@ -138,7 +144,9 @@ enum feature_code{
 	FL_SYSTEM_DEVICE		= 0x080000000000ULL, //
 	FL_SYSTEM_ENERGY		= 0x100000000000ULL, //
 
-	FL_RESERVED4			= 0xe00000000000ULL, // reserved 1110
+	FL_LIFECYCLE_TIMING		= 0x200000000000ULL, // elm_prof
+
+	FL_RESERVED4			= 0xc00000000000ULL, // reserved 1100
 
 	FL_ALL_FEATURES			= 0x3FFFFFFFFFFFULL &
 					  (~FL_RESERVED1) &
@@ -237,8 +245,15 @@ struct app_info_t {
 	uint32_t app_type;
 	char *app_id;
 	char *exe_path;
-};
 
+	union {
+		/* for APP_TYPE_TIZEN */
+		struct {
+			uint64_t main;
+			uint64_t plt_aem;
+		};
+	};
+};
 
 
 struct us_func_inst_plane_t {
@@ -461,4 +476,11 @@ int parse_string_no_alloc(struct msg_buf_t *msg, char *str);
 int parse_replay_event_seq(struct msg_buf_t *msg, struct replay_event_seq_t *res);
 
 void init_prof_session(struct prof_session_t *prof_session);
+
+
+#ifdef __cplusplus
+}
+#endif
+
+
 #endif /* _DA_PROTOCOL_ */

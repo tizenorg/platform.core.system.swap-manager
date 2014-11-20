@@ -11,6 +11,7 @@ BuildRequires:  glib2-devel
 BuildRequires:  aul-devel
 BuildRequires:  vconf-devel
 BuildRequires:  capi-system-info-devel
+BuildRequires:  capi-appfw-application-devel
 BuildRequires:  capi-system-runtime-info-devel
 BuildRequires:  pkgconfig(ecore)
 %if "%_project" != "Kirana_SWA_OPEN:Build" && "%_project" != "Kirana_SWA_OPEN:Daily"
