@@ -1,5 +1,6 @@
 #!/bin/sh
 
+rmmod swap_elm_prof
 rmmod swap_message_parser
 rmmod swap_energy
 rmmod swap_sampler
