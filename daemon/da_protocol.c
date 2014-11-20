@@ -48,6 +48,7 @@
 #include "debug.h"
 #include "md5.h"
 #include "da_data.h"
+#include "elm_prof.h"
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -614,6 +615,8 @@ static enum HostMessageT get_ack_msg_id(const enum HostMessageT id)
 		return NMSG_SWAP_INST_REMOVE_ACK;
 	case NMSG_GET_PROCESS_ADD_INFO:
 		return NMSG_GET_PROCESS_ADD_INFO_ACK;
+	case NMSG_ELM_PROF_INFO:
+		return NMSG_ELM_PROF_INFO_ACK;
 	default:
 		LOGE("Fatal: unknown message ID [0x%X]\n", id);
 		exit(EXIT_FAILURE);
@@ -943,6 +946,9 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 		goto send_ack;
 	}
 
+	if (IS_OPT_SET(FL_LIFECYCLE_TIMING))
+		elm_prof_set(EPS_ON);
+
 	if (msg_start(msg_control, &prof_session.user_space_inst,
 		      &msg_reply, &err_code) != 0) {
 		LOGE("parse error\n");
@@ -1185,6 +1191,7 @@ int host_message_handler(struct msg_t *msg)
 	case NMSG_START:
 		return process_msg_start(&msg_control);
 	case NMSG_STOP:
+		elm_prof_set(EPS_OFF);
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		if (stop_all() != ERR_NO) {
 			LOGE("Stop failed\n");
@@ -1278,6 +1285,10 @@ int host_message_handler(struct msg_t *msg)
 		return process_msg_get_screenshot(&msg_control);
 	case NMSG_GET_PROCESS_ADD_INFO:
 		return process_msg_get_process_add_info(&msg_control);
+	case NMSG_ELM_PROF_INFO:
+		process_msg_elm_prof(&msg_control);
+		error_code = ERR_NO;
+		goto send_ack;
 	default:
 		LOGE("unknown message %d <0x%08X>\n", msg->id, msg->id);
 		error_code = ERR_WRONG_MESSAGE_TYPE;

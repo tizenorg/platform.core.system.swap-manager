@@ -36,6 +36,12 @@
 #include <stddef.h>
 #include <linux/input.h>
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 enum HostMessageT {
 NMSG_KEEP_ALIVE			=0x0001,
 NMSG_START				=0x0002,
@@ -45,6 +51,7 @@ NMSG_BINARY_INFO		=0x0005,
 NMSG_GET_TARGET_INFO	=0x0007,
 NMSG_SWAP_INST_ADD		=0x0008,
 NMSG_SWAP_INST_REMOVE		=0x0009,
+NMSG_ELM_PROF_INFO		=0x000a,
 NMSG_GET_SCREENSHOT		=0x0010,
 NMSG_GET_PROCESS_ADD_INFO	=0x0011,
 
@@ -57,6 +64,7 @@ NMSG_SWAP_INST_ACK			=0x1006,
 NMSG_GET_TARGET_INFO_ACK	=0x1007,
 NMSG_SWAP_INST_ADD_ACK		=0x1008,
 NMSG_SWAP_INST_REMOVE_ACK	=0x1009,
+NMSG_ELM_PROF_INFO_ACK		=0x100a,
 NMSG_GET_PROCESS_ADD_INFO_ACK	=0x1011,
 
 NMSG_PROCESS_INFO			=0x0001,	//	target process info
@@ -138,7 +146,9 @@ enum feature_code{
 	FL_SYSTEM_DEVICE		= 0x080000000000ULL, //
 	FL_SYSTEM_ENERGY		= 0x100000000000ULL, //
 
-	FL_RESERVED4			= 0xe00000000000ULL, // reserved 1110
+	FL_LIFECYCLE_TIMING		= 0x200000000000ULL, // elm_prof
+
+	FL_RESERVED4			= 0xc00000000000ULL, // reserved 1100
 
 	FL_ALL_FEATURES			= 0x3FFFFFFFFFFFULL &
 					  (~FL_RESERVED1) &
@@ -461,4 +471,11 @@ int parse_string_no_alloc(struct msg_buf_t *msg, char *str);
 int parse_replay_event_seq(struct msg_buf_t *msg, struct replay_event_seq_t *res);
 
 void init_prof_session(struct prof_session_t *prof_session);
+
+
+#ifdef __cplusplus
+}
+#endif
+
+
 #endif /* _DA_PROTOCOL_ */
