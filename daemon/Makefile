@@ -15,6 +15,7 @@ DEBUG_FLAGS = \
 #	-DNOLOGI=1
 
 INCLUDE := \
+	-Iinclude/generated \
 	-I/usr/include \
 	-I/usr/include/system \
 	-I/usr/include/capi-system-info \
@@ -22,7 +23,8 @@ INCLUDE := \
 	-I/usr/include/vconf \
 	-I/usr/include/ecore-1 \
 	-I/usr/include/eina-1 \
-	-I/usr/include/eina-1/eina
+	-I/usr/include/eina-1/eina \
+	-I/usr/include/appcore
 
 FLAGS := \
 	$(COMM_FLAGS) \
@@ -36,7 +38,7 @@ endif
 
 # compiler flags
 CFLAGS := $(FLAGS)
-CPPFLAGS := $(FLAGS)
+CPPFLAGS := $(FLAGS) -std=c++0x
 
 # linker flags
 LDFLAGS := \
@@ -76,7 +78,8 @@ SRC_C := \
 	thread.c \
 	wsi.c
 
-SRC_CPP :=
+SRC_CPP := \
+	elm_prof.cpp
 
 OBJS_C := $(SRC_C:.c=.o)
 OBJS_CPP := $(SRC_CPP:.cpp=.o)
@@ -90,6 +93,21 @@ STOP_SH := stop.sh
 
 all: debug
 
+GENERATED_DIR = include/generated
+GENERATED_ELM_PROF_H = include/generated/elm_prof_data.h
+GENERATED_HEADERS = $(GENERATED_ELM_PROF_H)
+
+$(GENERATED_ELM_PROF_H): ./scripts/gen_elm_prof_data.sh
+	sh $< > $@
+
+$(GENERATED_DIR):
+	mkdir -p $(GENERATED_DIR)
+
+headers: $(GENERATED_DIR) $(GENERATED_HEADERS)
+rmheaders:
+	rm -f $(GENERATED_HEADERS)
+
+
 release: CFLAGS += -DNOLOGI=1
 release: CPPFLAGS += -DNOLOGI=1
 release: debug
@@ -101,7 +119,7 @@ release: debug
 	$(CPP) $(CPPFLAGS) -c -o $@ $<
 
 
-debug: $(OBJS)
+debug: rmheaders headers $(OBJS)
 	$(CPP) $(LDFLAGS) $(OBJS) -o $(TARGET)
 
 

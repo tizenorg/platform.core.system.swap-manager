@@ -10,6 +10,8 @@ BuildRequires:  libattr-devel
 BuildRequires:  glib2-devel
 BuildRequires:  aul-devel
 BuildRequires:  vconf-devel
+BuildRequires:  app-core-efl-devel
+BuildRequires:  app-core-common-devel
 BuildRequires:  capi-system-info-devel
 BuildRequires:  capi-system-runtime-info-devel
 BuildRequires:  libwebsockets-devel
