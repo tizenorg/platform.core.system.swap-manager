@@ -13,6 +13,7 @@ if [ ! -e /sys/kernel/debug/swap/writer/raw ]; then
     insmod swap_sampler.ko || exit 1
     insmod swap_energy.ko || exit 1
     insmod swap_message_parser.ko || exit 1  # parser is loaded
+    insmod swap_webprobe.ko || exit 1
 
 fi
 
