@@ -48,6 +48,7 @@
 #include "debug.h"
 #include "md5.h"
 #include "da_data.h"
+#include "wsi.h"
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -193,6 +194,7 @@ static void feature_code_str(uint64_t feature0, uint64_t feature1, char *to,
 	print_feature_0(FL_SYSTEM_NETWORK);
 	print_feature_0(FL_SYSTEM_DEVICE);
 	print_feature_0(FL_SYSTEM_ENERGY);
+	print_feature_0(FL_WEB_PROFILING);
 
 	goto exit;
 err_exit:
@@ -677,6 +679,11 @@ enum ErrorCode stop_all_no_lock(void)
 
 	// stop all only if it has not been called yet
 	if (check_running_status(&prof_session)) {
+		if (is_feature_enabled(FL_WEB_PROFILING)) {
+			wsi_stop_profiling();
+			wsi_destroy();
+		}
+
 		msg = gen_stop_msg();
 		terminate_all();
 		stop_profiling();

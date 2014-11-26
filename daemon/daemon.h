@@ -191,6 +191,7 @@ int prepare_profiling(void);
 int start_profiling(void);
 void stop_profiling(void);
 int reconfigure(struct conf_t conf);
+int is_feature_enabled(enum feature_code fcode);
 int sendACKCodeToHost(enum HostMessageType resp, int msgcode);
 void terminate_all(void);
 

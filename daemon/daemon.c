@@ -61,10 +61,13 @@
 #include "input_events.h"
 #include "smack.h"
 #include "debug.h"
+#include "wsi.h"
 
 #define DA_WORK_DIR			"/home/developer/sdk_tools/da/"
 #define DA_READELF_PATH			"/home/developer/sdk_tools/da/readelf"
 #define SCREENSHOT_DIR			"/tmp/da"
+
+#define WSI_HOST			"127.0.0.1"
 
 #define MAX_APP_LAUNCH_TIME		60
 #define MAX_CONNECT_TIMEOUT_TIME	5*60
@@ -221,6 +224,19 @@ static int exec_app(const struct app_info_t *app_info)
 		if (exec_app_web(app_info->app_id)) {
 			LOGE("Cannot exec web app %s\n", app_info->app_id);
 			res = -1;
+		}
+
+		if (!is_feature_enabled(FL_WEB_PROFILING))
+			break;
+
+		if (wsi_init(WSI_HOST, 0)) {
+			LOGE("Cannot init web application profiling\n");
+			res = -1;
+		} else {
+			if (wsi_start_profiling()) {
+				LOGE("Cannot start web application profiling\n");
+				res = -1;
+			}
 		}
 		break;
 	default:
@@ -446,6 +462,11 @@ int reconfigure(struct conf_t conf)
 	return 0;
 }
 
+int is_feature_enabled(enum feature_code fcode)
+{
+	/* TODO: add check use_features1 */
+	return (fcode & prof_session.conf.use_features0) ? 1 : 0;
+}
 
 static int file2str(const char *filename, char *buf, int len)
 {

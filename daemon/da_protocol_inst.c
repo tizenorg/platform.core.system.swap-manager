@@ -96,6 +96,8 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 	case SWAP_LD_PROBE:
 		size += sizeof(uint64_t); /* ld preload handler addr */
 		break;
+	case SWAP_WEBPROBE:
+		break;
 	default:
 		LOGE("wrong probe type <%u>\n", type);
 		goto err_ret;
