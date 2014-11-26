@@ -47,6 +47,7 @@ NMSG_SWAP_INST_ADD		=0x0008,
 NMSG_SWAP_INST_REMOVE		=0x0009,
 NMSG_GET_SCREENSHOT		=0x0010,
 NMSG_GET_PROCESS_ADD_INFO	=0x0011,
+NMSG_WRT_LAUNCHER_PORT		=0x8001,
 
 NMSG_KEEP_ALIVE_ACK			=0x1001,
 NMSG_START_ACK				=0x1002,
@@ -138,9 +139,11 @@ enum feature_code{
 	FL_SYSTEM_DEVICE		= 0x080000000000ULL, //
 	FL_SYSTEM_ENERGY		= 0x100000000000ULL, //
 
-	FL_RESERVED4			= 0xe00000000000ULL, // reserved 1110
+	FL_WEB_PROFILING		= 0x400000000000ULL, // Web profiling
 
-	FL_ALL_FEATURES			= 0x3FFFFFFFFFFFULL &
+	FL_RESERVED4			= 0xa00000000000ULL, // reserved 1010
+
+	FL_ALL_FEATURES			= 0x7FFFFFFFFFFFULL &
 					  (~FL_RESERVED1) &
 					  (~FL_RESERVED2) &
 					  (~FL_RESERVED3) &
@@ -151,7 +154,8 @@ enum feature_code{
 enum probe_type {
 	SWAP_RETPROBE   = 0, //Common retprobe
 	SWAP_FBI_PROBE  = 1, //Function body instrumentation probe
-	SWAP_LD_PROBE   = 2  //Preloaded API probe
+	SWAP_LD_PROBE   = 2, //Preloaded API probe
+	SWAP_WEBPROBE   = 3, //Webprobe
 };
 
 #define IS_OPT_SET_IN(OPT, reg) (reg & (OPT))
