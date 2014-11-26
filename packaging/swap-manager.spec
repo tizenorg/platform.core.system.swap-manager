@@ -12,6 +12,8 @@ BuildRequires:  aul-devel
 BuildRequires:  vconf-devel
 BuildRequires:  capi-system-info-devel
 BuildRequires:  capi-system-runtime-info-devel
+BuildRequires:  libwebsockets-devel
+BuildRequires:  libjson-devel
 BuildRequires:  pkgconfig(ecore)
 %if "%_project" != "Kirana_SWA_OPEN:Build" && "%_project" != "Kirana_SWA_OPEN:Daily"
 Requires:  swap-modules
