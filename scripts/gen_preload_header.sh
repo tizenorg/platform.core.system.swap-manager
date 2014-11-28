@@ -2,7 +2,6 @@
 preload_library_name="libdl-2.13.so"
 preload_library_path="/lib/"
 preload_open_function="dlopen@@GLIBC"
-var_addr_file="/usr/local/include/var_addr"
 handlers_lib="/usr/lib/da_probe_tizen.so"
 linker_path="/lib/ld-2.13.so"
 linker_sym="_r_debug"
@@ -29,13 +28,6 @@ function print_lib_name()
 {
     filename=$1
     echo -e "    echo \"$preload_library_path$preload_library_name\" > /sys/kernel/debug/swap/preload/loader/loader_path" >> $filename
-}
-
-function print_var_offset()
-{
-    filename=$1
-    variabe=$2
-    echo -e "    echo 0x$variabe > /sys/kernel/debug/swap/preload/var_offset" >> $filename
 }
 
 function print_probe_lib()
@@ -67,13 +59,11 @@ function print_post()
 ##################################
 
 open_addr=$(readelf -sW $preload_library_path$preload_library_name | grep $preload_open_function | awk '{print $2}')
-var_offset=$(cat $var_addr_file)
 r_debug_offset=$(readelf -sW $linker_path | grep $linker_sym | awk '{print $2}' | uniq)
 
 print_header $output
 print_lib_name $output
 print_open_function $output $open_addr
-print_var_offset $output $var_offset
 print_probe_lib $output
 print_linker_path $output
 print_r_debug_offset $output $r_debug_offset
