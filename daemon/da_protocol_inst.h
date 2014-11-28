@@ -39,4 +39,6 @@ int parse_app_inst_list(struct msg_buf_t *msg,
 
 int feature_add_lib_inst_list(struct ld_feature_list_el_t *ld_lib_list,
 			      struct lib_list_t **lib_list, int preload_probe_type);
+
+int add_preload_get_caller_probe(struct lib_list_t **lib_list);
 #endif /* __DA_PROTOCOL_INST__ */

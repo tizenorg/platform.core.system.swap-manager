@@ -29,6 +29,7 @@
 #include "da_protocol_inst.h"
 #include "da_inst.h"
 #include "da_protocol_check.h"
+#include "ld_preload_probe_lib.h"
 
 //----------------- hash
 static uint32_t calc_lib_hash(struct us_lib_inst_t *lib)
@@ -404,6 +405,48 @@ int feature_add_lib_inst_list(struct ld_feature_list_el_t *ld_lib_list,
 		data_list_append((struct data_list_t **)lib_list,
 				 (struct data_list_t *)lib);
 	}
+
+	return 1;
+}
+
+int add_preload_get_caller_probe(struct lib_list_t **lib_list)
+{
+	struct lib_list_t *preload_lib = new_lib();
+	struct probe_list_t *get_caller_probe = new_probe();
+	struct us_func_inst_plane_t *func = NULL;
+
+	if (preload_lib == NULL) {
+		LOGE("preload lib alloc error\n");
+		return 0;
+	}
+
+	if (get_caller_probe == NULL) {
+		LOGE("get caller probe alloc error\n");
+		return 0;
+	}
+
+	preload_lib->lib->bin_path = probe_lib;
+	preload_lib->func_num = 1;
+
+	func = malloc(sizeof(*func));
+	if (func == NULL) {
+		LOGE("preload get_caller probe no memory\n");
+		return -ENOMEM;
+	}
+
+	func->func_addr = get_caller_addr;
+	func->probe_type = 4; /* GET_CALLER_ADDR probe type */
+
+	get_caller_probe->size = sizeof(*func);
+	get_caller_probe->func = func;
+
+	probe_list_append(preload_lib, get_caller_probe);
+
+	preload_lib->func_num = 1;
+	preload_lib->size += strlen(preload_lib->lib->bin_path) + 1 + sizeof(preload_lib->func_num);
+	preload_lib->hash = calc_lib_hash(preload_lib->lib);
+
+	data_list_append((struct data_list_t **)lib_list, (struct data_list_t *)preload_lib);
 
 	return 1;
 }
