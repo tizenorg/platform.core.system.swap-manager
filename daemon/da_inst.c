@@ -814,6 +814,12 @@ int msg_start(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 		goto msg_start_exit;
 	}
 
+	if (!add_preload_get_caller_probe(&us_inst->lib_inst_list)) {
+		LOGE("cannot add preload probe\n");
+		res = 1;
+		goto msg_start_exit;
+	}
+
 	generate_msg(msg, us_inst->lib_inst_list, us_inst->ld_lib_inst_list,
 		     us_inst->app_inst_list);
 
