@@ -64,7 +64,7 @@ static void* recvThread(void* data)
 
 	for (;;) {
 		err = target_recv_msg(target, &log);
-		if (err != 0) {
+		if ((err != 0) || (log.length >= TARGER_MSG_MAX_LEN)) {
 			/* disconnect */
 			event = EVENT_STOP;
 			write(target->event_fd, &event, sizeof(event));
@@ -181,7 +181,6 @@ static void* recvThread(void* data)
 		pass = 1;
 	}
 
-	target->recv_thread = -1;
 	return NULL;
 }
 
@@ -322,6 +321,16 @@ static useconds_t time_diff_us(struct timeval *tv1, struct timeval *tv2)
 		((int)tv1->tv_usec - (int)tv2->tv_usec);
 }
 
+static pthread_mutex_t replay_thread_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static void exit_replay_thread()
+{
+	pthread_mutex_lock(&replay_thread_mutex);
+	manager.replay_thread = -1;
+	reset_replay_event_seq(&prof_session.replay_event_seq);
+	pthread_mutex_unlock(&replay_thread_mutex);
+}
+
 static void *replay_thread(void *arg)
 {
 	struct replay_event_seq_t *event_seq = (struct replay_event_seq_t *)arg;
@@ -359,13 +368,22 @@ static void *replay_thread(void *arg)
 
 	LOGI("replay events thread finished\n");
 
+	exit_replay_thread();
+
 	return arg;
 }
 
 int start_replay()
 {
-	if (manager.replay_thread != -1) // already started
-		return 1;
+	int res = 0;
+
+	pthread_mutex_lock(&replay_thread_mutex);
+
+	if (manager.replay_thread != -1) {
+		LOGI("replay already started\n");
+		res = 1;
+		goto exit;
+	}
 
 	if (pthread_create(&(manager.replay_thread),
 			   NULL,
@@ -373,22 +391,33 @@ int start_replay()
 			   &prof_session.replay_event_seq) < 0)
 	{
 		LOGE("Failed to create replay thread\n");
-		return 1;
+		res = 1;
+		goto exit;
 	}
 
-	return 0;
+exit:
+	pthread_mutex_unlock(&replay_thread_mutex);
+	return res;
 }
+
 
 void stop_replay()
 {
+	pthread_mutex_lock(&replay_thread_mutex);
+
 	if (manager.replay_thread == -1) {
 		LOGI("replay thread not running\n");
-		return;
+		goto exit;
 	}
 	LOGI("stopping replay thread\n");
 	pthread_cancel(manager.replay_thread);
 	pthread_join(manager.replay_thread, NULL);
 	manager.replay_thread = -1;
-	reset_replay_event_seq(&prof_session.replay_event_seq);
 	LOGI("replay thread joined\n");
+
+	reset_replay_event_seq(&prof_session.replay_event_seq);
+
+exit:
+	pthread_mutex_unlock(&replay_thread_mutex);
+
 }

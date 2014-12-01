@@ -90,6 +90,7 @@ char *msg_ID_str(enum HostMessageT ID)
 	check_and_return(NMSG_GET_TARGET_INFO_ACK);
 	check_and_return(NMSG_SWAP_INST_ADD_ACK);
 	check_and_return(NMSG_SWAP_INST_REMOVE_ACK);
+	check_and_return(NMSG_GET_PROCESS_ADD_INFO_ACK);
 
 	check_and_return(NMSG_PROCESS_INFO);
 	check_and_return(NMSG_TERMINATE);
@@ -141,18 +142,24 @@ static char *msgErrStr(enum ErrorCode err)
 	default:
 		return "unknown error";
 	}
-	return "unknown error";
 }
 
 
-#define print_feature(f,in,to,delim)		\
-	if (f & in) {				\
-		sprintf(to, dstr(f) delim );	\
-		to+=strlen( dstr(f) delim );	\
+#define print_feature(f,in,to,delim)					\
+	if (f & in) {							\
+		if (strlen(dstr(f) delim) + 1 < buflen ) {		\
+			lenin = snprintf(to, buflen, dstr(f) delim );	\
+			to += lenin;					\
+			buflen -= lenin;				\
+		} else { 						\
+			goto err_exit;					\
+		}							\
 	}
 #define print_feature_0(f) print_feature(f, feature0, to, ", \n\t")
-void feature_code_str(uint64_t feature0, uint64_t feature1, char *to)
+static void feature_code_str(uint64_t feature0, uint64_t feature1, char *to,
+			     uint32_t buflen)
 {
+	int lenin = 0;
 	print_feature_0(FL_FUNCTION_PROFILING);
 	print_feature_0(FL_MEMORY_ALLOC_PROBING);
 	print_feature_0(FL_FILE_API_PROBING);
@@ -186,6 +193,12 @@ void feature_code_str(uint64_t feature0, uint64_t feature1, char *to)
 	print_feature_0(FL_SYSTEM_NETWORK);
 	print_feature_0(FL_SYSTEM_DEVICE);
 	print_feature_0(FL_SYSTEM_ENERGY);
+
+	goto exit;
+err_exit:
+	LOGE("Not enought mem to print\n");
+exit:
+	return;
 }
 
 
@@ -347,6 +360,7 @@ static int parse_timeval(struct msg_buf_t *msg, struct timeval *tv)
 static int parse_replay_event(struct msg_buf_t *msg,
 				    struct replay_event_t *re)
 {
+	uint32_t dummy;
 
 	if (!parse_timeval(msg, &re->ev.time)) {
 		LOGE("time parsing error\n");
@@ -358,15 +372,18 @@ static int parse_replay_event(struct msg_buf_t *msg,
 		return 0;
 	}
 
-	if (!parse_int32(msg, (uint32_t *)&re->ev.type)) {
+	/* FIXME ev.type, ev.code should be uint16_t */
+	if (!parse_int32(msg, &dummy)) {
 		LOGE("type parsing error\n");
 		return 0;
 	}
+	re->ev.type = (uint16_t)dummy;
 
-	if (!parse_int32(msg, (uint32_t *)&re->ev.code)) {
+	if (!parse_int32(msg, &dummy)) {
 		LOGE("code parsing error\n");
 		return 0;
 	}
+	re->ev.code = (uint16_t)dummy;
 
 	if (!parse_int32(msg, (uint32_t *)&re->ev.value)) {
 		LOGE("value parsing error\n");
@@ -412,6 +429,9 @@ int parse_replay_event_seq(struct msg_buf_t *msg,
 		return 0;
 	}
 	parse_deb("events num=%d\n", res->event_num);
+
+	LOGI("Replay events: count = %u; total_size = %u\n",
+	     res->event_num, res->event_num * sizeof(*res->events));
 
 	res->events = (struct replay_event_t *)malloc(res->event_num *
 						      sizeof(*res->events));
@@ -557,7 +577,8 @@ static int send_reply(struct msg_t *msg)
 	printBuf((char *)msg, msg->len + sizeof (*msg));
 	if (send(manager.host.control_socket,
 		 msg, MSG_CMD_HDR_LEN + msg->len, MSG_NOSIGNAL) == -1) {
-		LOGE("Cannot send reply : %s\n", strerror(errno));
+		GETSTRERROR(errno, buf);
+		LOGE("Cannot send reply : %s\n", buf);
 		return -1;
 	}
 
@@ -628,7 +649,8 @@ int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 
 		if (send(manager.host.control_socket, msg,
 			 loglen, MSG_NOSIGNAL) == -1) {
-			LOGE("Cannot send reply: %s\n", strerror(errno));
+			GETSTRERROR(errno, buf);
+			LOGE("Cannot send reply: %s\n", buf);
 			free(msg);
 			return 1;
 		}
@@ -658,6 +680,7 @@ enum ErrorCode stop_all_no_lock(void)
 		msg = gen_stop_msg();
 		terminate_all();
 		stop_profiling();
+		stop_replay();
 
 		if (msg == NULL) {
 			LOGE("cannot generate stop message\n");
@@ -753,7 +776,7 @@ static size_t binary_ack_pack(char *s, const struct binary_ack *ba)
 	s += len;
 
 	for (i = 0; i!= 16; ++i) {
-		sprintf(s, "%02x", ba->digest[i]);
+		snprintf(s, 2, "%02x", ba->digest[i]);
 		s += 2;
 	}
 	*s = '\0';
@@ -769,12 +792,15 @@ static void get_file_md5sum(md5_byte_t digest[16], const char *filename)
 	int fd = open(filename, O_RDONLY);
 
 	md5_init(&md5_state);
-	if (fd > 0)
+	if (fd >= 0) {
 		while ((size = read(fd, buffer, sizeof(buffer))) > 0)
 			md5_append(&md5_state, buffer, size);
+		close(fd);
+	} else {
+		LOGW("File does not exists <%s>\n", filename);
+	}
 
 	md5_finish(&md5_state, digest);
-	close(fd);
 }
 
 static const char* basename(const char *filename)
@@ -905,6 +931,7 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 
 	if (check_running_status(&prof_session) == 1) {
 		LOGW("Profiling has already been started\n");
+		err_code = ERR_ALREADY_RUNNING;
 		goto send_ack;
 	}
 
@@ -1034,12 +1061,13 @@ static char *get_process_cmd_line(uint32_t pid)
 	int f;
 	ssize_t count;
 
-	sprintf(buf, "/proc/%u/cmdline", pid);
+	snprintf(buf, sizeof(buf), "/proc/%u/cmdline", pid);
 	f = open(buf, O_RDONLY);
 	if (f != -1) {
 		count = read(f, buf, sizeof(buf));
-		if (count == 0)
-			buf[0] = '\0';
+		if (count >= sizeof(buf))
+			count = sizeof(buf) - 1;
+		buf[count] = '\0';
 		close(f);
 	} else {
 		LOGE("file not found <%s>\n", buf);
@@ -1061,7 +1089,7 @@ static int process_msg_get_process_add_info(struct msg_buf_t *msg)
 	if (!parse_int32(msg, &count)) {
 		LOGE("NMSG_GET_PROCESS_ADD_INFO error: No process count\n");
 		err_code = ERR_WRONG_MESSAGE_DATA;
-		goto send_ack;
+		goto send_fail;
 	}
 
 	/* alloc array for pids */
@@ -1069,18 +1097,18 @@ static int process_msg_get_process_add_info(struct msg_buf_t *msg)
 	cmd_line_arr = malloc(count * sizeof(*cmd_line_arr));
 	if (pidarr == NULL) {
 		LOGE("can not alloc pid array (%u)", count);
-		goto send_ack;
+		goto send_fail;
 	}
 	if (cmd_line_arr == NULL) {
 		LOGE("can not alloc cmd line array (%u)", count);
-		goto send_fail_parse;
+		goto send_fail;
 	}
 
 	/* parse all pids */
 	for (i = 0; i != count; i++) {
 		if (!parse_int32(msg, &pidarr[i])) {
 			LOGE("can not parse pid #%u", i);
-			goto send_fail_parse;
+			goto send_fail;
 		}
 	}
 
@@ -1092,7 +1120,7 @@ static int process_msg_get_process_add_info(struct msg_buf_t *msg)
 
 	payload = malloc(total_len);
 	if (payload == NULL)
-		goto send_fail_payload;
+		goto send_fail;
 	/* pack payload data */
 	p = payload;
 	pack_int32(p, count);
@@ -1103,16 +1131,23 @@ static int process_msg_get_process_add_info(struct msg_buf_t *msg)
 	}
 
 	/* success */
+	err_code = ERR_NO;
 	goto send_ack;
 
-send_fail_payload:
+send_fail:
+	/* fail */
+	total_len = 0;
+
+send_ack:
+	/* success */
+	sendACKToHost(NMSG_GET_PROCESS_ADD_INFO, err_code, payload, total_len);
+
+	/* free data */
 	if (payload != NULL) {
 		free(payload);
 		payload = NULL;
 	}
 
-send_fail_parse:
-	/* fail */
 	if (pidarr != NULL) {
 		free(pidarr);
 		pidarr = NULL;
@@ -1123,11 +1158,6 @@ send_fail_parse:
 		cmd_line_arr = NULL;
 	}
 
-	total_len = 0;
-
-send_ack:
-	/* success */
-	sendACKToHost(NMSG_GET_PROCESS_ADD_INFO, err_code, payload, total_len);
 	return -(err_code != ERR_NO);
 }
 
@@ -1215,8 +1245,10 @@ int host_message_handler(struct msg_t *msg)
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		// send config message to target process
 		sendlog.type = MSG_OPTION;
-		sendlog.length = sprintf(sendlog.data, "%llu",
-				     (unsigned long long) prof_session.conf.use_features0);
+		sendlog.length = snprintf(sendlog.data, sizeof(sendlog.data),
+					  "%llu",
+					  (unsigned long long)
+					  prof_session.conf.use_features0) + 1;
 		target_send_msg_to_all(&sendlog);
 		break;
 	case NMSG_BINARY_INFO:
@@ -1268,6 +1300,8 @@ int host_message_handler(struct msg_t *msg)
 		return process_msg_get_process_add_info(&msg_control);
 	default:
 		LOGE("unknown message %d <0x%08X>\n", msg->id, msg->id);
+		error_code = ERR_WRONG_MESSAGE_TYPE;
+		goto send_ack;
 	}
 
 	return 0;
@@ -1289,7 +1323,7 @@ static void print_conf(struct conf_t *conf)
 {
 	char buf[1024];
 	memset(&buf[0], 0, 1024);
-	feature_code_str(conf->use_features0, conf->use_features1, buf);
+	feature_code_str(conf->use_features0, conf->use_features1, buf, sizeof(buf));
 	LOGI("conf = \n");
 	LOGI("\tuse_features = 0x%016LX : 0x%016LX \n(\t%s)\n",
 	     conf->use_features0, conf->use_features1, buf);

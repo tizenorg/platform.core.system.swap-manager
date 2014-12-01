@@ -159,27 +159,37 @@ static int parse_func_inst_list(struct msg_buf_t *msg,
 
 static int parse_inst_lib(struct msg_buf_t *msg, struct lib_list_t **dest)
 {
+	int res = 1;
 	*dest = new_lib();
 	if (*dest == NULL) {
 		LOGE("lib alloc error\n");
-		return 0;
+		res = 0;
+		goto exit;
 	};
 
 	if (!parse_string(msg, &((*dest)->lib->bin_path)) ||
 	    !check_exec_path((*dest)->lib->bin_path))
 	{
 		LOGE("bin path parsing error\n");
-		return 0;
+		goto exit_free_err;
 	}
 
 	if (!parse_func_inst_list(msg, (struct data_list_t *) *dest)) {
 		LOGE("funcs parsing error\n");
-		return 0;
+		goto exit_free_err;
 	}
 
 	(*dest)->size +=  strlen((*dest)->lib->bin_path) + 1 + sizeof((*dest)->func_num);
 	(*dest)->hash = calc_lib_hash((*dest)->lib);
-	return 1;
+
+	goto exit;
+
+exit_free_err:
+	res = 0;
+	free(*dest);
+
+exit:
+	return res;
 
 }
 
@@ -211,13 +221,15 @@ int parse_lib_inst_list(struct msg_buf_t *msg,
 
 int parse_inst_app(struct msg_buf_t *msg, struct app_list_t **dest)
 {
+	int res = 1;
 	char *start, *end;
 	struct app_info_t *app_info = NULL;
 	*dest = new_app();
 
 	if (*dest == NULL) {
 		LOGE("lib alloc error\n");
-		return 0;
+		res = 0;
+		goto exit;
 	};
 
 	app_info = (*dest)->app;
@@ -226,15 +238,16 @@ int parse_inst_app(struct msg_buf_t *msg, struct app_list_t **dest)
 		!check_app_type(app_info->app_type))
 	{
 		LOGE("app type parsing error <0x%X>\n", app_info->app_type);
-		return 0;
+		goto exit_free_err;
 	}
 
 	if (!parse_string(msg, &app_info->app_id) ||
 		!check_app_id(app_info->app_type, app_info->app_id))
 	{
 		LOGE("app id parsing error\n");
-		return 0;
+		goto exit_free_err;
 	}
+
 	if (!parse_string(msg, &app_info->exe_path) ||
 	    ((app_info->app_type != APP_TYPE_WEB) &&
 	     ((app_info->app_type != APP_TYPE_RUNNING) ||
@@ -242,18 +255,24 @@ int parse_inst_app(struct msg_buf_t *msg, struct app_list_t **dest)
 	     !check_exec_path(app_info->exe_path)))
 	{
 		LOGE("exec path parsing error\n");
-		return 0;
+		goto exit_free_err;
 	}
 	end = msg->cur_pos;
 
 	if (!parse_func_inst_list(msg, (struct data_list_t *)*dest)) {
 		LOGE("funcs parsing error\n");
-		return 0;
+		goto exit_free_err;
 	}
 
 	(*dest)->size += (end - start) + sizeof((*dest)->func_num);
 	(*dest)->hash = calc_app_hash(app_info);
-	return 1;
+	goto exit;
+
+exit_free_err:
+	res = 0;
+	free(*dest);
+exit:
+	return res;
 }
 
 int parse_app_inst_list(struct msg_buf_t *msg,

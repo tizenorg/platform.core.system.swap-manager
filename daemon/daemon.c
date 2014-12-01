@@ -364,9 +364,10 @@ int start_profiling(void)
 	}
 	// remove previous screen capture files
 	remove_indir(SCREENSHOT_DIR);
-	if (mkdir(SCREENSHOT_DIR, 0777) == -1 && errno != EEXIST)
-		LOGW("Failed to create directory for screenshot : %s\n",
-		     strerror(errno));
+	if (mkdir(SCREENSHOT_DIR, 0777) == -1 && errno != EEXIST) {
+		GETSTRERROR(errno, buf);
+		LOGW("Failed to create directory for screenshot : %s\n", buf);
+	}
 
 	set_label_for_all(SCREENSHOT_DIR);
 
@@ -492,7 +493,7 @@ static pid_t get_lpad_pid(pid_t pid)
 		char fname[64];
 		char buf[lpad_path_len];
 
-		sprintf(fname, "/proc/%d/cmdline", pid);
+		snprintf(fname, sizeof(fname), "/proc/%d/cmdline", pid);
 		if (-1 == file2str(fname, buf, lpad_path_len))
 			return lpad_pid;
 
@@ -537,31 +538,31 @@ static int target_event_pid_handler(struct target *target)
 
 	target_set_type(target);
 
-	if (0) {	// main application (index == 0)
-		app_info = app_info_get_first(&app);
-		if (app_info == NULL) {
-			LOGE("No app info found\n");
-			return -1;
-		}
-
-		while (app_info != NULL) {
-			if (is_same_app_process(app_info->exe_path,
-						target_get_pid(target)))
-				break;
-			app_info = app_info_get_next(&app);
-		}
-
-		if (app_info == NULL) {
-			LOGE("pid %d not found in app list\n",
-			     target_get_pid(target));
-			return -1;
-		}
-
-		if (start_replay() != 0) {
-			LOGE("Cannot start replay thread\n");
-			return -1;
-		}
+	/* posible need some process check right there before start_replay >> */
+	app_info = app_info_get_first(&app);
+	if (app_info == NULL) {
+		LOGE("No app info found\n");
+		return -1;
 	}
+
+	while (app_info != NULL) {
+		if (is_same_app_process(app_info->exe_path,
+					target_get_pid(target)))
+			break;
+		app_info = app_info_get_next(&app);
+	}
+
+	if (app_info == NULL) {
+		LOGE("pid %d not found in app list\n",
+		     target_get_pid(target));
+		return -1;
+	}
+
+	if (start_replay() != 0) {
+		LOGE("Cannot start replay thread\n");
+		return -1;
+	}
+	/* posible need some process check right there before start_replay << */
 
 	target->initial_log = 1;
 
@@ -576,11 +577,9 @@ static int target_event_stop_handler(struct target *target)
 	LOGI("target[%p] close, pid(%d) : (remaining %d target)\n",
 	     target, target_get_pid(target), target_cnt_get() - 1);
 
-	if (0)		// main application (index == 0)
-		stop_replay();
-
 	ecore_main_fd_handler_del(target->handler);
 
+	target_wait(target);
 	target_dtor(target);
 	// all target client are closed
 	cnt = target_cnt_sub_and_fetch();
@@ -656,8 +655,8 @@ static int targetServerHandler(void)
 	if (err == 0) {
 		/* send config message to target process */
 		log.type = MSG_OPTION;
-		log.length = sprintf(log.data, "%llu\0",
-				     prof_session.conf.use_features0) + 1;
+		log.length = snprintf(log.data, sizeof(log.data), "%llu",
+				      prof_session.conf.use_features0) + 1;
 		if (target_send_msg(target, &log) != 0)
 			LOGE("fail to send data to target %p\n", target);
 
@@ -720,6 +719,33 @@ static int targetServerHandler(void)
 	}
 }
 
+static void recv_msg_tail(int fd, uint32_t len)
+{
+	char buf[512];
+	uint32_t blocks;
+	int recv_len;
+
+	for (blocks = len / sizeof(buf); blocks != 0; blocks--) {
+		recv_len = recv(fd, buf, sizeof(buf), MSG_WAITALL);
+		if (recv_len != sizeof(buf))
+			goto error_ret;
+	}
+
+	len = len % sizeof(buf);
+	if (len != 0) {
+		recv_len = recv(fd, buf, len, MSG_WAITALL);
+		if (recv_len == -1)
+			goto error_ret;
+	}
+
+	return;
+
+error_ret:
+	LOGE("error or close request from host. recv_len = %d\n",
+	     recv_len);
+	return;
+}
+
 static Ecore_Fd_Handler *host_ctrl_handler;
 static Ecore_Fd_Handler *host_data_handler;
 
@@ -741,15 +767,24 @@ static int controlSocketHandler(int efd)
 	// Receive header
 	recv_len = recv(manager.host.control_socket,
 			&msg_head, MSG_CMD_HDR_LEN, 0);
+
 	// error or close request from host
-	if (recv_len == -1 || recv_len == 0)
+	if (recv_len == -1 || recv_len == 0) {
+		LOGW("error or close request from host. "
+		     "MSG_ID = 0x%08X; recv_len = %d\n",
+		     msg_head.id, recv_len);
 		return -11;
-	else {
-		if (msg_head.len > RECV_BUF_MAX)
+	} else {
+		if (msg_head.len > HOST_CTL_MSG_MAX_LEN) {
+			LOGE("Too long message. size = %u\n", msg_head.len);
+			recv_msg_tail(manager.host.control_socket, msg_head.len);
+			sendACKToHost(msg_head.id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
 			return -1;
+		}
 		msg = malloc(MSG_CMD_HDR_LEN + msg_head.len);
 		if (!msg) {
 			LOGE("Cannot alloc msg\n");
+			recv_msg_tail(manager.host.control_socket, msg_head.len);
 			sendACKToHost(msg_head.id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
 			return -1;
 		}
@@ -760,6 +795,8 @@ static int controlSocketHandler(int efd)
 			recv_len = recv(manager.host.control_socket,
 					msg->payload, msg->len, MSG_WAITALL);
 			if (recv_len == -1) {
+				LOGE("error or close request from host. recv_len = %d\n",
+				     recv_len);
 				free(msg);
 				return -11;
 			}
@@ -785,7 +822,7 @@ static Eina_Bool host_ctrl_cb(void *data, Ecore_Fd_Handler *fd_handler)
 		manager.host.data_socket = -1; //splice will fail without that
 		ecore_main_loop_quit();
 	} else if (result < 0) {
-		LOGE("Control socket handler.\n");
+		LOGE("Control socket handler. err #%d\n", result);
 	}
 
 	return ECORE_CALLBACK_RENEW;

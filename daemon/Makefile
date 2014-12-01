@@ -47,7 +47,8 @@ DAEMON_SRCS =			\
 	device_camera.c		\
 	smack.c					\
 	malloc_debug.c \
-	target.c
+	target.c \
+	thread.c
 
 DAEMON_OBJS = $(patsubst %.c,%.o, $(DAEMON_SRCS))
 

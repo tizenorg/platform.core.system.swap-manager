@@ -32,22 +32,19 @@
 #define APP_INFO_TYPE_MIN 0x0001
 #define APP_INFO_TYPE_MAX 0x0004
 
-#define CONF_SYSTRACE_PERIOD_MIN 10
+#define CONF_SYSTRACE_PERIOD_MIN 100
 #define CONF_SYSTRACE_PERIOD_MAX 1000
 
 #define CONF_DATA_MSG_PERIOD_MIN 1
 #define CONF_DATA_MSG_PERIOD_MAX 100
 
-#define US_APP_COUNT_MIN 0
 #define US_APP_COUNT_MAX MAX_TARGET_COUNT
 
-#define US_APP_INST_FUNC_MIN 0
 #define US_APP_INST_FUNC_MAX 100000
 
 #define US_FUNC_ARGS "bcdxpfw"
 #define US_FUNC_RETURN "vnbcdxpfw"
 
-#define US_APP_INST_LIB_MIN 0
 #define US_APP_INST_LIB_MAX 1000
 
 int check_app_type(uint32_t app_type);

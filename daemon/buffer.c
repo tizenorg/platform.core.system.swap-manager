@@ -45,7 +45,8 @@ static int open_tasks_dev(void)
 	if (manager.fd.inst_tasks == NULL) {
 		manager.fd.inst_tasks = fopen(INST_PID_FILENAME, "re");
 		if (manager.fd.inst_tasks == NULL) {
-			LOGE("Cannot open tasks dev: %s\n", strerror(errno));
+			GETSTRERROR(errno, buf);
+			LOGE("Cannot open tasks dev: %s\n", buf);
 			return 1;
 		}
 		LOGI("tasks dev opened: %s, %d\n", BUF_FILENAME, manager.buf_fd);
@@ -59,21 +60,28 @@ static int open_tasks_dev(void)
 static void close_tasks_dev(void)
 {
 	LOGI("close tasks dev (%d)\n", manager.fd.inst_tasks);
-	fclose(manager.fd.inst_tasks);
+	if (manager.fd.inst_tasks != NULL) {
+		fclose(manager.fd.inst_tasks);
+		manager.fd.inst_tasks = NULL;
+	} else {
+		LOGW("manager.fd.inst_tasks alredy closed or not opened\n");
+	}
 }
 
 static int open_buf_ctl(void)
 {
 	manager.buf_fd = open(BUF_FILENAME, O_RDONLY | O_CLOEXEC);
 	if (manager.buf_fd == -1) {
-		LOGE("Cannot open buffer: %s\n", strerror(errno));
+		GETSTRERROR(errno, buf);
+		LOGE("Cannot open buffer: %s\n", buf);
 		return 1;
 	}
 	LOGI("buffer opened: %s, %d\n", BUF_FILENAME, manager.buf_fd);
 
 	manager.user_ev_fd = open(USER_EVENT_FILENAME, O_WRONLY | O_CLOEXEC);
 	if (manager.user_ev_fd == -1) {
-		LOGE("Cannot open user event sysfs file: %s\b", strerror(errno));
+		GETSTRERROR(errno, buf);
+		LOGE("Cannot open user event sysfs file: %s\n", buf);
 		return 1;
 	}
 	LOGI("user event sysfs file opened: %s, %d\n", USER_EVENT_FILENAME,
@@ -119,12 +127,14 @@ int init_buf(void)
 	}
 
 	if (ioctl(manager.buf_fd, SWAP_DRIVER_BUFFER_INITIALIZE, &init) == -1) {
-		LOGE("Cannot init buffer: %s\n", strerror(errno));
+		GETSTRERROR(errno, buf);
+		LOGE("Cannot init buffer: %s\n", buf);
 		return 1;
 	}
 
 	if (open_tasks_dev() != 0) {
-		LOGE("Cannot open tasks: %s\n", strerror(errno));
+		GETSTRERROR(errno, buf);
+		LOGE("Cannot open tasks: %s\n", buf);
 		return 1;
 	}
 
@@ -134,8 +144,10 @@ int init_buf(void)
 void exit_buf(void)
 {
 	LOGI("Uninit driver (%d)\n", manager.buf_fd);
-	if (ioctl(manager.buf_fd, SWAP_DRIVER_BUFFER_UNINITIALIZE) == -1)
-		LOGW("Cannot uninit driver: %s\n", strerror(errno));
+	if (ioctl(manager.buf_fd, SWAP_DRIVER_BUFFER_UNINITIALIZE) == -1) {
+		GETSTRERROR(errno, buf);
+		LOGW("Cannot uninit driver: %s\n", buf);
+	}
 
 	close_buf_ctl();
 	close_tasks_dev();
@@ -143,14 +155,18 @@ void exit_buf(void)
 
 void flush_buf(void)
 {
-	if (ioctl(manager.buf_fd, SWAP_DRIVER_FLUSH_BUFFER) == -1)
-		LOGW("Cannot send flush to driver: %s\n", strerror(errno));
+	if (ioctl(manager.buf_fd, SWAP_DRIVER_FLUSH_BUFFER) == -1) {
+		GETSTRERROR(errno, buf);
+		LOGW("Cannot send flush to driver: %s\n", buf);
+	}
 }
 
 void wake_up_buf(void)
 {
-	if (ioctl(manager.buf_fd, SWAP_DRIVER_WAKE_UP) == -1)
-		LOGW("Cannot send wake up to driver: %s\n", strerror(errno));
+	if (ioctl(manager.buf_fd, SWAP_DRIVER_WAKE_UP) == -1) {
+		GETSTRERROR(errno, buf);
+		LOGW("Cannot send wake up to driver: %s\n", buf);
+	}
 }
 
 int write_to_buf(struct msg_data_t *msg)
@@ -158,8 +174,9 @@ int write_to_buf(struct msg_data_t *msg)
 	uint32_t total_len = MSG_DATA_HDR_LEN + msg->len;
 
 	if (write(manager.user_ev_fd, msg, total_len) == -1) {
+		GETSTRERROR(errno, buf);
 		LOGE("write to buf (user_ev_fd=%d, msg=%p, len=%d) %s\n",
-		     manager.user_ev_fd, msg, total_len, strerror(errno));
+		     manager.user_ev_fd, msg, total_len, buf);
 		return 1;
 	}
 	return 0;

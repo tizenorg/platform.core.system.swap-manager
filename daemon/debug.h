@@ -63,6 +63,10 @@ void print_buf(char *buf, int len, const char *info);
 #endif
 
 #ifdef DEBUG
+#define GETSTRERROR(err_code, buf)				\
+	char buf[256];						\
+	strerror_r(err_code, buf, sizeof(buf))
+
 #define LOGE(...) do_log("ERR", __func__, __LINE__, __VA_ARGS__)
 #define LOGW(...) do_log("WRN", __func__, __LINE__, __VA_ARGS__)
 
@@ -109,6 +113,7 @@ static inline void do_log(const char *prefix, const char *funcname, int line, ..
 
 	#endif
 #else
+	#define GETSTRERROR(...)
 	#define LOGI(...)
 	#define LOGI_(...)
 	#define LOGE(...)

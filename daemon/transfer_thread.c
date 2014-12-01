@@ -59,7 +59,12 @@ static void *transfer_thread(void *arg)
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
 	//init pipe
-	pipe(fd_pipe);
+	if (pipe(fd_pipe) != 0) {
+		/* TODO posible need total instrumentation stop up there */
+		LOGE("can not pipe!\n");
+		return NULL;
+	}
+
 	//set cleanup function
 	pthread_cleanup_push(transfer_thread_cleanup, (void *)fd_pipe);
 
@@ -72,11 +77,13 @@ static void *transfer_thread(void *arg)
 			     fd_pipe[1], NULL,
 			     BUF_SIZE, 0);
 		if (nrd == -1) {
-			if (errno == EAGAIN) {
+			int errsv = errno;
+			if (errsv == EAGAIN) {
 				LOGI("No more data to read\n");
 				break;
 			}
-			LOGE("Cannot splice read: %s\n", strerror(errno));
+			GETSTRERROR(errsv, err_buf);
+			LOGE("Cannot splice read: %s\n", err_buf);
 			goto thread_exit;
 		}
 
@@ -85,7 +92,8 @@ static void *transfer_thread(void *arg)
 			     nrd, 0);
 
 		if (nwr == -1) {
-			LOGE("Cannot splice write: %s\n", strerror(errno));
+			GETSTRERROR(errno, buf);
+			LOGE("Cannot splice write: %s\n", buf);
 			goto thread_exit;
 		}
 		if (nwr != nrd) {
@@ -116,7 +124,10 @@ int start_transfer(void)
 	}
 
 	saved_flags = fcntl(manager.buf_fd, F_GETFL);
-	fcntl(manager.buf_fd, F_SETFL, saved_flags & ~O_NONBLOCK);
+	if (fcntl(manager.buf_fd, F_SETFL, saved_flags & ~O_NONBLOCK) == -1) {
+		LOGE("can not set buf_fd flags\n");
+		return -1;
+	}
 
 	if(pthread_create(&(manager.transfer_thread),
 			  NULL,
@@ -143,7 +154,10 @@ void stop_transfer(void)
 
 	flush_buf();
 	saved_flags = fcntl(manager.buf_fd, F_GETFL);
-	fcntl(manager.buf_fd, F_SETFL, saved_flags | O_NONBLOCK);
+	if (fcntl(manager.buf_fd, F_SETFL, saved_flags | O_NONBLOCK) == -1) {
+		/* TODO do something on error */
+		LOGE("can not set buf_fd flags\n");
+	}
 	wake_up_buf();
 
 	LOGI("joining thread...\n");

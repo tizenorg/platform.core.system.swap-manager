@@ -153,9 +153,7 @@ int check_conf_datamsg_period(uint32_t data_message_period)
 int check_us_app_count(uint32_t app_count)
 {
 	int res = 1;
-	if ((app_count < US_APP_COUNT_MIN) ||
-		(app_count > US_APP_COUNT_MAX))
-	{
+	if (app_count > US_APP_COUNT_MAX) {
 		LOGE("wrong user space app count %u (0x%08X)\n",
 		     (unsigned int)app_count, app_count);
 		res = 0;
@@ -167,9 +165,7 @@ int check_us_app_count(uint32_t app_count)
 int check_us_app_inst_func_count(uint32_t func_count)
 {
 	int res = 1;
-	if ((func_count < US_APP_INST_FUNC_MIN) ||
-		(func_count > US_APP_INST_FUNC_MAX))
-	{
+	if (func_count > US_APP_INST_FUNC_MAX) {
 		LOGE("wrong US app inst func count %u (0x%08X)\n",
 		     (unsigned int)func_count, func_count);
 		res = 0;
@@ -203,9 +199,7 @@ int check_us_inst_func_ret_type(char ret_type)
 int check_lib_inst_count(uint32_t lib_count)
 {
 	int res = 1;
-	if ((lib_count < US_APP_INST_LIB_MIN) ||
-		(lib_count > US_APP_INST_LIB_MAX))
-	{
+	if (lib_count > US_APP_INST_LIB_MAX) {
 		LOGE("wrong US app inst lib count %u (0x%08X)\n",
 		     (unsigned int)lib_count, lib_count);
 		res = 0;

@@ -33,10 +33,13 @@ make
 
 %install
 rm -rf ${RPM_BUILD_ROOT}
+mkdir -p %{buildroot}/usr/share/license
+cp LICENSE %{buildroot}/usr/share/license/%{name}
 cd daemon
 %make_install
 
 %files
+/usr/share/license/%{name}
 %manifest swap-manager.manifest
 %defattr(-,root,root,-)
 %{_prefix}/bin/da_manager

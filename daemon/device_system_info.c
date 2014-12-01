@@ -31,12 +31,16 @@
 #include <system_info.h>
 #include <runtime_info.h>
 #include "device_system_info.h"
+#include "debug.h"
 
 static int is_available(const char *path)
 {
-	bool res;
+	bool res = 0;
 
-	system_info_get_platform_bool(path, &res);
+	if (system_info_get_platform_bool(path, &res) != SYSTEM_INFO_ERROR_NONE) {
+		/* TODO do something */
+		LOGE("get bool value fail\n");
+	}
 
 	return res;
 }

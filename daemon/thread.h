@@ -1,12 +1,11 @@
 /*
  *  DA manager
  *
- * Copyright (c) 2000 - 2013 Samsung Electronics Co., Ltd. All rights reserved.
+ * Copyright (c) 2014 Samsung Electronics Co., Ltd. All rights reserved.
  *
  * Contact:
  *
- * Cherepanov Vitaliy <v.cherepanov@samsung.com>
- * Nikita Kalyazin    <n.kalyazin@samsung.com>
+ * Vyacheslav Cherkashin <v.cherkashin@samsung.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,23 +25,19 @@
  */
 
 
-/* SWAP Device ioctl commands */
+#ifndef _THREAD_H_
+#define _THREAD_H_
 
-#include "ioctl_commands.h"
-#include "debug.h"
-#include "da_protocol.h"
-#include "daemon.h"
 
-#include <errno.h>
+struct thread;
 
-//send message to device
-int ioctl_send_msg(struct msg_t *msg)
-{
-	LOGI("write to device\n");
-	if (ioctl(manager.buf_fd, SWAP_DRIVER_MSG, msg) == -1) {
-		GETSTRERROR(errno, buf);
-		LOGE("write to device: %s\n", buf);
-		return 1;
-	}
-	return 0;
-}
+
+struct thread *thread_ctor(void);
+void thread_dtor(struct thread *t);
+
+
+int thread_start(struct thread *t, void *(*func) (void *), void *data);
+int thread_wait(struct thread *t);
+
+
+#endif /* _THREAD_H_ */

@@ -156,7 +156,7 @@ static int makeTargetServerSocket()
 
 	memset(&serverAddrUn, '\0', sizeof(serverAddrUn));
 	serverAddrUn.sun_family = AF_UNIX;
-	sprintf(serverAddrUn.sun_path, "%s", UDS_NAME);
+	snprintf(serverAddrUn.sun_path, sizeof(serverAddrUn.sun_path), "%s", UDS_NAME);
 
 	if (-1 == bind(manager.target_server_socket, (struct sockaddr*) &serverAddrUn,
 					sizeof(serverAddrUn)))
@@ -405,7 +405,12 @@ int main()
 	if (!ensure_singleton(SINGLETON_LOCKFILE))
 		return 1;
 
-	initialize_log();
+	if (initialize_log() != 0) {
+		LOGE("Init log failed. uninit\n");
+		terminate0();
+		LOGE("Daemon terminated\n");
+		exit(0);
+	}
 
 	LOGI("da_started\n");
 	atexit(terminate0);

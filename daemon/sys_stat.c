@@ -74,7 +74,7 @@
 #define MEM_SLOT_MAX		4
 
 #define MIN_TICKS_FOR_LOAD	8
-#define MIN_TOTAL_TICK		10
+#define MIN_TOTAL_TICK		1
 #define SYS_INFO_TICK		100	// TODO : change to (Hertz * profiling period)
 
 #define CPUMHZ		"cpu MHz"
@@ -178,18 +178,21 @@ static void init_brightness_status()
 	DIR *dir_info;
 	struct dirent *dir_entry;
 	char fullpath[PATH_MAX];
+	static char dirent_buffer[ sizeof(struct dirent) + PATH_MAX + 1 ] = {0,};
+	static struct dirent *dirent_r = (struct dirent *)dirent_buffer;
+
 
 	dir_info = opendir(BRIGHTNESS_PARENT_DIR);
 	if (dir_info != NULL) {
-		while ((dir_entry = readdir(dir_info)) != NULL) {
+		while ((readdir_r(dir_info, dirent_r, &dir_entry) == 0) && dir_entry) {
 			if (strcmp(dir_entry->d_name, ".") == 0 ||
 			    strcmp(dir_entry->d_name, "..") == 0)
 				continue;
 			else { /* first directory */
-				sprintf(fullpath,
-					BRIGHTNESS_PARENT_DIR "/%s/"
-					BRIGHTNESS_FILENAME,
-					dir_entry->d_name);
+				snprintf(fullpath, sizeof(fullpath),
+					 BRIGHTNESS_PARENT_DIR "/%s/"
+					 BRIGHTNESS_FILENAME,
+					 dir_entry->d_name);
 				get_file_status(&manager.fd.brightness,
 						fullpath);
 			}
@@ -212,6 +215,8 @@ static int get_max_brightness()
 {
 	int maxbrightnessfd = -1;
 	static int max_brightness = -1;
+	static char dirent_buffer[ sizeof(struct dirent) + PATH_MAX + 1 ] = {0,};
+	static struct dirent *dirent_r = (struct dirent *)dirent_buffer;
 
 	if (__builtin_expect(max_brightness < 0, 0)) {
 #ifdef DEVICE_ONLY
@@ -221,14 +226,14 @@ static int get_max_brightness()
 
 		dir_info = opendir(BRIGHTNESS_PARENT_DIR);
 		if (dir_info != NULL) {
-			while((dir_entry = readdir(dir_info)) != NULL) {
+			while ((readdir_r(dir_info, dirent_r, &dir_entry) == 0) && dir_entry) {
 				if (strcmp(dir_entry->d_name, ".") == 0 ||
 				    strcmp(dir_entry->d_name, "..") == 0)
 					continue;
 				else { /* first */
-					sprintf(fullpath,
-						BRIGHTNESS_PARENT_DIR "/%s/" MAX_BRIGHTNESS_FILENAME,
-						dir_entry->d_name);
+					snprintf(fullpath, sizeof(fullpath),
+						 BRIGHTNESS_PARENT_DIR "/%s/" MAX_BRIGHTNESS_FILENAME,
+						 dir_entry->d_name);
 					max_brightness = get_file_status(&maxbrightnessfd, fullpath);
 				}
 			}
@@ -294,13 +299,19 @@ static void get_cpu_frequency(float *freqs)
 	FILE *f;
 	int cpu_n = 0;
 
-	//clean data array
+	/* clean data array */
 	for (cpu_n = 0; cpu_n < num_of_cpu; cpu_n++)
 		freqs[cpu_n] = 0.0;
 
 	cpu_n = 0;
 	while (1) {
-		//is CPU present
+		/* TODO for targets with 1 cpu core
+		 * file "/sys/devices/system/cpu/cpu0/online" can be absent
+		 * so need lookup file /sys/devices/system/cpu/online
+		 * and parse it
+		 */
+
+		/* is CPU present */
 		snprintf(filename, MIDDLE_BUFFER,
 			 "/sys/devices/system/cpu/cpu%d/online", cpu_n);
 
@@ -311,20 +322,26 @@ static void get_cpu_frequency(float *freqs)
 		}
 		fclose(f);
 
-		//get CPU freq
+		/* get CPU freq */
 		snprintf(filename, MIDDLE_BUFFER,
 			 "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_cur_freq", cpu_n);
 		f = fopen(filename, "r");
 		if (!f)
 		{
-			//core is disabled
+			/* core is disabled */
 			LOGI_th_samp("core #%d diasabled\n", cpu_n);
 			freqs[cpu_n] = 0.0;
 		} else {
-			//core enabled, get frequency
-			fscanf(f, "%s", freq_str);
-			freqs[cpu_n] = atof(freq_str);
-			LOGI_th_samp("core #%d freq = %.0f\n", cpu_n, freqs[cpu_n]);
+			/* core enabled, get frequency /*/
+			if (fscanf(f, "%s", freq_str) != 1) {
+				/* TODO return error code */
+				freqs[cpu_n] = 0.0f;
+				LOGE("scan cpu #%d freq fail\n", cpu_n);
+			} else {
+				freqs[cpu_n] = atof(freq_str);
+				LOGI_th_samp("core #%d freq = %.0f\n", cpu_n,
+					     freqs[cpu_n]);
+			}
 			fclose(f);
 		}
 
@@ -488,7 +505,7 @@ static int parse_proc_stat_file_bypid(char *path, proc_t* P, int is_inst_process
 	char *abuf, *bbuf;
 
 	// read from stat file
-	sprintf(filename, "%s/stat", path);
+	snprintf(filename, sizeof(filename), "%s/stat", path);
 	fd = open(filename, O_RDONLY, 0);
 
 	if(unlikely(fd == -1)){
@@ -583,7 +600,7 @@ static int parse_proc_smaps_file_bypid(char *path, proc_t* P)
 	P->sh_mem = 0;
 
 	// read from smaps file
-	sprintf(filename, "%s/smaps", path);
+	snprintf(filename, sizeof(filename), "%s/smaps", path);
 	fp = fopen(filename, "r");
 
 	if(fp == NULL){
@@ -686,7 +703,7 @@ static int update_process_data(procNode **prochead, pid_t* pidarray, int pidcoun
 			continue;
 		}
 
-		sprintf(buf, "/proc/%d", pidarray[i]);
+		snprintf(buf, sizeof(buf), "/proc/%d", pidarray[i]);
 		if (unlikely(stat(buf, &sb) == -1))	// cannot access anymore
 		{
 			del_node(prochead, pidarray[i]);
@@ -766,7 +783,7 @@ static int update_system_cpu_frequency(int cur_index)
 		}
 	}
 
-	sprintf(filename, CPUNUM_OF_FREQ);
+	snprintf(filename, sizeof(filename), CPUNUM_OF_FREQ);
 	// update cpu frequency information
 	for(i = 0; i < num_of_cpu; i++)
 	{
@@ -1131,28 +1148,31 @@ static int update_thread_data(int pid)
 	unsigned int tid;
 	procNode *node = NULL;
 	procNode **thread_prochead = NULL;
+	static char dirent_buffer[ sizeof(struct dirent) + PATH_MAX + 1 ] = {0,};
+	static struct dirent *dirent_r = (struct dirent *)dirent_buffer;
 
-	sprintf(path, "/proc/%d/task", pid);
+	snprintf(path, sizeof(path), "/proc/%d/task", pid);
 
 	if(!(taskdir = opendir(path)))
 	{
 		LOGE("task not found '%s'\n", path);
-		return -1;
+		ret = -1;
+		goto exit;
 	}
 
 	node = find_node(inst_prochead, pid);
 	if (node == NULL) {
 		LOGE("inst node task not found '%s' pid = %d\n", path, pid);
-		return -1;
+		ret = -1;
+		goto exit_close_dir;
 	}
 	thread_prochead = (procNode **)&(node->thread_prochead);
 
-	while((entry = readdir(taskdir)) != NULL)
-	{
+	while ((readdir_r(taskdir, dirent_r, &entry) == 0) && entry) {
 		if(*entry->d_name > '0' &&	*entry->d_name <= '9')
 		{
 			tid = atoi(entry->d_name);
-			sprintf(buf, "/proc/%d/task/%d", pid, tid);
+			snprintf(buf, sizeof(buf), "/proc/%d/task/%d", pid, tid);
 
 			if(unlikely(stat(buf, &sb) == -1))
 			{
@@ -1188,7 +1208,9 @@ static int update_thread_data(int pid)
 	del_notfound_node(thread_prochead);
 	reset_found_node(*thread_prochead);
 
+exit_close_dir:
 	closedir(taskdir);
+exit:
 	return ret;
 }
 
@@ -1196,40 +1218,54 @@ static int update_thread_data(int pid)
 // overall information getter functions
 // ========================================================================
 
-static int get_device_network_type(char* buf, int buflen)
+#define print_to_buf(buf, buflen, str)				\
+do {								\
+	if (strlen(str) <= buflen) {				\
+		lenin = snprintf(buf, buflen, "CDMA,");		\
+		len += lenin;					\
+		buflen -= lenin;				\
+	} else {						\
+		LOGE("can not pack <%s>\n", str);		\
+		goto exit;					\
+	}							\
+} while(1)
+
+static int get_device_network_type(char* buf, size_t buflen)
 {
-	int len = 0;
+	int len = 0, lenin = 0;
+
 
 	if (is_cdma_available())
-		len += sprintf(buf + len, "CDMA,");
+		print_to_buf(buf, buflen, "CDMA,");
 
 	if (is_edge_available())
-		len += sprintf(buf + len, "EDGE,");
+		print_to_buf(buf, buflen, "EDGE,");
 
 	if (is_gprs_available())
-		len += sprintf(buf + len, "GPRS,");
+		print_to_buf(buf, buflen, "GPRS,");
 
 	if (is_gsm_available())
-		len += sprintf(buf + len, "GSM,");
+		print_to_buf(buf, buflen, "GSM,");
 
 	if (is_hsdpa_available())
-		len += sprintf(buf + len, "HSDPA,");
+		print_to_buf(buf, buflen, "HSDPA,");
 
 	if (is_hspa_available())
-		len += sprintf(buf + len, "HSPA,");
+		print_to_buf(buf, buflen, "HSPA,");
 
 	if (is_hsupa_available())
-		len += sprintf(buf + len, "HSUPA,");
+		print_to_buf(buf, buflen, "HSUPA,");
 
 	if (is_umts_available())
-		len += sprintf(buf + len, "UMTS,");
+		print_to_buf(buf, buflen, "UMTS,");
 
 	if (is_lte_available())
-		len += sprintf(buf + len, "LTE,");
+		print_to_buf(buf, buflen, "LTE,");
 
 	if (len != 0)
 		buf[--len] = 0;
 
+exit:
 	return len;
 }
 
@@ -1426,22 +1462,31 @@ static int fill_system_cpu_info(struct system_info_t *sys_info)
 	return 0;
 }
 
+/* TODO add return value to skip_lines */
 static void skip_lines(FILE * fp, unsigned int count)
 {
 	char *buffer = NULL;
 	size_t buflen;
 	unsigned int index;
-	for (index = 0; index != count; ++index)
-		getline(&buffer, &buflen, fp);
+	for (index = 0; index != count; ++index) {
+		if (getline(&buffer, &buflen, fp) < 0)
+			LOGE("file scan fail\n");
+	}
 	free(buffer);
 }
 
-static void skip_tokens(FILE * fp, unsigned int count)
+static int skip_tokens(FILE * fp, unsigned int count)
 {
+	int res;
 	unsigned int index;
 
-	for (index = 0; index != count; ++index)
-		fscanf(fp, "%*s");
+	for (index = 0; index != count; ++index) {
+		res = fscanf(fp, "%*s");
+		if (res == EOF && index != count - 1)
+			return -1;
+	}
+
+	return 0;
 }
 
 static void init_network_stat()
@@ -1465,16 +1510,24 @@ static void get_network_stat(uint32_t *recv, uint32_t *send)
 
 	while (fscanf(fp, "%s", ifname) != EOF)
 		if (strcmp("lo:", ifname)) {
-			fscanf(fp, "%" SCNuMAX, &irecv);
+			if (fscanf(fp, "%" SCNuMAX, &irecv) <= 0)
+				goto scan_error;
 			skip_tokens(fp, 7);
 
-			fscanf(fp, "%" SCNuMAX, &isend);
+			if (fscanf(fp, "%" SCNuMAX, &isend) <= 0)
+				goto scan_error;
 			skip_tokens(fp, 7);
 
 			*recv += irecv;
 			*send += isend;
 		} else
 			skip_tokens(fp, 16);
+
+	goto exit;
+scan_error:
+	LOGE("scan fail\n");
+exit:
+	return;
 }
 
 static void peek_network_stat_diff(uint32_t *recv, uint32_t *send)
@@ -1508,7 +1561,7 @@ static uint32_t get_partition_sector_size(char *partition_name)
 	uint32_t res = 0;
 
 	/* prepare partition sector size file name */
-	sprintf(buf, "/sys/block/%s/queue/hw_sector_size", partition_name);
+	snprintf(buf, MAX_FILENAME, "/sys/block/%s/queue/hw_sector_size", partition_name);
 	f = fopen(buf, "r");
 
 	/* check file */
@@ -1516,13 +1569,14 @@ static uint32_t get_partition_sector_size(char *partition_name)
 		/* reset error code */
 		errno = 0;
 		/* scan partition sector size */
-		fscanf(f, "%d", &res);
-		/* check errors */
-		int errsv = errno;
-		if (errsv) {
-			LOGE("scan file <%s> error: %s\n", buf,
-			     strerror(errsv));
-			res = 0;
+		if (fscanf(f, "%d", &res) != 1) {
+			/* check errors */
+			int errsv = errno;
+			if (errsv) {
+				GETSTRERROR(errsv, errno_buf);
+				LOGE("scan file <%s> error: %s\n", buf, errno_buf);
+				res = 0;
+			}
 		}
 		/* close source file */
 		fclose(f);
@@ -1561,25 +1615,33 @@ static void get_disk_stat(uint32_t *reads, uint32_t *bytes_reads,
 		char partition[partition_name_maxlength];
 		uintmax_t preads, pwrites;
 		uintmax_t psec_read, psec_write;
-		skip_tokens(fp, 2);
-		fscanf(fp, "%s", partition);
+		if (skip_tokens(fp, 2) < 0)
+			goto exit;
+
+		if (fscanf(fp, "%s", partition) != 1)
+			goto scan_error;
 		if (*master_partition
 		    && !strncmp(master_partition, partition,
 			       strlen(master_partition))) {
 			/* subpartition */
 			skip_tokens(fp, 11);
 		} else {
+			/* TODO add check err in skip_token func */
 			//1
-			fscanf(fp, "%" SCNuMAX, &preads);
+			if (fscanf(fp, "%" SCNuMAX, &preads) == EOF)
+				goto scan_error;
 			skip_tokens(fp, 1);
 			//3
-			fscanf(fp, "%" SCNuMAX, &psec_read);
+			if (fscanf(fp, "%" SCNuMAX, &psec_read) == EOF)
+				goto scan_error;
 			skip_tokens(fp, 1);
 			//5
-			fscanf(fp, "%" SCNuMAX, &pwrites);
+			if (fscanf(fp, "%" SCNuMAX, &pwrites) == EOF)
+				goto scan_error;
 			skip_tokens(fp, 1);
 			//7
-			fscanf(fp, "%" SCNuMAX, &psec_write);
+			if (fscanf(fp, "%" SCNuMAX, &psec_write) == EOF)
+				goto scan_error;
 			skip_tokens(fp, 4);
 
 			memcpy(master_partition, partition,
@@ -1597,6 +1659,11 @@ static void get_disk_stat(uint32_t *reads, uint32_t *bytes_reads,
 		}
 	}
 
+	goto exit;
+scan_error:
+	LOGE("scan fail\n");
+exit:
+	return;
 }
 
 static void peek_disk_stat_diff(uint32_t *reads, uint32_t *bytes_reads,
@@ -1777,13 +1844,16 @@ static int get_other_pid_array(pid_t inst_pid[], const int inst_n, pid_t arr[],
 	DIR *d = opendir("/proc");
 	struct dirent *dirent;
 	int count = 0, i = 0;
+	static char dirent_buffer[ sizeof(struct dirent) + PATH_MAX + 1 ] = {0,};
+	static struct dirent *dirent_r = (struct dirent *)dirent_buffer;
 
 	if (!d) {
-		LOGW("Cannot open /proc dir (%s)\n", strerror(errno));
+		GETSTRERROR(errno, buf);
+		LOGW("Cannot open /proc dir (%s)\n", buf);
 		return 0;
 	}
 
-	while ((dirent = readdir(d)) && (count < n)) {
+	while ((readdir_r(d, dirent_r, &dirent) == 0) && dirent) {
 		if (dirent->d_type == DT_DIR) {
 			char *tmp;
 			pid_t pid = strtol(dirent->d_name, &tmp, 10);
