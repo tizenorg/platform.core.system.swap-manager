@@ -87,20 +87,32 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 		size += strlen(msg->cur_pos) + 1 + sizeof(char);
 		break;
 	case SWAP_FBI_PROBE:
-		tmp_size = sizeof(uint64_t) + /* var id */
-			   sizeof(uint64_t) + /* register offset */
-			   sizeof(uint8_t) +  /* register number */
-			   sizeof(uint32_t);  /* data size */
+		{
+		char *p = msg->cur_pos;
+		uint8_t vars_c = *(uint8_t *)p;
+		p += sizeof(vars_c);
 
-		size += tmp_size;
-		size += (*(uint8_t *)(msg->cur_pos + tmp_size)) /* steps count */
-			* (		     /* step size: */
-			   sizeof(uint8_t) + /* pointer order*/
-			   sizeof(uint64_t)  /* data offset */
-			  );
+		while (vars_c != 0) {
+			tmp_size = sizeof(uint64_t) + /* var id */
+				   sizeof(uint64_t) + /* register offset */
+				   sizeof(uint8_t) +  /* register number */
+				   sizeof(uint32_t);  /* data size */
 
-		size += sizeof(uint8_t);  /* steps count */
+			tmp_size += (*(uint8_t *)(p + tmp_size)) /* steps count */
+				     * (		     /* step size: */
+					sizeof(uint8_t) + /* pointer order*/
+					sizeof(uint64_t)  /* data offset */
+					);
 
+			tmp_size += sizeof(uint8_t);  /* steps count */
+			p += tmp_size;
+			size += tmp_size;
+			vars_c--;
+		}
+
+
+		size += (sizeof vars_c);
+		}
 		break;
 	case SWAP_LD_PROBE:
 		size += sizeof(uint64_t); /* ld preload handler addr */
