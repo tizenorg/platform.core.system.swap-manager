@@ -55,6 +55,69 @@ static uint32_t calc_app_hash(struct app_info_t *app)
 	return hash;
 }
 
+struct fbi_step_t {
+	uint8_t pointer_order;
+	uint64_t data_offset;
+} __attribute__ ((packed));
+
+struct fbi_probe_t {
+	uint64_t varid;
+	uint64_t reg_offset;
+	uint8_t reg_num;
+	uint32_t data_size;
+	uint8_t steps_count;
+	struct fbi_step_t fbi_step[0];
+} __attribute__ ((packed));
+
+static uint32_t get_fbi_probe_size(struct msg_buf_t *msg)
+{
+	char *p = NULL;
+	uint8_t vars_c, i;
+	uint32_t size = 0;
+	struct fbi_probe_t *fbi_probe;
+
+	if (msg == NULL || msg->cur_pos == NULL) {
+		LOGE("wrong msg structure\n");
+		goto err_ret;
+	}
+	p = msg->cur_pos;
+
+	/* extract valuses count */
+	vars_c = *(uint8_t *)p;
+	p += sizeof(vars_c);
+
+	parse_deb("fbi probe count = %d \n", vars_c);
+
+	for (i = 0; i != vars_c; i++) {
+		fbi_probe = (struct fbi_probe_t *)p;
+		size = /* header */
+		       sizeof(*fbi_probe) +
+		       /* steps size */
+		       fbi_probe->steps_count * sizeof(fbi_probe->fbi_step[0]);
+
+		if (p + size > msg->end) {
+			LOGE("\nfbi probe #%d parsing error:\n"
+			     "\tvarid       %016llX\n"
+			     "\treg_offset  %016llX\n"
+			     "\treg_num     %02x\n"
+			     "\tdata_size   %016lX\n"
+			     "\tsteps_count %02x\n",
+			     i + 1,
+			     fbi_probe->varid,
+			     fbi_probe->reg_offset,
+			     (int)fbi_probe->reg_num,
+			     fbi_probe->data_size,
+			     (int)fbi_probe->steps_count
+			     );
+			goto err_ret;
+		}
+		p += size;
+	}
+
+	return (uint32_t)(p - msg->cur_pos);
+err_ret:
+	return 0;
+}
 
 //----------------------------------- parse -----------------------------------
 static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
@@ -87,20 +150,12 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 		size += strlen(msg->cur_pos) + 1 + sizeof(char);
 		break;
 	case SWAP_FBI_PROBE:
-		tmp_size = sizeof(uint64_t) + /* var id */
-			   sizeof(uint64_t) + /* register offset */
-			   sizeof(uint8_t) +  /* register number */
-			   sizeof(uint32_t);  /* data size */
-
+		tmp_size = get_fbi_probe_size(msg);
+		if (tmp_size == 0) {
+			LOGE("probe parsing error\n");
+			goto err_ret;
+		}
 		size += tmp_size;
-		size += (*(uint8_t *)(msg->cur_pos + tmp_size)) /* steps count */
-			* (		     /* step size: */
-			   sizeof(uint8_t) + /* pointer order*/
-			   sizeof(uint64_t)  /* data offset */
-			  );
-
-		size += sizeof(uint8_t);  /* steps count */
-
 		break;
 	case SWAP_LD_PROBE:
 		size += sizeof(uint64_t); /* ld preload handler addr */
@@ -127,14 +182,15 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 	*dest = new_probe();
 	if (*dest == NULL) {
 		LOGE("alloc new_probe error\n");
-		goto err_ret;
+		goto free_func_ret;
 	}
 	(*dest)->size = size;
 	(*dest)->func = func;
 	return 1;
 
-err_ret:
+free_func_ret:
 	free(func);
+err_ret:
 	return 0;
 }
 
