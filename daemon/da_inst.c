@@ -1008,7 +1008,8 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 
 			buf[0] = '\0';
 
-			feature_code_str(f.feature_value, f.feature_value, &buf[0]);
+			feature_code_str(f.feature_value, f.feature_value, &buf[0],
+					 sizeof(buf));
 			LOGI("Set LD probes for %016LX <%s>\n", f.feature_value, &buf[0]);
 
 			feature_add_lib_inst_list(f.feature_ld, &us_inst->ld_lib_inst_list,

@@ -457,7 +457,8 @@ int recv_msg_from_sock(int sock, struct msg_target_t *msg);
 
 //debugs
 void print_replay_event(struct replay_event_t *ev, uint32_t num, char *tab);
-void feature_code_str(uint64_t feature0, uint64_t feature1, char *to);
+void feature_code_str(uint64_t feature0, uint64_t feature1, char *to,
+		      uint32_t buflen);
 
 int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 			char *payload, int payload_size);
