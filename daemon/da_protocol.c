@@ -156,8 +156,8 @@ static char *msgErrStr(enum ErrorCode err)
 		}							\
 	}
 #define print_feature_0(f) print_feature(f, feature0, to, ", \n\t")
-static void feature_code_str(uint64_t feature0, uint64_t feature1, char *to,
-			     uint32_t buflen)
+void feature_code_str(uint64_t feature0, uint64_t feature1, char *to,
+		      uint32_t buflen)
 {
 	int lenin = 0;
 	print_feature_0(FL_FUNCTION_PROFILING);
