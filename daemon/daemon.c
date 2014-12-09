@@ -75,20 +75,46 @@
 // =============================================================================
 
 static Ecore_Fd_Handler *launch_timer_handler;
+static pthread_mutex_t launch_timer_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static void launch_timer_lock()
+{
+	LOGI("lock launch_timer_mutex\n");
+	pthread_mutex_lock(&launch_timer_mutex);
+	LOGI("locked launch_timer_mutex\n");
+}
+
+static void launch_timer_unlock()
+{
+	pthread_mutex_unlock(&launch_timer_mutex);
+	LOGI("unlock launch_timer_mutex\n");
+}
 
 //stop application launch timer
 static int stop_app_launch_timer()
 {
-	close(manager.app_launch_timerfd);
-	manager.app_launch_timerfd = -1;
+	int res = 0;
+	launch_timer_lock();
 
-	return 0;
+	if (manager.app_launch_timerfd > 0) {
+		ecore_main_fd_handler_del(launch_timer_handler);
+		if (close(manager.app_launch_timerfd)) {
+			LOGE("close app_launch_timerfd failed\n");
+			res = 1;
+		}
+		manager.app_launch_timerfd = -1;
+	} else {
+		LOGW("trying to stop app launch timer when it stoped\n");
+	}
+
+	launch_timer_unlock();
+	return res;
 }
 
 static Eina_Bool launch_timer_cb(void *data, Ecore_Fd_Handler *fd_handler)
 {
 	LOGE("Failed to launch application\n");
-	if (stop_app_launch_timer() < 0)
+	if (stop_app_launch_timer())
 		LOGE("cannot stop app launch timer\n");
 
 	return ECORE_CALLBACK_CANCEL;
@@ -104,6 +130,13 @@ static int start_app_launch_timer(int apps_count)
 	if (apps_count == 0)
 		return res;
 
+	if (manager.app_launch_timerfd > 0) {
+		LOGI("stop previous app launch timer\n");
+		stop_app_launch_timer();
+	}
+
+	launch_timer_lock();
+
 	manager.app_launch_timerfd =
 	    timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC);
 	if (manager.app_launch_timerfd > 0) {
@@ -114,8 +147,8 @@ static int start_app_launch_timer(int apps_count)
 		ctime.it_interval.tv_nsec = 0;
 		if (timerfd_settime(manager.app_launch_timerfd, 0, &ctime, NULL) < 0) {
 			LOGE("fail to set app launch timer\n");
-			stop_app_launch_timer();
 			res = -1;
+			goto unlock_and_stop;
 		} else {
 			launch_timer_handler =
 				ecore_main_fd_handler_add(manager.app_launch_timerfd,
@@ -125,8 +158,8 @@ static int start_app_launch_timer(int apps_count)
 							  NULL, NULL);
 			if (!launch_timer_handler) {
 				LOGE("fail to add app launch timer fd to \n");
-				stop_app_launch_timer();
 				res = -2;
+				goto unlock_and_stop;
 			} else {
 				LOGI("application launch time started\n");
 			}
@@ -136,6 +169,13 @@ static int start_app_launch_timer(int apps_count)
 		res = -3;
 	}
 
+	launch_timer_unlock();
+	return res;
+
+unlock_and_stop:
+	launch_timer_unlock();
+
+	stop_app_launch_timer();
 	return res;
 }
 
@@ -678,7 +718,7 @@ static int targetServerHandler(void)
 		dec_apps_to_run();
 
 		if ((manager.app_launch_timerfd > 0) && (get_apps_to_run() == 0)) {
-			if (stop_app_launch_timer() < 0)
+			if (stop_app_launch_timer())
 				LOGE("cannot stop app launch timer\n");
 		}
 
