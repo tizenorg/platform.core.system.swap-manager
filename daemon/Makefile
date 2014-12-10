@@ -53,6 +53,7 @@ DAEMON_SRCS =			\
 DAEMON_OBJS = $(patsubst %.c,%.o, $(DAEMON_SRCS))
 
 TARGET = da_manager
+BUILD_INFO = build_info.tar
 START_SH = start.sh
 STOP_SH = stop.sh
 
@@ -62,15 +63,19 @@ release: CPPFLAGS += -DNOLOGI=1
 debug release: $(DAEMON_OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $(TARGET)
 
+$(BUILD_INFO):
+	../scripts/create_build_info.sh
+	tar -cf $(BUILD_INFO) ../build_info/ || touch $(BUILD_INFO)
+
 install: BINDIR = $(DESTDIR)/usr/bin
 install: OPTDIR = $(DESTDIR)/opt/swap/sdk
-install: $(TARGET)
+install: $(TARGET) $(BUILD_INFO)
 	mkdir -p $(BINDIR)
 	mkdir -p $(OPTDIR)
 	install $(TARGET) -t $(BINDIR)
-	install -m 755 $(START_SH) $(STOP_SH) -t $(OPTDIR)
+	install -m 755 $(START_SH) $(STOP_SH) $(BUILD_INFO) -t $(OPTDIR)
 
 clean:
-	rm -f $(TARGET) $(DAEMON_OBJS)
+	rm -f $(TARGET) $(DAEMON_OBJS) ${BUILD_INFO}
 
 .PHONY: all debug release clean install
