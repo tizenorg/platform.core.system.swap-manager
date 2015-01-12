@@ -7,6 +7,7 @@
 
 #ifdef MALLOC_DEBUG_LEVEL
 
+#undef strdup
 #undef calloc
 #undef malloc
 #undef free
@@ -165,6 +166,19 @@ void add_malloc(struct mlist_t **list, void *addr, int line,
 
 }
 
+char *strdub_call_d(int line, const char *file_name, const char *func_name,
+		    char *str)
+{
+	logi("strdup>\n");
+	void *addr = strdup(str);
+	logi("strdup> 0x%0lX (%d:%s '%s')\n", addr, line, func_name, file_name);
+	struct mlist_t *file_el = find_list(file_name);
+
+	add_malloc(&(file_el->addr), addr, line, file_name, func_name, strlen(str) + 1);
+
+	return addr;
+}
+
 void *malloc_call_d(int line, const char *file_name, const char *func_name,
 		    size_t size)
 {
@@ -220,6 +234,7 @@ void free_call_d(int line, const char *file_name, const char *function,
 }
 
 //redefine functions
+#define strdup(str) malloc_call_d( __LINE__ , __FILE__, __FUNCTION__, str)
 #define malloc(size) malloc_call_d( __LINE__ , __FILE__, __FUNCTION__, size)
 #define calloc(num, size) calloc_call_d( __LINE__ , __FILE__, __FUNCTION__, num, size)
 #define free(addr) free_call_d(__LINE__, __FILE__, __func__, addr)
