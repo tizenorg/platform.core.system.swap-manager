@@ -49,14 +49,14 @@ static inline int close_on_exec_dup(int old, int new)
 	if (dup2(old, new) != -1) {
 		unsigned long flags = fcntl(new, F_GETFD);
 		if (flags == -1) {
-			LOGE("can not get flags fd #%d <%s>\n", new,
-			     strerror(errno));
+			LOGE("can not get flags fd #%d errno <%d>\n", new,
+			     errno);
 			goto err_ret;
 		}
 
 		if (fcntl(new, F_SETFD, flags | FD_CLOEXEC) == -1) {
-			LOGE("can not get flags fd #%d <%s>\n", new,
-			     strerror(errno));
+			LOGE("can not get flags fd #%d errno <%d>\n", new,
+			     errno);
 			goto err_ret;
 		}
 	} else {
@@ -73,20 +73,42 @@ err_ret:
 
 int initialize_log(void)
 {
+	/* TODO fix problem with ecore and redirect stderr to DEBUG_LOGFILE back
+	 *
+	 * error sample
+	 * *** IN FUNCTION: _ecore_main_fdh_epoll_mark_active()
+	 * ERR<2328>:ecore ecore.c:572 _ecore_magic_fail()   Input handle has already been freed!
+	 * ERR<2328>:ecore ecore.c:581 _ecore_magic_fail() *** NAUGHTY PROGRAMMER!!!
+	 * *** SPANK SPANK SPANK!!!
+	 *
+	 */
 	int ret = 0;
-	int fd = open(DEBUG_LOGFILE, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-	if (fd != -1) {
-		if (close_on_exec_dup(fd, 1) != 0 ||
+	int fd = -1;
+	int fd_null = -1;
+
+	if (remove(DEBUG_LOGFILE))
+		LOGE("remove(%s), return error, errno=%d\n",
+		     DEBUG_LOGFILE, errno);
+
+	fd = open(DEBUG_LOGFILE, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+	fd_null = open("/dev/null", O_WRONLY | O_CREAT | O_TRUNC, 0777);
+
+	if (fd != -1 && fd_null != -1) {
+		if (close_on_exec_dup(fd_null, 1) != 0 ||
 		    close_on_exec_dup(fd, 2) != 0) {
 			LOGE("duplicate fd fail\n");
 			ret = -1;
 		}
-
-		close(fd);
 	} else {
 		close(1);
 		close(2);
 	}
+
+	if (fd_null != -1)
+		close(fd_null);
+
+	if (fd != -1)
+		close(fd);
 
 	close(0);
 	return ret;

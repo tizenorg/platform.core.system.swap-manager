@@ -783,7 +783,10 @@ static size_t binary_ack_pack(char *s, const struct binary_ack *ba)
 	s += len;
 
 	for (i = 0; i!= 16; ++i) {
-		snprintf(s, 2, "%02x", ba->digest[i]);
+		/* we should use snprintf, snprintf prints data including
+		 * terminate '\0' so we need print 3 symbols
+		 */
+		snprintf(s, 3, "%02x", ba->digest[i]);
 		s += 2;
 	}
 	*s = '\0';
@@ -842,7 +845,8 @@ static struct binary_ack* binary_ack_alloc(const char *filename)
 	if (stat(filename, &decoy) == 0) {
 		ba->type = get_binary_type(filename);
 
-		get_build_dir(builddir, filename);
+		if (ba->type != BINARY_TYPE_UNKNOWN)
+			get_build_dir(builddir, filename);
 
 		if (builddir[0] != '\0')
 			snprintf(binpath, sizeof(binpath), check_windows_path(builddir) ?
@@ -887,7 +891,11 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 		if (new->type == BINARY_TYPE_FILE_NOT_EXIST) {
 			error_code = ERR_WRONG_MESSAGE_DATA;
 			LOGW("binary file not exists <%s>\n", str);
+		} else if (new->type == BINARY_TYPE_UNKNOWN) {
+			error_code = ERR_WRONG_MESSAGE_DATA;
+			LOGW("binary is not ELF binary <%s>\n", str);
 		}
+
 		if (new->binpath[0] == '\0')
 			LOGW("section '.debug_str' not found in <%s>\n", str);
 		acks[i] = new;
