@@ -271,6 +271,8 @@ struct user_space_inst_t {
 	struct app_list_t *app_inst_list;
 	uint32_t lib_num;
 	struct lib_list_t *lib_inst_list;
+	uint32_t ld_lib_num;
+	struct lib_list_t *ld_lib_inst_list;
 };
 
 //replays
@@ -397,13 +399,13 @@ struct recorded_event_t {
 
 #define pack_int64(to, n) do {						\
 		static_assert(sizeof(n) == 8);				\
-		*(uint64_t *)to = n;					\
+		*(uint64_t *)to = (n);					\
 		to += sizeof(uint64_t);					\
 	} while (0)
 
 #define pack_int32(to, n) do {						\
 		static_assert(sizeof(n) == 4);				\
-		*(uint32_t *)to = n;					\
+		*(uint32_t *)to = (n);					\
 		to += sizeof(uint32_t);					\
 	} while (0)
 
@@ -459,6 +461,8 @@ int recv_msg_from_sock(int sock, struct msg_target_t *msg);
 
 //debugs
 void print_replay_event(struct replay_event_t *ev, uint32_t num, char *tab);
+void feature_code_str(uint64_t feature0, uint64_t feature1, char *to,
+		      uint32_t buflen);
 
 int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 			char *payload, int payload_size);

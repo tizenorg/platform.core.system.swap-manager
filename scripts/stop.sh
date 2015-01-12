@@ -1,5 +1,7 @@
 #!/bin/sh
 
+rmmod swap_preload
+rmmod swap_task_data
 rmmod swap_webprobe
 rmmod swap_retprobe
 rmmod swap_message_parser
