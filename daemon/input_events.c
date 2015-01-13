@@ -93,6 +93,8 @@ static const char *input_touch_devices[] = {
 	"MELPAS MMS114 Touchscreen",
 	/* target: Kiran, kernel: 3.10.17 */
 	"ist30xx_ts_input",
+	/* target: tv emulator, kernel: 3.12.18 */
+	"ImExPS/2 Generic Explorer Mouse",
 	NULL
 };
 
