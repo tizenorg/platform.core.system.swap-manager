@@ -989,8 +989,8 @@ int daemonLoop(void)
 	ecore_init();
 
 	if (init_input_events() == -1) {
-		return_value = -1;
-		goto END_EVENT;
+		LOGE("Init input event failed. "
+		     "Record and replay events failed.\n");
 	}
 
 	if (!initialize_events()) {
