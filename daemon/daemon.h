@@ -167,6 +167,7 @@ typedef struct
 	int buf_fd;
 	int user_ev_fd;
 	int efd;
+	int lockfd;
 	__da_host_info host;
 	__file_descriptors fd;
 	char appPath[128]; // application executable path
