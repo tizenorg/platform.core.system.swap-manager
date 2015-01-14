@@ -241,23 +241,23 @@ static int makeHostServerSocket()
 // initializing / finalizing functions
 // =============================================================================
 
-static bool ensure_singleton(const char *lockfile)
+static int ensure_singleton(const char *lockfile)
 {
-	if (access(lockfile, F_OK) == 0)	/* File exists */
-		return false;
+	int lockfd;
+	int locked;
 
-	int lockfd = open(lockfile, O_WRONLY | O_CREAT, 0600);
-	if (lockfd < 0) {
-		LOGE("singleton lock file creation failed");
-		return false;
-	}
+	/* DO NOT CLOSE lockfile!!! */
+	lockfd = open(lockfile, O_RDWR | O_CREAT, 0600);
+	if (lockfd < 0)
+		LOGI("singleton lock file creation failed\n");
+
 	/* To prevent race condition, also check for lock availiability. */
-	bool locked = flock(lockfd, LOCK_EX | LOCK_NB) == 0;
+	locked = (!(flock(lockfd, LOCK_EX | LOCK_NB) < 0));
 
-	if (!locked) {
-		LOGE("another instance of daemon is already running");
-	}
-	close(lockfd);
+	if (!locked)
+		LOGE("another instance of daemon is already running\n");
+
+	/* DO NOT CLOSE lockfile!!! */
 	return locked;
 }
 
@@ -402,8 +402,11 @@ static void setup_signals()
 // main function
 int main()
 {
-	if (!ensure_singleton(SINGLETON_LOCKFILE))
+
+	if (!ensure_singleton(SINGLETON_LOCKFILE)) {
+		LOGE("Daemon cannot be launched\n");
 		return 1;
+	}
 
 	if (initialize_log() != 0) {
 		LOGE("Init log failed. uninit\n");
