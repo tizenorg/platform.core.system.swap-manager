@@ -29,6 +29,7 @@
 #include "da_protocol_inst.h"
 #include "da_inst.h"
 #include "da_protocol_check.h"
+#include "ld_preload_probe_lib.h"
 
 //----------------- hash
 static uint32_t calc_lib_hash(struct us_lib_inst_t *lib)
@@ -94,7 +95,8 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 			sizeof(uint32_t);  /* pointer order */
 		break;
 	case SWAP_LD_PROBE:
-		size += sizeof(uint64_t); /* ld preload handler addr */
+		size += sizeof(uint64_t) + /* ld preload handler addr */
+			sizeof(char);		  /* ld probe type */
 		break;
 	case SWAP_WEBPROBE:
 		break;
@@ -307,4 +309,146 @@ int parse_app_inst_list(struct msg_buf_t *msg,
 
 	return 1;
 }
+/* ld probes */
+#define NOFEATURE 0x123456
+#include "ld_preload_types.h"
+struct ld_preload_probe_t {
+	uint64_t orig_addr;
+	uint8_t probe_type;
+	uint64_t handler_addr;
+	uint8_t preload_type;
+} __attribute__ ((packed));
 
+static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
+				      struct data_list_t *dest, int preload_probe_type)
+{
+	uint32_t i = 0, num = 0;
+	struct probe_list_t *probe_el;
+	struct ld_preload_probe_t *func = NULL;
+
+	num = ld_lib.probe_count;
+
+	if (!check_us_app_inst_func_count(num)) {
+		LOGE("ld probe count is wrong\n");
+		return 0;
+	}
+	//parse user space function list
+
+	LOGI("app_int_num = %d\n", num);
+	for (i = 0; i < num; i++) {
+		parse_deb("app_int #%d\n", i);
+		probe_el = new_probe();
+		func = malloc(sizeof(struct ld_preload_probe_t));
+
+		func->orig_addr = ld_lib.probes[i].orig_addr;
+		func->probe_type = SWAP_LD_PROBE;
+		func->handler_addr = ld_lib.probes[i].handler_addr;
+		func->preload_type = preload_probe_type;
+
+		probe_el->size = sizeof(struct ld_preload_probe_t);
+		probe_el->func = (struct us_func_inst_plane_t *)func;
+
+		LOGI("app_int #%d size = %lu\n", i, dest->size);
+		probe_list_append(dest, probe_el);
+	}
+	dest->func_num = num;
+	return 1;
+}
+
+static int feature_add_inst_lib(struct ld_lib_list_el_t ld_lib,
+				struct lib_list_t **dest, int preload_probe_type)
+{
+	*dest = new_lib();
+	if (*dest == NULL) {
+		LOGE("lib alloc error\n");
+		return 0;
+	};
+
+	if (!check_exec_path(ld_lib.lib_name)) {
+		LOGE("bin path parsing error\n");
+		return 0;
+	}
+
+	(*dest)->lib->bin_path = strdup(ld_lib.lib_name);
+
+	if (!feature_add_func_inst_list(ld_lib, (struct data_list_t *)*dest,
+	    preload_probe_type)) {
+		LOGE("funcs parsing error\n");
+		return 0;
+	}
+
+	(*dest)->size += strlen((*dest)->lib->bin_path) + 1 + sizeof((*dest)->func_num);
+	(*dest)->hash = calc_lib_hash((*dest)->lib);
+	return 1;
+
+}
+
+int feature_add_lib_inst_list(struct ld_feature_list_el_t *ld_lib_list,
+			      struct lib_list_t **lib_list, int preload_probe_type)
+{
+
+	uint32_t i = 0, num;
+	struct lib_list_t *lib = NULL;
+
+	num = ld_lib_list->lib_count;
+	if (!check_lib_inst_count(num)) {
+		LOGE("lib num parsing error\n");
+		return 0;
+	}
+
+	for (i = 0; i < num; i++) {
+		LOGI(">add lib #%d <%s> probes_count=%lu\n", i, ld_lib_list->libs[i].lib_name, ld_lib_list->libs[i].probe_count);
+		if (!feature_add_inst_lib(ld_lib_list->libs[i], &lib,
+		    preload_probe_type)) {
+			// TODO maybe need free allocated memory up there
+			LOGE("add LD lib #%d failed\n", i + 1);
+			return 0;
+		}
+		data_list_append((struct data_list_t **)lib_list,
+				 (struct data_list_t *)lib);
+	}
+
+	return 1;
+}
+
+int add_preload_get_caller_probe(struct lib_list_t **lib_list)
+{
+	struct lib_list_t *preload_lib = new_lib();
+	struct probe_list_t *get_caller_probe = new_probe();
+	struct us_func_inst_plane_t *func = NULL;
+
+	if (preload_lib == NULL) {
+		LOGE("preload lib alloc error\n");
+		return 0;
+	}
+
+	if (get_caller_probe == NULL) {
+		LOGE("get caller probe alloc error\n");
+		return 0;
+	}
+
+	preload_lib->lib->bin_path = probe_lib;
+	preload_lib->func_num = 1;
+
+	func = malloc(sizeof(*func));
+	if (func == NULL) {
+		LOGE("preload get_caller probe no memory\n");
+		return -ENOMEM;
+	}
+
+	func->func_addr = get_caller_addr;
+	func->probe_type = 4; /* GET_CALLER_ADDR probe type */
+
+	get_caller_probe->size = sizeof(*func);
+	get_caller_probe->func = func;
+
+	probe_list_append(preload_lib, get_caller_probe);
+
+	preload_lib->func_num = 1;
+	preload_lib->size += strlen(preload_lib->lib->bin_path) + 1 + sizeof(preload_lib->func_num);
+	preload_lib->hash = calc_lib_hash(preload_lib->lib);
+
+	data_list_append((struct data_list_t **)lib_list, (struct data_list_t *)preload_lib);
+
+	return 1;
+}
