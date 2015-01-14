@@ -21,7 +21,12 @@ endif
 
 COMMON_LIBS := -lglib-2.0 -lpthread
 TARGET_LIBS := $(COMMON_LIBS) -lvconf -lsmack -lcapi-system-info -lecore -leina -lpthread
-CFLAGS := -Wall -pthread -g -O0 -I/usr/include/ecore-1 -I/usr/include/eina-1 -I/usr/include/eina-1/eina
+CFLAGS := -Wall -pthread -g -O0 \
+		  -I/usr/include/ecore-1 \
+		  -I/usr/include/eina-1 \
+		  -I/usr/include/eina-1/eina \
+		  -I/usr/include/efl-1 \
+		  -I/usr/include/eo-1
 
 DAEMON_SRCS =			\
 	buffer.c		\
