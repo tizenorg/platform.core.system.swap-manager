@@ -832,8 +832,8 @@ static struct binary_ack* binary_ack_alloc(const char *filename)
 {
 	struct binary_ack *ba = malloc(sizeof(*ba));
 	struct stat decoy;
-	char builddir[PATH_MAX];
-	char binpath[PATH_MAX];
+	char builddir[PATH_MAX] = {0,};
+	char binpath[PATH_MAX] = {0,};
 
 	if (stat(filename, &decoy) == 0) {
 		ba->type = get_binary_type(filename);
@@ -844,8 +844,6 @@ static struct binary_ack* binary_ack_alloc(const char *filename)
 		if (builddir[0] != '\0')
 			snprintf(binpath, sizeof(binpath), check_windows_path(builddir) ?
 				 "%s\\%s" : "%s/%s", builddir, basename(filename) ?: "");
-		else
-			binpath[0] = '\0';
 
 		ba->binpath = strdup(binpath);
 		get_file_md5sum(ba->digest, filename);
