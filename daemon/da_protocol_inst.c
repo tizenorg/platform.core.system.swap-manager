@@ -343,7 +343,7 @@ static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
 		func->orig_addr = ld_lib.probes[i].orig_addr;
 		func->probe_type = SWAP_LD_PROBE;
 		func->handler_addr = ld_lib.probes[i].handler_addr;
-		func->preload_type = preload_probe_type;
+		func->preload_type = (ld_lib.probes[i].block_type << 1) | preload_probe_type;
 
 		probe_el->size = sizeof(struct ld_preload_probe_t);
 		probe_el->func = (struct us_func_inst_plane_t *)func;
@@ -411,11 +411,34 @@ int feature_add_lib_inst_list(struct ld_feature_list_el_t *ld_lib_list,
 	return 1;
 }
 
+static int create_preload_probe_func(struct probe_list_t **probe,
+				     unsigned long probe_addr,
+				     char probe_type)
+{
+	struct us_func_inst_plane_t *func = NULL;
+
+	func = malloc(sizeof(*func));
+	if (func == NULL) {
+		LOGE("no memory for probe func\n");
+		return -ENOMEM;
+	}
+
+	func->func_addr = probe_addr;
+	func->probe_type = probe_type;
+
+	(*probe)->size = sizeof(*func);
+	(*probe)->func = func;
+
+	return 0;
+}
+
 int add_preload_probes(struct lib_list_t **lib_list)
 {
 	struct lib_list_t *preload_lib = new_lib();
-	struct probe_list_t *get_caller_probe = new_probe();
-	struct probe_list_t *get_call_type_probe = new_probe();
+	struct probe_list_t
+	    *get_caller_probe = new_probe(),
+	    *get_call_type_probe = new_probe();
+	int ret = 0;
 	struct us_func_inst_plane_t *func = NULL;
 
 	if (preload_lib == NULL) {
@@ -423,42 +446,24 @@ int add_preload_probes(struct lib_list_t **lib_list)
 		return 0;
 	}
 
-	if (get_caller_probe == NULL) {
-		LOGE("get caller probe alloc error\n");
+	if (get_caller_probe == NULL || get_call_type_probe == NULL) {
+		LOGE("probe alloc error\n");
 		return 0;
 	}
 
 	preload_lib->lib->bin_path = probe_lib;
 	preload_lib->func_num = 2;
 
-    /* Add get_caller probe */
-	func = malloc(sizeof(*func));
-	if (func == NULL) {
-		LOGE("preload get_caller probe no memory\n");
-		return -ENOMEM;
-	}
-
-	func->func_addr = get_caller_addr;
-	func->probe_type = 4; /* GET_CALLER_ADDR probe type */
-
-	get_caller_probe->size = sizeof(*func);
-	get_caller_probe->func = func;
-
+	/* Add get_caller probe */
+	ret = create_preload_probe_func(&get_caller_probe, get_caller_addr, 4);
+	if (ret != 0)
+		return ret;
 	probe_list_append(preload_lib, get_caller_probe);
 
-    /* Add get_call_type probe */
-	func = malloc(sizeof(*func));
-	if (func == NULL) {
-		LOGE("preload get_call_type probe no memory\n");
-		return -ENOMEM;
-	}
-
-	func->func_addr = get_call_type_addr;
-	func->probe_type = 5; /* GET_CALL_TYPE probe type */
-
-	get_call_type_probe->size = sizeof(*func);
-	get_call_type_probe->func = func;
-
+	/* Add get_call_type probe */
+	ret = create_preload_probe_func(&get_call_type_probe, get_call_type_addr, 5);
+	if (ret != 0)
+		return ret;
 	probe_list_append(preload_lib, get_call_type_probe);
 
 	preload_lib->func_num = 2;
