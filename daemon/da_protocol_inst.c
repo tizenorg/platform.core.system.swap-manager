@@ -438,6 +438,7 @@ int add_preload_probes(struct lib_list_t **lib_list)
 	struct probe_list_t
 	    *get_caller_probe = new_probe(),
 	    *get_call_type_probe = new_probe();
+	    *write_msg_probe = new_probe();
 	int ret = 0;
 	struct us_func_inst_plane_t *func = NULL;
 
@@ -446,13 +447,13 @@ int add_preload_probes(struct lib_list_t **lib_list)
 		return 0;
 	}
 
-	if (get_caller_probe == NULL || get_call_type_probe == NULL) {
+	if (get_caller_probe == NULL || get_call_type_probe == NULL || write_msg_probe == NULL) {
 		LOGE("probe alloc error\n");
 		return 0;
 	}
 
 	preload_lib->lib->bin_path = probe_lib;
-	preload_lib->func_num = 2;
+	preload_lib->func_num = 3;
 
 	/* Add get_caller probe */
 	ret = create_preload_probe_func(&get_caller_probe, get_caller_addr, 4);
@@ -466,7 +467,13 @@ int add_preload_probes(struct lib_list_t **lib_list)
 		return ret;
 	probe_list_append(preload_lib, get_call_type_probe);
 
-	preload_lib->func_num = 2;
+	/* Add write_msg probe */
+	ret = create_preload_probe_func(&write_msg_probe, write_msg_addr, 6);
+	if (ret != 0)
+		return ret;
+	probe_list_append(preload_lib, write_msg_probe);
+
+	preload_lib->func_num = 3;
 	preload_lib->size += strlen(preload_lib->lib->bin_path) + 1 + sizeof(preload_lib->func_num);
 	preload_lib->hash = calc_lib_hash(preload_lib->lib);
 
