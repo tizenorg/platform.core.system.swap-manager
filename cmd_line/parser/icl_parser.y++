@@ -1,0 +1,693 @@
+    %define api.pure
+%parse-param { struct pcdata * pp }
+
+/* ICL grammar */
+
+%{
+
+    #include <stdio.h>
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+    #include <dirent.h>
+    #include <limits.h>
+    #include <stdlib.h>
+    #include <string.h>
+    #include "CConfig.h"
+    #include "stddebug.h"
+    #include "CInterpreter.h"
+    #include "lex_mem.h"
+    #include "da_protocol.h"
+
+    #include "CProbeFBI.h"
+    #include "CProbeDataFBIVar.h"
+
+    #define YYERROR_VERBOSE 1
+
+    #define RISE_ERROR(msg)		\
+    do					\
+    {					\
+	yyerror(NULL, "ERROR: " msg);	\
+	if (GLOBALS->nMode != CONF_ONLY) { \
+	    YYERROR;			\
+	} else {			\
+	    YYABORT;			\
+	}				\
+    } while(0)
+
+    #define PRINT_OK			\
+    if (GLOBALS->nMode != CONF_ONLY) {	\
+            fprintf(YYOUT, "ok\n");	\
+    }
+
+    #define PRINT_ERROR(msg)		\
+    if (GLOBALS->nMode != CONF_ONLY) {  \
+            fprintf(YYOUT, "error\n");	\
+	    fprintf(YYOUT, msg);	\
+	    fprintf(YYOUT, "\n");	\
+    }
+
+
+    //If the number of variables is exceeded 32, tell Anatoly.
+
+
+    // types of library instrumentation ( x - standart instrumentation, m - memory access instr., a - all types )
+    const int INST_TYPE__X = COMMON_TRACE;
+    const int INST_TYPE__E = ONLY_ENTRY_TRACE;
+
+int yylex(void);
+%}
+
+%union
+{
+    unsigned long ulValue;
+    struct in_addr Ip;
+    char * szValue;
+    char cDataType;
+    int nVar;
+    long slValue;
+    int nValue;
+    int nInstType;
+
+    app_type_t nAppType;
+    probe_t  nProbeType;
+    probe_level_type_t nProbeLevelType;
+
+    CProbeFBI *fbiProbe;
+    CProbeDataFBIVar *fbiVar;
+    CProbeDataFBIVarList *fbiVarsList;
+    CProbeDataFBIStepList *fbiStepsList;
+    CProbeDataFBIStep *fbiStepElm;
+}
+
+%{
+    #include "flex_common.h"
+
+    #define YYPCDATA pp
+    #define YYLEX_PARAM pp->scaninfo
+    #define GLOBALS ((struct pcdata *)yyget_extra( pp->scaninfo ))
+    #define YYOUT yyget_out(YYLEX_PARAM)
+
+// FIXME: Turn these definitions into CConfig's methods
+#ifdef TARGET
+#define GetBinPath(profile) profile->m_ssTargetBinPath;
+#define GetLibsPath(profile) profile->m_ssTLibsPath
+#else
+#define GetBinPath(profile) profile->m_ssHostBinPath
+#define GetLibsPath(profile) profile->m_ssLibsPath
+#endif
+
+    void PrintPrompt(struct pcdata * pp)
+    {
+	if (1) {
+		fprintf(YYOUT, "#>");
+	} else {
+		fprintf(YYOUT, "\n");
+	}
+    }
+
+    int yyerror(struct pcdata * pp, const char * s)
+    {
+	if (GLOBALS->nMode != CONF_ONLY) {
+		fprintf(stderr, "..");
+		for (int i = 0; i < GLOBALS->_columnNum - 1; i++) {
+			fprintf(stderr, ".");
+		}
+		fprintf(stderr, "^\n");
+	}
+	fprintf(stderr, "Line: #%d:%d\t\t%s\n", GLOBALS->_lineNum, GLOBALS->_columnNum, s);
+	if (GLOBALS->nMode != CONF_ONLY)
+	{
+	    PrintPrompt(YYPCDATA);
+	}
+	return 0;
+    }
+
+%}
+
+/* -------------- axiom --------------- */
+%start		SCRIPT
+
+/* -------------- tokens -------------- */
+
+/* keywords */
+/* set commands */
+%token		setv
+%token		setp
+%token		setd
+
+/* get commands */
+%token		getv
+%token		getp
+%token		getall
+%token		getlibs
+
+%token		traceinfo
+%token		delp
+%token		lib_name
+%token		target_ip
+%token		target_port
+%token		buffer_size
+%token		buffer_cont
+
+/**/
+%token		cur_app
+%token		cur_lib
+%token		step
+%token		var
+
+/* probe types */
+%token		kern
+%token		app
+%token		lib
+
+/* probe subtype */
+%token		fbi
+
+/* param types */
+%token		sdec32
+%token		uhex32
+%token		_float
+%token		_char
+%token		str
+
+%token		all
+%token		_start
+%token		stop
+%token		ignore
+%token		clear
+%token		save
+%token		savepf
+%token		loadpf
+%token		_TRUE
+%token		_FALSE
+%token		x
+%token		e
+%token		shell
+%token		parse
+%token		quit
+%token		__exit
+%token          db_fname
+%token		sampler_timer
+
+/* application types */
+%token		tizen
+%token		native
+%token		running
+%token		common
+%token		web
+
+/* dec numbers  */
+%token<ulValue>		LEX_DEC_NUM
+
+/* hex numbers */
+%token<ulValue>		LEX_HEX_NUM
+
+/* path */
+%token<szValue>		LEX_SYMNAME
+
+/* ip address */
+%token<Ip>		LEX_IP
+
+/* memory size */
+%token<ulValue>		LEX_MEM_SIZE
+
+/* identifier */
+%token<szValue>		LEX_ID
+
+/* = */
+%token			LEX_EQ
+
+/* - */
+%token			LEX_MINUS
+
+/* commentary */
+%token			LEX_COMMENT
+
+/* new line */
+%token			LEX_NEW_LINE
+
+/* bad lexeme */
+%token			LEX_BAD_LEXEME
+
+
+%token LEX_BRACE_OPEN
+%token LEX_BRACE_CLOSE
+%token LEX_LIST_DELIMETER
+
+
+
+
+
+/* -------------- some nonterminals -------------- */
+%type<nAppType>	APP_TYPE
+%type<nProbeLevelType>	PROBE_TYPE
+%type<nProbeType>	PROBE_SUBTYPE
+
+%type<cDataType>	DATA_TYPE
+%type<nVar>		VAR_NAME
+%type<slValue>		OFFSET
+%type<slValue>		POINTER_ORDER
+%type<szValue>		TRACE_BIN_FILE
+%type<szValue>		PROFILE
+%type<fbiProbe>			FBI_PROBE
+
+%type<fbiVar>			FBI_VAR
+%type<fbiVarsList>			FBI_VARS_LIST
+%type<fbiVarsList>			FBI_VAR_LIST_ELM
+
+
+%type<fbiStepElm>	FBI_STEP
+%type<fbiStepsList>	FBI_STEPS_LIST_ELM
+%type<fbiStepsList>	FBI_STEPS_LIST
+
+
+
+%%
+
+/* production */
+
+SCRIPT
+	: /* empty */
+	| SCRIPT LINE
+	;
+
+LINE
+	: COMMAND LEX_NEW_LINE
+	| LEX_COMMENT LEX_NEW_LINE
+	| LEX_NEW_LINE
+	{
+	    if (GLOBALS->nMode != CONF_ONLY) {
+		PrintPrompt(YYPCDATA);
+	    }
+	}
+	| error LEX_NEW_LINE
+	{
+	    yyerrok;
+	    if (GLOBALS->nMode == CONF_ONLY) {
+		YYABORT;
+	    }
+	}
+	;
+
+
+COMMAND:	CONF_COMMAND
+		{
+			if (GLOBALS->nMode != CONF_ONLY) {
+				PrintPrompt(YYPCDATA);
+			}
+		} |
+		ACT_COMMAND
+		{
+			if (GLOBALS->nMode != CONF_ONLY) {
+				PrintPrompt(YYPCDATA);
+			}
+		}
+		;
+
+CONF_COMMAND:
+		setv target_ip LEX_IP		{
+			TRACE("setv target_ip 'IP'" );		
+		} |
+
+		setv target_port LEX_DEC_NUM	{
+			TRACE("setv target_port '%lu'", $3);
+		} |
+
+		setv cur_app APP_TYPE LEX_SYMNAME LEX_SYMNAME
+		{
+			TRACE("setv cur_app %d '%s' '%s'", $3, $4, $5);
+			GLOBALS->pConfig->setCurrentApplication(static_cast<app_type_t>$3, $4, $5);
+		}|
+
+		setv cur_lib LEX_SYMNAME
+		{
+			TRACE("setv cur_lib '%s'", $3);
+			GLOBALS->pConfig->setCurrentLib($3);
+		}
+		;
+
+VAR_NAME:	
+		lib_name		{ $$ = VAR__LIB_NAME;		} |
+		target_port		{ $$ = VAR__TARGET_PORT;	} |
+		buffer_size		{ $$ = VAR__BUFFER_SIZE;	} |
+		buffer_cont		{ $$ = VAR__BUFFER_CONT;	} |
+		;
+
+expr: LEX_DEC_NUM  {PRINT_OK};
+array_expr: array_expr expr | expr;
+array: '{'array_expr'}';
+
+CONF_COMMAND:	
+		setp lib PROBE_SUBTYPE LEX_HEX_NUM  {
+			GLOBALS->pConfig->setCurrentLibProbe($4, static_cast<probe_t>($3));
+		} |
+
+
+		setp PROBE_TYPE fbi LEX_HEX_NUM {
+			if (GLOBALS->pConfig->setCurrentProbe($2, $4, PROBE_TYPE_FBI) != 0) {
+				PRINT_ERROR("Cannot set probe");
+			}
+		} |
+		setp PROBE_TYPE fbi LEX_HEX_NUM FBI_VARS_LIST {
+			TRACE("!!!!!!!!!!!!!!!!!!!setp fbi 1 = 0x%lx:%p", $4, $5);
+			if (GLOBALS->pConfig->setCurrentProbe($2, $4, PROBE_TYPE_FBI, $5) != 0) {
+				PRINT_ERROR("Cannot set probe1");
+				delete $5;
+			}
+		} |
+		setd PROBE_TYPE fbi var LEX_DEC_NUM OFFSET LEX_DEC_NUM LEX_DEC_NUM {
+			TRACE("!!!!!!!!!!!!!!!!!!!setp fbi var = %lu %li %lu %lu", $5, $6, $7, $8);
+			CProbeDataFBIVar *FBIvar = new CProbeDataFBIVar($5, $6, $7, $8);
+			if (GLOBALS->pConfig->addCurrentAppProbeData(FBIvar) != 0) {
+				PRINT_ERROR("Cannot add var");
+				delete FBIvar;
+			}
+		} |
+		setd PROBE_TYPE fbi step POINTER_ORDER OFFSET {
+			TRACE("!!!!!!!!!!!!!!!!!!!setp fbi step = %li %li", $5, $6);
+			CProbeDataFBIStep *FBIStep = new CProbeDataFBIStep($5, $6);
+			if (GLOBALS->pConfig->addCurrentAppProbeData(FBIStep) != 0) {
+				PRINT_ERROR("Cannot add step");
+				delete FBIStep;
+			}
+		} |
+		;
+
+LIST_DELIMETER:		LEX_LIST_DELIMETER | LEX_LIST_DELIMETER LEX_NEW_LINE;
+BRACE_OPEN:		LEX_BRACE_OPEN | LEX_BRACE_OPEN LEX_NEW_LINE;
+BRACE_CLOSE:		LEX_BRACE_CLOSE | LEX_BRACE_CLOSE LEX_NEW_LINE;
+
+
+FBI_PROBE:		LEX_HEX_NUM FBI_VARS_LIST {
+			};
+
+FBI_VARS_LIST:		BRACE_OPEN FBI_VAR_LIST_ELM BRACE_CLOSE {
+				$$ = $2;
+				TRACE("????????? 1 %p -> %p", $2, $$);
+				$2->printList();
+			};
+
+FBI_VAR_LIST_ELM:	BRACE_OPEN FBI_VAR BRACE_CLOSE {
+				$$ = new CProbeDataFBIVarList();
+				TRACE("????????? 2 %p -> %p", $2, $$);
+				$$->addData($2);
+			} |
+			BRACE_OPEN FBI_VAR BRACE_CLOSE LIST_DELIMETER FBI_VAR_LIST_ELM {
+				$$ = $5;//new FBIStepElm();
+				$$->addData($2);
+				TRACE("????????? setp step list add %p -> %p ", $2, $5);
+			};
+
+
+
+FBI_VAR:			LEX_DEC_NUM LIST_DELIMETER OFFSET LIST_DELIMETER LEX_DEC_NUM LIST_DELIMETER LEX_DEC_NUM LIST_DELIMETER FBI_STEPS_LIST
+			{
+				/* var id (8b), register offset (8b), register num (1b), data size (4b)*/
+				TRACE("id=%lu off=%lu reg=%lu size=%lu list=%p", $1, $3, $5, $7, $9);
+				$$ = new CProbeDataFBIVar($1, $3, $5, $7);
+				$$->setData($9);
+				$$->printList();
+			};
+
+FBI_STEPS_LIST:		BRACE_OPEN FBI_STEPS_LIST_ELM BRACE_CLOSE {
+				TRACE("!!!!!!!!!!!!!!!!!!!setp fbi 3 %p", $2);
+				$$ = $2;
+			};
+
+FBI_STEPS_LIST_ELM:	BRACE_OPEN FBI_STEP BRACE_CLOSE {
+				$$ = new CProbeDataFBIStepList();
+				TRACE("!!!!!!!!!!!!!!!!!!! step list start %p->%p", $2, $$);
+				$$->addData($2);
+			}|
+			BRACE_OPEN FBI_STEP BRACE_CLOSE LIST_DELIMETER FBI_STEPS_LIST_ELM {
+				$$ = $5;//new FBIStepElm();
+				$$->addData($2);
+				TRACE("!!!!!!!!!!!!!!!!!!!  setp step list add %p -> %p ", $2, $5);
+			};
+
+FBI_STEP:		POINTER_ORDER LIST_DELIMETER OFFSET {
+				//FBIStepElm *elm = new FBIStepElm(new FBIStep($1,$3));
+				CProbeDataFBIStep *FBIStep = new CProbeDataFBIStep($1, $3);
+				$$ = FBIStep;
+				TRACE("step %p: ord=%lu off=0x%lx", $$, $1, $3)
+			};
+
+PROBE_TYPE:	kern	{ $$ = PROBE_TYPE_LEVEL_KERNEL; } |
+		app	{ $$ = PROBE_TYPE_LEVEL_APP;    } |
+		lib	{ $$ = PROBE_TYPE_LEVEL_LIB;    };
+
+PROBE_SUBTYPE:	fbi	{ $$ = PROBE_TYPE_FBI;     }
+
+APP_TYPE:	native	{ $$ = APP_TYPE_TIZEN;  } |
+		running	{ $$ = APP_TYPE_RUNNING; } |
+		common	{ $$ = APP_TYPE_COMMON;  } |
+		web	{ $$ = APP_TYPE_WEB;     }
+		;
+
+
+DATA_TYPE:	sdec32	{ $$ = 'd'; } |
+		uhex32	{ $$ = 'x'; } |
+		_float	{ $$ = 'f'; } |
+		_char	{ $$ = 'c'; } |
+		str	{ $$ = 's'; }
+		;
+
+POINTER_ORDER:	LEX_DEC_NUM | LEX_HEX_NUM { $$ = static_cast<long>($1);   };
+OFFSET:		LEX_MINUS LEX_HEX_NUM	{ $$ = - static_cast<long>($2); } |
+		LEX_HEX_NUM		{ $$ = static_cast<long>($1);   }
+		;
+
+ACT_COMMAND:	getall				{GLOBALS->pConfig->getAll();} |
+		getv all			{} |
+		getv VAR_NAME			{} |
+		getp all			{} |
+		getp kern			{} |
+		getp lib LEX_SYMNAME		{} |
+		getp app			{} |
+		getp PROBE_TYPE	all		{} |
+		getp PROBE_TYPE LEX_HEX_NUM	{} |
+		shell				{
+							if (GLOBALS->nMode == CONF_ONLY)
+							{
+								RISE_ERROR(MSG_CANT_EXECUTE_COMMAND_IN_CURRENT_MODE);
+							}
+							else
+							{
+								fprintf( YYOUT, "%s\n", MSG_START_SHELL );
+								system(CMD_PATH_TO_SHELL);
+								fprintf( YYOUT, "%s\n", MSG_EXIT_SHELL );
+							}
+						} |
+		shell LEX_SYMNAME	{
+							char * szShellCmd = $2;
+							TRACE("shell '%s'", szShellCmd);
+							if (GLOBALS->nMode == CONF_ONLY)
+							{
+								DELETE_LEX_STR(szShellCmd);
+								RISE_ERROR(MSG_CANT_EXECUTE_COMMAND_IN_CURRENT_MODE);
+							}
+							else
+							{
+								system(szShellCmd);
+								DELETE_LEX_STR(szShellCmd);
+							}
+						}
+						;
+
+ACT_COMMAND:	delp all			{ /* del all probes*/
+						} |
+		delp PROBE_TYPE all		{ /* del all probes by type */
+							PRINT_OK;
+						} |
+		delp PROBE_TYPE LEX_HEX_NUM	{ /* del probe by addr */
+							PRINT_OK;
+						}
+		;
+
+ACT_COMMAND:	traceinfo                    {
+                                                if (GLOBALS->nMode == CONF_ONLY)
+                                                {
+                                                        //RISE_ERROR(MSG_CANT_EXECUTE_COMMAND_IN_CURRENT_MODE);
+                                                }
+                                                else
+                                                {
+#if defined(ACTIVE_CMDS_ENABLED)
+                                                        unsigned long pnArray[BSECI_COUNT];
+                                                        GLOBALS->pControlAPI->ControlAPIGetBufferStatus(pnArray, BSECI_COUNT);
+							// In any state except EC_STATE_IDLE the count of events must be greater than 0
+							if ( pnArray[BSECI_STATE] != EC_STATE_IDLE && pnArray[BSECI_SAVED] == 0) {
+								PRINT_ERROR("Reboot system");
+							} else if ( pnArray[BSECI_STATE] == EC_STATE_IDLE && pnArray[BSECI_SAVED] == 0) {
+								PRINT_OK;
+								printf("Trace collection not started\n");
+							} else {
+								PRINT_OK;
+								printf("buffer_size: %ld \n", pnArray[BSECI_BUFFER_SIZE] );
+								printf("first: %ld \n", pnArray[BSECI_FIRST] );
+								printf("after_last: %ld \n", pnArray[BSECI_AFTER_LAST]);
+								printf("collision_count: %ld \n", pnArray[BSECI_COLLISION]);
+								printf("lost_events_count: %ld \n", pnArray[BSECI_LOST]);
+								printf("trace_size: %ld \n", pnArray[BSECI_TRACE_SIZE]);
+								printf("ignored_events_count: %ld \n", pnArray[BSECI_IGNORED] );
+								printf("discarded_events_count: %ld \n", pnArray[BSECI_DISCARDED] );
+								printf("saved_events_count: %ld \n", pnArray[BSECI_SAVED] );
+							}
+
+#endif // defined(ACTIVE_CMDS_ENABLED)
+                                                }
+                                        } |
+
+
+ACT_COMMAND
+	: _start
+	{
+	    TRACE("start");
+	    if (GLOBALS->nMode == CONF_ONLY) {
+		//RISE_ERROR(MSG_CANT_EXECUTE_COMMAND_IN_CURRENT_MODE);
+	    } else {
+#if defined(ACTIVE_CMDS_ENABLED)
+		TRACE("ControlAPISetConfig(NULL, GLOBALS->pConfig)");
+//		GLOBALS->pControlAPI->ControlAPISetConfig(NULL, /*GLOBALS->pConfig*/);
+		if (GLOBALS->pControlAPI->ControlAPIStartTrace() == -1) {
+		    TRACE("Error while start data collection!");
+		    PRINT_ERROR(MSG_CANT_START_DATA_COLLECTION);
+		} else {
+		    PRINT_OK;
+		}
+#endif // defined(ACTIVE_CMDS_ENABLED)
+	    }
+	}
+	| stop
+	{
+	    if (GLOBALS->nMode == CONF_ONLY) {
+		//RISE_ERROR(MSG_CANT_EXECUTE_COMMAND_IN_CURRENT_MODE);
+	    } else {
+#if defined(ACTIVE_CMDS_ENABLED)
+		GLOBALS->pControlAPI->ControlAPIStopTrace();
+		PRINT_OK;
+#endif // defined(ACTIVE_CMDS_ENABLED)
+	    }
+	}
+	| clear
+	{
+	    if (GLOBALS->nMode == CONF_ONLY) {
+		RISE_ERROR(MSG_CANT_EXECUTE_COMMAND_IN_CURRENT_MODE);
+	    } else {
+		// ControlAPIClearTrace();
+	    }
+	}
+	| save TRACE_BIN_FILE
+	{
+	    char *szName = $2;
+	    int iLength = strlen("cp -f  ") + strlen(szName) +
+		strlen(DEFAULT_DB_FILE) + strlen(szName) + 1;
+	    char *szCmd = new char[iLength];
+	    snprintf(szCmd, iLength, "cp -f %s %s", DEFAULT_DB_FILE, szName);
+	    system(szCmd);
+	    PRINT_OK;
+	    printf("%s\n", szCmd);
+	    delete szCmd;
+	    DELETE_LEX_STR($2);
+	}
+;
+
+TRACE_BIN_FILE:	LEX_SYMNAME { $$ = $1; }
+		;
+
+ACT_COMMAND:	savepf PROFILE	{
+					if (GLOBALS->nMode == CONF_ONLY)
+					{
+					    DELETE_LEX_STR($2);
+					    RISE_ERROR(MSG_CANT_EXECUTE_COMMAND_IN_CURRENT_MODE);
+					}
+					else
+					{
+					    FILE * fdConfig = fopen($2, "w");
+					    //PrintConfig(fdConfig, GLOBALS->pConfig);
+					    fclose(fdConfig);
+					    PRINT_OK;
+					}
+					DELETE_LEX_STR($2);
+				} |
+		loadpf PROFILE	{
+					char * szScriptFileName = $2;
+					if (GLOBALS->nMode == CONF_ONLY)
+					{
+					    DELETE_LEX_STR(szScriptFileName);
+					    RISE_ERROR(MSG_CANT_EXECUTE_COMMAND_IN_CURRENT_MODE);
+					}
+					else
+					{
+					    /* reentrant parser invocation */
+					    FILE * pFdScriptFile = fopen(szScriptFileName, "r");
+					    int res;
+					    if (pFdScriptFile) {
+						GLOBALS->pConfig->clean();
+						res = YYmain(GLOBALS->pConfig,GLOBALS->pControlAPI, pFdScriptFile, YYOUT, CONF_ONLY);
+						fclose(pFdScriptFile);
+						if(!res) {
+						    PRINT_OK;
+						} else {
+						    PRINT_ERROR("Config loaded with errors");
+						}
+					    } else {
+						PRINT_ERROR("File not found");
+					    }
+					}
+					DELETE_LEX_STR(szScriptFileName);
+				}
+				;
+
+ACT_COMMAND:	getlibs		{
+				}
+				;
+
+ACT_COMMAND:	parse		{
+				}
+				;
+
+ACT_COMMAND:	quit	{
+				if (GLOBALS->nMode == CONF_ONLY)
+				{
+					RISE_ERROR(MSG_CANT_EXECUTE_COMMAND_IN_CURRENT_MODE);
+				}
+				else
+				{
+					PRINT_OK;
+					fprintf(YYOUT, "\n");
+#if defined(ACTIVE_CMDS_ENABLED)
+					GLOBALS->pControlAPI->ControlAPIStopTrace();
+#endif
+				YYABORT;
+				}
+			} |
+		__exit	{ exit(0); };
+
+PROFILE:	LEX_SYMNAME { $$ = $1; }
+		;
+
+%%
+
+int YYmain(pCConfig& pConfig, pCControlAPI& pControlAPI, FILE * pFd_in, FILE * pFd_out, EMode nMode)
+{
+	struct pcdata _perScannerData = { pControlAPI, pConfig, (EMode)0, 1, 0, NULL };
+
+	int res = yylex_init_extra(&_perScannerData, &_perScannerData.scaninfo);
+	ASSERT(res == 0);
+
+	_perScannerData.nMode = nMode;
+	yyset_in(pFd_in, _perScannerData.scaninfo);
+	yyset_out(pFd_out, _perScannerData.scaninfo);
+	setvbuf(pFd_out, NULL, _IOLBF, 0);
+
+	//YYLEX;
+	if (nMode != CONF_ONLY) {
+		PrintPrompt(&_perScannerData);
+	}
+
+	res = yyparse(&_perScannerData);
+
+	return res;
+}
+
