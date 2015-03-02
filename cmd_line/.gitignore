@@ -1,0 +1,5 @@
+*.o
+icl_lexer.cpp
+icl_parser.cpp
+icl_parser.h
+.gitignore
