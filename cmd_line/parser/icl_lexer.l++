@@ -1,0 +1,368 @@
+%option noyywrap nodefault yylineno reentrant bison-bridge always-interactive
+%option header-file="icl_lexer.lex.h"
+
+/* lexeme scanner for ICL language */
+
+%{
+    /* include headers */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include "lex_mem.h"
+#include "flex_common.h"
+
+#include "CProbeFBI.h"
+#include "CProbeDataFBIVar.h"
+
+#include "icl_parser.h"
+
+
+const int DEC_BASE = 10;
+const int HEX_BASE = 16;
+const int MB_FACTOR = 1024*1024;
+const int KB_FACTOR = 1024;
+
+#define DEBUG_LEX
+
+#ifdef DEBUG_LEX
+#define PRINT_LEX(lex)					\
+	{						\
+	    printf("lex: %s = '%s' \n", #lex, yytext);	\
+	}
+#else
+#define PRINT_LEX(lex)
+#endif
+
+#define KEYWORD_HANDLER(lex)		\
+	{				\
+	    PRINT_LEX(lex);		\
+	    return lex;			\
+	}
+
+#define YY_USER_ACTION pp->_columnNum += yyleng;
+
+%}
+
+LEX_NEW_LINE		[\n]
+LEX_DEC_NUM		[0-9]+
+LEX_HEX_NUM		0x[0-9A-Fa-f]+
+LEX_SYMNAME		\"[^\"]+\"
+LEX_IP			[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}
+LEX_MEM_SIZE__MB	[0-9]+Mb
+LEX_MEM_SIZE__KB	[0-9]+Kb
+LEX_MEM_SIZE__B		[0-9]+b
+LEX_ID			\[[^\[]+\]
+LEX_EQ			=
+LEX_MINUS		\-
+LEX_COMMENT		#[^\n]*
+LEX_BRACE_OPEN		\{
+LEX_BRACE_CLOSE		\}
+LEX_LIST_DELIMETER	\,
+
+%%
+
+%{
+    struct pcdata * pp = (struct pcdata *)yyextra;
+%}
+
+setv	{
+	    KEYWORD_HANDLER(setv);
+	}
+
+setp	{
+	    KEYWORD_HANDLER(setp);
+	}
+
+setd	{
+	    KEYWORD_HANDLER(setd);
+	}
+
+getv	{
+	    KEYWORD_HANDLER(getv);
+	}
+
+getp	{
+	    KEYWORD_HANDLER(getp);
+	}
+
+getall	{
+	    KEYWORD_HANDLER(getall);
+	}
+
+getlibs	{
+	    KEYWORD_HANDLER(getlibs);
+	}
+
+traceinfo {
+	    KEYWORD_HANDLER(traceinfo);
+	}
+
+delp	{
+	    KEYWORD_HANDLER(delp);
+	}
+
+lib_name			{
+	    KEYWORD_HANDLER(lib_name);
+	}
+
+target_ip	{
+	    KEYWORD_HANDLER(target_ip);
+	}
+
+target_port	{
+	    KEYWORD_HANDLER(target_port);
+	}
+
+buffer_size	{
+	    KEYWORD_HANDLER(buffer_size);
+	}
+
+buffer_cont	{
+	    KEYWORD_HANDLER(buffer_cont);
+	}
+
+kern	{
+	    KEYWORD_HANDLER(kern);
+	}
+
+app	{
+	    KEYWORD_HANDLER(app);
+	}
+
+lib	{
+	    KEYWORD_HANDLER(lib);
+	}
+
+fbi	{
+	    KEYWORD_HANDLER(fbi);
+	}
+
+sdec32	{
+	    KEYWORD_HANDLER(sdec32);
+	}
+
+uhex32	{
+	    KEYWORD_HANDLER(uhex32);
+	}
+
+float	{
+	    KEYWORD_HANDLER(_float);
+	}
+
+char	{
+	    KEYWORD_HANDLER(_char);
+	}
+
+str	{
+	    KEYWORD_HANDLER(str);
+	}
+
+all	{
+	    KEYWORD_HANDLER(all);
+	}
+
+start	{
+	    KEYWORD_HANDLER(_start);
+	}
+
+stop	{
+	    KEYWORD_HANDLER(stop);
+	}
+
+ignore	{
+	    KEYWORD_HANDLER(ignore);
+	}
+
+clear	{
+	    KEYWORD_HANDLER(clear);
+	}
+
+save	{
+	    KEYWORD_HANDLER(save);
+	}
+
+savepf	{
+	    KEYWORD_HANDLER(savepf);
+	}
+
+loadpf	{
+	    KEYWORD_HANDLER(loadpf);
+	}
+
+TRUE	{
+	    KEYWORD_HANDLER(_TRUE);
+	}
+
+FALSE	{
+	    KEYWORD_HANDLER(_FALSE);
+	}
+
+x	{
+	    KEYWORD_HANDLER(x);
+	}
+
+e	{
+	    KEYWORD_HANDLER(e);
+	}
+
+shell	{
+	    KEYWORD_HANDLER(shell);
+	}
+
+parse	{
+	    KEYWORD_HANDLER(parse);
+	}
+
+exit	{
+	    KEYWORD_HANDLER(__exit);
+	}
+
+
+quit	{
+	    KEYWORD_HANDLER(quit);
+	}
+
+db_fname	{
+	    KEYWORD_HANDLER(db_fname);
+	}
+sampler_timer	{
+		KEYWORD_HANDLER(sampler_timer);
+	}
+
+%{ /* --------------- NEW --------------- */ %}
+
+
+native		{KEYWORD_HANDLER(native);}
+tizen		{KEYWORD_HANDLER(native);}
+running		{KEYWORD_HANDLER(running);}
+common		{KEYWORD_HANDLER(common);}
+web		{KEYWORD_HANDLER(web);}
+
+cur_app		{KEYWORD_HANDLER(cur_app);}
+cur_lib		{KEYWORD_HANDLER(cur_lib);}
+step		{KEYWORD_HANDLER(step);}
+var		{KEYWORD_HANDLER(var);}
+
+{LEX_NEW_LINE}		{
+			    PRINT_LEX(LEX_NEW_LINE);
+			    pp->_lineNum ++;
+			    pp->_columnNum = 0;
+			    return LEX_NEW_LINE;
+			}
+
+{LEX_DEC_NUM}		{
+			    PRINT_LEX(LEX_DEC_NUM);
+			    yylval->ulValue = strtoul(yytext, NULL, DEC_BASE);
+			    if (yylval->ulValue == EINVAL)
+				return LEX_BAD_LEXEME;
+			    else
+				return LEX_DEC_NUM;
+			}
+
+{LEX_HEX_NUM}		{
+			    PRINT_LEX(LEX_HEX_NUM);
+			    yylval->ulValue = strtoul(yytext, NULL, HEX_BASE);
+			    if (yylval->ulValue == EINVAL)
+				return LEX_BAD_LEXEME;
+			    else
+			    {
+				return LEX_HEX_NUM;
+			    }
+			}
+
+{LEX_SYMNAME}		{
+			    PRINT_LEX(LEX_SYMNAME);
+			    yytext[yyleng-1] = '\x0';	// it means to pass last '"'
+			    // yytext + 1 means to pass first '"'
+			    COPY_LEX_STR(yytext, yylval->szValue);
+			    return LEX_SYMNAME;
+			}
+
+{LEX_IP}		{
+			    if (!inet_aton(yytext, &yylval->Ip))
+			    {
+				PRINT_LEX(LEX_BAD_LEXEME);
+				return LEX_BAD_LEXEME;
+			    }
+			    else
+			    {
+				PRINT_LEX(LEX_IP);
+				return LEX_IP;
+			    }
+			}
+
+{LEX_MEM_SIZE__MB}	{
+			    PRINT_LEX(LEX_MEM_SIZE);
+			    yylval->ulValue = strtoul(yytext, NULL, DEC_BASE);
+			    if (yylval->ulValue == EINVAL)
+				return LEX_BAD_LEXEME;
+			    else
+			    {
+				yylval->ulValue *= MB_FACTOR;
+				return LEX_MEM_SIZE;
+			    }
+			}
+
+{LEX_MEM_SIZE__KB}	{
+			    PRINT_LEX(LEX_MEM_SIZE);
+			    yylval->ulValue = strtoul(yytext, NULL, DEC_BASE);
+			    if (yylval->ulValue == EINVAL)
+				return LEX_BAD_LEXEME;
+			    else
+			    {
+				yylval->ulValue *= KB_FACTOR;
+				return LEX_MEM_SIZE;
+			    }
+			}
+
+{LEX_MEM_SIZE__B}	{
+			    PRINT_LEX(LEX_MEM_SIZE);
+			    yylval->ulValue = strtoul(yytext, NULL, DEC_BASE);
+			    if (yylval->ulValue == EINVAL)
+				return LEX_BAD_LEXEME;
+			    else
+				return LEX_MEM_SIZE;
+			}
+
+{LEX_ID}		{
+			    PRINT_LEX(LEX_ID);
+			    yytext[yyleng-1] = '\x0';	// it means to pass last '['
+			    // yytext + 1 means to pass first ']'
+			    COPY_LEX_STR(yytext, yylval->szValue);
+			    return LEX_ID;
+			}
+
+{LEX_EQ}		{
+			    PRINT_LEX(LEX_EQ);
+			    return LEX_EQ;
+			}
+
+{LEX_MINUS}		{
+			    PRINT_LEX(LEX_MINUS);
+			    return LEX_MINUS;
+			}
+
+{LEX_BRACE_OPEN}	{ KEYWORD_HANDLER(LEX_BRACE_OPEN) }
+{LEX_BRACE_CLOSE}	{ KEYWORD_HANDLER(LEX_BRACE_CLOSE) }
+{LEX_LIST_DELIMETER}	{ yylval->ulValue++; KEYWORD_HANDLER(LEX_LIST_DELIMETER) }
+
+{LEX_COMMENT}		{
+			    pp->_lineNum ++;
+			    pp->_columnNum = 0;
+			    PRINT_LEX(LEX_COMMENT);
+			    return LEX_NEW_LINE;
+			}
+
+[ \t]			{
+			    /* nothing to be done here */
+			}
+
+.			{
+			    PRINT_LEX(LEX_BAD_LEXEME);
+			    return LEX_BAD_LEXEME;
+			}
+
+
