@@ -433,6 +433,10 @@ int start_profiling(void)
 	const struct app_info_t *app_info = NULL;
 	int res = 0;
 
+	res = fm_start();
+	if (res)
+		goto exit;
+
 	app_info = app_info_get_first(&app);
 	if (app_info == NULL) {
 		LOGE("No app info found\n");
@@ -450,7 +454,7 @@ int start_profiling(void)
 	if (samplingStart() < 0) {
 		LOGE("Cannot start sampling\n");
 		res = -1;
-		goto exit;
+		goto stop;
 	}
 
 	if (IS_OPT_SET(FL_RECORDING))
@@ -477,6 +481,8 @@ int start_profiling(void)
 		del_input_events();
 	samplingStop();
 
+ stop:
+	fm_stop();
  exit:
 	LOGI("return %d\n", res);
 	return res;
@@ -487,6 +493,8 @@ void stop_profiling(void)
 	if (IS_OPT_SET(FL_RECORDING))
 		del_input_events();
 	samplingStop();
+
+	fm_stop();
 }
 
 static void reconfigure_recording(struct conf_t conf)
@@ -506,6 +514,7 @@ static void reconfigure_recording(struct conf_t conf)
 		prof_session.conf.use_features0 |= FL_RECORDING;
 	}
 
+	fm_set(conf.use_features0, conf.use_features1);
 }
 
 static void reconfigure_ld_probes(struct conf_t conf, struct msg_t **msg_reply, struct msg_t **msg_reply_additional)
