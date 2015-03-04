@@ -39,7 +39,7 @@ endif
 
 # compiler flags
 CFLAGS := $(FLAGS)
-CPPFLAGS := $(FLAGS)
+CPPFLAGS := $(FLAGS) -std=c++0x
 
 # linker flags
 LDFLAGS := \
@@ -79,7 +79,10 @@ SRC_C := \
 	thread.c \
 	wsi.c
 
-SRC_CPP :=
+SRC_CPP := \
+	features/feature.cpp \
+	features/feature_manager.cpp \
+	features/feature_manager_c.cpp
 
 OBJS_C := $(SRC_C:.c=.o)
 OBJS_CPP := $(SRC_CPP:.cpp=.o)
