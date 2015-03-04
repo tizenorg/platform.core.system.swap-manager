@@ -79,6 +79,9 @@ SRC_C := \
 	wsi.c
 
 SRC_CPP := \
+	features/feature.cpp \
+	features/feature_manager.cpp \
+	features/feature_manager_c.cpp \
 	elm_prof.cpp
 
 OBJS_C := $(SRC_C:.c=.o)
