@@ -81,6 +81,8 @@ static const char *input_key_devices[] = {
 	"sci-keypad",
 	/* target: Kiran, kernel: 3.10.17, buttons: menu, back */
 	"ist30xx_ts_tinput",
+	/* target: tv emulator, remo, kernel: 3.12.18 */
+	"wt61p807 rc",
 	NULL
 };
 
@@ -170,6 +172,10 @@ static void _get_fds(input_dev *dev, int input_id)
 				dev[count].fd = open(dev[count].fileName,
 						     O_RDWR | O_NONBLOCK);
 				count++;
+				if (count >= MAX_DEVICE - 1) {
+					LOGE("too match device found!");
+					break;
+				}
 			}
 		}
 	}
@@ -321,16 +327,17 @@ void write_input_event(int id, struct input_event *ev)
 
 int init_input_events(void)
 {
+	int res = 0;
 	_get_fds(g_key_dev, INPUT_ID_KEY);
 	if (g_key_dev[0].fd == ARRAY_END) {
 		LOGE("No key devices found.\n");
-		return -1;
+		res = -1;
 	}
 	_get_fds(g_touch_dev, INPUT_ID_TOUCH);
 	if (g_touch_dev[0].fd == ARRAY_END) {
 		LOGE("No touch devices found.\n");
-		return -1;
+		res = -1;
 	}
 
-	return 0;
+	return res;
 }
