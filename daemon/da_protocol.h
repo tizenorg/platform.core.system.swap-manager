@@ -96,58 +96,89 @@ enum ErrorCode {
 
 #define FL_SYSTEM_ENERGY_OLD (1<<26)
 
+#define feature_list \
+_x(RESERVED0			,  0) _x_del /* reserved */ \
+_x(RESERVED1			,  1) _x_del /* reserved */ \
+\
+_x(FUNCTION_PROFILING		,  2) _x_del /* On/Off the UserSpaceInst                  */ \
+_x(MEMORY_ALLOC_PROBING		,  3) _x_del /* memory allocation API (glibc)             */ \
+_x(FILE_API_PROBING		,  4) _x_del /* file API (glibc, OSP)                     */ \
+_x(THREAD_API_PROBING		,  5) _x_del /* thread API (glibc, OSP)                   */ \
+_x(OSP_UI_API_PROBING		,  6) _x_del /* UI API (OSP)                              */ \
+_x(SCREENSHOT			,  7) _x_del /* Screenshot                                */ \
+_x(USER_EVENT			,  8) _x_del /* events of Touch, Gesture, Orientation, Key*/ \
+_x(RECORDING			,  9) _x_del /* recording the user event                  */ \
+_x(SYSTCALL_FILE		, 10) _x_del /* File operation syscalls tracing           */ \
+_x(SYSTCALL_IPC			, 11) _x_del /* IPC syscall tracing                       */ \
+_x(SYSTCALL_PROCESS		, 12) _x_del /* Process syscalls tracing                  */ \
+_x(SYSTCALL_SIGNAL		, 13) _x_del /* Signal syscalls tracing                   */ \
+_x(SYSTCALL_NETWORK		, 14) _x_del /* Network syscalls tracing                  */ \
+_x(SYSTCALL_DESC		, 15) _x_del /* Descriptor syscalls tracing               */ \
+_x(CONTEXT_SWITCH		, 16) _x_del /* Context switch tracing                    */ \
+_x(NETWORK_API_PROBING		, 17) _x_del /* network API (glibc, OSP, libsoap, openssl)*/ \
+_x(OPENGL_API_PROBING		, 18) _x_del /* openGL API                                */ \
+_x(FUNCTION_SAMPLING		, 19) _x_del /* Function sampling                         */ \
+\
+_x(RESERVED20			, 20) _x_del /* reserved */ \
+_x(RESERVED21			, 21) _x_del /* reserved */ \
+_x(RESERVED22			, 22) _x_del /* reserved */ \
+_x(RESERVED23			, 23) _x_del /* reserved */ \
+_x(RESERVED24			, 24) _x_del /* reserved */ \
+_x(RESERVED25			, 25) _x_del /* reserved */ \
+_x(RESERVED26			, 26) _x_del /* reserved */ \
+_x(RESERVED27			, 27) _x_del /* reserved */ \
+\
+_x(MEMORY_ALLOC_ALWAYS_PROBING	, 28) _x_del /* all (include external) memory allocation API (glibc) always             */ \
+_x(FILE_API_ALWAYS_PROBING	, 29) _x_del /* all (include external) file API (glibc, OSP) always                     */ \
+_x(THREAD_API_ALWAYS_PROBING	, 30) _x_del /* all (include external) thread API (glibc, OSP) always                   */ \
+_x(OSP_UI_API_ALWAYS_PROBING	, 31) _x_del /* all (include external) UI API (OSP) always                              */ \
+_x(NETWORK_API_ALWAYS_PROBING	, 32) _x_del /* all (include external) network API (glibc, OSP, libsoap, openssl) always*/ \
+_x(OPENGL_API_ALWAYS_PROBING	, 33) _x_del /* all (include external) openGL API always                                */ \
+\
+_x(RESERVED34			, 34) _x_del /* reserved */ \
+_x(RESERVED35			, 35) _x_del /* reserved */ \
+\
+_x(SYSTEM_CPU			, 36) _x_del /* CPU core load, frequency                                      */ \
+_x(SYSTEM_MEMORY		, 37) _x_del /* System memory used                                            */ \
+_x(SYSTEM_PROCESS		, 38) _x_del /* Info for profilling processes (VSS, PSS, RSS, etc)            */ \
+_x(SYSTEM_THREAD_LOAD		, 39) _x_del /* Thread loading for profiling processes                        */ \
+_x(SYSTEM_PROCESSES_LOAD	, 40) _x_del /* Non instrumented process load                                 */ \
+_x(SYSTEM_DISK			, 41) _x_del /* /proc/diskstats - reads, sectors read, writes, sectors written*/ \
+_x(SYSTEM_NETWORK		, 42) _x_del /* network send/recv size                                        */ \
+_x(SYSTEM_DEVICE		, 43) _x_del \
+_x(SYSTEM_ENERGY		, 44) _x_del \
+\
+_x(RESERVED45			, 45) _x_del \
+\
+_x(WEB_PROFILING		, 46) _x_del \
+\
+_x(RESERVED47			, 47) _x_del /* reserved */ \
+_x(RESERVED48			, 48) _x_del /* reserved */ \
+
 enum feature_code{
-	FL_RESERVED1			= 0x000000000003ULL, // reserved 0011
-
-	FL_FUNCTION_PROFILING		= 0x000000000004ULL, // On/Off the UserSpaceInst
-	FL_MEMORY_ALLOC_PROBING		= 0x000000000008ULL, // memory allocation API (glibc)
-	FL_FILE_API_PROBING		= 0x000000000010ULL, // file API (glibc, OSP)
-	FL_THREAD_API_PROBING		= 0x000000000020ULL, // thread API (glibc, OSP)
-	FL_OSP_UI_API_PROBING		= 0x000000000040ULL, // UI API (OSP)
-	FL_SCREENSHOT			= 0x000000000080ULL, // Screenshot
-	FL_USER_EVENT			= 0x000000000100ULL, // events of Touch, Gesture, Orientation, Key
-	FL_RECORDING			= 0x000000000200ULL, // recording the user event
-	FL_SYSTCALL_FILE		= 0x000000000400ULL, // File operation syscalls tracing
-	FL_SYSTCALL_IPC			= 0x000000000800ULL, // IPC syscall tracing
-	FL_SYSTCALL_PROCESS		= 0x000000001000ULL, // Process syscalls tracing
-	FL_SYSTCALL_SIGNAL		= 0x000000002000ULL, // Signal syscalls tracing
-	FL_SYSTCALL_NETWORK		= 0x000000004000ULL, // Network syscalls tracing
-	FL_SYSTCALL_DESC		= 0x000000008000ULL, // Descriptor syscalls tracing
-	FL_CONTEXT_SWITCH		= 0x000000010000ULL, // Context switch tracing
-	FL_NETWORK_API_PROBING		= 0x000000020000ULL, // network API (glibc, OSP, libsoap, openssl)
-	FL_OPENGL_API_PROBING		= 0x000000040000ULL, // openGL API
-	FL_FUNCTION_SAMPLING		= 0x000000080000ULL, // Function sampling
-
-	FL_RESERVED2			= 0x00000FF00000ULL, // reserved
-
-	FL_MEMORY_ALLOC_ALWAYS_PROBING	= 0x000010000000ULL, // all (include external) memory allocation API (glibc) always
-	FL_FILE_API_ALWAYS_PROBING	= 0x000020000000ULL, // all (include external) file API (glibc, OSP) always
-	FL_THREAD_API_ALWAYS_PROBING	= 0x000040000000ULL, // all (include external) thread API (glibc, OSP) always
-	FL_OSP_UI_API_ALWAYS_PROBING	= 0x000080000000ULL, // all (include external) UI API (OSP) always
-	FL_NETWORK_API_ALWAYS_PROBING	= 0x000100000000ULL, // all (include external) network API (glibc, OSP, libsoap, openssl) always
-	FL_OPENGL_API_ALWAYS_PROBING	= 0x000200000000ULL, // all (include external) openGL API always
-
-	FL_RESERVED3			= 0x000c00000000ULL, // reserved
-
-	FL_SYSTEM_CPU			= 0x001000000000ULL, // CPU core load, frequency
-	FL_SYSTEM_MEMORY		= 0x002000000000ULL, // System memory used
-	FL_SYSTEM_PROCESS		= 0x004000000000ULL, // Info for profilling processes (VSS, PSS, RSS, etc)
-	FL_SYSTEM_THREAD_LOAD		= 0x008000000000ULL, // Thread loading for profiling processes
-	FL_SYSTEM_PROCESSES_LOAD	= 0x010000000000ULL, // Non instrumented process load
-	FL_SYSTEM_DISK			= 0x020000000000ULL, // /proc/diskstats - reads, sectors read, writes, sectors written
-	FL_SYSTEM_NETWORK		= 0x040000000000ULL, // network send/recv size
-	FL_SYSTEM_DEVICE		= 0x080000000000ULL, //
-	FL_SYSTEM_ENERGY		= 0x100000000000ULL, //
-
-	FL_WEB_PROFILING		= 0x400000000000ULL, // Web profiling
-
-	FL_RESERVED4			= 0xa00000000000ULL, // reserved 1010
-
+#define _x(a,b) FL_ ## a = (1ULL<<b)
+#define _x_del ,
+feature_list
+#undef _x
+#undef _x_del
 	FL_ALL_FEATURES			= 0x7FFFFFFFFFFFULL &
+					  (~FL_RESERVED0) &
 					  (~FL_RESERVED1) &
-					  (~FL_RESERVED2) &
-					  (~FL_RESERVED3) &
-					  (~FL_RESERVED4)
+
+					  (~FL_RESERVED20) &
+					  (~FL_RESERVED21) &
+					  (~FL_RESERVED22) &
+					  (~FL_RESERVED23) &
+					  (~FL_RESERVED24) &
+					  (~FL_RESERVED25) &
+					  (~FL_RESERVED26) &
+					  (~FL_RESERVED27) &
+
+					  (~FL_RESERVED34) &
+					  (~FL_RESERVED35) &
+					  (~FL_RESERVED45) &
+					  (~FL_RESERVED47) &
+					  (~FL_RESERVED48)
 
 };
 

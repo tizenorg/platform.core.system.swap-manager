@@ -69,6 +69,8 @@ int yylex(void);
     int nValue;
     int nInstType;
 
+    feature_code nFeatureType;
+
     app_type_t nAppType;
     probe_t  nProbeType;
     probe_level_type_t nProbeLevelType;
@@ -155,6 +157,7 @@ int yylex(void);
 %token		cur_lib
 %token		step
 %token		var
+%token		feature
 
 /* probe types */
 %token		kern
@@ -230,6 +233,55 @@ int yylex(void);
 /* bad lexeme */
 %token			LEX_BAD_LEXEME
 
+/* feature codes */
+%token		enable
+%token		disable
+
+%token		__FL_FUNCTION_PROFILING
+%token		__FL_MEMORY_ALLOC_PROBING
+%token		__FL_FILE_API_PROBING
+%token		__FL_THREAD_API_PROBING
+%token		__FL_OSP_UI_API_PROBING
+%token		__FL_SCREENSHOT
+%token		__FL_USER_EVENT
+%token		__FL_RECORDING
+%token		__FL_SYSTCALL_FILE
+%token		__FL_SYSTCALL_IPC
+%token		__FL_SYSTCALL_PROCESS
+%token		__FL_SYSTCALL_SIGNAL
+%token		__FL_SYSTCALL_NETWORK
+%token		__FL_SYSTCALL_DESC
+%token		__FL_CONTEXT_SWITCH
+%token		__FL_NETWORK_API_PROBING
+%token		__FL_OPENGL_API_PROBING
+%token		__FL_FUNCTION_SAMPLING
+%token		__FL_MEMORY_ALLOC_ALWAYS_PROBING
+%token		__FL_FILE_API_ALWAYS_PROBING
+%token		__FL_THREAD_API_ALWAYS_PROBING
+%token		__FL_OSP_UI_API_ALWAYS_PROBING
+%token		__FL_NETWORK_API_ALWAYS_PROBING
+%token		__FL_OPENGL_API_ALWAYS_PROBING
+%token		__FL_SYSTEM_CPU
+%token		__FL_SYSTEM_MEMORY
+%token		__FL_SYSTEM_PROCESS
+%token		__FL_SYSTEM_THREAD_LOAD
+%token		__FL_SYSTEM_PROCESSES_LOAD
+%token		__FL_SYSTEM_DISK
+%token		__FL_SYSTEM_NETWORK
+%token		__FL_SYSTEM_DEVICE
+%token		__FL_SYSTEM_ENERGY
+%token		__FL_WEB_PROFILING
+
+
+
+
+
+
+
+
+
+
+
 
 %token LEX_BRACE_OPEN
 %token LEX_BRACE_CLOSE
@@ -250,18 +302,19 @@ int yylex(void);
 %type<slValue>		POINTER_ORDER
 %type<szValue>		TRACE_BIN_FILE
 %type<szValue>		PROFILE
-%type<fbiProbe>			FBI_PROBE
 
-%type<fbiVar>			FBI_VAR
-%type<fbiVarsList>			FBI_VARS_LIST
-%type<fbiVarsList>			FBI_VAR_LIST_ELM
+%type<nFeatureType>	FEATURE_VALUE
+
+%type<fbiProbe>		FBI_PROBE
+
+%type<fbiVar>		FBI_VAR
+%type<fbiVarsList>	FBI_VARS_LIST
+%type<fbiVarsList>	FBI_VAR_LIST_ELM
 
 
 %type<fbiStepElm>	FBI_STEP
 %type<fbiStepsList>	FBI_STEPS_LIST_ELM
 %type<fbiStepsList>	FBI_STEPS_LIST
-
-
 
 %%
 
@@ -324,6 +377,15 @@ CONF_COMMAND:
 		{
 			TRACE("setv cur_lib '%s'", $3);
 			GLOBALS->pConfig->setCurrentLib($3);
+		} |
+
+		setv feature enable FEATURE_VALUE {
+			TRACE("setv feature enable '%lx'", $4);
+			GLOBALS->pConfig->setFeature($4, true);
+		} |
+		setv feature disable FEATURE_VALUE {
+			TRACE("setv feature disable '%lx'", $4);
+			GLOBALS->pConfig->setFeature($4, false);
 		}
 		;
 
@@ -339,6 +401,8 @@ array_expr: array_expr expr | expr;
 array: '{'array_expr'}';
 
 CONF_COMMAND:	
+
+
 		setp lib PROBE_SUBTYPE LEX_HEX_NUM  {
 			GLOBALS->pConfig->setCurrentLibProbe($4, static_cast<probe_t>($3));
 		} |
@@ -457,6 +521,44 @@ POINTER_ORDER:	LEX_DEC_NUM | LEX_HEX_NUM { $$ = static_cast<long>($1);   };
 OFFSET:		LEX_MINUS LEX_HEX_NUM	{ $$ = - static_cast<long>($2); } |
 		LEX_HEX_NUM		{ $$ = static_cast<long>($1);   }
 		;
+
+FEATURE_VALUE:
+		__FL_FUNCTION_PROFILING           { $$ = FL_FUNCTION_PROFILING           ;/*# On/Off the UserSpaceInst */} |
+		__FL_MEMORY_ALLOC_PROBING         { $$ = FL_MEMORY_ALLOC_PROBING         ;/*# memory allocation API (glibc) */} |
+		__FL_FILE_API_PROBING             { $$ = FL_FILE_API_PROBING             ;/*# file API (glibc, OSP) */} |
+		__FL_THREAD_API_PROBING           { $$ = FL_THREAD_API_PROBING           ;/*# thread API (glibc, OSP) */} |
+		__FL_OSP_UI_API_PROBING           { $$ = FL_OSP_UI_API_PROBING           ;/*# UI API (OSP) */} |
+		__FL_SCREENSHOT                   { $$ = FL_SCREENSHOT                   ;/*# Screenshot */} |
+		__FL_USER_EVENT                   { $$ = FL_USER_EVENT                   ;/*# events of Touch, Gesture, Orientation, Key */} |
+		__FL_RECORDING                    { $$ = FL_RECORDING                    ;/*# recording the user event */} |
+		__FL_SYSTCALL_FILE                { $$ = FL_SYSTCALL_FILE                ;/*# File operation syscalls tracing */} |
+		__FL_SYSTCALL_IPC                 { $$ = FL_SYSTCALL_IPC                 ;/*# IPC syscall tracing */} |
+		__FL_SYSTCALL_PROCESS             { $$ = FL_SYSTCALL_PROCESS             ;/*# Process syscalls tracing */} |
+		__FL_SYSTCALL_SIGNAL              { $$ = FL_SYSTCALL_SIGNAL              ;/*# Signal syscalls tracing */} |
+		__FL_SYSTCALL_NETWORK             { $$ = FL_SYSTCALL_NETWORK             ;/*# Network syscalls tracing */} |
+		__FL_SYSTCALL_DESC                { $$ = FL_SYSTCALL_DESC                ;/*# Descriptor syscalls tracing */} |
+		__FL_CONTEXT_SWITCH               { $$ = FL_CONTEXT_SWITCH               ;/*# Context switch tracing */} |
+		__FL_NETWORK_API_PROBING          { $$ = FL_NETWORK_API_PROBING          ;/*# network API (glibc, OSP, libsoap, openssl) */} |
+		__FL_OPENGL_API_PROBING           { $$ = FL_OPENGL_API_PROBING           ;/*# openGL API */} |
+		__FL_FUNCTION_SAMPLING            { $$ = FL_FUNCTION_SAMPLING            ;/*# Function sampling */} |
+		__FL_MEMORY_ALLOC_ALWAYS_PROBING  { $$ = FL_MEMORY_ALLOC_ALWAYS_PROBING  ;/*# memory allocation API (glibc) always */} |
+		__FL_FILE_API_ALWAYS_PROBING      { $$ = FL_FILE_API_ALWAYS_PROBING      ;/*# file API (glibc, OSP) always */} |
+		__FL_THREAD_API_ALWAYS_PROBING    { $$ = FL_THREAD_API_ALWAYS_PROBING    ;/*# thread API (glibc, OSP) always */} |
+		__FL_OSP_UI_API_ALWAYS_PROBING    { $$ = FL_OSP_UI_API_ALWAYS_PROBING    ;/*# UI API (OSP) always */} |
+		__FL_NETWORK_API_ALWAYS_PROBING   { $$ = FL_NETWORK_API_ALWAYS_PROBING   ;/*# network API (glibc, OSP, libsoap, openssl) always */} |
+		__FL_OPENGL_API_ALWAYS_PROBING    { $$ = FL_OPENGL_API_ALWAYS_PROBING    ;/*# openGL API always */} |
+		__FL_SYSTEM_CPU                   { $$ = FL_SYSTEM_CPU                   ;/*# CPU core load, frequency */} |
+		__FL_SYSTEM_MEMORY                { $$ = FL_SYSTEM_MEMORY                ;/*# */} |
+		__FL_SYSTEM_PROCESS               { $$ = FL_SYSTEM_PROCESS               ;/*# Process load */} |
+		__FL_SYSTEM_THREAD_LOAD           { $$ = FL_SYSTEM_THREAD_LOAD           ;/*# */} |
+		__FL_SYSTEM_PROCESSES_LOAD        { $$ = FL_SYSTEM_PROCESSES_LOAD        ;/*# Process size(VSS, PSS. RSS), heap usage(application, library), physical memory in use */} |
+		__FL_SYSTEM_DISK                  { $$ = FL_SYSTEM_DISK                  ;/*# */} |
+		__FL_SYSTEM_NETWORK               { $$ = FL_SYSTEM_NETWORK               ;/*# */} |
+		__FL_SYSTEM_DEVICE                { $$ = FL_SYSTEM_DEVICE                ;/*# */} |
+		__FL_SYSTEM_ENERGY                { $$ = FL_SYSTEM_ENERGY                ;/*# */} |
+		__FL_WEB_PROFILING                { $$ = FL_WEB_PROFILING                ;/*# */}
+		;
+
 
 ACT_COMMAND:	getall				{GLOBALS->pConfig->getAll();} |
 		getv all			{} |
