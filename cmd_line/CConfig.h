@@ -45,6 +45,7 @@ public:
 	int setCurrentApplication(app_type_t app_type, const char *app_id, const char *app_path);
 	int setCurrentLib (const char *lib_path);
 
+	int setFeature(feature_code f, bool enable = true);
 	int setCurrentAppProbe (uint64_t addr, probe_t ptype);
 	int setCurrentAppProbe (uint64_t addr, probe_t ptype, CProbeData *data);
 	int setCurrentLibProbe (uint64_t addr, probe_t ptype);
