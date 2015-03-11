@@ -96,60 +96,90 @@ enum ErrorCode {
 
 #define FL_SYSTEM_ENERGY_OLD (1<<26)
 
+#define feature_list \
+X(RESERVED0			,  0) XSEP /* reserved */ \
+X(RESERVED1			,  1) XSEP /* reserved */ \
+\
+X(FUNCTION_PROFILING		,  2) XSEP /* On/Off the UserSpaceInst                  */ \
+X(MEMORY_ALLOC_PROBING		,  3) XSEP /* memory allocation API (glibc)             */ \
+X(FILE_API_PROBING		,  4) XSEP /* file API (glibc, OSP)                     */ \
+X(THREAD_API_PROBING		,  5) XSEP /* thread API (glibc, OSP)                   */ \
+X(OSP_UI_API_PROBING		,  6) XSEP /* UI API (OSP)                              */ \
+X(SCREENSHOT			,  7) XSEP /* Screenshot                                */ \
+X(USER_EVENT			,  8) XSEP /* events of Touch, Gesture, Orientation, Key*/ \
+X(RECORDING			,  9) XSEP /* recording the user event                  */ \
+X(SYSTCALL_FILE			, 10) XSEP /* File operation syscalls tracing           */ \
+X(SYSTCALL_IPC			, 11) XSEP /* IPC syscall tracing                       */ \
+X(SYSTCALL_PROCESS		, 12) XSEP /* Process syscalls tracing                  */ \
+X(SYSTCALL_SIGNAL		, 13) XSEP /* Signal syscalls tracing                   */ \
+X(SYSTCALL_NETWORK		, 14) XSEP /* Network syscalls tracing                  */ \
+X(SYSTCALL_DESC			, 15) XSEP /* Descriptor syscalls tracing               */ \
+X(CONTEXT_SWITCH		, 16) XSEP /* Context switch tracing                    */ \
+X(NETWORK_API_PROBING		, 17) XSEP /* network API (glibc, OSP, libsoap, openssl)*/ \
+X(OPENGL_API_PROBING		, 18) XSEP /* openGL API                                */ \
+X(FUNCTION_SAMPLING		, 19) XSEP /* Function sampling                         */ \
+\
+X(RESERVED20			, 20) XSEP /* reserved */ \
+X(RESERVED21			, 21) XSEP /* reserved */ \
+X(RESERVED22			, 22) XSEP /* reserved */ \
+X(RESERVED23			, 23) XSEP /* reserved */ \
+X(RESERVED24			, 24) XSEP /* reserved */ \
+X(RESERVED25			, 25) XSEP /* reserved */ \
+X(RESERVED26			, 26) XSEP /* reserved */ \
+X(RESERVED27			, 27) XSEP /* reserved */ \
+\
+X(MEMORY_ALLOC_ALWAYS_PROBING	, 28) XSEP /* all (include external) memory allocation API (glibc) always             */ \
+X(FILE_API_ALWAYS_PROBING	, 29) XSEP /* all (include external) file API (glibc, OSP) always                     */ \
+X(THREAD_API_ALWAYS_PROBING	, 30) XSEP /* all (include external) thread API (glibc, OSP) always                   */ \
+X(OSP_UI_API_ALWAYS_PROBING	, 31) XSEP /* all (include external) UI API (OSP) always                              */ \
+X(NETWORK_API_ALWAYS_PROBING	, 32) XSEP /* all (include external) network API (glibc, OSP, libsoap, openssl) always*/ \
+X(OPENGL_API_ALWAYS_PROBING	, 33) XSEP /* all (include external) openGL API always                                */ \
+\
+X(RESERVED34			, 34) XSEP /* reserved */ \
+X(RESERVED35			, 35) XSEP /* reserved */ \
+\
+X(SYSTEM_CPU			, 36) XSEP /* CPU core load, frequency                                      */ \
+X(SYSTEM_MEMORY			, 37) XSEP /* System memory used                                            */ \
+X(SYSTEM_PROCESS		, 38) XSEP /* Info for profilling processes (VSS, PSS, RSS, etc)            */ \
+X(SYSTEM_THREAD_LOAD		, 39) XSEP /* Thread loading for profiling processes                        */ \
+X(SYSTEM_PROCESSES_LOAD		, 40) XSEP /* Non instrumented process load                                 */ \
+X(SYSTEM_DISK			, 41) XSEP /* /proc/diskstats - reads, sectors read, writes, sectors written*/ \
+X(SYSTEM_NETWORK		, 42) XSEP /* network send/recv size                                        */ \
+X(SYSTEM_DEVICE			, 43) XSEP \
+X(SYSTEM_ENERGY			, 44) XSEP \
+\
+X(RESERVED45			, 45) XSEP \
+\
+X(WEB_PROFILING			, 46) XSEP \
+\
+X(RESERVED47			, 47) XSEP /* reserved */ \
+X(RESERVED48			, 48)  /* reserved */ \
+
+#define XSEP
+
+#define X(a,b) FL_ ## a = (1ULL<<b),
 enum feature_code{
-	FL_RESERVED1			= 0x000000000003ULL, // reserved 0011
-
-	FL_FUNCTION_PROFILING		= 0x000000000004ULL, // On/Off the UserSpaceInst
-	FL_MEMORY_ALLOC_PROBING		= 0x000000000008ULL, // memory allocation API (glibc)
-	FL_FILE_API_PROBING		= 0x000000000010ULL, // file API (glibc, OSP)
-	FL_THREAD_API_PROBING		= 0x000000000020ULL, // thread API (glibc, OSP)
-	FL_OSP_UI_API_PROBING		= 0x000000000040ULL, // UI API (OSP)
-	FL_SCREENSHOT			= 0x000000000080ULL, // Screenshot
-	FL_USER_EVENT			= 0x000000000100ULL, // events of Touch, Gesture, Orientation, Key
-	FL_RECORDING			= 0x000000000200ULL, // recording the user event
-	FL_SYSTCALL_FILE		= 0x000000000400ULL, // File operation syscalls tracing
-	FL_SYSTCALL_IPC			= 0x000000000800ULL, // IPC syscall tracing
-	FL_SYSTCALL_PROCESS		= 0x000000001000ULL, // Process syscalls tracing
-	FL_SYSTCALL_SIGNAL		= 0x000000002000ULL, // Signal syscalls tracing
-	FL_SYSTCALL_NETWORK		= 0x000000004000ULL, // Network syscalls tracing
-	FL_SYSTCALL_DESC		= 0x000000008000ULL, // Descriptor syscalls tracing
-	FL_CONTEXT_SWITCH		= 0x000000010000ULL, // Context switch tracing
-	FL_NETWORK_API_PROBING		= 0x000000020000ULL, // network API (glibc, OSP, libsoap, openssl)
-	FL_OPENGL_API_PROBING		= 0x000000040000ULL, // openGL API
-	FL_FUNCTION_SAMPLING		= 0x000000080000ULL, // Function sampling
-
-	FL_RESERVED2			= 0x00000FF00000ULL, // reserved
-
-	FL_MEMORY_ALLOC_ALWAYS_PROBING	= 0x000010000000ULL, // all (include external) memory allocation API (glibc) always
-	FL_FILE_API_ALWAYS_PROBING	= 0x000020000000ULL, // all (include external) file API (glibc, OSP) always
-	FL_THREAD_API_ALWAYS_PROBING	= 0x000040000000ULL, // all (include external) thread API (glibc, OSP) always
-	FL_OSP_UI_API_ALWAYS_PROBING	= 0x000080000000ULL, // all (include external) UI API (OSP) always
-	FL_NETWORK_API_ALWAYS_PROBING	= 0x000100000000ULL, // all (include external) network API (glibc, OSP, libsoap, openssl) always
-	FL_OPENGL_API_ALWAYS_PROBING	= 0x000200000000ULL, // all (include external) openGL API always
-
-	FL_RESERVED3			= 0x000c00000000ULL, // reserved
-
-	FL_SYSTEM_CPU			= 0x001000000000ULL, // CPU core load, frequency
-	FL_SYSTEM_MEMORY		= 0x002000000000ULL, // System memory used
-	FL_SYSTEM_PROCESS		= 0x004000000000ULL, // Info for profilling processes (VSS, PSS, RSS, etc)
-	FL_SYSTEM_THREAD_LOAD		= 0x008000000000ULL, // Thread loading for profiling processes
-	FL_SYSTEM_PROCESSES_LOAD	= 0x010000000000ULL, // Non instrumented process load
-	FL_SYSTEM_DISK			= 0x020000000000ULL, // /proc/diskstats - reads, sectors read, writes, sectors written
-	FL_SYSTEM_NETWORK		= 0x040000000000ULL, // network send/recv size
-	FL_SYSTEM_DEVICE		= 0x080000000000ULL, //
-	FL_SYSTEM_ENERGY		= 0x100000000000ULL, //
-
-	FL_WEB_PROFILING		= 0x400000000000ULL, // Web profiling
-
-	FL_RESERVED4			= 0xa00000000000ULL, // reserved 1010
-
+	feature_list
 	FL_ALL_FEATURES			= 0x7FFFFFFFFFFFULL &
+					  (~FL_RESERVED0) &
 					  (~FL_RESERVED1) &
-					  (~FL_RESERVED2) &
-					  (~FL_RESERVED3) &
-					  (~FL_RESERVED4)
 
+					  (~FL_RESERVED20) &
+					  (~FL_RESERVED21) &
+					  (~FL_RESERVED22) &
+					  (~FL_RESERVED23) &
+					  (~FL_RESERVED24) &
+					  (~FL_RESERVED25) &
+					  (~FL_RESERVED26) &
+					  (~FL_RESERVED27) &
+
+					  (~FL_RESERVED34) &
+					  (~FL_RESERVED35) &
+					  (~FL_RESERVED45) &
+					  (~FL_RESERVED47) &
+					  (~FL_RESERVED48)
 };
+#undef X
 
 enum probe_type {
 	SWAP_RETPROBE   = 0, //Common retprobe
