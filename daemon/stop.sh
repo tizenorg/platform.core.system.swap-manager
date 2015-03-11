@@ -13,12 +13,5 @@ rmmod swap_writer
 rmmod swap_driver
 rmmod swap_ksyms
 rmmod swap_buffer
-
-
-
-
-
-
-
-
+rmmod swap_master
 
