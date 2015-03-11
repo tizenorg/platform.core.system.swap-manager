@@ -13,6 +13,7 @@ SRC_MAIN=\
 		main.cpp						\
 		client.cpp						\
 		CConfig.cpp						\
+		CFeatures.cpp					\
 		CInterpreter.cpp				\
 		probes/CAppListContainer.cpp	\
 		probes/CLibListContainer.cpp	\

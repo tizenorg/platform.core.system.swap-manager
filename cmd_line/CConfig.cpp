@@ -9,15 +9,16 @@
 
 CConfig::CConfig ()
 {
-
 /* new */
 	m_AppList = new CAppListContainer();
+	m_Features = new CFeatures();
 }
 
 CConfig::~CConfig()
 {
 	TRACE("Destroy");
 	delete m_AppList;
+	delete m_Features;
 	TRACE("end");
 	clean();
 }
@@ -57,6 +58,21 @@ CProbeListContainer *CConfig::getCurrentLibProbe()
 int CConfig::trace (const char *message)
 {
 	TRACE("trace->%s", message);
+}
+
+int CConfig::setFeature(feature_code f, bool enable)
+{
+	if (m_Features == NULL) {
+		LOGE("Features are not initialized\n");
+		return -EINVAL;
+	}
+
+	if (enable)
+		*m_Features |= f;
+	else
+		*m_Features &= ~f;
+
+	return 0;
 }
 
 int CConfig::setCurrentApplication (app_type_t app_type, const char *app_id, const char *app_path)
@@ -190,6 +206,7 @@ int CConfig::addCurrentAppProbeData (CProbeData *data)
 int CConfig::getAll()
 {
 	TRACE("*****************************");
+	m_Features->printList();
 	m_AppList->printList();
 }
 
