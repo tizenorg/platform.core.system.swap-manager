@@ -320,7 +320,7 @@ struct ld_preload_probe_t {
 } __attribute__ ((packed));
 
 static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
-				      struct data_list_t *dest, int preload_probe_type)
+				      struct data_list_t *dest)
 {
 	uint32_t i = 0, num = 0;
 	struct probe_list_t *probe_el;
@@ -343,7 +343,7 @@ static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
 		func->orig_addr = ld_lib.probes[i].orig_addr;
 		func->probe_type = SWAP_LD_PROBE;
 		func->handler_addr = ld_lib.probes[i].handler_addr;
-		func->preload_type = (ld_lib.probes[i].block_type << 1) | preload_probe_type;
+		func->preload_type = ld_lib.probes[i].probe_type;
 
 		probe_el->size = sizeof(struct ld_preload_probe_t);
 		probe_el->func = (struct us_func_inst_plane_t *)func;
@@ -356,7 +356,7 @@ static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
 }
 
 static int feature_add_inst_lib(struct ld_lib_list_el_t ld_lib,
-				struct lib_list_t **dest, int preload_probe_type)
+				struct lib_list_t **dest)
 {
 	*dest = new_lib();
 	if (*dest == NULL) {
@@ -371,8 +371,7 @@ static int feature_add_inst_lib(struct ld_lib_list_el_t ld_lib,
 
 	(*dest)->lib->bin_path = strdup(ld_lib.lib_name);
 
-	if (!feature_add_func_inst_list(ld_lib, (struct data_list_t *)*dest,
-	    preload_probe_type)) {
+	if (!feature_add_func_inst_list(ld_lib, (struct data_list_t *)*dest)) {
 		LOGE("funcs parsing error\n");
 		return 0;
 	}
@@ -384,7 +383,7 @@ static int feature_add_inst_lib(struct ld_lib_list_el_t ld_lib,
 }
 
 int feature_add_lib_inst_list(struct ld_feature_list_el_t *ld_lib_list,
-			      struct lib_list_t **lib_list, int preload_probe_type)
+			      struct lib_list_t **lib_list)
 {
 
 	uint32_t i = 0, num;
@@ -398,8 +397,7 @@ int feature_add_lib_inst_list(struct ld_feature_list_el_t *ld_lib_list,
 
 	for (i = 0; i < num; i++) {
 		LOGI(">add lib #%d <%s> probes_count=%lu\n", i, ld_lib_list->libs[i].lib_name, ld_lib_list->libs[i].probe_count);
-		if (!feature_add_inst_lib(ld_lib_list->libs[i], &lib,
-		    preload_probe_type)) {
+		if (!feature_add_inst_lib(ld_lib_list->libs[i], &lib)) {
 			// TODO maybe need free allocated memory up there
 			LOGE("add LD lib #%d failed\n", i + 1);
 			return 0;
