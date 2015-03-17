@@ -17,6 +17,9 @@ if [ ! -e /sys/kernel/debug/swap/writer/raw ]; then
 
 fi
 
+# swap enebling
+echo 1 > /sys/kernel/debug/swap/enable
+
 # Energy coefficients
 # CPU coefficients are divided by 10^6 because
 #  - they were calculated for mAs
