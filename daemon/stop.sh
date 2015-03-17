@@ -1,5 +1,7 @@
 #!/bin/sh
 
+echo 0 > /sys/kernel/debug/swap/enable
+
 rmmod swap_message_parser
 rmmod swap_energy
 rmmod swap_sampler
