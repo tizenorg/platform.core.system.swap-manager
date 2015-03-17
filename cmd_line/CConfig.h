@@ -27,9 +27,19 @@
 #include "CFeatures.h"
 #include "CAppListContainer.h"
 
+enum TargetType_t {
+	TT_AUTO,
+	TT_DEVICE,
+	TT_VIRTUAL
+};
+
 class CConfig
 {
 public:
+	TargetType_t m_TargetType;
+	struct in_addr m_TargetIP;
+	int m_TargetPort;
+
 	CFeatures *m_Features;
 	CAppListContainer *m_AppList;
     /* methods */
@@ -41,6 +51,7 @@ public:
 	CProbeListContainer *getCurrentAppProbe();
 	CProbeListContainer *getCurrentLibProbe();
 
+/* CLI interfaces */
 	/* Probe methods */
 	int setCurrentApplication(app_type_t app_type, const char *app_id, const char *app_path);
 	int setCurrentLib (const char *lib_path);
@@ -53,10 +64,19 @@ public:
 	int setCurrentProbe(probe_level_type_t plevel, uint64_t addr, probe_t ptype, CProbeData *data);
 	int setCurrentProbe(probe_level_type_t plevel, uint64_t addr, probe_t ptype);
 
+	int setTargetType(TargetType_t type);
+	int setTargetIP(struct in_addr IP);
+	int setTargetPort(int port);
+
 	int addCurrentAppProbeData (CProbeData *data);
 	void deleteLibProbes();
-		/* get */
+	/* get */
 	int getAll();
+	int getTargetIP(struct in_addr *IP);
+	int getTargetPort();
+
+/* CClient interfaces */
+	TargetType_t getTargetType();
 
 private:
     static int MakeAbsolutePath(const char *path, std::string &out)

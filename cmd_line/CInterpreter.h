@@ -5,7 +5,6 @@
 #include "instapi.h"
 
 using namespace std;
-using namespace instapi;
 
 enum EMode
 {
@@ -13,8 +12,7 @@ enum EMode
 	CONF_ONLY
 };
 
-int YYmain(pCConfig &pConfig, pCControlAPI &pCControlAPI,
-	   FILE *pFd_in, FILE *pFd_out, EMode nMode);
+int YYmain(FILE *pFd_in, FILE *pFd_out, EMode nMode);
 
 class CInterpreter
 {
@@ -33,7 +31,7 @@ class CInterpreter
 			}
 
 
-			m_pControl = pCControlAPI(new instapi::CControlAPI(pConfig));
+//			m_pControl = pCControlAPI(new CControlAPI(pConfig, pClient));
 			m_pConfig = pConfig;
 		}
 

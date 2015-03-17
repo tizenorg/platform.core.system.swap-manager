@@ -14,8 +14,10 @@
 #include "lex_mem.h"
 #include "flex_common.h"
 
+#include "CClient.h"
 #include "CProbeFBI.h"
 #include "CProbeDataFBIVar.h"
+#include "CCommonContainer.h"
 
 #include "icl_parser.h"
 
@@ -108,13 +110,12 @@ lib_name			{
 	    KEYWORD_HANDLER(lib_name);
 	}
 
-target_ip	{
-	    KEYWORD_HANDLER(target_ip);
-	}
-
-target_port	{
-	    KEYWORD_HANDLER(target_port);
-	}
+target_type	{KEYWORD_HANDLER(target_type);}
+target_ip	{KEYWORD_HANDLER(target_ip);}
+target_port	{KEYWORD_HANDLER(target_port);}
+virtual		{KEYWORD_HANDLER(target_type_virtual);}
+device		{KEYWORD_HANDLER(target_type_device);}
+auto		{KEYWORD_HANDLER(target_type_auto);}
 
 buffer_size	{
 	    KEYWORD_HANDLER(buffer_size);
@@ -166,6 +167,10 @@ all	{
 
 start	{
 	    KEYWORD_HANDLER(_start);
+	}
+
+apply_config	{
+	    KEYWORD_HANDLER(apply_config);
 	}
 
 stop	{

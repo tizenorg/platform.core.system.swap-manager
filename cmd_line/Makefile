@@ -11,7 +11,7 @@ SRC_PARSER=\
 
 SRC_MAIN=\
 		main.cpp						\
-		client.cpp						\
+		CClient.cpp						\
 		CConfig.cpp						\
 		CFeatures.cpp					\
 		CInterpreter.cpp				\

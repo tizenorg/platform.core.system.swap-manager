@@ -23,6 +23,7 @@ typedef enum {
 	BSECI_COUNT,
 } TYPE_BSECI;
 
+/* TODO rm it */
 class IInstrumentation //: public CError
 {
 public:

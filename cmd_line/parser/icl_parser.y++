@@ -19,6 +19,8 @@
     #include "lex_mem.h"
     #include "da_protocol.h"
 
+    #include "CCommonContainer.h"
+    #include "CClient.h"
     #include "CProbeFBI.h"
     #include "CProbeDataFBIVar.h"
 
@@ -74,6 +76,7 @@ int yylex(void);
     app_type_t nAppType;
     probe_t  nProbeType;
     probe_level_type_t nProbeLevelType;
+    TargetType_t nTargetType;
 
     CProbeFBI *fbiProbe;
     CProbeDataFBIVar *fbiVar;
@@ -88,6 +91,7 @@ int yylex(void);
     #define YYPCDATA pp
     #define YYLEX_PARAM pp->scaninfo
     #define GLOBALS ((struct pcdata *)yyget_extra( pp->scaninfo ))
+    #define GLOBAL Global
     #define YYOUT yyget_out(YYLEX_PARAM)
 
 // FIXME: Turn these definitions into CConfig's methods
@@ -147,8 +151,14 @@ int yylex(void);
 %token		traceinfo
 %token		delp
 %token		lib_name
+
+/* target */
+%token		target_type
 %token		target_ip
 %token		target_port
+%token		target_type_virtual
+%token		target_type_device
+%token		target_type_auto
 %token		buffer_size
 %token		buffer_cont
 
@@ -176,6 +186,7 @@ int yylex(void);
 
 %token		all
 %token		_start
+%token		apply_config
 %token		stop
 %token		ignore
 %token		clear
@@ -282,7 +293,6 @@ int yylex(void);
 
 
 
-
 %token LEX_BRACE_OPEN
 %token LEX_BRACE_CLOSE
 %token LEX_LIST_DELIMETER
@@ -315,6 +325,9 @@ int yylex(void);
 %type<fbiStepElm>	FBI_STEP
 %type<fbiStepsList>	FBI_STEPS_LIST_ELM
 %type<fbiStepsList>	FBI_STEPS_LIST
+
+%type<nTargetType>	TARGET_TYPE
+
 
 %%
 
@@ -360,7 +373,18 @@ COMMAND:	CONF_COMMAND
 
 CONF_COMMAND:
 		setv target_ip LEX_IP		{
-			TRACE("setv target_ip 'IP'" );		
+			TRACE("setv target_ip 'IP' %d", $3 );
+			GLOBAL->getConfig()->setTargetIP($3);
+		} |
+
+		setv target_port LEX_DEC_NUM	{
+			TRACE("setv target_port '%lu'", $3);
+			GLOBAL->getConfig()->setTargetPort($3);
+		} |
+
+		setv target_type TARGET_TYPE	{
+			TRACE("setv target_type '%d'", $3);
+			GLOBAL->getConfig()->setTargetType($3);
 		} |
 
 		setv target_port LEX_DEC_NUM	{
@@ -370,24 +394,28 @@ CONF_COMMAND:
 		setv cur_app APP_TYPE LEX_SYMNAME LEX_SYMNAME
 		{
 			TRACE("setv cur_app %d '%s' '%s'", $3, $4, $5);
-			GLOBALS->pConfig->setCurrentApplication(static_cast<app_type_t>$3, $4, $5);
+			GLOBAL->getConfig()->setCurrentApplication(static_cast<app_type_t>$3, $4, $5);
 		}|
 
 		setv cur_lib LEX_SYMNAME
 		{
 			TRACE("setv cur_lib '%s'", $3);
-			GLOBALS->pConfig->setCurrentLib($3);
+			GLOBAL->getConfig()->setCurrentLib($3);
 		} |
 
 		setv feature enable FEATURE_VALUE {
 			TRACE("setv feature enable '%lx'", $4);
-			GLOBALS->pConfig->setFeature($4, true);
+			GLOBAL->getConfig()->setFeature($4, true);
 		} |
 		setv feature disable FEATURE_VALUE {
 			TRACE("setv feature disable '%lx'", $4);
-			GLOBALS->pConfig->setFeature($4, false);
+			GLOBAL->getConfig()->setFeature($4, false);
 		}
 		;
+
+TARGET_TYPE:	target_type_device	{ $$ = TT_DEVICE;		}|
+		target_type_virtual	{ $$ = TT_VIRTUAL;		}|
+		target_type_auto	{ $$ = TT_AUTO;			};
 
 VAR_NAME:	
 		lib_name		{ $$ = VAR__LIB_NAME;		} |
@@ -404,18 +432,18 @@ CONF_COMMAND:
 
 
 		setp lib PROBE_SUBTYPE LEX_HEX_NUM  {
-			GLOBALS->pConfig->setCurrentLibProbe($4, static_cast<probe_t>($3));
+			GLOBAL->getConfig()->setCurrentLibProbe($4, static_cast<probe_t>($3));
 		} |
 
 
 		setp PROBE_TYPE fbi LEX_HEX_NUM {
-			if (GLOBALS->pConfig->setCurrentProbe($2, $4, PROBE_TYPE_FBI) != 0) {
+			if (GLOBAL->getConfig()->setCurrentProbe($2, $4, PROBE_TYPE_FBI) != 0) {
 				PRINT_ERROR("Cannot set probe");
 			}
 		} |
 		setp PROBE_TYPE fbi LEX_HEX_NUM FBI_VARS_LIST {
 			TRACE("!!!!!!!!!!!!!!!!!!!setp fbi 1 = 0x%lx:%p", $4, $5);
-			if (GLOBALS->pConfig->setCurrentProbe($2, $4, PROBE_TYPE_FBI, $5) != 0) {
+			if (GLOBAL->getConfig()->setCurrentProbe($2, $4, PROBE_TYPE_FBI, $5) != 0) {
 				PRINT_ERROR("Cannot set probe1");
 				delete $5;
 			}
@@ -423,7 +451,7 @@ CONF_COMMAND:
 		setd PROBE_TYPE fbi var LEX_DEC_NUM OFFSET LEX_DEC_NUM LEX_DEC_NUM {
 			TRACE("!!!!!!!!!!!!!!!!!!!setp fbi var = %lu %li %lu %lu", $5, $6, $7, $8);
 			CProbeDataFBIVar *FBIvar = new CProbeDataFBIVar($5, $6, $7, $8);
-			if (GLOBALS->pConfig->addCurrentAppProbeData(FBIvar) != 0) {
+			if (GLOBAL->getConfig()->addCurrentAppProbeData(FBIvar) != 0) {
 				PRINT_ERROR("Cannot add var");
 				delete FBIvar;
 			}
@@ -431,7 +459,7 @@ CONF_COMMAND:
 		setd PROBE_TYPE fbi step POINTER_ORDER OFFSET {
 			TRACE("!!!!!!!!!!!!!!!!!!!setp fbi step = %li %li", $5, $6);
 			CProbeDataFBIStep *FBIStep = new CProbeDataFBIStep($5, $6);
-			if (GLOBALS->pConfig->addCurrentAppProbeData(FBIStep) != 0) {
+			if (GLOBAL->getConfig()->addCurrentAppProbeData(FBIStep) != 0) {
 				PRINT_ERROR("Cannot add step");
 				delete FBIStep;
 			}
@@ -560,7 +588,7 @@ FEATURE_VALUE:
 		;
 
 
-ACT_COMMAND:	getall				{GLOBALS->pConfig->getAll();} |
+ACT_COMMAND:	getall				{GLOBAL->getConfig()->getAll();} |
 		getv all			{} |
 		getv VAR_NAME			{} |
 		getp all			{} |
@@ -616,7 +644,7 @@ ACT_COMMAND:	traceinfo                    {
                                                 {
 #if defined(ACTIVE_CMDS_ENABLED)
                                                         unsigned long pnArray[BSECI_COUNT];
-                                                        GLOBALS->pControlAPI->ControlAPIGetBufferStatus(pnArray, BSECI_COUNT);
+                                                        GLOBAL->getControlAPI()->ControlAPIGetBufferStatus(pnArray, BSECI_COUNT);
 							// In any state except EC_STATE_IDLE the count of events must be greater than 0
 							if ( pnArray[BSECI_STATE] != EC_STATE_IDLE && pnArray[BSECI_SAVED] == 0) {
 								PRINT_ERROR("Reboot system");
@@ -647,17 +675,18 @@ ACT_COMMAND
 	    TRACE("start");
 	    if (GLOBALS->nMode == CONF_ONLY) {
 		//RISE_ERROR(MSG_CANT_EXECUTE_COMMAND_IN_CURRENT_MODE);
+		PRINT_ERROR(MSG_CANT_EXECUTE_COMMAND_IN_CURRENT_MODE);
 	    } else {
-#if defined(ACTIVE_CMDS_ENABLED)
-		TRACE("ControlAPISetConfig(NULL, GLOBALS->pConfig)");
-//		GLOBALS->pControlAPI->ControlAPISetConfig(NULL, /*GLOBALS->pConfig*/);
-		if (GLOBALS->pControlAPI->ControlAPIStartTrace() == -1) {
+//#if defined(ACTIVE_CMDS_ENABLED)
+//		TRACE("ControlAPISetConfig(NULL, GLOBAL->getConfig())");
+//		GLOBAL->getControlAPI()->ControlAPISetConfig(NULL, /*GLOBAL->getConfig()*/);
+		if (GLOBAL->getControlAPI()->startTrace() != 0) {
 		    TRACE("Error while start data collection!");
 		    PRINT_ERROR(MSG_CANT_START_DATA_COLLECTION);
 		} else {
 		    PRINT_OK;
 		}
-#endif // defined(ACTIVE_CMDS_ENABLED)
+//#endif // defined(ACTIVE_CMDS_ENABLED)
 	    }
 	}
 	| stop
@@ -666,7 +695,7 @@ ACT_COMMAND
 		//RISE_ERROR(MSG_CANT_EXECUTE_COMMAND_IN_CURRENT_MODE);
 	    } else {
 #if defined(ACTIVE_CMDS_ENABLED)
-		GLOBALS->pControlAPI->ControlAPIStopTrace();
+		GLOBAL->getControlAPI()->ControlAPIStopTrace();
 		PRINT_OK;
 #endif // defined(ACTIVE_CMDS_ENABLED)
 	    }
@@ -692,6 +721,10 @@ ACT_COMMAND
 	    delete szCmd;
 	    DELETE_LEX_STR($2);
 	}
+	| apply_config
+	{
+		GLOBAL->getControlAPI()->applyConfig();
+	}
 ;
 
 TRACE_BIN_FILE:	LEX_SYMNAME { $$ = $1; }
@@ -706,7 +739,7 @@ ACT_COMMAND:	savepf PROFILE	{
 					else
 					{
 					    FILE * fdConfig = fopen($2, "w");
-					    //PrintConfig(fdConfig, GLOBALS->pConfig);
+					    //PrintConfig(fdConfig, GLOBAL->getConfig());
 					    fclose(fdConfig);
 					    PRINT_OK;
 					}
@@ -725,8 +758,11 @@ ACT_COMMAND:	savepf PROFILE	{
 					    FILE * pFdScriptFile = fopen(szScriptFileName, "r");
 					    int res;
 					    if (pFdScriptFile) {
-						GLOBALS->pConfig->clean();
-						res = YYmain(GLOBALS->pConfig,GLOBALS->pControlAPI, pFdScriptFile, YYOUT, CONF_ONLY);
+						pCConfig config = GLOBAL->getConfig();
+						pCControlAPI control = GLOBAL->getControlAPI();
+						config->clean();
+
+						res = YYmain(pFdScriptFile, YYOUT, CONF_ONLY);
 						fclose(pFdScriptFile);
 						if(!res) {
 						    PRINT_OK;
@@ -759,7 +795,7 @@ ACT_COMMAND:	quit	{
 					PRINT_OK;
 					fprintf(YYOUT, "\n");
 #if defined(ACTIVE_CMDS_ENABLED)
-					GLOBALS->pControlAPI->ControlAPIStopTrace();
+					GLOBAL->getControlAPI()->ControlAPIStopTrace();
 #endif
 				YYABORT;
 				}
@@ -771,9 +807,9 @@ PROFILE:	LEX_SYMNAME { $$ = $1; }
 
 %%
 
-int YYmain(pCConfig& pConfig, pCControlAPI& pControlAPI, FILE * pFd_in, FILE * pFd_out, EMode nMode)
+int YYmain(FILE * pFd_in, FILE * pFd_out, EMode nMode)
 {
-	struct pcdata _perScannerData = { pControlAPI, pConfig, (EMode)0, 1, 0, NULL };
+	struct pcdata _perScannerData = { (EMode)0, 1, 0, NULL };
 
 	int res = yylex_init_extra(&_perScannerData, &_perScannerData.scaninfo);
 	ASSERT(res == 0);
