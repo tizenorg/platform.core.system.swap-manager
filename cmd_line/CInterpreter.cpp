@@ -6,7 +6,7 @@ extern void PrintConfig(FILE *fd, pCConfig&  pConfig);
 
 void CInterpreter::Interpret()
 {
-	YYmain(m_pConfig, m_pControl, m_pFD_in, m_pFD_out, m_nMode);
+	YYmain(m_pFD_in, m_pFD_out, m_nMode);
 }
 
 int SaveConfig(pCConfig& pConfig, const char *filename)

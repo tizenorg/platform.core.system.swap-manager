@@ -32,8 +32,12 @@ class CFeatures : public std::bitset<FEATURE_MAX_SIZE>, public CPrintable
 			return res;
 		}
 
-		int serialize(uint64_t *f, int count64bit)
+
+	public:
+		//int serialize(uint64_t *f)
+		int serialize(char *to)
 		{
+			uint64_t *f = (uint64_t *)to;
 			int i, pos, res;
 			std::string st;
 			CBitSet64 bitset64;
@@ -43,7 +47,7 @@ class CFeatures : public std::bitset<FEATURE_MAX_SIZE>, public CPrintable
 			st = to_string();
 			pos = st.length();
 
-			for (i = 0; i < count64bit; i++) {
+			for (i = 0; i < FEATURE_MAX_SIZE/FEATURE_CELL_SIZE; i++) {
 				pos -= FEATURE_CELL_SIZE;
 				if (pos < 0) {
 					res = -EINVAL;
@@ -55,13 +59,13 @@ class CFeatures : public std::bitset<FEATURE_MAX_SIZE>, public CPrintable
 
 				f[i] = bitset64.to_ullong();
 				TRACE("%d:%lx", i, f[i]);
+
+				res += sizeof(*f);
 			}
 
 			exit:
 			return res;
 		}
-
-	public:
 
 		virtual void printElm()
 		{
@@ -70,7 +74,7 @@ class CFeatures : public std::bitset<FEATURE_MAX_SIZE>, public CPrintable
 
 			TRACE("%s", st.c_str());
 
-			if (serialize(features, sizeof(features)/sizeof(*features)) == 0) {
+			if (serialize((char *)features) > 0) {
 				st = featureToStr();
 				TRACE("\n%s", st.c_str());
 			}

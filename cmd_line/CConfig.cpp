@@ -10,6 +10,7 @@
 CConfig::CConfig ()
 {
 /* new */
+	m_TargetType = TT_AUTO;
 	m_AppList = new CAppListContainer();
 	m_Features = new CFeatures();
 }
@@ -190,15 +191,45 @@ int CConfig::addCurrentAppProbeData (CProbeData *data)
 	TRACE("ProbeVar '%p'", data);
 
 	CAppListElm *cur_app;
+	TRACE("ProbeVar '%p'", data);
 
 	cur_app = m_AppList->getCurrent();
+	TRACE("ProbeVar '%p'", data);
 	if (cur_app == NULL)
 		return -EINVAL;
+	TRACE("ProbeVar '%p'", data);
+
+	if (cur_app->m_Probes == NULL)
+		LOGE("Probes not initialized");
+
+	if (cur_app->m_Probes->getCurrent() == NULL)
+		LOGE("No probe set");
 
 	cur_app->m_Probes->getCurrent()->addData(data);
 
+	TRACE("ProbeVar '%p'", data);
+
 	TRACE("list:");
 	m_AppList->printList();
+	return 0;
+}
+
+int CConfig::setTargetType(TargetType_t type)
+{
+	TRACE("type = %d", type);
+	m_TargetType = type;
+	return 0;
+}
+
+int CConfig::setTargetIP(struct in_addr IP)
+{
+	m_TargetIP = IP;
+	return 0;
+}
+
+int CConfig::setTargetPort(int port)
+{
+	m_TargetPort = port;
 	return 0;
 }
 
@@ -211,3 +242,19 @@ int CConfig::getAll()
 }
 
 
+/* CClient interfaces */
+TargetType_t CConfig::getTargetType()
+{
+	return m_TargetType;
+}
+
+int CConfig::getTargetIP(struct in_addr *IP)
+{
+	memcpy(IP, &m_TargetIP, sizeof(m_TargetIP));
+	return 0;
+}
+
+int CConfig::getTargetPort()
+{
+	return  m_TargetPort;
+}

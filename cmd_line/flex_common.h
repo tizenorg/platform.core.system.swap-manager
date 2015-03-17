@@ -10,8 +10,8 @@ typedef void * yyscan_t;
 
 struct pcdata
 {
-	pCControlAPI pControlAPI;
-	pCConfig pConfig;
+//	pCControlAPI pControlAPI;
+//	pCConfig pConfig;
 	EMode nMode;
 	int _lineNum;
 	int _columnNum;

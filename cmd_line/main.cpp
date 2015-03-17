@@ -1,12 +1,13 @@
 #include <iostream>
 
+#include "CCommonContainer.h"
 #include "CConfig.h"
-#include "CInterpreter.h"
 
-#include "client.h"
 #include "debug.h"
 
 static CInterpreter *_inter = NULL;
+
+CCommonContainer *Global;
 
 int main(int argc, char *argv[])
 {
@@ -18,8 +19,12 @@ int main(int argc, char *argv[])
 	if (argc >= 2)
 		fout = fopen(argv[2], "w");
 
-	Client *cl = new Client();
-	pCConfig config(new CConfig());
+	Global = new CCommonContainer(fin, fout);
+
+	Global->getInter()->Interpret();
+/*
+	CConfig *config = new CConfig();
+	CClient *cl = new CClient();
 
 	//config->m_bPrompt = true;
 	_inter = new CInterpreter(config, ALL, fin, fout);
@@ -34,4 +39,5 @@ int main(int argc, char *argv[])
 	}
 	delete cl;
 	delete _inter;
+*/
 }
