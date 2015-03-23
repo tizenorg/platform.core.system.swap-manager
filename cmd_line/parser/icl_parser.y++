@@ -451,7 +451,7 @@ CONF_COMMAND:
 		setd PROBE_TYPE fbi var LEX_DEC_NUM OFFSET LEX_DEC_NUM LEX_DEC_NUM {
 			TRACE("!!!!!!!!!!!!!!!!!!!setp fbi var = %lu %li %lu %lu", $5, $6, $7, $8);
 			CProbeDataFBIVar *FBIvar = new CProbeDataFBIVar($5, $6, $7, $8);
-			if (GLOBAL->getConfig()->addCurrentAppProbeData(FBIvar) != 0) {
+			if (GLOBAL->getConfig()->addCurrentProbeData($2, FBIvar) != 0) {
 				PRINT_ERROR("Cannot add var");
 				delete FBIvar;
 			}
@@ -459,7 +459,7 @@ CONF_COMMAND:
 		setd PROBE_TYPE fbi step POINTER_ORDER OFFSET {
 			TRACE("!!!!!!!!!!!!!!!!!!!setp fbi step = %li %li", $5, $6);
 			CProbeDataFBIStep *FBIStep = new CProbeDataFBIStep($5, $6);
-			if (GLOBAL->getConfig()->addCurrentAppProbeData(FBIStep) != 0) {
+			if (GLOBAL->getConfig()->addCurrentProbeData($2, FBIStep) != 0) {
 				PRINT_ERROR("Cannot add step");
 				delete FBIStep;
 			}

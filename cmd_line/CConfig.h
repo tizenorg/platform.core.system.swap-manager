@@ -69,6 +69,8 @@ public:
 	int setTargetPort(int port);
 
 	int addCurrentAppProbeData (CProbeData *data);
+	int addCurrentLibProbeData (CProbeData *data);
+	int addCurrentProbeData (probe_level_type_t plevel, CProbeData *data);
 	void deleteLibProbes();
 	/* get */
 	int getAll();
