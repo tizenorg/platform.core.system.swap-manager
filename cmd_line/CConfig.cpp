@@ -188,30 +188,65 @@ int CConfig::setCurrentProbe(probe_level_type_t plevel, uint64_t addr, probe_t p
 
 int CConfig::addCurrentAppProbeData (CProbeData *data)
 {
-	TRACE("ProbeVar '%p'", data);
+	CProbeListContainer *probes = getCurrentAppProbe();
+	CProbeListElm *probe = NULL;
 
-	CAppListElm *cur_app;
-	TRACE("ProbeVar '%p'", data);
-
-	cur_app = m_AppList->getCurrent();
-	TRACE("ProbeVar '%p'", data);
-	if (cur_app == NULL)
+	if (probes == NULL) {
+		LOGE("Cannot get current probe list.");
 		return -EINVAL;
-	TRACE("ProbeVar '%p'", data);
+	}
 
-	if (cur_app->m_Probes == NULL)
-		LOGE("Probes not initialized");
+	probe = probes->getCurrent();
+	if (probe == NULL) {
+		LOGE("Cannot get current probe.");
+		return -EINVAL;
+	}
 
-	if (cur_app->m_Probes->getCurrent() == NULL)
-		LOGE("No probe set");
-
-	cur_app->m_Probes->getCurrent()->addData(data);
+	probe->addData(data);
 
 	TRACE("ProbeVar '%p'", data);
 
 	TRACE("list:");
 	m_AppList->printList();
 	return 0;
+}
+
+int CConfig::addCurrentLibProbeData (CProbeData *data)
+{
+	CProbeListContainer *probes = getCurrentLibProbe();
+	CProbeListElm *probe = NULL;
+
+	if (probes == NULL) {
+		LOGE("Cannot get current probe list.");
+		return -EINVAL;
+	}
+
+	probe = probes->getCurrent();
+	if (probe == NULL) {
+		LOGE("Cannot get current probe.");
+		return -EINVAL;
+	}
+
+	probe->addData(data);
+
+	TRACE("ProbeVar '%p'", data);
+
+	TRACE("list:");
+	m_AppList->printList();
+	return 0;
+}
+
+int CConfig::addCurrentProbeData (probe_level_type_t plevel, CProbeData *data)
+{
+	switch (plevel) {
+	case PROBE_TYPE_LEVEL_APP:
+		return addCurrentAppProbeData(data);
+	case PROBE_TYPE_LEVEL_LIB:
+		return addCurrentLibProbeData(data);
+	default:
+		LOGE("Wrong probe type " << plevel);
+		return -EINVAL;
+	}
 }
 
 int CConfig::setTargetType(TargetType_t type)
