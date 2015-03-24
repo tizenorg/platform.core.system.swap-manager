@@ -314,13 +314,14 @@ var		{KEYWORD_HANDLER(var);}
 
 {LEX_HEX_NUM}		{
 			    PRINT_LEX(LEX_HEX_NUM);
+			    int errsv = errno;
 			    yylval->ulValue = strtoul(yytext, NULL, HEX_BASE);
-			    if (yylval->ulValue == EINVAL)
+			    if (errno == ERANGE) {
+				errno = errsv;
 				return LEX_BAD_LEXEME;
-			    else
-			    {
-				return LEX_HEX_NUM;
 			    }
+			    errno = errsv;
+			    return LEX_HEX_NUM;
 			}
 
 {LEX_SYMNAME}		{

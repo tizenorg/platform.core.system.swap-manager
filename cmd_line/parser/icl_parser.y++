@@ -47,6 +47,7 @@
             fprintf(YYOUT, "error\n");	\
 	    fprintf(YYOUT, msg);	\
 	    fprintf(YYOUT, "\n");	\
+	    exit(1);			\
     }
 
 
@@ -546,7 +547,7 @@ DATA_TYPE:	sdec32	{ $$ = 'd'; } |
 		;
 
 POINTER_ORDER:	LEX_DEC_NUM | LEX_HEX_NUM { $$ = static_cast<long>($1);   };
-OFFSET:		LEX_MINUS LEX_HEX_NUM	{ $$ = - static_cast<long>($2); } |
+OFFSET:		LEX_MINUS LEX_HEX_NUM	{ TRACE("->hex=%p", $2); $$ = 0 - static_cast<long>($2); } |
 		LEX_HEX_NUM		{ $$ = static_cast<long>($1);   }
 		;
 
