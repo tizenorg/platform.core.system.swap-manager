@@ -12,7 +12,7 @@
 #include <iostream>
 #include <cerrno>
 
-#define LOGI(...) std::cout << "[INF] "  << __FUNCTION__  << "[" << __LINE__ << "]:" << __VA_ARGS__ << std::endl
+#define LOGI(...) std::cout << "[INF] "  << typeid(this).name() << "::" <<  __FUNCTION__  << "[" << __LINE__ << "]:" << __VA_ARGS__ << std::endl
 #define LOGE(...) std::cout << "[ERR] "  << __FUNCTION__  << "[" << __LINE__ << "]:" << __VA_ARGS__ << std::endl
 
 #else /* __cplusplus */
