@@ -15,10 +15,12 @@ SRC_MAIN=\
 		CConfig.cpp						\
 		CFeatures.cpp					\
 		CInterpreter.cpp				\
+		probes/CVisitor.cpp				\
 		probes/CAppListContainer.cpp	\
 		probes/CLibListContainer.cpp	\
 		probes/CProbe.cpp				\
 		probes/CProbeFBI.cpp			\
+		probes_data/CProbeData.cpp		\
 
 SRC_PRECOMPILE=$(patsubst %.y++,%.cpp, $(patsubst %.l++,%.cpp, $(SRC_PARSER)))
 

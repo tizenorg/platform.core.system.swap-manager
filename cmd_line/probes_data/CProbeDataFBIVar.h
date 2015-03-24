@@ -58,6 +58,14 @@ class CProbeDataFBIStep: public CProbeData
 		uint8_t m_PointerOrder;
 		uint64_t m_Offset;
 
+		void accept(CVisitor& v) /* CNode */
+		{
+			if (v.access(this) == CVisitor::ACCESS_GRANTED) {
+				v.entry(this);
+				v.exit(this);
+			}
+		}
+
 		virtual void printElm()
 		{
 			TRACE("po=%d off=0x%lx", m_PointerOrder, m_Offset);
@@ -101,6 +109,18 @@ typedef std::shared_ptr<CProbeDataFBIStep> pCProbeDataFBIStep;
 class CProbeDataFBIStepList : public CProbeDataList
 {
 	public:
+
+		void accept(CVisitor& v) /* CNode */
+		{
+			if (v.access(this) == CVisitor::ACCESS_GRANTED) {
+				v.entry(this);
+				itList i;
+				for (i = m_List->begin(); i != m_List->end(); i++)
+					(*i)->accept(v);
+				v.exit(this);
+			}
+		}
+
 		virtual int addData(CProbeData *data)
 		{
 			TRACE("add data");
@@ -132,6 +152,15 @@ class CProbeDataFBIVar: public CProbeData
 		uint32_t m_ProbeDataSize;
 
 		CProbeData *m_Steps;
+
+		virtual void accept(CVisitor& v) /* CNode */
+		{
+			if (v.access(this) == CVisitor::ACCESS_GRANTED) {
+				v.entry(this);
+				m_Steps->accept(v);
+				v.exit(this);
+			}
+		}
 
 		virtual void printElm()
 		{
@@ -216,6 +245,17 @@ class CProbeDataFBIVarList : public CProbeDataList
 		virtual int setData(CProbeData *data)
 		{
 			CProbeDataList::setData(data);
+		}
+
+		void accept(CVisitor& v) /* CNode */
+		{
+			if (v.access(this) == CVisitor::ACCESS_GRANTED) {
+				v.entry(this);
+				itList i;
+				for (i = m_List->begin(); i != m_List->end(); i++)
+					(*i)->accept(v);
+				v.exit(this);
+			}
 		}
 
 		CProbeDataFBIVarList()

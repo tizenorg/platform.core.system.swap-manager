@@ -7,7 +7,7 @@
 #include "CLibListContainer.h"
 
 /** Appication list classes **/
-class CAppListElm : public CPrintable {
+class CAppListElm : public CNode {
 	public:
 		app_type_t m_AppType;
 		std::string m_AppID;
@@ -15,16 +15,26 @@ class CAppListElm : public CPrintable {
 		CLibListContainer  *m_LibList;
 		CProbeListContainer *m_Probes;
 
-		virtual void printElm() /* CPrintable */
+		virtual void printElm() /* CNode */
 		{
 			TRACE("Type %d, AppID '%s', AppPath '%s'", m_AppType, m_AppID.c_str(), m_FilePath.c_str());
 		}
 
-		virtual void printList() /* CPrintable */
+		virtual void printList() /* CNode */
 		{
 			printElm();
 			m_Probes->printList();
 			m_LibList->printList();
+		}
+
+		virtual void accept(CVisitor& v) /* CNode */
+		{
+			if (v.access(this) == CVisitor::ACCESS_GRANTED) {
+				v.entry(this);
+				m_Probes->accept(v);
+				m_LibList->accept(v);
+				v.exit(this);
+			}
 		}
 
 		CAppListElm(app_type_t app_type, std::string app_id, std::string file_path)
@@ -50,6 +60,14 @@ typedef TAppList::iterator itAppListElm;
 
 class CAppListContainer: public CListContainer<CAppListElm>{
 	public:
+		virtual void accept(CVisitor& v) /* CNode */
+		{
+			itList i;
+			v.entry(this);
+			for (i = m_List->begin(); i != m_List->end(); i++)
+				i->get()->accept(v);
+			v.exit(this);
+		}
 
 		virtual int elmCmp(pAppListElm a, pAppListElm b) {
 

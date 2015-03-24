@@ -1,10 +1,11 @@
 #ifndef _CLISTCONTAINER_H__
 #define _CLISTCONTAINER_H__
 
-#include "CPrintable.h"
+#include "CVisitor.h"
 #include "debug.h"
 
-template <class TElm> class CListContainer : public CPrintable {
+template <class TElm> class CListContainer: public CNode {
+	public:
 	typedef std::shared_ptr<TElm> pElm;
 	typedef std::list<pElm> TList;
 	typedef typename TList::iterator itList;
@@ -57,10 +58,10 @@ template <class TElm> class CListContainer : public CPrintable {
 
 		}
 
-		virtual void printElm() /* CPrintable */
+		virtual void printElm() /* CNode */
 		{
 		}
-		virtual void printList() /* CPrintable */
+		virtual void printList() /* CNode */
 		{
 			itList i;
 			for (i = m_List->begin(); i != m_List->end(); i++)

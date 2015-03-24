@@ -28,6 +28,16 @@ void CConfig::clean()
 {
 }
 
+void CConfig::accept(CVisitor &v)
+{
+	if (v.access(this) == CVisitor::ACCESS_GRANTED) {
+		v.entry(this);
+		m_Features->accept(v);
+		m_AppList->accept(v);
+		v.exit(this);
+	}
+}
+
 CProbeListContainer *CConfig::getCurrentAppProbe()
 {
 	CAppListElm *app = NULL;
