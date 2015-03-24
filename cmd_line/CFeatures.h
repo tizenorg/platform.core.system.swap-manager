@@ -10,7 +10,7 @@
 
 extern const char *feature_to_str_arr[];
 
-class CFeatures : public std::bitset<FEATURE_MAX_SIZE>, public CPrintable
+class CFeatures : public std::bitset<FEATURE_MAX_SIZE>, public CNode
 {
 	protected:
 		typedef std::bitset<FEATURE_CELL_SIZE> CBitSet64;
@@ -83,6 +83,14 @@ class CFeatures : public std::bitset<FEATURE_MAX_SIZE>, public CPrintable
 		virtual void printList()
 		{
 			printElm();
+		}
+
+		virtual void accept(CVisitor& v) /* CNode */
+		{
+			if (v.access(this) == CVisitor::ACCESS_GRANTED) {
+				v.entry(this);
+				v.exit(this);
+			}
 		}
 
 		CFeatures()

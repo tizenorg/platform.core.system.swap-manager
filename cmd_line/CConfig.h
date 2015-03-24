@@ -14,6 +14,8 @@
 #include "debug.h"
 #include "defines.h"
 
+#include "CVisitor.h"
+
 
 #endif
 
@@ -33,7 +35,7 @@ enum TargetType_t {
 	TT_VIRTUAL
 };
 
-class CConfig
+class CConfig : public CNode
 {
 public:
 	TargetType_t m_TargetType;
@@ -45,8 +47,11 @@ public:
     /* methods */
 	CConfig();
 	virtual ~CConfig();
+
 	int trace (const char* message);
 	void clean();
+	void virtual accept(CVisitor &v); /* CNode */
+
 
 	CProbeListContainer *getCurrentAppProbe();
 	CProbeListContainer *getCurrentLibProbe();

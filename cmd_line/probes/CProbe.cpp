@@ -3,6 +3,15 @@
 #include "debug.h"
 
 /* CProbeListElm */
+void CProbeListElm::accept(CVisitor& v) /* CNode */
+{
+	if (v.access(this) == CVisitor::ACCESS_GRANTED) {
+		v.entry(this);
+		m_Data->accept(v);
+		v.exit(this);
+	}
+}
+
 CProbeListElm::CProbeListElm(uint64_t addr, probe_t ptype)
 {
 	m_Addr = addr;
@@ -15,6 +24,18 @@ CProbeListElm::~CProbeListElm()
 }
 
 /* CProbeListContainer */
+void CProbeListContainer::accept(CVisitor& v) /* CNode */
+{
+	itList i;
+	if (v.access(this) == CVisitor::ACCESS_GRANTED) {
+		v.entry(this);
+		for (i = m_List->begin(); i != m_List->end(); i++) {
+			i->get()->accept(v);
+		}
+		v.exit(this);
+	}
+}
+
 int CProbeListContainer::elmCmp(pProbeListElm a, pProbeListElm b) {
 	int res;
 

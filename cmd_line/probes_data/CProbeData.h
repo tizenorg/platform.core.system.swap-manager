@@ -1,7 +1,7 @@
 #ifndef __CPROBEDATA_H__
 #define __CPROBEDATA_H__
 
-#include "CPrintable.h"
+#include "CVisitor.h"
 #include "debug.h"
 
 
@@ -13,7 +13,7 @@ enum datatype_t {
 	PROBE_DATA_FBI_STEP_LIST,
 };
 
-class CProbeData : public CPrintable {
+class CProbeData : public CNode {
 	public:
 		typedef std::shared_ptr<CProbeData> pCProbeData;
 
@@ -22,14 +22,14 @@ class CProbeData : public CPrintable {
 
 		datatype_t m_DataType;
 
-		CProbeData(datatype_t data_type)
-		:m_DataType(data_type)
-		{
-		}
+		virtual void accept(CVisitor& v); /* CNode */
+		int printElm(){};
+		int printList(){};
 
-		virtual ~CProbeData()
-		{
-		}
+
+		CProbeData(datatype_t data_type);
+
+		virtual ~CProbeData();
 };
 typedef std::shared_ptr<CProbeData> pCProbeData;
 
