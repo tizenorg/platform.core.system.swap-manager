@@ -15,12 +15,13 @@ SRC_MAIN=\
 		CConfig.cpp						\
 		CFeatures.cpp					\
 		CInterpreter.cpp				\
-		probes/CVisitor.cpp				\
 		probes/CAppListContainer.cpp	\
 		probes/CLibListContainer.cpp	\
 		probes/CProbe.cpp				\
 		probes/CProbeFBI.cpp			\
 		probes_data/CProbeData.cpp		\
+		serialise/CSerialise.cpp		\
+		serialise/CSavepf.cpp			\
 
 SRC_PRECOMPILE=$(patsubst %.y++,%.cpp, $(patsubst %.l++,%.cpp, $(SRC_PARSER)))
 
@@ -38,7 +39,7 @@ LEXCOMPILE = $(LEX) $(AM_LFLAGS) $(LFLAGS)
 OBJ=$(patsubst %.cpp,%.o, $(CPPSRC))
 
 CPP=g++
-INCLUDE_CPPFLAGS= -I. -I./common -I./../daemon -I./probes -I./probes_data -I./instapi
+INCLUDE_CPPFLAGS= -I. -I./common -I./../daemon -I./probes -I./probes_data -I./instapi -I./serialise
 CPP_LDFLAGS=-pthread
 
 CPPFLAGS+=$(INCLUDE_CPPFLAGS)
