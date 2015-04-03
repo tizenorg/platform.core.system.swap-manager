@@ -254,15 +254,17 @@ void kill_app_web(const char *app_id)
 	}
 }
 
-#define SUB_1(x) (x-1)
-#define STRDEFINE(x) #x
+#define STRDEFINE_L2(x) #x
+#define STRDEFINE(x) STRDEFINE_L2(x)
+
 // find process id from executable binary path
 static pid_t find_pid_from_path(const char *path)
 {
-	char buf[BUFFER_MAX];
+	char buf[BUFFER_MAX + 1];
 	char cmdline[PATH_MAX];
 	DIR *proc;
 	FILE *fp = NULL;
+	static const char scan_format[] = "%" STRDEFINE(BUFFER_MAX) "s";
 	static char dirent_buffer[ sizeof(struct dirent) + PATH_MAX + 1 ] = {0,};
 	static struct dirent *dirent_r = (struct dirent *)dirent_buffer;
 	struct dirent *entry;
@@ -287,7 +289,7 @@ static pid_t find_pid_from_path(const char *path)
 			continue;
 
 		found = 0;
-		if (fscanf(fp, "%" STRDEFINE(SUB_1(BUFFER_MAX)) "s", buf) != EOF) /* read only argv[0] */
+		if (fscanf(fp, scan_format, buf) != EOF) /* read only argv[0] */
 			found = (strncmp(path, buf, len) == 0);
 
 		fclose(fp);
