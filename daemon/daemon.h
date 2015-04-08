@@ -132,7 +132,8 @@ enum DAState
 #define EVENT_PID		0x00000002
 #define EVENT_ERROR		0x00000004
 
-
+#define strr(x) #x
+#define str(x) strr(x)
 
 typedef struct
 {
