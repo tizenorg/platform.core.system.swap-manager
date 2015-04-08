@@ -257,7 +257,7 @@ void kill_app_web(const char *app_id)
 // find process id from executable binary path
 static pid_t find_pid_from_path(const char *path)
 {
-	char buf[BUFFER_MAX];
+	char buf[BUFFER_MAX + 1];
 	char cmdline[PATH_MAX];
 	DIR *proc;
 	FILE *fp;
@@ -285,7 +285,7 @@ static pid_t find_pid_from_path(const char *path)
 			continue;
 
 		found = 0;
-		if (fscanf(fp, "%s", buf) != EOF) /* read only argv[0] */
+		if (fscanf(fp, "%" str(BUFFER_MAX) "s", buf) != EOF) /* read only argv[0] */
 			found = (strncmp(path, buf, len) == 0);
 
 		fclose(fp);

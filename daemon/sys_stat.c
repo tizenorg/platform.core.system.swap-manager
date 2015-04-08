@@ -262,7 +262,7 @@ static int get_video_status()
 	int video_status = 0;
 	int ret;
 	FILE *video_fp = manager.fd.video;
-	char stat[256];
+	char stat[MIDDLE_BUFFER + 1]; /* on changing this size, change fscanf params */
 
 	if (video_fp == NULL) // file is not open
 		return 0;
@@ -270,7 +270,7 @@ static int get_video_status()
 	rewind(video_fp);
 	fflush(video_fp);
 
-	ret = fscanf(video_fp, "%s", stat);
+	ret = fscanf(video_fp, "%" str(MIDDLE_BUFFER) "s", stat);
 
 	if (ret != EOF)
 		if(strncmp(stat,"active",6) == 0)
@@ -295,7 +295,7 @@ static int get_voltage_status()
 static void get_cpu_frequency(float *freqs)
 {
 	char filename[MIDDLE_BUFFER];
-	char freq_str[SMALL_BUFFER];
+	char freq_str[SMALL_BUFFER + 1]; /* on changing this size, change fscanf params */
 	FILE *f;
 	int cpu_n = 0;
 
@@ -332,8 +332,8 @@ static void get_cpu_frequency(float *freqs)
 			LOGI_th_samp("core #%d diasabled\n", cpu_n);
 			freqs[cpu_n] = 0.0;
 		} else {
-			/* core enabled, get frequency /*/
-			if (fscanf(f, "%s", freq_str) != 1) {
+			/* core enabled, get frequency */
+			if (fscanf(f, "%" str(SMALL_BUFFER) "s", freq_str) != 1) {
 				/* TODO return error code */
 				freqs[cpu_n] = 0.0f;
 				LOGE("scan cpu #%d freq fail\n", cpu_n);
@@ -1501,7 +1501,7 @@ static void get_network_stat(uint32_t *recv, uint32_t *send)
 {
 	FILE *fp = manager.fd.networkstat;
 	uintmax_t irecv, isend;
-	char ifname[64];
+	char ifname[SMALL_BUFFER + 1]; /* on changing this size, change fscanf params */
 	if (fp == NULL)
 		return;
 
@@ -1511,7 +1511,7 @@ static void get_network_stat(uint32_t *recv, uint32_t *send)
 	*recv = *send = 0;
 	skip_lines(fp, 2);	/* strip header */
 
-	while (fscanf(fp, "%s", ifname) != EOF)
+	while (fscanf(fp, "%" str(SMALL_BUFFER) "s", ifname) != EOF)
 		if (strcmp("lo:", ifname)) {
 			if (fscanf(fp, "%" SCNuMAX, &irecv) <= 0)
 				goto scan_error;
@@ -1596,12 +1596,12 @@ static void init_disk_stat(void)
 	manager.fd.diskstats = fopen("/proc/diskstats", "r");
 }
 
+#define PARTITION_NAME_MAXLENGTH 128
 static void get_disk_stat(uint32_t *reads, uint32_t *bytes_reads,
 			  uint32_t *writes, uint32_t *bytes_writes)
 {
-	enum { partition_name_maxlength = 128 };
 	FILE *fp = manager.fd.diskstats;
-	char master_partition[partition_name_maxlength] = { 0 };
+	char master_partition[PARTITION_NAME_MAXLENGTH + 1] = { 0 };/* on changing this size, change fscanf params */
 	uint32_t sector_size = 0;
 
 	*reads = *writes = 0;
@@ -1615,13 +1615,13 @@ static void get_disk_stat(uint32_t *reads, uint32_t *bytes_reads,
 	fflush(fp);
 
 	while (!feof(fp)) {
-		char partition[partition_name_maxlength];
+		char partition[PARTITION_NAME_MAXLENGTH + 1];/* on changing this size, change fscanf params */
 		uintmax_t preads, pwrites;
 		uintmax_t psec_read, psec_write;
 		if (skip_tokens(fp, 2) < 0)
 			goto exit;
 
-		if (fscanf(fp, "%s", partition) != 1)
+		if (fscanf(fp, "%" str(PARTITION_NAME_MAXLENGTH) "s", partition) != 1)
 			goto scan_error;
 		if (*master_partition
 		    && !strncmp(master_partition, partition,
@@ -1647,8 +1647,7 @@ static void get_disk_stat(uint32_t *reads, uint32_t *bytes_reads,
 				goto scan_error;
 			skip_tokens(fp, 4);
 
-			memcpy(master_partition, partition,
-			       partition_name_maxlength);
+			memcpy(master_partition, partition, sizeof(partition));
 
 			/* get sector size */
 			sector_size = get_partition_sector_size(partition);
@@ -2128,8 +2127,6 @@ static void ftest_and_close(FILE **fd)
 	*fd = NULL;
 }
 
-#define strr(x) #x
-#define str(x) strr(x)
 #define dtest_and_close(fd) do {LOGI("CLOSE " str(fd) "\n");test_and_close(fd);} while(0)
 #define dftest_and_close(fd) do {LOGI("CLOSE " str(fd) "\n");ftest_and_close(fd);} while(0)
 void close_system_file_descriptors(void)
@@ -2208,7 +2205,7 @@ int sys_stat_prepare(void)
 	uint32_t reads, writes, bytes_reads, bytes_writes;
 	uint32_t recv, send;
 
-	peek_disk_stat_diff(&reads, &writes, &bytes_reads, &bytes_writes);
+	peek_disk_stat_diff(&reads, &bytes_reads, &writes ,&bytes_writes);
 	peek_network_stat_diff(&recv, &send);
 
 	return 0;
