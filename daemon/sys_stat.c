@@ -714,6 +714,11 @@ static int update_process_data(procNode **prochead, pid_t* pidarray, int pidcoun
 		if ((procnode = find_node(*prochead, pidarray[i])) == NULL) {
 			// new process
 			procnode = add_node(prochead, pidarray[i]);
+			if (procnode == NULL) {
+				LOGE("Failed to add node\n");
+				ret = 1;
+				continue;
+			}
 			is_new_node = 1;
 		}
 
@@ -729,7 +734,6 @@ static int update_process_data(procNode **prochead, pid_t* pidarray, int pidcoun
 				procnode->saved_utime = procnode->proc_data.utime;
 				procnode->saved_stime = procnode->proc_data.stime;
 			}
-
 		} else if (datatype == PROCDATA_SMAPS) {
 			//parse smaps
 			ret = parse_proc_smaps_file_bypid(buf,
@@ -1184,15 +1188,20 @@ static int update_thread_data(int pid)
 			if((procnode = find_node(*thread_prochead, tid)) == NULL)
 			{
 				procnode = add_node(thread_prochead, tid);
-				if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data), 0)) < 0))
-				{
-					LOGE("Failed to get proc stat file by tid(%d). add node\n", tid);
-				}
-				else
-				{
-					procnode->saved_utime = procnode->proc_data.utime;
-					procnode->saved_stime = procnode->proc_data.stime;
-					LOGI_th_samp("data created %s\n", buf);
+				if (procnode != NULL) {
+					if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data), 0)) < 0))
+					{
+						LOGE("Failed to get proc stat file by tid(%d). add node\n", tid);
+					}
+					else
+					{
+						procnode->saved_utime = procnode->proc_data.utime;
+						procnode->saved_stime = procnode->proc_data.stime;
+						LOGI_th_samp("data created %s\n", buf);
+					}
+				} else {
+						LOGE("Failed add_node\n");
+
 				}
 			}
 			else
@@ -1442,9 +1451,15 @@ static int fill_system_cpu_info(struct system_info_t *sys_info)
 
 	// fill cpu load
 	float *pcpu_usage;
+	float *res;
 	if (num_of_cpu != 0)
 	{
-		sys_info->cpu_load = malloc( num_of_cpu * sizeof(*sys_info->cpu_load) );
+		res = malloc( num_of_cpu * sizeof(*sys_info->cpu_load));
+		if (res == NULL) {
+			LOGE("Cannot alloc cpy load\n");
+			return 1;
+		}
+		sys_info->cpu_load = res;
 		pcpu_usage = sys_info->cpu_load;
 		for(i = 0; i < num_of_cpu; i++)
 		{
