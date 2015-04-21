@@ -69,38 +69,60 @@ static int data_list_make_hash(struct data_list_t *what)
 //------------ create - destroy
 static struct data_list_t *new_data(void)
 {
-	struct data_list_t *lib = malloc(sizeof(*lib));
-	lib->next = NULL;
-	lib->prev = NULL;
-	lib->hash = 0;
-	lib->size = 0;
-	lib->list = NULL;
+	struct data_list_t *res;
+	struct data_list_t *lib;
+	res = malloc(sizeof(*lib));
+	if (res != NULL) {
+		lib = res;
+		lib->next = NULL;
+		lib->prev = NULL;
+		lib->hash = 0;
+		lib->size = 0;
+		lib->list = NULL;
+	} else {
+		LOGE("can not malloc buffer for data_list_t lib \n");
+	}
 	return lib;
 }
 
 struct lib_list_t *new_lib(void)
 {
+	struct probe_list_t *res = NULL;
 	struct lib_list_t *lib = (struct lib_list_t *)new_data();
-	lib->lib = malloc(sizeof(*lib->lib));
-	memset(lib->lib, 0, sizeof(*lib->lib));
+	res = malloc(sizeof(*lib->lib));
+	if (res != NULL) {
+		lib->lib = res ;
+		memset(lib->lib, 0, sizeof(*lib->lib));
+	} else {
+		LOGE("can not malloc buffer for probe_list_t lib\n");
+	}
 	return lib;
 }
 
 struct app_list_t *new_app(void)
 {
+	struct app_info_t *res = NULL;
 	struct app_list_t *app = (struct app_list_t *)new_data();
-	app->app = malloc(sizeof(*app->app));
-	memset(app->app, 0, sizeof(*app->app));
+	res = malloc(sizeof(*app->app));
+	if (res != NULL) {
+		app->app = res;
+		memset(app->app, 0, sizeof(*app->app));
+	} else {
+		LOGE("can not malloc buffer for app_info_t app\n");
+	}
 	return app;
 }
 
 struct probe_list_t *new_probe(void)
 {
-	struct probe_list_t *probe = malloc(sizeof(*probe));
-	probe->next = NULL;
-	probe->prev = NULL;
-	probe->size = 0;
-	probe->func = NULL;
+	struct probe_list_t *probe;
+	probe = malloc(sizeof(*probe));
+	if (probe != NULL) {
+		probe->next = NULL;
+		probe->prev = NULL;
+		probe->size = 0;
+		probe->func = NULL;
+	}
 	return probe;
 }
 
@@ -506,6 +528,7 @@ static int generate_msg(struct msg_t **msg, struct lib_list_t *lib_list, struct 
 		 libs_count = 0,
 		 apps_count = 0;
 	char	 *p = NULL;
+	struct msg_t *res = NULL;
 
 	packed_lib_list = pack_lib_list_to_array(lib_list, &libs_size, &libs_count);
 	// print_buf(packed_lib_list, libs_size, "LIBS");
@@ -518,27 +541,30 @@ static int generate_msg(struct msg_t **msg, struct lib_list_t *lib_list, struct 
 	LOGI("size = %d, apps= %d, libs = %d\n", size, apps_count, libs_count);
 
 	// add header size
-	*msg = malloc(size + sizeof(**msg));
-	memset(*msg, '*', size);
+	res = malloc(size + sizeof(**msg));
+	if (res != NULL) {
+		*msg = res;
+		memset(*msg, '*', size);
 
-	p = (char *)*msg;
-	pack_int32(p, 0);		// msg id
-	pack_int32(p, size);		// payload size
-	pack_int32(p, apps_count);
+		p = (char *)*msg;
+		pack_int32(p, 0);		// msg id
+		pack_int32(p, size);		// payload size
+		pack_int32(p, apps_count);
+	} else
+		LOGE("can not malloc buffer for msg\n");
 
-	struct app_list_t *app = app_list;
-	char *app_p = packed_app_list + sizeof(((struct user_space_inst_t *)0)->app_num);
+		struct app_list_t *app = app_list;
+		char *app_p = packed_app_list + sizeof(((struct user_space_inst_t *)0)->app_num);
 
-	for (i = 0; i < apps_count; i++) {
-		memcpy(p, app_p, app->size);
-		p += app->size;
-		memcpy(p, packed_lib_list, libs_size);
-		p += libs_size;
+		for (i = 0; i < apps_count; i++) {
+			memcpy(p, app_p, app->size);
+			p += app->size;
+			memcpy(p, packed_lib_list, libs_size);
+			p += libs_size;
 
-		app_p += app->size;
-		app = app->next;
-	}
-
+			app_p += app->size;
+			app = app->next;
+		}
 	free(packed_lib_list);
 	free(packed_app_list);
 

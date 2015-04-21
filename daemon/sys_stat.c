@@ -718,18 +718,21 @@ static int update_process_data(procNode **prochead, pid_t* pidarray, int pidcoun
 		}
 
 		if (datatype == PROCDATA_STAT) {
-			ret = parse_proc_stat_file_bypid(buf,
-							 &(procnode->proc_data),
-							 is_inst_process);
-			if (unlikely(ret < 0)) {
-				//parse fail. log it
-				LOGE("Failed to get proc stat file by pid(%d)\n", pidarray[i]);
-			} else if (is_new_node == 1) {
-				//update data for new node
-				procnode->saved_utime = procnode->proc_data.utime;
-				procnode->saved_stime = procnode->proc_data.stime;
+			if (procnode != NULL) {
+				ret = parse_proc_stat_file_bypid(buf,
+								 &(procnode->proc_data),
+								 is_inst_process);
+				if (unlikely(ret < 0)) {
+					//parse fail. log it
+					LOGE("Failed to get proc stat file by pid(%d)\n", pidarray[i]);
+				} else if (is_new_node == 1) {
+					//update data for new node
+					procnode->saved_utime = procnode->proc_data.utime;
+					procnode->saved_stime = procnode->proc_data.stime;
+				}
+			} else {
+					LOGE("Failed to add node\n");
 			}
-
 		} else if (datatype == PROCDATA_SMAPS) {
 			//parse smaps
 			ret = parse_proc_smaps_file_bypid(buf,
@@ -1184,15 +1187,20 @@ static int update_thread_data(int pid)
 			if((procnode = find_node(*thread_prochead, tid)) == NULL)
 			{
 				procnode = add_node(thread_prochead, tid);
-				if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data), 0)) < 0))
-				{
-					LOGE("Failed to get proc stat file by tid(%d). add node\n", tid);
-				}
-				else
-				{
-					procnode->saved_utime = procnode->proc_data.utime;
-					procnode->saved_stime = procnode->proc_data.stime;
-					LOGI_th_samp("data created %s\n", buf);
+				if (procnode != NULL) {
+					if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data), 0)) < 0))
+					{
+						LOGE("Failed to get proc stat file by tid(%d). add node\n", tid);
+					}
+					else
+					{
+						procnode->saved_utime = procnode->proc_data.utime;
+						procnode->saved_stime = procnode->proc_data.stime;
+						LOGI_th_samp("data created %s\n", buf);
+					}
+				} else {
+						LOGE("Failed add_node\n");
+
 				}
 			}
 			else
@@ -1442,15 +1450,19 @@ static int fill_system_cpu_info(struct system_info_t *sys_info)
 
 	// fill cpu load
 	float *pcpu_usage;
+	float *res;
 	if (num_of_cpu != 0)
 	{
-		sys_info->cpu_load = malloc( num_of_cpu * sizeof(*sys_info->cpu_load) );
-		pcpu_usage = sys_info->cpu_load;
-		for(i = 0; i < num_of_cpu; i++)
-		{
-			LOGI_th_samp("cpu#%d : %.1f\n" , i,  cpus[i].cpu_usage);
-			*pcpu_usage = cpus[i].cpu_usage;
-			pcpu_usage++;
+		res = malloc( num_of_cpu * sizeof(*sys_info->cpu_load));
+		if (res != NULL) {
+			sys_info->cpu_load = res;
+			pcpu_usage = sys_info->cpu_load;
+			for(i = 0; i < num_of_cpu; i++)
+			{
+				LOGI_th_samp("cpu#%d : %.1f\n" , i,  cpus[i].cpu_usage);
+				*pcpu_usage = cpus[i].cpu_usage;
+				pcpu_usage++;
+			}
 		}
 	}
 
