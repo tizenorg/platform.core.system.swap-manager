@@ -70,12 +70,6 @@ int get_gps_status(void)
 	if (res < 0) {
 		LOG_ONCE_W("get error #%d\n", res);
 		gps_status = VCONFKEY_LOCATION_GPS_OFF;
-	} else if (gps_status != 0) {
-		res = vconf_get_int(VCONFKEY_LOCATION_GPS_STATE, &gps_status);
-		if (res < 0) {
-			LOG_ONCE_W("get error #%d\n", res);
-			gps_status = VCONFKEY_LOCATION_GPS_OFF;
-		}
 	}
 
 	return gps_status;
