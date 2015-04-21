@@ -69,7 +69,12 @@ static int data_list_make_hash(struct data_list_t *what)
 //------------ create - destroy
 static struct data_list_t *new_data(void)
 {
-	struct data_list_t *lib = malloc(sizeof(*lib));
+	struct data_list_t *lib;
+	lib = malloc(sizeof(*lib));
+	if (lib == NULL) {
+		LOGE("can not malloc buffer for data_list_t lib \n");
+		return NULL;
+	}
 	lib->next = NULL;
 	lib->prev = NULL;
 	lib->hash = 0;
@@ -80,8 +85,14 @@ static struct data_list_t *new_data(void)
 
 struct lib_list_t *new_lib(void)
 {
+	struct probe_list_t *res = NULL;
 	struct lib_list_t *lib = (struct lib_list_t *)new_data();
-	lib->lib = malloc(sizeof(*lib->lib));
+	res = malloc(sizeof(*lib->lib));
+	if (res == NULL) {
+		LOGE("can not malloc buffer for probe_list_t lib\n");
+		return NULL;
+	}
+	lib->lib = res;
 	memset(lib->lib, 0, sizeof(*lib->lib));
 	return lib;
 }
@@ -90,17 +101,24 @@ struct app_list_t *new_app(void)
 {
 	struct app_list_t *app = (struct app_list_t *)new_data();
 	app->app = malloc(sizeof(*app->app));
+	if (app->app == NULL) {
+		LOGE("can not malloc buffer for app_info_t app\n");
+		return NULL;
+	}
 	memset(app->app, 0, sizeof(*app->app));
 	return app;
 }
 
 struct probe_list_t *new_probe(void)
 {
-	struct probe_list_t *probe = malloc(sizeof(*probe));
-	probe->next = NULL;
-	probe->prev = NULL;
-	probe->size = 0;
-	probe->func = NULL;
+	struct probe_list_t *probe;
+	probe = malloc(sizeof(*probe));
+	if (probe != NULL) {
+		probe->next = NULL;
+		probe->prev = NULL;
+		probe->size = 0;
+		probe->func = NULL;
+	}
 	return probe;
 }
 
@@ -519,6 +537,10 @@ static int generate_msg(struct msg_t **msg, struct lib_list_t *lib_list, struct 
 
 	// add header size
 	*msg = malloc(size + sizeof(**msg));
+	if (*msg == NULL) {
+		LOGE("can not malloc buffer for msg\n");
+		return NULL;
+	}
 	memset(*msg, '*', size);
 
 	p = (char *)*msg;
@@ -538,7 +560,6 @@ static int generate_msg(struct msg_t **msg, struct lib_list_t *lib_list, struct 
 		app_p += app->size;
 		app = app->next;
 	}
-
 	free(packed_lib_list);
 	free(packed_app_list);
 

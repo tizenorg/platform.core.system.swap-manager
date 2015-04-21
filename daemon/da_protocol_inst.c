@@ -67,7 +67,7 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 	//ret_type   | char   | 1         |
 
 	uint32_t size = 0;
-	struct us_func_inst_plane_t *func;
+	struct us_func_inst_plane_t *func = NULL;
 	int par_count = 0;
 	char *ret_type = NULL;
 
@@ -75,26 +75,31 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 	size = sizeof(*func) + par_count + 1 +
 	       sizeof(char) /* sizeof(char) for ret_type */;
 	func = malloc(size);
+	if (func == NULL) {
+		LOGE("error allocates memory for func\n");
+		goto err_ret;
+	}
 	if (!parse_int64(msg, &(func->func_addr))) {
 		LOGE("func addr parsing error\n");
-		goto err_ret;
+		goto err_free;
 	}
 
 	if (!parse_string_no_alloc(msg, func->args) ||
 	    !check_us_inst_func_args(func->args))
 	{
 		LOGE("args format parsing error\n");
-		goto err_ret;
+		goto err_free;
 	}
 
 	//func->args type is char[0]
 	//and we need put ret_type after func->args
 	ret_type = func->args + par_count + 1;
+
 	if (!parse_int8(msg, (uint8_t *)ret_type) ||
 	    !check_us_inst_func_ret_type(*ret_type))
 	{
 		LOGE("return type parsing error\n");
-		goto err_ret;
+		goto err_free;
 	} else {
 		parse_deb("ret type = <%c>\n", *ret_type);
 	}
@@ -107,8 +112,9 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 	(*dest)->size = size;
 	(*dest)->func = func;
 	return 1;
-err_ret:
+err_free:
 	free(func);
+err_ret:
 	return 0;
 }
 

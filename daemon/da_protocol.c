@@ -623,49 +623,68 @@ static enum HostMessageT get_ack_msg_id(const enum HostMessageT id)
 int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 			char *payload, int payload_size)
 {
-	if (manager.host.control_socket != -1) {
-		struct msg_t *msg;
-		uint32_t err = err_code;
-		int loglen = sizeof(*msg) - sizeof(msg->payload) +
-					 sizeof(err) + //return ID
-					 payload_size;
-		msg = malloc(loglen);
-		char *p = msg->payload;
+	int ret = 1; /* error by default */
+	struct msg_t *msg = NULL;
+	uint32_t err = err_code;
+	int loglen = sizeof(*msg) - sizeof(msg->payload) +
+				 sizeof(err) + //return ID
+				 payload_size;
+	char *p;
 
-		resp = get_ack_msg_id(resp);
+	if (manager.host.control_socket == -1) {
+		LOGE("no connection\n");
+		goto exit;
+	}
 
-		//set message id
-		msg->id = resp;
-		//set payload lenth
-		msg->len = payload_size + sizeof(err);
-		//set return id
-		pack_int32(p, err);
-		//copy payload data
-		memcpy(p, payload, payload_size);
+	msg = malloc(loglen);
+	if (msg == NULL) {
+		LOGE("Cannot allocates memory for msg\n");
+		goto exit;
+	}
+	p = msg->payload;
 
-		LOGI("ACK (%s) errcode<%s> payload=0x%08X; size=%d\n", msg_ID_str(resp),
-				msgErrStr(err_code), (int)payload, payload_size);
-		printBuf((char *)msg, loglen);
+	resp = get_ack_msg_id(resp);
 
-		if (send(manager.host.control_socket, msg,
-			 loglen, MSG_NOSIGNAL) == -1) {
-			GETSTRERROR(errno, buf);
-			LOGE("Cannot send reply: %s\n", buf);
-			free(msg);
-			return 1;
-		}
-		free(msg);
-		return 0;
-	} else
-		return 1;
+	//set message id
+	msg->id = resp;
+	//set payload lenth
+	msg->len = payload_size + sizeof(err);
+	//set return id
+	pack_int32(p, err);
+	//copy payload data
+	memcpy(p, payload, payload_size);
+
+	LOGI("ACK (%s) errcode<%s> payload=0x%08X; size=%d\n", msg_ID_str(resp),
+			msgErrStr(err_code), (int)payload, payload_size);
+	printBuf((char *)msg, loglen);
+
+	if (send(manager.host.control_socket, msg,
+		 loglen, MSG_NOSIGNAL) == -1) {
+		GETSTRERROR(errno, buf);
+		LOGE("Cannot send reply: %s\n", buf);
+		goto exit_free_msg;
+	}
+
+	ret = 0; /* no errors */
+
+exit_free_msg:
+	free(msg);
+exit:
+	return ret;
 }
 
 static struct msg_t *gen_stop_msg(void)
 {
-	struct msg_t *res = malloc(sizeof(*res));
-	memset(res, 0, sizeof(*res));
-	res->id = NMSG_STOP;
-	res->len = 0;
+	struct msg_t *res = NULL;
+	res = malloc(sizeof(*res));
+	if (res != NULL) {
+		memset(res, 0, sizeof(*res));
+		res->id = NMSG_STOP;
+		res->len = 0;
+	} else {
+		LOGE("Cannot allocates memory for res\n");
+	}
+
 	return res;
 }
 
@@ -830,7 +849,7 @@ static int check_windows_path(const char *path)
 
 static struct binary_ack* binary_ack_alloc(const char *filename)
 {
-	struct binary_ack *ba = malloc(sizeof(*ba));
+	struct binary_ack *ba;
 	struct stat decoy;
 	char builddir[PATH_MAX];
 	char binpath[PATH_MAX];
@@ -838,22 +857,27 @@ static struct binary_ack* binary_ack_alloc(const char *filename)
 	builddir[0]='\0';
 	binpath[0]='\0';
 
-	if (stat(filename, &decoy) == 0) {
-		ba->type = get_binary_type(filename);
+	ba = malloc(sizeof(*ba));
+	if (ba != NULL) {
+		if (stat(filename, &decoy) == 0) {
+			ba->type = get_binary_type(filename);
 
-		if (ba->type != BINARY_TYPE_UNKNOWN)
-			get_build_dir(builddir, filename);
+			if (ba->type != BINARY_TYPE_UNKNOWN)
+				get_build_dir(builddir, filename);
 
-		if (builddir[0] != '\0')
-			snprintf(binpath, sizeof(binpath), check_windows_path(builddir) ?
-				 "%s\\%s" : "%s/%s", builddir, basename(filename) ?: "");
+			if (builddir[0] != '\0')
+				snprintf(binpath, sizeof(binpath), check_windows_path(builddir) ?
+					 "%s\\%s" : "%s/%s", builddir, basename(filename) ?: "");
 
-		ba->binpath = strdup(binpath);
-		get_file_md5sum(ba->digest, filename);
+			ba->binpath = strdup(binpath);
+			get_file_md5sum(ba->digest, filename);
+		} else {
+			ba->type = BINARY_TYPE_FILE_NOT_EXIST;
+			ba->binpath = strdup(filename);
+			memset(ba->digest, 0x00, sizeof(ba->digest));
+		}
 	} else {
-		ba->type = BINARY_TYPE_FILE_NOT_EXIST;
-		ba->binpath = strdup(filename);
-		memset(ba->digest, 0x00, sizeof(ba->digest));
+		LOGE("Cannot allocates memory for ba\n");
 	}
 
 	return ba;
@@ -897,12 +921,17 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 	}
 	typedef uint32_t return_id;
 	typedef uint32_t binary_ack_count;
-	struct msg_t *msg_reply = malloc(sizeof(struct msg_t)
+	struct msg_t *msg_reply = NULL;
+	char *p = NULL;
+	msg_reply = malloc(sizeof(struct msg_t)
 					 + sizeof(return_id)
 					 + sizeof(binary_ack_count)
 					 + total_size);
-	char *p = msg_reply->payload;
-
+	if (msg_reply == NULL) {
+		LOGE("Cannot allocates memory for msg_reply\n");
+		return 1;
+	}
+	p = msg_reply->payload;
 	msg_reply->id = NMSG_BINARY_INFO_ACK;
 	msg_reply->len = total_size + sizeof(return_id)
 				    + sizeof(binary_ack_count);
