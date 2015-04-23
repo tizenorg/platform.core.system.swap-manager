@@ -28,6 +28,11 @@
 #ifndef WSI_H_
 #define WSI_H_
 
+#include "da_inst.h"
+
+int wsi_set_profile(const struct app_info_t *app_info);
+int wsi_set_smack_rules(const struct app_info_t *app_info);
+int wsi_enable_profiling(int mode);
 int wsi_init(const char *address, int port);
 int wsi_start_profiling(void);
 void wsi_destroy(void);
