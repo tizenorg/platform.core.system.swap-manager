@@ -61,6 +61,41 @@ struct libwebsocket *wsi;
 int pstate = PSTATE_DEFAULT;
 int request_id = 1;
 
+static void set_profile_addr(const char *path, unsigned long addr)
+{
+    FILE *fp;
+    fp = fopen(path, "w");
+    if (fp != NULL) {
+        fprintf(fp, "%lx", addr);
+        fclose(fp);
+    } else {
+        LOGE("Can't open file: %s", path);
+    }
+}
+
+void wsi_set_profile(const struct app_info_t *app_info)
+{
+    static const char *INSPSERVER_START_FILE =  "/sys/kernel/debug/swap/webprobe/inspector_server_start";
+    static const char *WILL_EXECUTE_FILE =      "/sys/kernel/debug/swap/webprobe/will_execute";
+    static const char *DID_EXECUTE_FILE =       "/sys/kernel/debug/swap/webprobe/did_execute";
+    static const char *APP_INFO_FILE =          "/sys/kernel/debug/swap/webprobe/app_info";
+
+    FILE *fp;
+    unsigned long addr;
+
+    fp = fopen(APP_INFO_FILE, "w");
+    if (fp != NULL) {
+        fprintf(fp, "%s %s", app_info->exe_path, app_info->app_id);
+        fclose(fp);
+    } else {
+        LOGE("Can't open file: %s", APP_INFO_FILE);
+    }
+
+    set_profile_addr(INSPSERVER_START_FILE, INSPECTOR_ADDR);
+    set_profile_addr(WILL_EXECUTE_FILE, WILLEXECUTE_ADDR);
+    set_profile_addr(DID_EXECUTE_FILE, DIDEXECUTE_ADDR);
+}
+
 static void send_request(const char *method)
 {
 #define	MAX_REQUEST_LENGTH	128

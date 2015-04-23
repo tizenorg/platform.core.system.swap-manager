@@ -28,9 +28,19 @@
 #ifndef WSI_H_
 #define WSI_H_
 
+#include "da_inst.h"
+
+void wsi_set_profile(const struct app_info_t *app_info);
 int wsi_init(const char *address, int port);
 int wsi_start_profiling(void);
 void wsi_destroy(void);
 void wsi_stop_profiling(void);
+
+/* Generated automatically during build */
+enum web_inst_addr {
+	INSPECTOR_ADDR = 0x00000000,
+	WILLEXECUTE_ADDR = 0x00000000,
+	DIDEXECUTE_ADDR = 0x00000000
+};
 
 #endif /* WSI_H_ */
