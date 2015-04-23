@@ -31,11 +31,14 @@
 #include <pthread.h>
 #include <libwebsockets.h>
 #include <json/json.h>
+#include <errno.h>
 
 #include "wsi.h"
 #include "debug.h"
 #include "da_protocol.h"
 #include "ioctl_commands.h"
+#include "smack.h"
+#include "wsi_prof.h" /* Generated automatically */
 
 #define MAX_MSG_LENGTH				4096
 
@@ -60,6 +63,122 @@ struct libwebsocket *wsi;
 
 int pstate = PSTATE_DEFAULT;
 int request_id = 1;
+
+static int set_profile_info(const char *path, const char *info)
+{
+	FILE *fp;
+	int ret = 0, c = 0;
+
+	fp = fopen(path, "w");
+	if (fp != NULL) {
+		c = fprintf(fp, "%s", info);
+		if (c < 0) {
+			LOGE("Can't write to file: %s\n", path);
+			ret = -EIO;
+		}
+		fclose(fp);
+	} else {
+		LOGE("Can't open file: %s\n", path);
+		ret = -ENOENT;
+	}
+
+	return ret;
+}
+
+int wsi_set_profile(const struct app_info_t *app_info)
+{
+	const char INSPSERVER_START_FILE[] =
+		"/sys/kernel/debug/swap/webprobe/inspector_server_start";
+	const char WILL_EXECUTE_FILE[] =
+		"/sys/kernel/debug/swap/webprobe/will_execute";
+	const char DID_EXECUTE_FILE[] =
+		"/sys/kernel/debug/swap/webprobe/did_execute";
+	const char APP_INFO_FILE[] =
+		"/sys/kernel/debug/swap/webprobe/app_info";
+	int ret = 0;
+	char info_tmp[256] = "";
+
+	ret = snprintf(info_tmp, sizeof(info_tmp), "%s %s", app_info->exe_path,
+		 app_info->app_id);
+
+	if (ret < 0 || ret >= sizeof(info_tmp)) {
+		LOGE("Can't save app_info, ret = %d\n", ret);
+		goto fail;
+	}
+
+	ret = set_profile_info(APP_INFO_FILE, info_tmp);
+	if (ret)
+		goto fail;
+
+	sprintf(info_tmp, "0x%lx", INSPECTOR_ADDR);
+	ret = set_profile_info(INSPSERVER_START_FILE, info_tmp);
+	if (ret)
+		goto fail;
+
+	sprintf(info_tmp, "0x%lx", WILLEXECUTE_ADDR);
+	ret = set_profile_info(WILL_EXECUTE_FILE, info_tmp);
+	if (ret)
+		goto fail;
+
+	sprintf(info_tmp, "0x%lx", DIDEXECUTE_ADDR);
+	ret = set_profile_info(DID_EXECUTE_FILE, info_tmp);
+	if (ret)
+		goto fail;
+
+	return ret;
+fail:
+	return -EIO;
+}
+
+int wsi_set_smack_rules(const struct app_info_t *app_info)
+{
+	const char SUBJECT[] = "swap";
+	const char ACCESS_TYPE[] = "rw";
+	const char delim[] = ".";
+	int ret = 0;
+	char *app_id;
+	char *package_id;
+	size_t id_maxlen = 128;
+
+	app_id = malloc(sizeof(char) * (strnlen(app_info->app_id, id_maxlen) + 1));
+	strcpy(app_id, app_info->app_id);
+	package_id = strtok(app_id, delim);
+
+	if (package_id != NULL) {
+		ret = apply_smack_rules(SUBJECT, package_id, ACCESS_TYPE);
+	} else {
+		LOGE("Can't determine package id\n");
+		ret = -EINVAL;
+	}
+
+	free(app_id);
+
+	return ret;
+}
+
+int wsi_enable_profiling(enum web_prof_state_t mode)
+{
+	const char ENABLED_FILE[] = "/sys/kernel/debug/swap/webprobe/enabled";
+	int ret = 0;
+
+	switch (mode) {
+	case 1:
+		ret = set_profile_info(ENABLED_FILE, "1");
+		if (ret)
+			LOGE("Can't enable profiling\n");
+		break;
+	case 0:
+		ret = set_profile_info(ENABLED_FILE, "0");
+		if (ret)
+			LOGE("Can't disable profiling\n");
+		break;
+	default:
+		ret = -EINVAL;
+		LOGE("Can't enable or disable profiling\n");
+	}
+
+	return ret;
+}
 
 static void send_request(const char *method)
 {

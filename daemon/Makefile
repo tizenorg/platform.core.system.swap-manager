@@ -15,6 +15,7 @@ DEBUG_FLAGS = \
 #	-DNOLOGI=1
 
 INCLUDE := \
+	-Iinclude/generated \
 	-I/usr/include \
 	-I/usr/include/system \
 	-I/usr/include/capi-system-info \
@@ -92,6 +93,21 @@ PRELOAD_SCRIPT = ../scripts/gen_preload_header.sh
 
 all: debug
 
+GENERATED_DIR = include/generated
+GENERATED_WSI_PROF_H = include/generated/wsi_prof.h
+GENERATED_HEADERS := $(GENERATED_WSI_PROF_H)
+
+$(GENERATED_WSI_PROF_H): ../scripts/gen_wsi_prof.sh
+	sh $< > $@
+
+$(GENERATED_DIR):
+	mkdir -p $(GENERATED_DIR)
+
+headers: $(GENERATED_DIR) $(GENERATED_HEADERS)
+rmheaders:
+	rm -f $(GENERATED_HEADERS)
+
+
 release: CFLAGS += -DNOLOGI=1
 release: CPPFLAGS += -DNOLOGI=1
 release: debug
@@ -103,7 +119,7 @@ release: debug
 	$(CPP) $(CPPFLAGS) -c -o $@ $<
 
 
-debug: $(OBJS)
+debug: rmheaders headers $(OBJS)
 	$(CPP) $(OBJS) -o $(TARGET) $(LDFLAGS)
 
 
