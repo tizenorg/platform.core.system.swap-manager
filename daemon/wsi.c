@@ -36,6 +36,8 @@
 #include "debug.h"
 #include "da_protocol.h"
 #include "ioctl_commands.h"
+#include "smack.h"
+#include "wsi_prof.h" /* Generated automatically */
 
 #define MAX_MSG_LENGTH				4096
 
@@ -60,6 +62,94 @@ struct libwebsocket *wsi;
 
 int pstate = PSTATE_DEFAULT;
 int request_id = 1;
+
+static int set_profile_addr(const char *path, unsigned long addr)
+{
+	FILE *fp;
+	int ret = 0, c = 0;
+
+	fp = fopen(path, "w");
+	if (fp != NULL) {
+		c = fprintf(fp, "%lx", addr);
+		if (c < 0) {
+			LOGE("Can't write to file: %s", path);
+			ret = -1;
+		}
+		fclose(fp);
+	} else {
+		LOGE("Can't open file: %s", path);
+		ret = -1;
+	}
+
+	return ret;
+}
+
+static int set_profile_info(const char *path, const struct app_info_t *app_info)
+{
+	FILE *fp;
+	int ret = 0, c = 0;
+
+	fp = fopen(path, "w");
+	if (fp != NULL) {
+		c = fprintf(fp, "%s %s", app_info->exe_path, app_info->app_id);
+		if (c < 0) {
+			LOGE("Can't write to file: %s", path);
+			ret = -1;
+		}
+		fclose(fp);
+	} else {
+		LOGE("Can't open file: %s", path);
+		ret = -1;
+	}
+
+	return ret;
+}
+
+int wsi_set_profile(const struct app_info_t *app_info)
+{
+	const char *INSPSERVER_START_FILE =
+		"/sys/kernel/debug/swap/webprobe/inspector_server_start";
+	const char *WILL_EXECUTE_FILE =
+		"/sys/kernel/debug/swap/webprobe/will_execute";
+	const char *DID_EXECUTE_FILE =
+		"/sys/kernel/debug/swap/webprobe/did_execute";
+	const char *APP_INFO_FILE =
+		"/sys/kernel/debug/swap/webprobe/app_info";
+	int ret = 0;
+
+	if (set_profile_info(APP_INFO_FILE, app_info) ||
+	    set_profile_addr(INSPSERVER_START_FILE, INSPECTOR_ADDR) ||
+	    set_profile_addr(WILL_EXECUTE_FILE, WILLEXECUTE_ADDR) ||
+	    set_profile_addr(DID_EXECUTE_FILE, DIDEXECUTE_ADDR))
+		ret = -1;
+
+	return ret;
+}
+
+int wsi_set_smack_rules(const struct app_info_t *app_info)
+{
+	const char *SUBJECT = "swap";
+	const char *ACCESS_TYPE = "rw";
+	const char *delim = ".";
+	int ret = 0;
+	char *app_id;
+	char *package_id;
+
+	app_id = malloc(sizeof(char) * (strlen(app_info->app_id) + 1));
+	strcpy(app_id, app_info->app_id);
+	package_id = strtok(app_id, delim);
+
+	if (package_id != NULL) {
+		ret = apply_smack_rules(SUBJECT, package_id, ACCESS_TYPE);
+	} else {
+		LOGE("Can't determine package id\n");
+		ret = -1;
+	}
+
+	free(app_id);
+
+	return ret;
+}
 
 static void send_request(const char *method)
 {
