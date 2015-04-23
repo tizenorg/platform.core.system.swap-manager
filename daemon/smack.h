@@ -34,5 +34,7 @@
 
 void fd_setup_attributes(int fd);
 void set_label_for_all(const char *path);
+int apply_smack_rules(const char* subject, const char* object,
+		      const char* access_type);
 
 #endif /* _SMACK_H_ */
