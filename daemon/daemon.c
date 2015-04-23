@@ -261,6 +261,11 @@ static int exec_app(const struct app_info_t *app_info)
 		}
 		break;
 	case APP_TYPE_WEB:
+		if (wsi_set_profile(app_info)) {
+			LOGE("Cannot set web app profiling\n");
+			res = -1;
+		}
+
 		if (exec_app_web(app_info->app_id)) {
 			LOGE("Cannot exec web app %s\n", app_info->app_id);
 			res = -1;
