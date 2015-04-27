@@ -36,29 +36,37 @@
 #include <stddef.h>
 #include <linux/input.h>
 
+#define PROTOCOL_VERSION "4.0"
+
 enum HostMessageT {
-NMSG_KEEP_ALIVE			=0x0001,
+NMSG_VERSION				=0x0001,
 NMSG_START				=0x0002,
 NMSG_STOP				=0x0003,
 NMSG_CONFIG				=0x0004,
-NMSG_BINARY_INFO		=0x0005,
-NMSG_GET_TARGET_INFO	=0x0007,
-NMSG_SWAP_INST_ADD		=0x0008,
-NMSG_SWAP_INST_REMOVE		=0x0009,
-NMSG_GET_SCREENSHOT		=0x0010,
-NMSG_GET_PROCESS_ADD_INFO	=0x0011,
-NMSG_WRT_LAUNCHER_PORT		=0x8001,
+NMSG_BINARY_INFO			=0x0005,
+NMSG_GET_TARGET_INFO			=0x0007,
+NMSG_SWAP_INST_ADD			=0x0008,
+NMSG_SWAP_INST_REMOVE			=0x0009,
+NMSG_GET_PROBE_MAP			=0x000A,
+NMSG_KEEP_ALIVE				=0x000F,
+NMSG_GET_SCREENSHOT			=0x0010,
+NMSG_GET_PROCESS_ADD_INFO		=0x0011,
+NMSG_WRT_LAUNCHER_PORT			=0x8001,
 
-NMSG_KEEP_ALIVE_ACK			=0x1001,
+NMSG_ACK_FLAG				=0x1000,
+
+NMSG_VERSION_ACK			=0x1001,
 NMSG_START_ACK				=0x1002,
 NMSG_STOP_ACK				=0x1003,
 NMSG_CONFIG_ACK				=0x1004,
-NMSG_BINARY_INFO_ACK		=0x1005,
+NMSG_BINARY_INFO_ACK			=0x1005,
 NMSG_SWAP_INST_ACK			=0x1006,
-NMSG_GET_TARGET_INFO_ACK	=0x1007,
-NMSG_SWAP_INST_ADD_ACK		=0x1008,
-NMSG_SWAP_INST_REMOVE_ACK	=0x1009,
-NMSG_GET_PROCESS_ADD_INFO_ACK	=0x1011,
+NMSG_GET_TARGET_INFO_ACK		=0x1007,
+NMSG_SWAP_INST_ADD_ACK			=0x1008,
+NMSG_SWAP_INST_REMOVE_ACK		=0x1009,
+NMSG_GET_PROBE_MAP_ACK			=0x100A,
+NMSG_KEEP_ALIVE_ACK			=0x100F,
+NMSG_GET_PROCESS_ADD_INFO_ACK		=0x1011,
 
 NMSG_PROCESS_INFO			=0x0001,	//	target process info
 NMSG_TERMINATE				=0x0002,	//terminate
@@ -88,6 +96,9 @@ enum ErrorCode {
 	ERR_WRONG_MESSAGE_TYPE			= -202,	/* wrong message type */
 	ERR_WRONG_MESSAGE_DATA			= -203,	/* wrong message data */
 	ERR_CANNOT_START_PROFILING		= -204,	/* cannot start profiling */
+	ERR_TO_LONG_MESSAGE			= -205,	/* message is too long to process */
+	ERR_TARGET_NOT_FOUND			= -206,	/* some target in message not found like file or some else */
+	ERR_NOT_SUPPORTED			= -207,	/* request not supported by security reason */
 	ERR_SERV_SOCK_CREATE			= -900,	/* server socket creation failed (written in /tmp/da.port file) */
 	ERR_SERV_SOCK_BIND			= -901,	/* server socket bind failed (written in /tmp/da.port file) */
 	ERR_SERV_SOCK_LISTEN			= -902,	/* server socket listen failed (written in /tmp/da.port file) */
