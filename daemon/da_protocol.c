@@ -55,6 +55,37 @@
 #include <unistd.h>
 #include <ctype.h>
 
+#include "x_define_api_id_list.h"
+
+#define X(id, func_name, file_name, lib_name, feature, always_feature) \
+	uint32_t id_ ## id;	\
+	char name_ ## id [sizeof(func_name)];
+
+struct packed_probe_map_t {
+	uint32_t count;
+	X_API_MAP_LIST
+} __attribute__((packed)) ;
+#undef X
+
+
+static struct packed_probe_map_t packed_probe_map = {
+
+	.count = 0
+#define X(id, func_name, file_name, lib_name, feature, always_feature) \
+	+1
+	X_API_MAP_LIST
+#undef X
+	,
+
+#define X(id, func_name, file_name, lib_name, feature, always_feature) \
+	.id_ ## id = id,\
+	.name_ ## id = func_name,
+	X_API_MAP_LIST
+#undef X
+};
+
+
+
 static pthread_mutex_t stop_all_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void inline free_msg(struct msg_t *msg)
@@ -71,6 +102,7 @@ static void print_conf(struct conf_t *conf);
 
 char *msg_ID_str(enum HostMessageT ID)
 {
+	check_and_return(NMSG_GET_PROBE_MAP);
 	check_and_return(NMSG_KEEP_ALIVE);
 	check_and_return(NMSG_START);
 	check_and_return(NMSG_STOP);
@@ -598,6 +630,8 @@ static void write_msg_error(const char *err_str)
 static enum HostMessageT get_ack_msg_id(const enum HostMessageT id)
 {
 	switch (id) {
+	case NMSG_GET_PROBE_MAP:
+		return NMSG_GET_PROBE_MAP_ACK;
 	case NMSG_KEEP_ALIVE:
 		return NMSG_KEEP_ALIVE_ACK;
 	case NMSG_START:
@@ -617,8 +651,9 @@ static enum HostMessageT get_ack_msg_id(const enum HostMessageT id)
 	case NMSG_GET_PROCESS_ADD_INFO:
 		return NMSG_GET_PROCESS_ADD_INFO_ACK;
 	default:
-		LOGE("Fatal: unknown message ID [0x%X]\n", id);
-		exit(EXIT_FAILURE);
+		LOGW("Unknown message ID [0x%X]\n", id);
+		LOGW("Generated ack ID [0x%X]\n", id | NMSG_ACK_FLAG);
+		return id | NMSG_ACK_FLAG;
 	}
 }
 
@@ -927,6 +962,23 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 	return err;
 }
 
+static int process_msg_get_probe_map()
+{
+	int res;
+	res = sendACKToHost(NMSG_GET_PROBE_MAP, ERR_NO,
+			    (void *)&packed_probe_map,
+			    sizeof(struct packed_probe_map_t));
+	return  -(res != 0);
+}
+
+static int process_msg_version()
+{
+	int res;
+	res = sendACKToHost(MSG_VERSION, ERR_NO, PROTOCOL_VERSION,
+			      sizeof(PROTOCOL_VERSION));
+	return  -(res != 0);
+}
+
 static void get_serialized_time(uint32_t dst[2])
 {
 	struct timeval tv;
@@ -1067,6 +1119,8 @@ static int process_msg_get_screenshot(struct msg_buf_t *msg_control)
 	if (target_send_msg_to_all(&sendlog) == 1)
 		err_code = ERR_NO;
 
+	sendACKToHost(NMSG_GET_SCREENSHOT, err_code, 0, 0);
+
 	return -(err_code != ERR_NO);
 }
 
@@ -1192,6 +1246,10 @@ int host_message_handler(struct msg_t *msg)
 	init_parse_control(&msg_control, msg);
 
 	switch (msg->id) {
+	case NMSG_VERSION:
+		return process_msg_version();
+	case NMSG_GET_PROBE_MAP:
+		return process_msg_get_probe_map();
 	case NMSG_KEEP_ALIVE:
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
