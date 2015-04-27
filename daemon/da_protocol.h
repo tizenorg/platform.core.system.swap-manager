@@ -36,29 +36,37 @@
 #include <stddef.h>
 #include <linux/input.h>
 
+#define PROTOCOL_VERSION "4.0"
+
 enum HostMessageT {
-NMSG_KEEP_ALIVE			=0x0001,
+NMSG_VERSION				=0x0001,
 NMSG_START				=0x0002,
 NMSG_STOP				=0x0003,
 NMSG_CONFIG				=0x0004,
-NMSG_BINARY_INFO		=0x0005,
-NMSG_GET_TARGET_INFO	=0x0007,
-NMSG_SWAP_INST_ADD		=0x0008,
-NMSG_SWAP_INST_REMOVE		=0x0009,
-NMSG_GET_SCREENSHOT		=0x0010,
-NMSG_GET_PROCESS_ADD_INFO	=0x0011,
-NMSG_WRT_LAUNCHER_PORT		=0x8001,
+NMSG_BINARY_INFO			=0x0005,
+NMSG_GET_TARGET_INFO			=0x0007,
+NMSG_SWAP_INST_ADD			=0x0008,
+NMSG_SWAP_INST_REMOVE			=0x0009,
+NMSG_GET_PROBE_MAP			=0x000A,
+NMSG_KEEP_ALIVE				=0x000F,
+NMSG_GET_SCREENSHOT			=0x0010,
+NMSG_GET_PROCESS_ADD_INFO		=0x0011,
+NMSG_WRT_LAUNCHER_PORT			=0x8001,
 
-NMSG_KEEP_ALIVE_ACK			=0x1001,
+NMSG_ACK_FLAG				=0x1000,
+
+NMSG_VERSION_ACK			=0x1001,
 NMSG_START_ACK				=0x1002,
 NMSG_STOP_ACK				=0x1003,
 NMSG_CONFIG_ACK				=0x1004,
-NMSG_BINARY_INFO_ACK		=0x1005,
+NMSG_BINARY_INFO_ACK			=0x1005,
 NMSG_SWAP_INST_ACK			=0x1006,
-NMSG_GET_TARGET_INFO_ACK	=0x1007,
-NMSG_SWAP_INST_ADD_ACK		=0x1008,
-NMSG_SWAP_INST_REMOVE_ACK	=0x1009,
-NMSG_GET_PROCESS_ADD_INFO_ACK	=0x1011,
+NMSG_GET_TARGET_INFO_ACK		=0x1007,
+NMSG_SWAP_INST_ADD_ACK			=0x1008,
+NMSG_SWAP_INST_REMOVE_ACK		=0x1009,
+NMSG_GET_PROBE_MAP_ACK			=0x100A,
+NMSG_KEEP_ALIVE_ACK			=0x100F,
+NMSG_GET_PROCESS_ADD_INFO_ACK		=0x1011,
 
 NMSG_PROCESS_INFO			=0x0001,	//	target process info
 NMSG_TERMINATE				=0x0002,	//terminate
@@ -88,6 +96,9 @@ enum ErrorCode {
 	ERR_WRONG_MESSAGE_TYPE			= -202,	/* wrong message type */
 	ERR_WRONG_MESSAGE_DATA			= -203,	/* wrong message data */
 	ERR_CANNOT_START_PROFILING		= -204,	/* cannot start profiling */
+	ERR_TO_LONG_MESSAGE			= -205,	/* message is too long to process */
+	ERR_TARGET_NOT_FOUND			= -206,	/* some target in message not found like file or some else */
+	ERR_NOT_SUPPORTED			= -207,	/* request not supported by security reason */
 	ERR_SERV_SOCK_CREATE			= -900,	/* server socket creation failed (written in /tmp/da.port file) */
 	ERR_SERV_SOCK_BIND			= -901,	/* server socket bind failed (written in /tmp/da.port file) */
 	ERR_SERV_SOCK_LISTEN			= -902,	/* server socket listen failed (written in /tmp/da.port file) */
@@ -97,53 +108,57 @@ enum ErrorCode {
 #define FL_SYSTEM_ENERGY_OLD (1<<26)
 
 enum feature_code{
-	FL_RESERVED1			= 0x000000000003ULL, // reserved 0011
+	FL_RESERVED1			= 0x0000000000003ULL, // reserved 0011
 
-	FL_FUNCTION_PROFILING		= 0x000000000004ULL, // On/Off the UserSpaceInst
-	FL_MEMORY_ALLOC_PROBING		= 0x000000000008ULL, // memory allocation API (glibc)
-	FL_FILE_API_PROBING		= 0x000000000010ULL, // file API (glibc, OSP)
-	FL_THREAD_API_PROBING		= 0x000000000020ULL, // thread API (glibc, OSP)
-	FL_OSP_UI_API_PROBING		= 0x000000000040ULL, // UI API (OSP)
-	FL_SCREENSHOT			= 0x000000000080ULL, // Screenshot
-	FL_USER_EVENT			= 0x000000000100ULL, // events of Touch, Gesture, Orientation, Key
-	FL_RECORDING			= 0x000000000200ULL, // recording the user event
-	FL_SYSTCALL_FILE		= 0x000000000400ULL, // File operation syscalls tracing
-	FL_SYSTCALL_IPC			= 0x000000000800ULL, // IPC syscall tracing
-	FL_SYSTCALL_PROCESS		= 0x000000001000ULL, // Process syscalls tracing
-	FL_SYSTCALL_SIGNAL		= 0x000000002000ULL, // Signal syscalls tracing
-	FL_SYSTCALL_NETWORK		= 0x000000004000ULL, // Network syscalls tracing
-	FL_SYSTCALL_DESC		= 0x000000008000ULL, // Descriptor syscalls tracing
-	FL_CONTEXT_SWITCH		= 0x000000010000ULL, // Context switch tracing
-	FL_NETWORK_API_PROBING		= 0x000000020000ULL, // network API (glibc, OSP, libsoap, openssl)
-	FL_OPENGL_API_PROBING		= 0x000000040000ULL, // openGL API
-	FL_FUNCTION_SAMPLING		= 0x000000080000ULL, // Function sampling
+	FL_FUNCTION_PROFILING		= 0x0000000000004ULL, // 0x4 * 0x10^00 On/Off the UserSpaceInst
+	FL_MEMORY_ALLOC_PROBING		= 0x0000000000008ULL, // 0x8 * 0x10^00 memory allocation API (glibc)
+	FL_FILE_API_PROBING		= 0x0000000000010ULL, // 0x1 * 0x10^01 file API (glibc, OSP)
+	FL_THREAD_API_PROBING		= 0x0000000000020ULL, // 0x2 * 0x10^01 thread API (glibc, OSP)
+	FL_OSP_UI_API_PROBING		= 0x0000000000040ULL, // 0x4 * 0x10^01 UI API (OSP)
+	FL_SCREENSHOT			= 0x0000000000080ULL, // 0x8 * 0x10^01 Screenshot
+	FL_USER_EVENT			= 0x0000000000100ULL, // 0x1 * 0x10^02 events of Touch, Gesture, Orientation, Key
+	FL_RECORDING			= 0x0000000000200ULL, // 0x2 * 0x10^02 recording the user event
+	FL_SYSTCALL_FILE		= 0x0000000000400ULL, // 0x4 * 0x10^02 File operation syscalls tracing
+	FL_SYSTCALL_IPC			= 0x0000000000800ULL, // 0x8 * 0x10^02 IPC syscall tracing
+	FL_SYSTCALL_PROCESS		= 0x0000000001000ULL, // 0x1 * 0x10^03 Process syscalls tracing
+	FL_SYSTCALL_SIGNAL		= 0x0000000002000ULL, // 0x2 * 0x10^03 Signal syscalls tracing
+	FL_SYSTCALL_NETWORK		= 0x0000000004000ULL, // 0x4 * 0x10^03 Network syscalls tracing
+	FL_SYSTCALL_DESC		= 0x0000000008000ULL, // 0x8 * 0x10^03 Descriptor syscalls tracing
+	FL_CONTEXT_SWITCH		= 0x0000000010000ULL, // 0x1 * 0x10^04 Context switch tracing
+	FL_NETWORK_API_PROBING		= 0x0000000020000ULL, // 0x2 * 0x10^04 network API (glibc, OSP, libsoap, openssl)
+	FL_OPENGL_API_PROBING		= 0x0000000040000ULL, // 0x4 * 0x10^04 openGL API
+	FL_FUNCTION_SAMPLING		= 0x0000000080000ULL, // 0x8 * 0x10^04 Function sampling
 
-	FL_RESERVED2			= 0x00000FF00000ULL, // reserved
+	FL_RESERVED2			= 0x000000FF00000ULL, // 0x1 * 0x10^00 reserved
 
-	FL_MEMORY_ALLOC_ALWAYS_PROBING	= 0x000010000000ULL, // all (include external) memory allocation API (glibc) always
-	FL_FILE_API_ALWAYS_PROBING	= 0x000020000000ULL, // all (include external) file API (glibc, OSP) always
-	FL_THREAD_API_ALWAYS_PROBING	= 0x000040000000ULL, // all (include external) thread API (glibc, OSP) always
-	FL_OSP_UI_API_ALWAYS_PROBING	= 0x000080000000ULL, // all (include external) UI API (OSP) always
-	FL_NETWORK_API_ALWAYS_PROBING	= 0x000100000000ULL, // all (include external) network API (glibc, OSP, libsoap, openssl) always
-	FL_OPENGL_API_ALWAYS_PROBING	= 0x000200000000ULL, // all (include external) openGL API always
+	FL_MEMORY_ALLOC_ALWAYS_PROBING	= 0x0000010000000ULL, // 0x1 * 0x10^07 all (include external) memory allocation API (glibc) always
+	FL_FILE_API_ALWAYS_PROBING	= 0x0000020000000ULL, // 0x2 * 0x10^07 all (include external) file API (glibc, OSP) always
+	FL_THREAD_API_ALWAYS_PROBING	= 0x0000040000000ULL, // 0x4 * 0x10^07 all (include external) thread API (glibc, OSP) always
+	FL_OSP_UI_API_ALWAYS_PROBING	= 0x0000080000000ULL, // 0x8 * 0x10^07 all (include external) UI API (OSP) always
+	FL_NETWORK_API_ALWAYS_PROBING	= 0x0000100000000ULL, // 0x1 * 0x10^08 all (include external) network API (glibc, OSP, libsoap, openssl) always
+	FL_OPENGL_API_ALWAYS_PROBING	= 0x0000200000000ULL, // 0x2 * 0x10^08 all (include external) openGL API always
 
-	FL_RESERVED3			= 0x000c00000000ULL, // reserved
+	FL_RESERVED3			= 0x0000c00000000ULL, // 0x1 * 0x10^00 reserved
 
-	FL_SYSTEM_CPU			= 0x001000000000ULL, // CPU core load, frequency
-	FL_SYSTEM_MEMORY		= 0x002000000000ULL, // System memory used
-	FL_SYSTEM_PROCESS		= 0x004000000000ULL, // Info for profilling processes (VSS, PSS, RSS, etc)
-	FL_SYSTEM_THREAD_LOAD		= 0x008000000000ULL, // Thread loading for profiling processes
-	FL_SYSTEM_PROCESSES_LOAD	= 0x010000000000ULL, // Non instrumented process load
-	FL_SYSTEM_DISK			= 0x020000000000ULL, // /proc/diskstats - reads, sectors read, writes, sectors written
-	FL_SYSTEM_NETWORK		= 0x040000000000ULL, // network send/recv size
-	FL_SYSTEM_DEVICE		= 0x080000000000ULL, //
-	FL_SYSTEM_ENERGY		= 0x100000000000ULL, //
+	FL_SYSTEM_CPU			= 0x0001000000000ULL, // 0x1 * 0x10^09 CPU core load, frequency
+	FL_SYSTEM_MEMORY		= 0x0002000000000ULL, // 0x2 * 0x10^09 System memory used
+	FL_SYSTEM_PROCESS		= 0x0004000000000ULL, // 0x4 * 0x10^09 Info for profilling processes (VSS, PSS, RSS, etc)
+	FL_SYSTEM_THREAD_LOAD		= 0x0008000000000ULL, // 0x8 * 0x10^09 Thread loading for profiling processes
+	FL_SYSTEM_PROCESSES_LOAD	= 0x0010000000000ULL, // 0x1 * 0x10^10 Non instrumented process load
+	FL_SYSTEM_DISK			= 0x0020000000000ULL, // 0x2 * 0x10^10 /proc/diskstats - reads, sectors read, writes, sectors written
+	FL_SYSTEM_NETWORK		= 0x0040000000000ULL, // 0x4 * 0x10^10 network send/recv size
+	FL_SYSTEM_DEVICE		= 0x0080000000000ULL, // 0x8 * 0x10^10
+	FL_SYSTEM_ENERGY		= 0x0100000000000ULL, // 0x1 * 0x10^11
 
-	FL_WEB_PROFILING		= 0x400000000000ULL, // Web profiling
+	FL_APP_STARTUP			= 0x0200000000000ULL, // 0x2 * 0x10^11 see MSG_APP_SETUP_STAGE in data channel
+	FL_WEB_PROFILING		= 0x0400000000000ULL, // 0x4 * 0x10^11 Web profiling
+	FL_WEB_STARTUP_PROFILING	= 0x0800000000000ULL, // 0x8 * 0x10^11 Web startup profiling
 
-	FL_RESERVED4			= 0xa00000000000ULL, // reserved 1010
+	FL_SYSTEM_FILE_ACTIVITY		= 0x1000000000000ULL, // 0x1 * 0x10^12 function entry/exit for probe type 04 (File syscall)
 
-	FL_ALL_FEATURES			= 0x7FFFFFFFFFFFULL &
+	FL_RESERVED4			= 0xe000000000000ULL, // reserved 1110
+
+	FL_ALL_FEATURES			= 0x7FFFFFFFFFFFFULL &
 					  (~FL_RESERVED1) &
 					  (~FL_RESERVED2) &
 					  (~FL_RESERVED3) &
