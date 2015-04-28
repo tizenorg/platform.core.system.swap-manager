@@ -23,7 +23,9 @@ INCLUDE := \
 	-I/usr/include/vconf \
 	-I/usr/include/ecore-1 \
 	-I/usr/include/eina-1 \
-	-I/usr/include/eina-1/eina
+	-I/usr/include/eina-1/eina \
+	-I/usr/include/efl-1 \
+	-I/usr/include/eo-1
 
 FLAGS := \
 	$(COMM_FLAGS) \
@@ -33,7 +35,6 @@ FLAGS := \
 ifeq (arm, $(findstring arm, $(shell uname -sm)))
 	FLAGS += -DDEVICE_ONLY
 endif
-
 
 # compiler flags
 CFLAGS := $(FLAGS)
@@ -47,7 +48,7 @@ LDFLAGS := \
 	-lecore \
 	-lcapi-system-info \
 	-lwebsockets \
-	-ljson
+	-ljson-c
 
 SRC_C := \
 	buffer.c \
@@ -118,7 +119,7 @@ release: debug
 
 
 debug: rmheaders headers $(OBJS)
-	$(CPP) $(LDFLAGS) $(OBJS) -o $(TARGET)
+	$(CPP) $(OBJS) -o $(TARGET) $(LDFLAGS)
 
 
 install: BINDIR = $(DESTDIR)/usr/bin
