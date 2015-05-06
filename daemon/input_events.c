@@ -207,10 +207,15 @@ static int deviceEventHandler(input_dev *dev, int input_type)
 			     count,
 			     input_type == INPUT_ID_KEY ? STR_KEY : STR_TOUCH);
 			log = gen_message_event(in_ev, count, input_type);
-			printBuf((char *)log, MSG_DATA_HDR_LEN + log->len);
-			if (write_to_buf(log) != 0)
-				LOGE("write to buf fail\n");
-			free_msg_data(log);
+			if (log != NULL) {
+				printBuf((char *)log, MSG_DATA_HDR_LEN + log->len);
+				if (write_to_buf(log) != 0)
+					LOGE("write to buf fail\n");
+				free_msg_data(log);
+			} else {
+				LOGE("cannot generate message event."
+				     "message missed\n");
+			}
 		}
 	} else {
 		LOGW("unknown input_type\n");
