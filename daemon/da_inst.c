@@ -85,28 +85,56 @@ static struct data_list_t *new_data(void)
 
 struct lib_list_t *new_lib(void)
 {
-	struct probe_list_t *res = NULL;
-	struct lib_list_t *lib = (struct lib_list_t *)new_data();
-	res = malloc(sizeof(*lib->lib));
-	if (res == NULL) {
-		LOGE("can not malloc buffer for probe_list_t lib\n");
-		return NULL;
+	struct lib_list_t *lib = NULL;
+
+	lib = (struct lib_list_t *)new_data();
+	if (lib == NULL) {
+		LOGE("cannot create lib\n");
+		goto exit_fail;
 	}
-	lib->lib = res;
+
+	lib->lib = malloc(sizeof(*lib->lib));
+	if (lib->lib == NULL) {
+		LOGE("can not malloc buffer for probe_list_t lib\n");
+		goto exit_fail_free_lib;
+	}
+
 	memset(lib->lib, 0, sizeof(*lib->lib));
+
+	/* SUCCESS */
 	return lib;
+
+exit_fail_free_lib:
+	free(lib);
+exit_fail:
+	return NULL;
 }
 
 struct app_list_t *new_app(void)
 {
-	struct app_list_t *app = (struct app_list_t *)new_data();
+	struct app_list_t *app = NULL;
+
+	app = (struct app_list_t *)new_data();
+	if (app = NULL) {
+		LOGE("cannot create app\n");
+		goto exit_fail;
+	}
+
 	app->app = malloc(sizeof(*app->app));
 	if (app->app == NULL) {
 		LOGE("can not malloc buffer for app_info_t app\n");
-		return NULL;
+		goto exit_fail_free_app;
 	}
+
 	memset(app->app, 0, sizeof(*app->app));
+
+	/* SUCCESS */
 	return app;
+
+exit_fail_free_app:
+	free(app);
+exit_fail:
+	return NULL;
 }
 
 struct probe_list_t *new_probe(void)
