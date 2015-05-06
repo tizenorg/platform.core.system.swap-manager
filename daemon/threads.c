@@ -175,13 +175,28 @@ static void* recvThread(void* data)
 			continue;
 		} else if (log.type == MSG_IMAGE) {
 			/* need chsmak */
-			char *file_name = log.data;
-			LOGI("MSG_IMAGE> <%s>\n", file_name);
+			void *p = log.data;
+			char *file_name = p;
+
+			if (access(file_name, F_OK) != -1) {
+				LOGI("MSG_IMAGE> <%s>\n", file_name);
+			} else {
+				LOGE("MSG_IMAGE> File not found <%s>\n", file_name);
+				continue;
+			}
 
 			if (chsmack(file_name) == 0) {
 				/* exctract probe message */
-				file_name += strnlen(file_name, PATH_MAX) + 1;
-				struct msg_data_t *msg_data = (struct msg_data_t *)file_name;
+				p += strnlen(file_name, PATH_MAX) + 1;
+				struct msg_data_t *msg_data = (struct msg_data_t *)(p);
+
+				/* check packed size */
+				if (log.length != strnlen(file_name, PATH_MAX) + 1 +
+					sizeof(*msg_data) + msg_data->len) {
+					LOGE("Bad packed message\n");
+					continue;
+				}
+
 				if (write_to_buf(msg_data) != 0)
 					LOGE("write to buf fail\n");
 			} else {

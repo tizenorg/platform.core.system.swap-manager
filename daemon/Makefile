@@ -22,7 +22,9 @@ INCLUDE := \
 	-I/usr/include/vconf \
 	-I/usr/include/ecore-1 \
 	-I/usr/include/eina-1 \
-	-I/usr/include/eina-1/eina
+	-I/usr/include/eina-1/eina \
+	-I/usr/include/efl-1 \
+	-I/usr/include/eo-1
 
 FLAGS := \
 	$(COMM_FLAGS) \
@@ -46,7 +48,7 @@ LDFLAGS := \
 	-lecore \
 	-lcapi-system-info \
 	-lwebsockets \
-	-ljson
+	-ljson-c
 
 SRC_C := \
 	buffer.c \
@@ -102,7 +104,7 @@ release: debug
 
 
 debug: $(OBJS)
-	$(CPP) $(LDFLAGS) $(OBJS) -o $(TARGET)
+	$(CPP) $(OBJS) -o $(TARGET) $(LDFLAGS)
 
 
 install: BINDIR = $(DESTDIR)/usr/bin
