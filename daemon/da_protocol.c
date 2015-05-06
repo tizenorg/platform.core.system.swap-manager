@@ -587,7 +587,14 @@ static int send_reply(struct msg_t *msg)
 
 static void write_msg_error(const char *err_str)
 {
-	struct msg_data_t *err_msg = gen_message_error(err_str);
+	struct msg_data_t *err_msg = NULL;
+
+	err_msg = gen_message_error(err_str);
+	if (err_msg == NULL) {
+		LOGE("cannot generate error message\n");
+		return;
+	}
+
 	if (write_to_buf(err_msg) != 0)
 		LOGE("write to buf fail\n");
 	free_msg_data(err_msg);
@@ -858,34 +865,39 @@ static struct binary_ack* binary_ack_alloc(const char *filename)
 	binpath[0]='\0';
 
 	ba = malloc(sizeof(*ba));
-	if (ba != NULL) {
-		if (stat(filename, &decoy) == 0) {
-			ba->type = get_binary_type(filename);
+	if (ba == NULL) {
+		LOGE("Cannot allocates memory for binary ack struct\n");
+		goto exit_fail;
+	}
 
-			if (ba->type != BINARY_TYPE_UNKNOWN)
-				get_build_dir(builddir, filename);
+	if (stat(filename, &decoy) == 0) {
+		ba->type = get_binary_type(filename);
 
-			if (builddir[0] != '\0')
-				snprintf(binpath, sizeof(binpath), check_windows_path(builddir) ?
-					 "%s\\%s" : "%s/%s", builddir, basename(filename) ?: "");
+		if (ba->type != BINARY_TYPE_UNKNOWN)
+			get_build_dir(builddir, filename);
 
-			ba->binpath = strdup(binpath);
-			get_file_md5sum(ba->digest, filename);
-		} else {
-			ba->type = BINARY_TYPE_FILE_NOT_EXIST;
-			ba->binpath = strdup(filename);
-			memset(ba->digest, 0x00, sizeof(ba->digest));
-		}
+		if (builddir[0] != '\0')
+			snprintf(binpath, sizeof(binpath), check_windows_path(builddir) ?
+				 "%s\\%s" : "%s/%s", builddir, basename(filename) ?: "");
+
+		ba->binpath = strdup(binpath);
+		get_file_md5sum(ba->digest, filename);
 	} else {
-		LOGE("Cannot allocates memory for ba\n");
+		ba->type = BINARY_TYPE_FILE_NOT_EXIST;
+		ba->binpath = strdup(filename);
+		memset(ba->digest, 0x00, sizeof(ba->digest));
 	}
 
 	return ba;
+
+exit_fail:
+	return NULL;
 }
 
 static int process_msg_binary_info(struct msg_buf_t *msg)
 {
-	uint32_t i, bincount;
+	int err;
+	uint32_t i, j, bincount;
 	enum ErrorCode error_code = ERR_NO;
 
 	printBuf(msg->cur_pos, msg->len);
@@ -906,7 +918,10 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 		}
 		new = binary_ack_alloc(str);
 		/* check for errors */
-		if (new->type == BINARY_TYPE_FILE_NOT_EXIST) {
+		if (new == NULL) {
+			LOGE("cannot create bin info structure\n");
+			goto exit_fail_free_ack;
+		} else if (new->type == BINARY_TYPE_FILE_NOT_EXIST) {
 			error_code = ERR_WRONG_MESSAGE_DATA;
 			LOGW("binary file not exists <%s>\n", str);
 		} else if (new->type == BINARY_TYPE_UNKNOWN) {
@@ -945,9 +960,16 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 	}
 
 	printBuf(msg_reply, msg_reply->len + sizeof(*msg_reply));
-	int err = send_reply(msg_reply);
+	err = send_reply(msg_reply);
 	free(msg_reply);
+
 	return err;
+
+exit_fail_free_ack:
+	for (j = 0; j < i; j++)
+		binary_ack_free(acks[j]);
+exit_fail:
+	return -1;
 }
 
 static void get_serialized_time(uint32_t dst[2])
@@ -1116,10 +1138,12 @@ static char *get_process_cmd_line(uint32_t pid)
 
 static int process_msg_get_process_add_info(struct msg_buf_t *msg)
 {
-	uint32_t i, count, total_len;
+	uint32_t i, count;
+	uint32_t total_len = 0;
 	uint32_t *pidarr = NULL;
 	char **cmd_line_arr = NULL;
-	char *payload, *p;
+	char *payload = NULL;
+	char *p;
 	struct msg_target_t sendlog;
 	enum ErrorCode err_code = ERR_UNKNOWN;
 
