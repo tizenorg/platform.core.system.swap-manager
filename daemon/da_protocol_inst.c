@@ -107,7 +107,7 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 	*dest = new_probe();
 	if (*dest == NULL) {
 		LOGE("alloc new_probe error\n");
-		goto err_ret;
+		goto err_free;
 	}
 	(*dest)->size = size;
 	(*dest)->func = func;
