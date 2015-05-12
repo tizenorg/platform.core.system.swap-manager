@@ -180,8 +180,12 @@ static void* recvThread(void* data)
 
 			if (chsmack(file_name) == 0) {
 				/* exctract probe message */
-				file_name += strnlen(file_name, PATH_MAX) + 1;
-				struct msg_data_t *msg_data = (struct msg_data_t *)file_name;
+				size_t file_name_len = strnlen(file_name, PATH_MAX) + 1;
+				struct msg_data_t *msg_data = (struct msg_data_t *)(file_name + file_name_len);
+				if (log.length != file_name_len + sizeof(*msg_data) + msg_data->len) {
+					LOGE("malformed packet ignored\n");
+					continue;
+				}
 				if (write_to_buf(msg_data) != 0)
 					LOGE("write to buf fail\n");
 			} else {

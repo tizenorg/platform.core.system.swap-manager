@@ -144,7 +144,7 @@ struct app_list_t *new_app(void)
 	struct app_list_t *app = NULL;
 
 	app = (struct app_list_t *)new_data();
-	if (app = NULL) {
+	if (app == NULL) {
 		LOGE("cannot create app\n");
 		goto exit_fail;
 	}
