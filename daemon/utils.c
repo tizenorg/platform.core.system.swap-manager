@@ -160,8 +160,7 @@ int exec_app_tizen(const char *app_id, const char *exec_path)
 		while (ret == -1 && errno == EINTR);
 		return 0;
 	} else { /* child */
-		execl(LAUNCH_APP_PATH, LAUNCH_APP_NAME, app_id, LAUNCH_APP_SDK,
-		      DA_PRELOAD_EXEC, NULL);
+		execl(LAUNCH_APP_PATH, LAUNCH_APP_NAME, app_id, NULL);
 		/* FIXME: If code flows here, it deserves greater attention */
 		_Exit(EXIT_FAILURE);
 	}
@@ -178,7 +177,7 @@ int exec_app_common(const char* exec_path)
 		return -1;
 	}
 
-	snprintf(command, sizeof(command), "%s %s", DA_PRELOAD_TIZEN, exec_path);
+	sprintf(command, "%s", exec_path);
 	LOGI("cmd: %s\n", command);
 
 	pid = fork();
@@ -215,7 +214,8 @@ int exec_app_web(const char *app_id)
 	} else { /* child */
 		execl(WRT_LAUNCHER_PATH,
 		      WRT_LAUNCHER_NAME,
-		      WRT_LAUNCHER_START,
+		      (is_feature_enabled(FL_WEB_PROFILING) ?
+		       WRT_LAUNCHER_START_DEBUG : WRT_LAUNCHER_START),
 		      app_id,
 		      NULL);
 		/* FIXME: If code flows here, it deserves greater attention */

@@ -45,6 +45,7 @@ extern "C" {
 #define WRT_LAUNCHER_PATH		"/usr/bin/wrt-launcher"
 #define WRT_LAUNCHER_NAME		"wrt-launcher"
 #define WRT_LAUNCHER_START		"-s"
+#define WRT_LAUNCHER_START_DEBUG	"-d -s"
 #define WRT_LAUNCHER_KILL		"-k"
 #define LAUNCH_APP_SDK			"__AUL_SDK__"
 #define DA_PRELOAD_EXEC			"DYNAMIC_ANALYSIS"

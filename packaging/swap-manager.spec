@@ -12,7 +12,11 @@ BuildRequires:  aul-devel
 BuildRequires:  vconf-devel
 BuildRequires:  capi-system-info-devel
 BuildRequires:  capi-system-runtime-info-devel
+BuildRequires:  libwebsockets-devel
+BuildRequires:  libjson-devel
 BuildRequires:  pkgconfig(ecore)
+BuildRequires:  swap-probe-devel
+BuildRequires:  webkit2-efl-debuginfo
 %if "%_project" != "Kirana_SWA_OPEN:Build" && "%_project" != "Kirana_SWA_OPEN:Daily"
 Requires:  swap-modules
 %endif

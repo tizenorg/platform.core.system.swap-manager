@@ -48,11 +48,43 @@
 #include "debug.h"
 #include "md5.h"
 #include "da_data.h"
+#include "wsi.h"
 
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <ctype.h>
+
+#include "x_define_api_id_list.h"
+
+#define X(id, func_name, file_name, lib_name, feature, always_feature) \
+	uint32_t id_ ## id;	\
+	char name_ ## id [sizeof(func_name)];
+
+struct packed_probe_map_t {
+	uint32_t count;
+	X_API_MAP_LIST
+} __attribute__((packed)) ;
+#undef X
+
+
+static struct packed_probe_map_t packed_probe_map = {
+
+	.count = 0
+#define X(id, func_name, file_name, lib_name, feature, always_feature) \
+	+1
+	X_API_MAP_LIST
+#undef X
+	,
+
+#define X(id, func_name, file_name, lib_name, feature, always_feature) \
+	.id_ ## id = id,\
+	.name_ ## id = func_name,
+	X_API_MAP_LIST
+#undef X
+};
+
+
 
 static pthread_mutex_t stop_all_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -70,6 +102,7 @@ static void print_conf(struct conf_t *conf);
 
 char *msg_ID_str(enum HostMessageT ID)
 {
+	check_and_return(NMSG_GET_PROBE_MAP);
 	check_and_return(NMSG_KEEP_ALIVE);
 	check_and_return(NMSG_START);
 	check_and_return(NMSG_STOP);
@@ -156,8 +189,8 @@ static char *msgErrStr(enum ErrorCode err)
 		}							\
 	}
 #define print_feature_0(f) print_feature(f, feature0, to, ", \n\t")
-static void feature_code_str(uint64_t feature0, uint64_t feature1, char *to,
-			     uint32_t buflen)
+void feature_code_str(uint64_t feature0, uint64_t feature1, char *to,
+		      uint32_t buflen)
 {
 	int lenin = 0;
 	print_feature_0(FL_FUNCTION_PROFILING);
@@ -193,6 +226,10 @@ static void feature_code_str(uint64_t feature0, uint64_t feature1, char *to,
 	print_feature_0(FL_SYSTEM_NETWORK);
 	print_feature_0(FL_SYSTEM_DEVICE);
 	print_feature_0(FL_SYSTEM_ENERGY);
+	print_feature_0(FL_APP_STARTUP);
+	print_feature_0(FL_WEB_PROFILING);
+	print_feature_0(FL_WEB_STARTUP_PROFILING);
+	print_feature_0(FL_SYSTEM_FILE_ACTIVITY);
 
 	goto exit;
 err_exit:
@@ -596,6 +633,8 @@ static void write_msg_error(const char *err_str)
 static enum HostMessageT get_ack_msg_id(const enum HostMessageT id)
 {
 	switch (id) {
+	case NMSG_GET_PROBE_MAP:
+		return NMSG_GET_PROBE_MAP_ACK;
 	case NMSG_KEEP_ALIVE:
 		return NMSG_KEEP_ALIVE_ACK;
 	case NMSG_START:
@@ -615,8 +654,9 @@ static enum HostMessageT get_ack_msg_id(const enum HostMessageT id)
 	case NMSG_GET_PROCESS_ADD_INFO:
 		return NMSG_GET_PROCESS_ADD_INFO_ACK;
 	default:
-		LOGE("Fatal: unknown message ID [0x%X]\n", id);
-		exit(EXIT_FAILURE);
+		LOGW("Unknown message ID [0x%X]\n", id);
+		LOGW("Generated ack ID [0x%X]\n", id | NMSG_ACK_FLAG);
+		return id | NMSG_ACK_FLAG;
 	}
 }
 
@@ -677,6 +717,11 @@ enum ErrorCode stop_all_no_lock(void)
 
 	// stop all only if it has not been called yet
 	if (check_running_status(&prof_session)) {
+		if (is_feature_enabled(FL_WEB_PROFILING)) {
+			wsi_stop_profiling();
+			wsi_destroy();
+		}
+
 		msg = gen_stop_msg();
 		terminate_all();
 		stop_profiling();
@@ -921,6 +966,23 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 	return err;
 }
 
+static int process_msg_get_probe_map()
+{
+	int res;
+	res = sendACKToHost(NMSG_GET_PROBE_MAP, ERR_NO,
+			    (void *)&packed_probe_map,
+			    sizeof(struct packed_probe_map_t));
+	return  -(res != 0);
+}
+
+static int process_msg_version()
+{
+	int res;
+	res = sendACKToHost(MSG_VERSION, ERR_NO, PROTOCOL_VERSION,
+			      sizeof(PROTOCOL_VERSION));
+	return  -(res != 0);
+}
+
 static void get_serialized_time(uint32_t dst[2])
 {
 	struct timeval tv;
@@ -1061,6 +1123,8 @@ static int process_msg_get_screenshot(struct msg_buf_t *msg_control)
 	if (target_send_msg_to_all(&sendlog) == 1)
 		err_code = ERR_NO;
 
+	sendACKToHost(NMSG_GET_SCREENSHOT, err_code, 0, 0);
+
 	return -(err_code != ERR_NO);
 }
 
@@ -1174,6 +1238,7 @@ int host_message_handler(struct msg_t *msg)
 {
 	struct target_info_t target_info;
 	struct msg_t *msg_reply = NULL;
+	struct msg_t *msg_reply_additional = NULL;
 	struct msg_buf_t msg_control;
 	struct conf_t conf;
 	enum ErrorCode error_code = ERR_NO;
@@ -1185,6 +1250,10 @@ int host_message_handler(struct msg_t *msg)
 	init_parse_control(&msg_control, msg);
 
 	switch (msg->id) {
+	case NMSG_VERSION:
+		return process_msg_version();
+	case NMSG_GET_PROBE_MAP:
+		return process_msg_get_probe_map();
 	case NMSG_KEEP_ALIVE:
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
@@ -1198,15 +1267,17 @@ int host_message_handler(struct msg_t *msg)
 		}
 		break;
 	case NMSG_CONFIG:
-		error_code = ERR_NO;
+//		error_code = ERR_NO;
 		if (!parse_msg_config(&msg_control, &conf)) {
 			LOGE("config parsing error\n");
-			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
-			return -1;
+			error_code = ERR_WRONG_MESSAGE_FORMAT;
+			goto send_ack;
 		}
-		if (reconfigure(conf) != 0) {
+
+		if (reconfigure(conf, &msg_reply, &msg_reply_additional ) != 0) {
 			LOGE("Cannot change configuration\n");
-			return -1;
+			error_code = ERR_UNKNOWN;
+			goto send_ack;
 		}
 		//write to device
 
@@ -1223,10 +1294,30 @@ int host_message_handler(struct msg_t *msg)
 		*((uint64_t *)msg->payload) = feature0;
 
 		if (ioctl_send_msg(msg) != 0) {
+			LOGI("send probes\n");
 			LOGE("ioctl send error\n");
-			sendACKToHost(msg->id, ERR_UNKNOWN, 0, 0);
-			return -1;
+			error_code = ERR_UNKNOWN;
+			goto send_ack;
 		}
+
+		if (msg_reply != NULL) {
+			LOGI("send ld preload add probes\n");
+			if (ioctl_send_msg(msg_reply) != 0) {
+				error_code = ERR_UNKNOWN;
+				LOGE("ioclt send error\n");
+				goto send_ack;
+			}
+		}
+
+		if (msg_reply_additional != NULL) {
+			LOGI("send ld preload remove probes\n");
+			if (ioctl_send_msg(msg_reply_additional) != 0) {
+				error_code = ERR_UNKNOWN;
+				LOGE("ioclt send error\n");
+				goto send_ack;
+			}
+		}
+
 		//send ack to host
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		// send config message to target process
@@ -1296,6 +1387,10 @@ send_ack:
 	sendACKToHost(msg->id, error_code, 0, 0);
 	if (msg_reply != NULL)
 		free(msg_reply);
+
+	if (msg_reply_additional != NULL)
+		free(msg_reply_additional);
+
 	return (error_code == ERR_NO);
 }
 

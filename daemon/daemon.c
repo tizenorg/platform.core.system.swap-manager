@@ -61,10 +61,13 @@
 #include "input_events.h"
 #include "smack.h"
 #include "debug.h"
+#include "wsi.h"
 
 #define DA_WORK_DIR			"/home/developer/sdk_tools/da/"
 #define DA_READELF_PATH			"/home/developer/sdk_tools/da/readelf"
 #define SCREENSHOT_DIR			"/tmp/da"
+
+#define WSI_HOST			"127.0.0.1"
 
 #define MAX_APP_LAUNCH_TIME		60
 #define MAX_CONNECT_TIMEOUT_TIME	5*60
@@ -258,9 +261,42 @@ static int exec_app(const struct app_info_t *app_info)
 		}
 		break;
 	case APP_TYPE_WEB:
+		if (wsi_set_profile(app_info)) {
+			LOGE("Cannot set web application profiling\n");
+			res = -1;
+		}
+
+		if (wsi_enable_profiling(PROF_ON)) {
+			LOGE("Cannot enable web application profiling\n");
+			res = -1;
+		}
+
+		if (wsi_set_smack_rules(app_info)) {
+			LOGE("Cannot set web application smack rules\n");
+			res = -1;
+		}
+
 		if (exec_app_web(app_info->app_id)) {
 			LOGE("Cannot exec web app %s\n", app_info->app_id);
 			res = -1;
+		}
+
+		if (!is_feature_enabled(FL_WEB_PROFILING)) {
+			if (wsi_enable_profiling(PROF_OFF)) {
+				LOGE("Cannot disable web application profiling\n");
+				res = -1;
+			}
+			break;
+		}
+
+		if (wsi_init(WSI_HOST, 0)) {
+			LOGE("Cannot init web application profiling\n");
+			res = -1;
+		} else {
+			if (wsi_start_profiling()) {
+				LOGE("Cannot start web application profiling\n");
+				res = -1;
+			}
 		}
 		break;
 	default:
@@ -472,9 +508,25 @@ static void reconfigure_recording(struct conf_t conf)
 
 }
 
-int reconfigure(struct conf_t conf)
+static void reconfigure_ld_probes(struct conf_t conf, struct msg_t **msg_reply, struct msg_t **msg_reply_additional)
+{
+	uint64_t old_features0 = prof_session.conf.use_features0;
+	uint64_t old_features1 = prof_session.conf.use_features1;
+	uint64_t new_features0 = conf.use_features0;
+	uint64_t new_features1 = conf.use_features1;
+	uint64_t to_enable0 = (new_features0 ^ old_features0) & new_features0;
+	uint64_t to_enable1 = (new_features1 ^ old_features1) & new_features1;
+	uint64_t to_disable0 = (new_features0 ^ old_features0) & old_features0;
+	uint64_t to_disable1 = (new_features1 ^ old_features1) & old_features1;
+	ld_add_probes_by_feature(to_enable0, to_enable1, to_disable0, to_disable1,
+				 &prof_session.user_space_inst, msg_reply,
+				 msg_reply_additional);
+}
+
+int reconfigure(struct conf_t conf, struct msg_t **msg_reply, struct msg_t **msg_reply_additional)
 {
 	reconfigure_recording(conf);
+	reconfigure_ld_probes(conf, msg_reply, msg_reply_additional);
 
 	samplingStop();
 	memcpy(&prof_session.conf, &conf, sizeof(conf));
@@ -486,6 +538,11 @@ int reconfigure(struct conf_t conf)
 	return 0;
 }
 
+int is_feature_enabled(enum feature_code fcode)
+{
+	/* TODO: add check use_features1 */
+	return (fcode & prof_session.conf.use_features0) ? 1 : 0;
+}
 
 static int file2str(const char *filename, char *buf, int len)
 {

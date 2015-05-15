@@ -43,8 +43,6 @@ extern "C" {
 #endif
 
 
-#define PROTOCOL_VERSION			"2.1"
-
 #define RUN_APP_LOADER
 
 #define MAX_TARGET_COUNT			8
@@ -191,7 +189,8 @@ int samplingStop(void);
 int prepare_profiling(void);
 int start_profiling(void);
 void stop_profiling(void);
-int reconfigure(struct conf_t conf);
+int reconfigure(struct conf_t conf, struct msg_t **msg_reply, struct msg_t **msg_reply_additional);
+int is_feature_enabled(enum feature_code fcode);
 int sendACKCodeToHost(enum HostMessageType resp, int msgcode);
 void terminate_all(void);
 

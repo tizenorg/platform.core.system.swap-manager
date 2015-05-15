@@ -29,6 +29,7 @@
 #include "da_protocol_inst.h"
 #include "da_inst.h"
 #include "da_protocol_check.h"
+#include "ld_preload_probe_lib.h"
 
 //----------------- hash
 static uint32_t calc_lib_hash(struct us_lib_inst_t *lib)
@@ -55,6 +56,69 @@ static uint32_t calc_app_hash(struct app_info_t *app)
 	return hash;
 }
 
+struct fbi_step_t {
+	uint8_t pointer_order;
+	uint64_t data_offset;
+} __attribute__ ((packed));
+
+struct fbi_probe_t {
+	uint64_t varid;
+	uint64_t reg_offset;
+	uint8_t reg_num;
+	uint32_t data_size;
+	uint8_t steps_count;
+	struct fbi_step_t fbi_step[0];
+} __attribute__ ((packed));
+
+static uint32_t get_fbi_probe_size(struct msg_buf_t *msg)
+{
+	char *p = NULL;
+	uint8_t vars_c, i;
+	uint32_t size = 0;
+	struct fbi_probe_t *fbi_probe;
+
+	if (msg == NULL || msg->cur_pos == NULL) {
+		LOGE("wrong msg structure\n");
+		goto err_ret;
+	}
+	p = msg->cur_pos;
+
+	/* extract valuses count */
+	vars_c = *(uint8_t *)p;
+	p += sizeof(vars_c);
+
+	parse_deb("fbi probe count = %d \n", vars_c);
+
+	for (i = 0; i != vars_c; i++) {
+		fbi_probe = (struct fbi_probe_t *)p;
+		size = /* header */
+		       sizeof(*fbi_probe) +
+		       /* steps size */
+		       fbi_probe->steps_count * sizeof(fbi_probe->fbi_step[0]);
+
+		if (p + size > msg->end) {
+			LOGE("\nfbi probe #%d parsing error:\n"
+			     "\tvarid       %016llX\n"
+			     "\treg_offset  %016llX\n"
+			     "\treg_num     %02x\n"
+			     "\tdata_size   %016lX\n"
+			     "\tsteps_count %02x\n",
+			     i + 1,
+			     fbi_probe->varid,
+			     fbi_probe->reg_offset,
+			     (int)fbi_probe->reg_num,
+			     fbi_probe->data_size,
+			     (int)fbi_probe->steps_count
+			     );
+			goto err_ret;
+		}
+		p += size;
+	}
+
+	return (uint32_t)(p - msg->cur_pos);
+err_ret:
+	return 0;
+}
 
 //----------------------------------- parse -----------------------------------
 static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
@@ -63,52 +127,72 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 	//name       | type   | len       | info
 	//------------------------------------------
 	//func_addr  | uint64 | 8         |
-	//args       | string | len(args) |end with '\0'
-	//ret_type   | char   | 1         |
+	//probe_type | char   | 1         |
 
-	uint32_t size = 0;
-	struct us_func_inst_plane_t *func;
-	int par_count = 0;
-	char *ret_type = NULL;
+	uint32_t size = 0, tmp_size = 0;
+	struct us_func_inst_plane_t *func = NULL;
+	char type;
+	uint64_t addr;
 
-	par_count = strlen(msg->cur_pos + sizeof(func->func_addr));
-	size = sizeof(*func) + par_count + 1 +
-	       sizeof(char) /* sizeof(char) for ret_type */;
-	func = malloc(size);
-	if (!parse_int64(msg, &(func->func_addr))) {
+	size = sizeof(*func);
+
+	if (!parse_int64(msg, &addr)) {
 		LOGE("func addr parsing error\n");
+		return 0;
+	}
+
+	if (!parse_int8(msg, &type)) {
+		LOGE("func type parsing error\n");
+		return 0;
+	}
+
+	switch (type) {
+	case SWAP_RETPROBE:
+		size += strlen(msg->cur_pos) + 1 + sizeof(char);
+		break;
+	case SWAP_FBI_PROBE:
+		tmp_size = get_fbi_probe_size(msg);
+		if (tmp_size == 0) {
+			LOGE("probe parsing error\n");
+			goto err_ret;
+		}
+		size += tmp_size;
+		break;
+	case SWAP_LD_PROBE:
+		size += sizeof(uint64_t) + /* ld preload handler addr */
+			sizeof(char);		  /* ld probe type */
+		break;
+	case SWAP_WEBPROBE:
+		break;
+	default:
+		LOGE("wrong probe type <%u>\n", type);
 		goto err_ret;
 	}
 
-	if (!parse_string_no_alloc(msg, func->args) ||
-	    !check_us_inst_func_args(func->args))
-	{
-		LOGE("args format parsing error\n");
-		goto err_ret;
+	func = malloc(size);
+	if (func == NULL) {
+		LOGE("no memory\n");
+		return 0;
 	}
 
-	//func->args type is char[0]
-	//and we need put ret_type after func->args
-	ret_type = func->args + par_count + 1;
-	if (!parse_int8(msg, (uint8_t *)ret_type) ||
-	    !check_us_inst_func_ret_type(*ret_type))
-	{
-		LOGE("return type parsing error\n");
-		goto err_ret;
-	} else {
-		parse_deb("ret type = <%c>\n", *ret_type);
-	}
+	func->probe_type = type;
+	func->func_addr = addr;
+
+	memcpy(&func->probe_info, msg->cur_pos, size - sizeof(*func));
+	msg->cur_pos += size - sizeof(*func);
 
 	*dest = new_probe();
 	if (*dest == NULL) {
 		LOGE("alloc new_probe error\n");
-		goto err_ret;
+		goto free_func_ret;
 	}
 	(*dest)->size = size;
 	(*dest)->func = func;
 	return 1;
-err_ret:
+
+free_func_ret:
 	free(func);
+err_ret:
 	return 0;
 }
 
@@ -290,4 +374,168 @@ int parse_app_inst_list(struct msg_buf_t *msg,
 
 	return 1;
 }
+/* ld probes */
+#define NOFEATURE 0x123456
+#include "ld_preload_types.h"
+struct ld_preload_probe_t {
+	uint64_t orig_addr;
+	uint8_t probe_type;
+	uint64_t handler_addr;
+	uint8_t preload_type;
+} __attribute__ ((packed));
 
+static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
+				      struct data_list_t *dest, int preload_probe_type)
+{
+	uint32_t i = 0, num = 0;
+	struct probe_list_t *probe_el;
+	struct ld_preload_probe_t *func = NULL;
+
+	num = ld_lib.probe_count;
+
+	if (!check_us_app_inst_func_count(num)) {
+		LOGE("ld probe count is wrong\n");
+		return 0;
+	}
+	//parse user space function list
+
+	LOGI("app_int_num = %d\n", num);
+	for (i = 0; i < num; i++) {
+		parse_deb("app_int #%d\n", i);
+		probe_el = new_probe();
+		func = malloc(sizeof(struct ld_preload_probe_t));
+
+		func->orig_addr = ld_lib.probes[i].orig_addr;
+		func->probe_type = SWAP_LD_PROBE;
+		func->handler_addr = ld_lib.probes[i].handler_addr;
+		func->preload_type = (ld_lib.probes[i].block_type << 1) | preload_probe_type;
+
+		probe_el->size = sizeof(struct ld_preload_probe_t);
+		probe_el->func = (struct us_func_inst_plane_t *)func;
+
+		LOGI("app_int #%d size = %lu\n", i, dest->size);
+		probe_list_append(dest, probe_el);
+	}
+	dest->func_num = num;
+	return 1;
+}
+
+static int feature_add_inst_lib(struct ld_lib_list_el_t ld_lib,
+				struct lib_list_t **dest, int preload_probe_type)
+{
+	*dest = new_lib();
+	if (*dest == NULL) {
+		LOGE("lib alloc error\n");
+		return 0;
+	};
+
+	if (!check_exec_path(ld_lib.lib_name)) {
+		LOGE("bin path parsing error\n");
+		return 0;
+	}
+
+	(*dest)->lib->bin_path = strdup(ld_lib.lib_name);
+
+	if (!feature_add_func_inst_list(ld_lib, (struct data_list_t *)*dest,
+	    preload_probe_type)) {
+		LOGE("funcs parsing error\n");
+		return 0;
+	}
+
+	(*dest)->size += strlen((*dest)->lib->bin_path) + 1 + sizeof((*dest)->func_num);
+	(*dest)->hash = calc_lib_hash((*dest)->lib);
+	return 1;
+
+}
+
+int feature_add_lib_inst_list(struct ld_feature_list_el_t *ld_lib_list,
+			      struct lib_list_t **lib_list, int preload_probe_type)
+{
+
+	uint32_t i = 0, num;
+	struct lib_list_t *lib = NULL;
+
+	num = ld_lib_list->lib_count;
+	if (!check_lib_inst_count(num)) {
+		LOGE("lib num parsing error\n");
+		return 0;
+	}
+
+	for (i = 0; i < num; i++) {
+		LOGI(">add lib #%d <%s> probes_count=%lu\n", i, ld_lib_list->libs[i].lib_name, ld_lib_list->libs[i].probe_count);
+		if (!feature_add_inst_lib(ld_lib_list->libs[i], &lib,
+		    preload_probe_type)) {
+			// TODO maybe need free allocated memory up there
+			LOGE("add LD lib #%d failed\n", i + 1);
+			return 0;
+		}
+		data_list_append((struct data_list_t **)lib_list,
+				 (struct data_list_t *)lib);
+	}
+
+	return 1;
+}
+
+static int create_preload_probe_func(struct probe_list_t **probe,
+				     unsigned long probe_addr,
+				     char probe_type)
+{
+	struct us_func_inst_plane_t *func = NULL;
+
+	func = malloc(sizeof(*func));
+	if (func == NULL) {
+		LOGE("no memory for probe func\n");
+		return -ENOMEM;
+	}
+
+	func->func_addr = probe_addr;
+	func->probe_type = probe_type;
+
+	(*probe)->size = sizeof(*func);
+	(*probe)->func = func;
+
+	return 0;
+}
+
+int add_preload_probes(struct lib_list_t **lib_list)
+{
+	struct lib_list_t *preload_lib = new_lib();
+	struct probe_list_t
+	    *get_caller_probe = new_probe(),
+	    *get_call_type_probe = new_probe();
+	int ret = 0;
+	struct us_func_inst_plane_t *func = NULL;
+
+	if (preload_lib == NULL) {
+		LOGE("preload lib alloc error\n");
+		return 0;
+	}
+
+	if (get_caller_probe == NULL || get_call_type_probe == NULL) {
+		LOGE("probe alloc error\n");
+		return 0;
+	}
+
+	preload_lib->lib->bin_path = probe_lib;
+	preload_lib->func_num = 2;
+
+	/* Add get_caller probe */
+	ret = create_preload_probe_func(&get_caller_probe, get_caller_addr, 4);
+	if (ret != 0)
+		return ret;
+	probe_list_append(preload_lib, get_caller_probe);
+
+	/* Add get_call_type probe */
+	ret = create_preload_probe_func(&get_call_type_probe, get_call_type_addr, 5);
+	if (ret != 0)
+		return ret;
+	probe_list_append(preload_lib, get_call_type_probe);
+
+	preload_lib->func_num = 2;
+	preload_lib->size += strlen(preload_lib->lib->bin_path) + 1 + sizeof(preload_lib->func_num);
+	preload_lib->hash = calc_lib_hash(preload_lib->lib);
+
+	data_list_append((struct data_list_t **)lib_list, (struct data_list_t *)preload_lib);
+
+	return 1;
+}
