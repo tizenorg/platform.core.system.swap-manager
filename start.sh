@@ -1,38 +1,27 @@
 #!/bin/sh
 
-#ERROR CODES
-ERR_CONTAINER_NOT_SUPPORTED=1
-ERR_NO=0
-
-PATH=$PATH:/usr/sbin/
-
-config_file="/etc/config/model-config.xml"
-if [ -e $config_file ]; then
-	grep -i "feature/container[^>]*>[[:blank:]]false" "$config_file" > /dev/null
-	if [ $? -ne 0 ]; then
+if [ -e /etc/config/model-config.xml ]; then
+	grep -i "feature/container[^>]*>[[:blank:]]false" > /dev/null
+	if [ $? -ne 0]; then
 		echo "SWAP is not supported devices with container feature"
-		exit $ERR_CONTAINER_NOT_SUPPORTED
+		exit 1
 	fi
 fi
 
 if [ ! -e /sys/kernel/debug/swap/writer/raw ]; then
 
-    insmod swap_master.ko || exit 1
-    insmod swap_buffer.ko || exit 1  # buffer is loaded
-    insmod swap_ksyms.ko || exit 1
-    insmod swap_driver.ko || exit 1  # driver is loaded
-    insmod swap_writer.ko || exit 1
-    insmod swap_kprobe.ko || exit 1  # kprobe is loaded
-    insmod swap_uprobe.ko || exit 1  # uprobe is loaded
-    insmod swap_us_manager.ko || exit 1  # us_manager is loaded
-    insmod swap_ks_features.ko || exit 1  # ks_features is loaded
-    insmod swap_sampler.ko || exit 1
-    insmod swap_energy.ko || exit 1
-    insmod swap_message_parser.ko || exit 1  # parser is loaded
-    insmod swap_retprobe.ko || exit 1 # retprobe is loaded
-    insmod swap_webprobe.ko || exit 1 # webprobe is loaded
-    insmod swap_task_data.ko || exit 1
-    insmod swap_preload.ko || exit 1
+    /usr/sbin/insmod swap_master.ko || exit 1
+    /usr/sbin/insmod swap_buffer.ko || exit 1  # buffer is loaded
+    /usr/sbin/insmod swap_ksyms.ko || exit 1
+    /usr/sbin/insmod swap_driver.ko || exit 1  # driver is loaded
+    /usr/sbin/insmod swap_writer.ko || exit 1
+    /usr/sbin/insmod swap_kprobe.ko || exit 1  # kprobe is loaded
+    /usr/sbin/insmod swap_uprobe.ko || exit 1  # uprobe is loaded
+    /usr/sbin/insmod swap_us_manager.ko || exit 1  # us_manager is loaded
+    /usr/sbin/insmod swap_ks_features.ko || exit 1  # ks_features is loaded
+    /usr/sbin/insmod swap_sampler.ko || exit 1
+    /usr/sbin/insmod swap_energy.ko || exit 1
+    /usr/sbin/insmod swap_message_parser.ko || exit 1  # parser is loaded
 
 fi
 
@@ -82,5 +71,3 @@ then
 	echo 179 > `ls /sys/kernel/debug/swap/energy/lcd/*/min_num` &&
 	echo 1000000 > `ls /sys/kernel/debug/swap/energy/lcd/*/min_denom`
 fi
-
-exit $ERR_NO
