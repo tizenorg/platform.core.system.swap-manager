@@ -1,5 +1,20 @@
 #!/bin/sh
 
+#ERROR CODES
+ERR_CONTAINER_NOT_SUPPORTED=1
+ERR_NO=0
+
+PATH=$PATH:/usr/sbin/
+
+config_file="/etc/config/model-config.xml"
+if [ -e $config_file ]; then
+	grep -i "feature/container[^>]*>[[:blank:]]false" "$config_file" > /dev/null
+	if [ $? -ne 0 ]; then
+		echo "SWAP is not supported devices with container feature"
+		exit $ERR_CONTAINER_NOT_SUPPORTED
+	fi
+fi
+
 if [ ! -e /sys/kernel/debug/swap/writer/raw ]; then
 
     insmod swap_master.ko || exit 1
@@ -67,3 +82,5 @@ then
 	echo 179 > `ls /sys/kernel/debug/swap/energy/lcd/*/min_num` &&
 	echo 1000000 > `ls /sys/kernel/debug/swap/energy/lcd/*/min_denom`
 fi
+
+exit $ERR_NO
