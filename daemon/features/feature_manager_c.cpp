@@ -93,7 +93,8 @@ extern "C" int fm_stop(void)
 
 extern "C" int fm_set(uint64_t f0, uint64_t f1)
 {
-    const uint64_t f0_support = f0 & (0); /* fill actual features */
+    /* fill actual features (f0_support and f1_support) */
+    const uint64_t f0_support = f0 & (FL_WEB_STARTUP_PROFILING);
     const uint64_t f1_support = f1 & (0);
     std::string f(u64toString(f1_support) + u64toString(f0_support));
 
