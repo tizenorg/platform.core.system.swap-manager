@@ -161,9 +161,7 @@ enum feature_code{
 	FL_ALL_FEATURES			= 0x7FFFFFFFFFFFFULL &
 					  (~FL_RESERVED1) &
 					  (~FL_RESERVED2) &
-					  (~FL_RESERVED3) &
-					  (~FL_RESERVED4)
-
+					  (~FL_RESERVED3)
 };
 
 enum probe_type {

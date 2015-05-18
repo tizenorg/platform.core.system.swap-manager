@@ -42,6 +42,7 @@ if [ ! -e /sys/kernel/debug/swap/writer/raw ]; then
     insmod swap_webprobe.ko         || exit 115  # webprobe is loaded
     insmod swap_task_data.ko        || exit 116
     insmod swap_preload.ko          || exit 117
+    insmod swap_wsp.ko              || exit 118
 
 fi
 
