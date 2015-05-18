@@ -81,6 +81,7 @@ SRC_C := \
 
 SRC_CPP := \
 	features/feature.cpp \
+	features/feature_wsp.cpp \
 	features/feature_manager.cpp \
 	features/feature_manager_c.cpp
 
@@ -98,9 +99,15 @@ all: debug
 
 GENERATED_DIR = include/generated
 GENERATED_WSI_PROF_H = include/generated/wsi_prof.h
-GENERATED_HEADERS := $(GENERATED_WSI_PROF_H)
+GENERATED_WSP_H = include/generated/wsp_data.h
+GENERATED_HEADERS := \
+	$(GENERATED_WSI_PROF_H) \
+	$(GENERATED_WSP_H)
 
 $(GENERATED_WSI_PROF_H): ../scripts/gen_wsi_prof.sh
+	sh $< > $@
+
+$(GENERATED_WSP_H): ../scripts/gen_wsp_data.sh
 	sh $< > $@
 
 $(GENERATED_DIR):
