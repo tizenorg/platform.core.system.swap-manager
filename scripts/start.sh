@@ -91,5 +91,3 @@ then
 	echo 179 > `ls /sys/kernel/debug/swap/energy/lcd/*/min_num` &&
 	echo 1000000 > `ls /sys/kernel/debug/swap/energy/lcd/*/min_denom`
 fi
-
-exit $ERR_NO
