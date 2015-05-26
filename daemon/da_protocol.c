@@ -102,6 +102,7 @@ static void print_conf(struct conf_t *conf);
 
 char *msg_ID_str(enum HostMessageT ID)
 {
+	check_and_return(NMSG_VERSION);
 	check_and_return(NMSG_GET_PROBE_MAP);
 	check_and_return(NMSG_KEEP_ALIVE);
 	check_and_return(NMSG_START);
@@ -633,10 +634,8 @@ static void write_msg_error(const char *err_str)
 static enum HostMessageT get_ack_msg_id(const enum HostMessageT id)
 {
 	switch (id) {
-	case NMSG_GET_PROBE_MAP:
-		return NMSG_GET_PROBE_MAP_ACK;
-	case NMSG_KEEP_ALIVE:
-		return NMSG_KEEP_ALIVE_ACK;
+	case NMSG_VERSION:
+		return NMSG_VERSION_ACK;
 	case NMSG_START:
 		return NMSG_START_ACK;
 	case NMSG_STOP:
@@ -651,8 +650,13 @@ static enum HostMessageT get_ack_msg_id(const enum HostMessageT id)
 		return NMSG_SWAP_INST_ADD_ACK;
 	case NMSG_SWAP_INST_REMOVE:
 		return NMSG_SWAP_INST_REMOVE_ACK;
+	case NMSG_GET_PROBE_MAP:
+		return NMSG_GET_PROBE_MAP_ACK;
+	case NMSG_KEEP_ALIVE:
+		return NMSG_KEEP_ALIVE_ACK;
 	case NMSG_GET_PROCESS_ADD_INFO:
 		return NMSG_GET_PROCESS_ADD_INFO_ACK;
+
 	default:
 		LOGW("Unknown message ID [0x%X]\n", id);
 		LOGW("Generated ack ID [0x%X]\n", id | NMSG_ACK_FLAG);
@@ -978,7 +982,7 @@ static int process_msg_get_probe_map()
 static int process_msg_version()
 {
 	int res;
-	res = sendACKToHost(MSG_VERSION, ERR_NO, PROTOCOL_VERSION,
+	res = sendACKToHost(NMSG_VERSION, ERR_NO, PROTOCOL_VERSION,
 			      sizeof(PROTOCOL_VERSION));
 	return  -(res != 0);
 }
