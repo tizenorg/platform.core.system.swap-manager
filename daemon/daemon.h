@@ -42,6 +42,7 @@
 extern "C" {
 #endif
 
+#include "app_protocol.h" /* from swap-probe-devel package */
 
 #define RUN_APP_LOADER
 
@@ -65,43 +66,7 @@ enum ErrorCode
 	ERR_WRONG_PROTOCOL_VERSION = -205
 };*/
 
-enum TargetMessageType
-{
-	MSG_DEVICE = 1,
-	MSG_TIME = 2,
-	MSG_SAMPLE = 3,
-	MSG_RESOURCE = 4,
-	MSG_LOG = 5,
-	MSG_IMAGE = 6,
-	MSG_TERMINATE = 7,
-	MSG_PID = 8,
-	MSG_MSG = 9,
-	MSG_ALLOC = 10,
-	MSG_ERROR = 11,
-	MSG_WARNING = 12
-};
 #define IS_PROBE_MSG(type) (((type) & 0x0100) == 0x0100)
-
-enum HostMessageType
-{
-	MSG_HOST_BEGIN = 100,
-	MSG_START = 100,
-	MSG_STOP = 101,
-	MSG_PAUSE = 102,
-	MSG_OPTION = 103,
-	MSG_ISALIVE = 104,
-	MSG_ALIVE = 105,
-	MSG_BATT_START = 106,
-	MSG_BATT_STOP = 107,
-	MSG_CAPTURE_SCREEN = 108,
-	MSG_MAPS_INST_LIST = 109,
-	MSG_RECORD = 801,
-	MSG_REPLAY = 802,
-	MSG_OK = 901,
-	MSG_NOTOK = 902,
-	MSG_VERSION = 999,
-	MSG_HOST_END = 999
-};
 
 enum DAState
 {
