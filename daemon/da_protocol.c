@@ -99,45 +99,14 @@ static void print_conf(struct conf_t *conf);
 //DEBUG FUNCTIONS
 #define dstr(x) #x
 #define check_and_return(check) if ( ID == check ) {return dstr(check);}
+#define X(id, val) check_and_return(id);
 
 char *msg_ID_str(enum HostMessageT ID)
 {
-	check_and_return(NMSG_GET_PROBE_MAP);
-	check_and_return(NMSG_KEEP_ALIVE);
-	check_and_return(NMSG_START);
-	check_and_return(NMSG_STOP);
-	check_and_return(NMSG_CONFIG);
-	check_and_return(NMSG_BINARY_INFO);
-	check_and_return(NMSG_GET_TARGET_INFO);
-	check_and_return(NMSG_SWAP_INST_ADD);
-	check_and_return(NMSG_SWAP_INST_REMOVE);
-	check_and_return(NMSG_GET_SCREENSHOT);
-	check_and_return(NMSG_GET_PROCESS_ADD_INFO);
-
-	check_and_return(NMSG_KEEP_ALIVE_ACK);
-	check_and_return(NMSG_START_ACK);
-	check_and_return(NMSG_STOP_ACK);
-	check_and_return(NMSG_CONFIG_ACK);
-	check_and_return(NMSG_BINARY_INFO_ACK);
-	check_and_return(NMSG_SWAP_INST_ACK);
-	check_and_return(NMSG_GET_TARGET_INFO_ACK);
-	check_and_return(NMSG_SWAP_INST_ADD_ACK);
-	check_and_return(NMSG_SWAP_INST_REMOVE_ACK);
-	check_and_return(NMSG_GET_PROCESS_ADD_INFO_ACK);
-
-	check_and_return(NMSG_PROCESS_INFO);
-	check_and_return(NMSG_TERMINATE);
-	check_and_return(NMSG_ERROR);
-	check_and_return(NMSG_SAMPLE);
-	check_and_return(NMSG_SYSTEM);
-	check_and_return(NMSG_IMAGE);
-	check_and_return(NMSG_RECORD);
-	check_and_return(NMSG_FUNCTION_ENTRY);
-	check_and_return(NMSG_FUNCTION_EXIT);
-	check_and_return(NMSG_CONTEXT_SWITCH_ENTRY);
-	check_and_return(NMSG_CONTEXT_SWITCH_EXIT);
+	MSG_ID_LIST
 	return "HZ";
 }
+#undef X
 
 
 static char *msgErrStr(enum ErrorCode err)
@@ -633,26 +602,9 @@ static void write_msg_error(const char *err_str)
 static enum HostMessageT get_ack_msg_id(const enum HostMessageT id)
 {
 	switch (id) {
-	case NMSG_GET_PROBE_MAP:
-		return NMSG_GET_PROBE_MAP_ACK;
-	case NMSG_KEEP_ALIVE:
-		return NMSG_KEEP_ALIVE_ACK;
-	case NMSG_START:
-		return NMSG_START_ACK;
-	case NMSG_STOP:
-		return NMSG_STOP_ACK;
-	case NMSG_CONFIG:
-		return NMSG_CONFIG_ACK;
-	case NMSG_BINARY_INFO:
-		return NMSG_BINARY_INFO_ACK;
-	case NMSG_GET_TARGET_INFO:
-		return NMSG_GET_TARGET_INFO_ACK;
-	case NMSG_SWAP_INST_ADD:
-		return NMSG_SWAP_INST_ADD_ACK;
-	case NMSG_SWAP_INST_REMOVE:
-		return NMSG_SWAP_INST_REMOVE_ACK;
-	case NMSG_GET_PROCESS_ADD_INFO:
-		return NMSG_GET_PROCESS_ADD_INFO_ACK;
+		#define X(id, val) case id: return id ## _ACK;
+		MSG_ID_LIST
+		#undef X
 	default:
 		LOGW("Unknown message ID [0x%X]\n", id);
 		LOGW("Generated ack ID [0x%X]\n", id | NMSG_ACK_FLAG);
@@ -978,7 +930,7 @@ static int process_msg_get_probe_map()
 static int process_msg_version()
 {
 	int res;
-	res = sendACKToHost(MSG_VERSION, ERR_NO, PROTOCOL_VERSION,
+	res = sendACKToHost(NMSG_VERSION, ERR_NO, PROTOCOL_VERSION,
 			      sizeof(PROTOCOL_VERSION));
 	return  -(res != 0);
 }
