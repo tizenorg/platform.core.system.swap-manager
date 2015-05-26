@@ -1068,7 +1068,7 @@ static int process_msg_get_screenshot(struct msg_buf_t *msg_control)
 	enum ErrorCode err_code = ERR_UNKNOWN;
 
 	// send config message to target process
-	sendlog.type = MSG_CAPTURE_SCREEN;
+	sendlog.type = APP_MSG_CAPTURE_SCREEN;
 	sendlog.length = 0;
 	log_len = sizeof(sendlog.type) + sizeof(sendlog.length) + sendlog.length;
 
@@ -1273,7 +1273,7 @@ int host_message_handler(struct msg_t *msg)
 		//send ack to host
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		// send config message to target process
-		sendlog.type = MSG_OPTION;
+		sendlog.type = APP_MSG_CONFIG;
 		sendlog.length = snprintf(sendlog.data, sizeof(sendlog.data),
 					  "%llu",
 					  (unsigned long long)
