@@ -111,16 +111,13 @@ static void* recvThread(void* data)
 		}
 
 		log.data[log.length] = '\0';
-		if(log.type == MSG_ALLOC)
-		{
+		if (log.type == APP_MSG_ALLOC) {
 			target->allocmem = str_to_int64(log.data);
 			continue;		// don't send to host
-		}
-		else if(log.type == MSG_PID)
-		{
-			LOGI("MSG_PID arrived (pid ppid): %s\n", log.data);
+		} else if (log.type == APP_MSG_PID) {
+			LOGI("APP_MSG_PID arrived (pid ppid): %s\n", log.data);
 
-			// only when first MSG_PID is arrived
+			/* only when first APP_MSG_PID is arrived */
 			if (target_get_pid(target) == UNKNOWN_PID) {
 				int n;
 				pid_t pid, ppid;
@@ -149,10 +146,8 @@ static void* recvThread(void* data)
 			}
 			send_maps_inst_msg_to(target);
 			continue;		// don't send to host
-		}
-		else if(log.type == MSG_TERMINATE)
-		{
-			LOGI("MSG_TERMINATE arrived: pid[%d]\n",
+		} else if (log.type == APP_MSG_TERMINATE) {
+			LOGI("APP_MSG_TERMINATE arrived: pid[%d]\n",
 			     target_get_pid(target));
 
 			// send stop message to main thread
@@ -161,27 +156,28 @@ static void* recvThread(void* data)
 			      sizeof(uint64_t));
 
 			break;
-		} else if (log.type == MSG_MSG) {
+		} else if (log.type == APP_MSG_MSG) {
 			// don't send to host
 			LOGI("EXTRA '%s'\n", log.data);
 			continue;
-		} else if (log.type == MSG_ERROR) {
+		} else if (log.type == APP_MSG_ERROR) {
 			// don't send to host
 			LOGE("EXTRA '%s'\n", log.data);
 			continue;
-		} else if (log.type == MSG_WARNING) {
+		} else if (log.type == APP_MSG_WARNING) {
 			// don't send to host
 			LOGW("EXTRA '%s'\n", log.data);
 			continue;
-		} else if (log.type == MSG_IMAGE) {
+		} else if (log.type == APP_MSG_IMAGE) {
 			/* need chsmak */
 			void *p = log.data;
 			char *file_name = p;
 
 			if (access(file_name, F_OK) != -1) {
-				LOGI("MSG_IMAGE> <%s>\n", file_name);
+				LOGI("APP_MSG_IMAGE> <%s>\n", file_name);
 			} else {
-				LOGE("MSG_IMAGE> File not found <%s>\n", file_name);
+				LOGE("APP_MSG_IMAGE> File not found <%s>\n",
+				     file_name);
 				continue;
 			}
 
@@ -207,8 +203,7 @@ static void* recvThread(void* data)
 			continue;
 		}
 #ifdef PRINT_TARGET_LOG
-		else if(log.type == MSG_LOG)
-		{
+		else if (log.type == APP_MSG_LOG) {
 			switch(log.data[0])
 			{
 				case '2':	// UI control creation log
@@ -221,14 +216,13 @@ static void* recvThread(void* data)
 				default:
 					break;
 			}
-		}
-		else 	// not MSG_LOG and not MSG_IMAGE
-		{
+		} else {
+			/* not APP_MSG_LOG and not APP_MSG_IMAGE */
 			LOGI("Extra MSG TYPE (%d|%d|%s)\n", log.type, log.length, log.data);
 		}
 #endif
 
-		// do not send any message to host until MSG_PID message arrives
+		/* do not send any message to host until APP_MSG_PID message arrives */
 		if(unlikely(pass == 0))
 		{
 			while(target->initial_log == 0)

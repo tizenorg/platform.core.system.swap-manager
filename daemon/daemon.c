@@ -313,7 +313,7 @@ static int exec_app(const struct app_info_t *app_info)
 static void terminate_all_target()
 {
 	struct msg_target_t msg = {
-		.type = MSG_STOP,
+		.type = APP_MSG_STOP,
 		.length = 0
 	};
 
@@ -744,7 +744,7 @@ static int targetServerHandler(void)
 	err = target_accept(target, manager.target_server_socket);
 	if (err == 0) {
 		/* send config message to target process */
-		log.type = MSG_OPTION;
+		log.type = APP_MSG_CONFIG;
 		log.length = snprintf(log.data, sizeof(log.data), "%llu",
 				      prof_session.conf.use_features0) + 1;
 		if (target_send_msg(target, &log) != 0)

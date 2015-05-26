@@ -643,7 +643,7 @@ static void generate_maps_inst_msg(struct user_space_inst_t *us_inst)
 		free(lib_maps_message);
 
 	lib_maps_message = malloc(total_len);
-	lib_maps_message->type = MSG_MAPS_INST_LIST;
+	lib_maps_message->type = APP_MSG_MAPS_INST_LIST;
 	lib_maps_message->length = total_len;
 
 	/* pack data */
