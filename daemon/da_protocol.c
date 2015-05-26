@@ -794,46 +794,64 @@ enum ErrorCode stop_all(void)
 }
 
 struct binary_ack {
+	char *bin_path;
 	uint32_t type;
-	char *binpath;
+	char *local_bin_path;
 	md5_byte_t digest[16];
 };
 
 static void binary_ack_free(struct binary_ack *ba)
 {
-	if (ba)
-		free(ba->binpath);
+	if (ba) {
+		free(ba->bin_path);
+		free(ba->local_bin_path);
+	}
 	free(ba);
 }
 
 static size_t binary_ack_size(const struct binary_ack *ba)
 {
 	/* MD5 is 16 bytes, so 16*2 hex digits */
-	return sizeof(uint32_t) + strlen(ba->binpath) + 1
-		+ 2*16 + 1;
+	return strlen(ba->bin_path) + 1 +
+	       sizeof(uint32_t) +
+	       strlen(ba->local_bin_path) + 1 +
+	       2*16 + 1;
 }
 
-static size_t binary_ack_pack(char *s, const struct binary_ack *ba)
+static size_t binary_ack_pack(char *to, const struct binary_ack *ba)
 {
-	unsigned int len = strlen(ba->binpath) + 1;
+	char *head;
+	size_t len;
 	int i;
-	*(uint32_t *) s = ba->type;
-	s += sizeof(uint32_t);
 
-	if (len)
-		memcpy(s, ba->binpath, len);
-	s += len;
+	head = to;
 
-	for (i = 0; i!= 16; ++i) {
+	if (to == NULL)
+		goto exit;
+
+	len = strlen(ba->bin_path) + 1;
+	memcpy(to, ba->bin_path, len);
+	to += len;
+
+	*(uint32_t *) to = ba->type;
+	to += sizeof(uint32_t);
+
+	len = strlen(ba->local_bin_path) + 1;
+	memcpy(to, ba->local_bin_path, len);
+	to += len;
+
+	for (i = 0; i != 16; ++i) {
 		/* we should use snprintf, snprintf prints data including
 		 * terminate '\0' so we need print 3 symbols
 		 */
-		snprintf(s, 3, "%02x", ba->digest[i]);
-		s += 2;
+		snprintf(to, 3, "%02x", ba->digest[i]);
+		to += 2;
 	}
-	*s = '\0';
+	*to = '\0';
+	to += 1;
 
-	return sizeof(uint32_t) + len + 2*16 + 1;
+exit:
+	return (size_t)(to - head);
 }
 
 static void get_file_md5sum(md5_byte_t digest[16], const char *filename)
@@ -882,10 +900,12 @@ static struct binary_ack* binary_ack_alloc(const char *filename)
 	struct binary_ack *ba = malloc(sizeof(*ba));
 	struct stat decoy;
 	char builddir[PATH_MAX];
-	char binpath[PATH_MAX];
+	char local_bin_path[PATH_MAX];
 
 	builddir[0]='\0';
-	binpath[0]='\0';
+	local_bin_path[0]='\0';
+
+	ba->bin_path = strdup(filename);
 
 	if (stat(filename, &decoy) == 0) {
 		ba->type = get_binary_type(filename);
@@ -894,14 +914,14 @@ static struct binary_ack* binary_ack_alloc(const char *filename)
 			get_build_dir(builddir, filename);
 
 		if (builddir[0] != '\0')
-			snprintf(binpath, sizeof(binpath), check_windows_path(builddir) ?
+			snprintf(local_bin_path, sizeof(local_bin_path), check_windows_path(builddir) ?
 				 "%s\\%s" : "%s/%s", builddir, basename(filename) ?: "");
 
-		ba->binpath = strdup(binpath);
+		ba->local_bin_path = strdup(local_bin_path);
 		get_file_md5sum(ba->digest, filename);
 	} else {
 		ba->type = BINARY_TYPE_FILE_NOT_EXIST;
-		ba->binpath = strdup(filename);
+		ba->local_bin_path = strdup(filename);
 		memset(ba->digest, 0x00, sizeof(ba->digest));
 	}
 
@@ -939,7 +959,7 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 			LOGW("binary is not ELF binary <%s>\n", str);
 		}
 
-		if (new->binpath[0] == '\0')
+		if (new->local_bin_path[0] == '\0')
 			LOGW("section '.debug_str' not found in <%s>\n", str);
 		acks[i] = new;
 		total_size += binary_ack_size(new);
