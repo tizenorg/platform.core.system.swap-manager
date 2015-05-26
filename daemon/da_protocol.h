@@ -38,48 +38,32 @@
 
 #define PROTOCOL_VERSION "4.0"
 
+
+#include "da_msg_ids.h"
+
 enum HostMessageT {
-NMSG_VERSION				=0x0001,
-NMSG_START				=0x0002,
-NMSG_STOP				=0x0003,
-NMSG_CONFIG				=0x0004,
-NMSG_BINARY_INFO			=0x0005,
-NMSG_GET_TARGET_INFO			=0x0007,
-NMSG_SWAP_INST_ADD			=0x0008,
-NMSG_SWAP_INST_REMOVE			=0x0009,
-NMSG_GET_PROBE_MAP			=0x000A,
-NMSG_KEEP_ALIVE				=0x000F,
-NMSG_GET_SCREENSHOT			=0x0010,
-NMSG_GET_PROCESS_ADD_INFO		=0x0011,
-NMSG_WRT_LAUNCHER_PORT			=0x8001,
 
-NMSG_ACK_FLAG				=0x1000,
+/* msg ids */
+	#define X(id, val) id = val,
+	MSG_ID_LIST
+	#undef X
 
-NMSG_VERSION_ACK			=0x1001,
-NMSG_START_ACK				=0x1002,
-NMSG_STOP_ACK				=0x1003,
-NMSG_CONFIG_ACK				=0x1004,
-NMSG_BINARY_INFO_ACK			=0x1005,
-NMSG_SWAP_INST_ACK			=0x1006,
-NMSG_GET_TARGET_INFO_ACK		=0x1007,
-NMSG_SWAP_INST_ADD_ACK			=0x1008,
-NMSG_SWAP_INST_REMOVE_ACK		=0x1009,
-NMSG_GET_PROBE_MAP_ACK			=0x100A,
-NMSG_KEEP_ALIVE_ACK			=0x100F,
-NMSG_GET_PROCESS_ADD_INFO_ACK		=0x1011,
+	NMSG_WRT_LAUNCHER_PORT			=0x8001,
+	NMSG_ACK_FLAG				=0x1000,
 
-NMSG_PROCESS_INFO			=0x0001,	//	target process info
-NMSG_TERMINATE				=0x0002,	//terminate
-NMSG_ERROR					=0x0003,	//error message
-NMSG_SAMPLE					=0x0004,	//N	10ms
-NMSG_SYSTEM					=0x0005,	//N	10~1000ms	DaData, start sending immediately after start message from host, first system message time is tracing start time
-NMSG_IMAGE					=0x0006,	//N	irregular	image
-NMSG_RECORD					=0x0007,	//N	irregular	replay event
-NMSG_FUNCTION_ENTRY			=0x0008,	//N	irregular	swap instrumentation, Instrumented functions by AppInst and LibInst
-NMSG_FUNCTION_EXIT			=0x0009,	//N	irregular	swap instrumentation, Instrumented functions by AppInst and LibInst
-NMSG_CONTEXT_SWITCH_ENTRY	=0x0010,	//N	irregular	swap instrumentation for kernel
-NMSG_CONTEXT_SWITCH_EXIT	=0x0011,	//N	irregular	swap instrumentation for kernel
+/* msg ACK */
+	#define X(id, val) id ## _ACK = val + NMSG_ACK_FLAG,
+	MSG_ID_LIST
+	#undef X
 };
+
+
+enum DataMessageT {
+	#define X(id, val) id = val,
+	DATA_MSG_ID_LIST
+	#undef X
+};
+
 #define MSG_MAX_NUM NMSG_SWAP_INST_REMOVE
 
 enum ErrorCode {
