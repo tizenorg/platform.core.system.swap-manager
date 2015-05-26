@@ -102,6 +102,7 @@ static void print_conf(struct conf_t *conf);
 
 char *msg_ID_str(enum HostMessageT ID)
 {
+	check_and_return(NMSG_VERSION);
 	check_and_return(NMSG_GET_PROBE_MAP);
 	check_and_return(NMSG_KEEP_ALIVE);
 	check_and_return(NMSG_START);
@@ -978,7 +979,7 @@ static int process_msg_get_probe_map()
 static int process_msg_version()
 {
 	int res;
-	res = sendACKToHost(MSG_VERSION, ERR_NO, PROTOCOL_VERSION,
+	res = sendACKToHost(NMSG_VERSION, ERR_NO, PROTOCOL_VERSION,
 			      sizeof(PROTOCOL_VERSION));
 	return  -(res != 0);
 }
