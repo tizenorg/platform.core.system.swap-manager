@@ -92,3 +92,11 @@ then
 	echo 179 > `ls /sys/kernel/debug/swap/energy/lcd/*/min_num` &&
 	echo 1000000 > `ls /sys/kernel/debug/swap/energy/lcd/*/min_denom`
 fi
+
+#Preload
+if [ -d /sys/kernel/debug/swap/preload/ ]
+then
+	./init_preload.sh
+fi
+
+exit $ERR_NO

@@ -49,6 +49,7 @@ cd daemon
 %{_prefix}/bin/da_manager
 /opt/swap/sdk/start.sh
 /opt/swap/sdk/stop.sh
+/opt/swap/sdk/init_preload.sh
 
 %changelog
 
