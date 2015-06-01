@@ -1,10 +1,32 @@
 #!/bin/sh
 
-lib_file=`rpm -ql webkit2-efl-debuginfo | grep "libewebkit2.so.debug$" | head -1`
+get_addr()
+{
+	name=$1
 
-inspector_addr=`readelf -sW ${lib_file} | grep ewk_context_inspector_server_start | awk '{print "0x"$2}'`
-willexecute_addr=`readelf -sW ${lib_file} | grep ProfileGenerator11willExecute | awk '{print "0x"$2}'`
-didexecute_addr=`readelf -sW ${lib_file} | grep ProfileGenerator10didExecute | awk '{print "0x"$2}'`
+	addr=$(cat ${tmp} | grep " $name$" | awk '{print $2}')
+	if [ -z "$addr" ]; then
+		echo "ERROR: symbol '$name' not found" >&2
+		exit 1
+	fi
+
+	echo 0x$addr
+}
+
+lib_file=$(rpm -ql webkit2-efl-debuginfo | grep "libewebkit2.so.debug$" | head -1)
+tmp=$(mktemp)
+
+readelf -sW ${lib_file} | grep " FUNC " > ${tmp}
+
+inspector_addr=$(get_addr ewk_context_inspector_server_start);
+willexecute_addr=$(get_addr _ZN3JSC16ProfileGenerator11willExecuteEPNS_9ExecStateERKNS_14CallIdentifierE);
+didexecute_addr=$(get_addr _ZN3JSC16ProfileGenerator10didExecuteEPNS_9ExecStateERKNS_14CallIdentifierE);
+
+rm ${tmp}
+
+if [ -z "${inspector_addr}" -o -z "${willexecute_addr}" -o -z "${didexecute_addr}" ]; then
+	exit 1
+fi
 
 cat << EOF
 /*
