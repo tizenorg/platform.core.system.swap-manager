@@ -26,8 +26,8 @@
 #include "feature.h"
 #include "feature_manager.h"
 
-#include "../common.h"
-#include "../debug.h"
+#include "common.h"
+#include "debug.h"
 #include "wsp_data.h"       /* auto generate */
 
 
