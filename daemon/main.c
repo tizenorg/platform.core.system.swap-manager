@@ -50,7 +50,7 @@
 #include "debug.h"
 #include "utils.h"
 #include "smack.h"
-#include "features/feature_manager_c.h"
+#include "cpp/features/feature_manager_c.h"
 
 #define SINGLETON_LOCKFILE			"/tmp/da_manager.lock"
 #define PORTFILE					"/tmp/port.da"

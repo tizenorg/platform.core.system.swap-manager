@@ -21,7 +21,7 @@
 
 #include "feature_manager.h"
 #include "feature.h"
-#include "../debug.h"   /* TODO: correct path */
+#include "debug.h"
 
 
 typedef std::lock_guard <std::mutex> lock_guard_mutex;

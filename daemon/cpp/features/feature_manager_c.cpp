@@ -24,7 +24,7 @@
 
 #include "feature_manager_c.h"
 #include "feature_manager.h"
-#include "../debug.h"           /* TODO: correct path */
+#include "debug.h"
 
 
 static std::string u64toString(uint64_t val)
