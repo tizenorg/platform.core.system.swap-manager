@@ -115,7 +115,7 @@ int Feature::enable()
         }
     }
 
-    _flag = FEnable;
+    _flag = F_ENABLE;
     return 0;
 }
 
