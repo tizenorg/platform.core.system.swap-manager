@@ -1058,7 +1058,7 @@ static int process_msg_get_screenshot(struct msg_buf_t *msg_control)
 	sendlog.length = 0;
 	log_len = sizeof(sendlog.type) + sizeof(sendlog.length) + sendlog.length;
 
-	if (target_send_msg_to_all(&sendlog) == 1)
+	if (target_send_msg_to_all(&sendlog) == 0)
 		err_code = ERR_NO;
 
 	return -(err_code != ERR_NO);
