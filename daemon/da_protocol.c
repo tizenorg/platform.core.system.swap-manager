@@ -566,49 +566,6 @@ static size_t str_array_getsize(const char **strings, size_t len)
 	return size;
 }
 
-
-static struct msg_t *gen_target_info_reply(struct target_info_t *target_info)
-{
-	struct msg_t *msg;
-	char *p = NULL;
-	uint32_t ret_id = ERR_NO;
-
-	msg = malloc(sizeof(*msg) +
-		     sizeof(ret_id) +
-		     sizeof(*target_info) -
-		     sizeof(target_info->network_type) +
-		     strlen(target_info->network_type) + 1 +
-		     sizeof(uint32_t) + /* devices count */
-		     str_array_getsize(supported_devices_strings,
-				       supported_devices_count));
-	if (!msg) {
-		LOGE("Cannot alloc target info msg\n");
-		free(msg);
-		return NULL;
-	}
-
-	msg->id = NMSG_GET_TARGET_INFO_ACK;
-	p = msg->payload;
-
-	pack_int32(p, ret_id);
-	pack_int64(p, target_info->sys_mem_size);
-	pack_int64(p, target_info->storage_size);
-	pack_int32(p, target_info->bluetooth_supp);
-	pack_int32(p, target_info->gps_supp);
-	pack_int32(p, target_info->wifi_supp);
-	pack_int32(p, target_info->camera_count);
-	pack_str(p, target_info->network_type);
-	pack_int32(p, target_info->max_brightness);
-	pack_int32(p, target_info->cpu_core_count);
-	pack_int32(p, supported_devices_count);
-	p = pack_str_array(p, supported_devices_strings,
-			   supported_devices_count);
-
-	msg->len = p - msg->payload;
-
-	return msg;
-}
-
 static int send_reply(struct msg_t *msg)
 {
 	printBuf((char *)msg, msg->len + sizeof (*msg));
@@ -1234,9 +1191,63 @@ send_ack:
 	return -(err_code != ERR_NO);
 }
 
-int host_message_handler(struct msg_t *msg)
+int process_msg_get_target_info()
 {
 	struct target_info_t target_info;
+	enum ErrorCode error_code = ERR_NO;
+	uint32_t payload_len = 0;
+	char *payload;
+	char *p = NULL;
+
+	fill_target_info(&target_info);
+
+	payload = malloc(sizeof(target_info) -
+			 sizeof(target_info.network_type) +
+			 strlen(target_info.network_type) + 1 +
+			 sizeof(uint32_t) + /* devices count */
+			 str_array_getsize(supported_devices_strings,
+					   supported_devices_count));
+
+	if (payload == NULL) {
+		LOGE("Cannot alloc target info msg\n");
+		/* TODO set error out of memory */
+		error_code = ERR_UNKNOWN;
+		goto send_ack;
+	}
+
+	p = payload;
+
+	pack_int64(p, target_info.sys_mem_size);
+	pack_int64(p, target_info.storage_size);
+	pack_int32(p, target_info.bluetooth_supp);
+	pack_int32(p, target_info.gps_supp);
+	pack_int32(p, target_info.wifi_supp);
+	pack_int32(p, target_info.camera_count);
+	pack_str(p, target_info.network_type);
+	pack_int32(p, target_info.max_brightness);
+	pack_int32(p, target_info.cpu_core_count);
+	pack_int32(p, supported_devices_count);
+	p = pack_str_array(p, supported_devices_strings,
+			   supported_devices_count);
+
+	payload_len = p - payload;
+
+send_ack:
+	if (sendACKToHost(NMSG_GET_TARGET_INFO, error_code, payload, payload_len) != 0) {
+		LOGE("Cannot send ACK");
+		error_code = ERR_UNKNOWN;
+		goto exit;
+	}
+
+exit:
+	free(payload);
+	reset_target_info(&target_info);
+	return -(error_code != ERR_NO);
+}
+
+
+int host_message_handler(struct msg_t *msg)
+{
 	struct msg_t *msg_reply = NULL;
 	struct msg_t *msg_reply_additional = NULL;
 	struct msg_buf_t msg_control;
@@ -1358,19 +1369,7 @@ int host_message_handler(struct msg_t *msg)
 		}
 		goto send_ack;
 	case NMSG_GET_TARGET_INFO:
-		fill_target_info(&target_info);
-		msg_reply = gen_target_info_reply(&target_info);
-		if (!msg_reply) {
-			LOGE("cannot generate reply message\n");
-			sendACKToHost(msg->id, ERR_UNKNOWN, 0, 0);
-			return -1;
-		}
-		if (send_reply(msg_reply) != 0) {
-			LOGE("Cannot send reply\n");
-		}
-		free(msg_reply);
-		reset_target_info(&target_info);
-		break;
+		return process_msg_get_target_info();
 	case NMSG_GET_SCREENSHOT:
 		return process_msg_get_screenshot(&msg_control);
 	case NMSG_GET_PROCESS_ADD_INFO:
