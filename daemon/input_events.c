@@ -319,16 +319,19 @@ void write_input_event(int id, struct input_event *ev)
 
 int init_input_events(void)
 {
+	int res = 0;
+
 	_get_fds(g_key_dev, INPUT_ID_KEY);
+	_get_fds(g_touch_dev, INPUT_ID_TOUCH);
+
 	if (g_key_dev[0].fd == ARRAY_END) {
 		LOGE("No key devices found.\n");
-		return -1;
+		res = -1;
 	}
-	_get_fds(g_touch_dev, INPUT_ID_TOUCH);
 	if (g_touch_dev[0].fd == ARRAY_END) {
 		LOGE("No touch devices found.\n");
-		return -1;
+		res = -1;
 	}
 
-	return 0;
+	return res;
 }
