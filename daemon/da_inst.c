@@ -67,22 +67,6 @@ static int data_list_make_hash(struct data_list_t *what)
 }
 
 //------------ create - destroy
-static struct data_list_t *new_data(void)
-{
-	struct data_list_t *lib;
-	lib = malloc(sizeof(*lib));
-	if (lib == NULL) {
-		LOGE("can not malloc buffer for data_list_t lib \n");
-		return NULL;
-	}
-	lib->next = NULL;
-	lib->prev = NULL;
-	lib->hash = 0;
-	lib->size = 0;
-	lib->list = NULL;
-	return lib;
-}
-
 static void free_probe_element(struct probe_list_t *probe)
 {
 	free(probe->func);
@@ -111,6 +95,22 @@ static void free_data(struct data_list_t *lib)
 	free_data_element(lib);
 }
 
+static struct data_list_t *new_data(void)
+{
+	struct data_list_t *lib = malloc(sizeof(*lib));
+
+	if (lib) {
+		lib->next = NULL;
+		lib->prev = NULL;
+		lib->hash = 0;
+		lib->size = 0;
+		lib->list = NULL;
+	} else {
+		LOGE("Cannot allocate memory for struct data_list_t\n");
+	}
+
+	return lib;
+}
 
 struct lib_list_t *new_lib(void)
 {
@@ -552,6 +552,7 @@ static int generate_msg(struct msg_t **msg, struct lib_list_t *lib_list, struct 
 		 apps_size = 0,
 		 libs_count = 0,
 		 apps_count = 0;
+		 int res = 1; /* no error */
 	char	 *p = NULL;
 
 	packed_lib_list = pack_lib_list_to_array(lib_list, &libs_size, &libs_count);
@@ -567,9 +568,11 @@ static int generate_msg(struct msg_t **msg, struct lib_list_t *lib_list, struct 
 	// add header size
 	*msg = malloc(size + sizeof(**msg));
 	if (*msg == NULL) {
-		LOGE("can not malloc buffer for msg\n");
-		return 0;
+		LOGE("Cannot allocate memory for struct msg_t \n");
+		res = 0;
+		goto exit_free;
 	}
+
 	memset(*msg, '*', size);
 
 	p = (char *)*msg;
@@ -589,11 +592,12 @@ static int generate_msg(struct msg_t **msg, struct lib_list_t *lib_list, struct 
 		app_p += app->size;
 		app = app->next;
 	}
+exit_free:
 	free(packed_lib_list);
 	free(packed_app_list);
 
 	// print_buf((char *)*msg, size, "ANSWER");
-	return 1;
+	return res;
 }
 
 static void lock_lib_maps_message()
