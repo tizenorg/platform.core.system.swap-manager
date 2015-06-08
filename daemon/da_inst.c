@@ -66,44 +66,7 @@ static int data_list_make_hash(struct data_list_t *what)
 	return 0;
 }
 
-//------------ create - destroy
-static struct data_list_t *new_data(void)
-{
-	struct data_list_t *lib = malloc(sizeof(*lib));
-	lib->next = NULL;
-	lib->prev = NULL;
-	lib->hash = 0;
-	lib->size = 0;
-	lib->list = NULL;
-	return lib;
-}
-
-struct lib_list_t *new_lib(void)
-{
-	struct lib_list_t *lib = (struct lib_list_t *)new_data();
-	lib->lib = malloc(sizeof(*lib->lib));
-	memset(lib->lib, 0, sizeof(*lib->lib));
-	return lib;
-}
-
-struct app_list_t *new_app(void)
-{
-	struct app_list_t *app = (struct app_list_t *)new_data();
-	app->app = malloc(sizeof(*app->app));
-	memset(app->app, 0, sizeof(*app->app));
-	return app;
-}
-
-struct probe_list_t *new_probe(void)
-{
-	struct probe_list_t *probe = malloc(sizeof(*probe));
-	probe->next = NULL;
-	probe->prev = NULL;
-	probe->size = 0;
-	probe->func = NULL;
-	return probe;
-}
-
+//free memory
 static void free_probe_element(struct probe_list_t *probe)
 {
 	free(probe->func);
@@ -141,6 +104,83 @@ void free_data_list(struct data_list_t **data)
 		*data = next;
 	}
 }
+
+//------------ create - destroy
+static struct data_list_t *new_data(void)
+{
+	struct data_list_t *lib = malloc(sizeof(*lib));
+
+	if (lib) {
+		lib->next = NULL;
+		lib->prev = NULL;
+		lib->hash = 0;
+		lib->size = 0;
+		lib->list = NULL;
+	} else {
+		LOGI("Cannot allocate memory for struct data_list_t\n");
+	}
+
+	return lib;
+}
+
+struct lib_list_t *new_lib(void)
+{
+	struct lib_list_t *lib = NULL;
+
+	lib = (struct lib_list_t *)new_data();
+	if (lib == NULL) {
+		LOGE("Cannot allocate memory for lib\n");
+		goto exit_fail;
+	}
+	lib->lib = malloc(sizeof(*lib->lib));
+	if (lib->lib == NULL) {
+		LOGI("Cannot locate memory for new lib\n");
+		goto exit_fail_free_lib;
+	}
+	memset(lib->lib, 0, sizeof(*lib->lib));
+
+exit_fail_free_lib:
+	free_data(lib);
+exit_fail:
+	return lib;
+}
+
+struct app_list_t *new_app(void)
+{
+	struct app_list_t *app = NULL;
+
+	app = (struct app_list_t *)new_data();
+	if (app == NULL) {
+		LOGI("Cannot allocate memory for new app\n");
+		goto fail_exit;
+	}
+	app->app = malloc(sizeof(*app->app));
+	if (app->app == NULL) {
+		LOGI("Cannot allocate memory for app->app\n");
+		goto exit_with_free;
+	}
+	memset(app->app, 0, sizeof(*app->app));
+
+exit_with_free:
+	free_data(app);
+fail_exit:
+	return app;
+}
+
+struct probe_list_t *new_probe(void)
+{
+	struct probe_list_t *probe = malloc(sizeof(*probe));
+	if (probe) {
+		probe->next = NULL;
+		probe->prev = NULL;
+		probe->size = 0;
+		probe->func = NULL;
+	} else {
+		LOGI("Cannot allocate memory for struct probe_list_t\n");
+	}
+	return probe;
+}
+
 
 //------------- add - remove
 int data_list_append(struct data_list_t **to, struct data_list_t *from)
@@ -505,6 +545,7 @@ static int generate_msg(struct msg_t **msg, struct lib_list_t *lib_list, struct 
 		 apps_size = 0,
 		 libs_count = 0,
 		 apps_count = 0;
+		 int res = 1; /* no error */
 	char	 *p = NULL;
 
 	packed_lib_list = pack_lib_list_to_array(lib_list, &libs_size, &libs_count);
@@ -519,6 +560,12 @@ static int generate_msg(struct msg_t **msg, struct lib_list_t *lib_list, struct 
 
 	// add header size
 	*msg = malloc(size + sizeof(**msg));
+	if (*msg == NULL) {
+		LOGI("Cannot allocate memory for struct msg_t \n");
+		res = 0;
+		goto exit_free;
+	}
+
 	memset(*msg, '*', size);
 
 	p = (char *)*msg;
@@ -538,12 +585,12 @@ static int generate_msg(struct msg_t **msg, struct lib_list_t *lib_list, struct 
 		app_p += app->size;
 		app = app->next;
 	}
-
+exit_free:
 	free(packed_lib_list);
 	free(packed_app_list);
 
 	// print_buf((char *)*msg, size, "ANSWER");
-	return 1;
+	return res;
 }
 
 static void lock_lib_maps_message()
