@@ -222,16 +222,17 @@ int fill_data_msg_head (struct msg_data_t *data, uint32_t msgid,
 struct msg_data_t *gen_message_terminate(uint32_t id)
 {
 	uint32_t payload_len = sizeof(uint32_t);
-	struct msg_data_t *data;
+	struct msg_data_t *data = NULL;
 	char *p;
+
 	data = malloc(sizeof(*data) + payload_len);
-	if (data != NULL) {
+	if (data) {
 		fill_data_msg_head(data,NMSG_TERMINATE, 0, payload_len);
 		// TODO fill good value
 		p = data->payload;
 		pack_int32(p, id);
 	} else {
-		LOGE("Failed to create buffer for data\n");
+		LOGI("Cannot allocate memory for struct msg_data_t\n");
 	}
 	return data;
 }
@@ -240,16 +241,18 @@ struct msg_data_t *gen_message_terminate(uint32_t id)
 struct msg_data_t *gen_message_error(const char * err_msg)
 {
 	int payload_len = strlen(err_msg)+1;
-	struct msg_data_t *data;
+	struct msg_data_t *data = NULL;
 	char *p;
+
 	data = malloc(sizeof(*data) + payload_len);
-	if (data != NULL) {
+	if (data) {
 		fill_data_msg_head(data, NMSG_ERROR, 0, payload_len);
 		p = data->payload;
 		pack_str(p,err_msg);
 	} else {
-		LOGE("Failed to create buffer for data\n");
+		LOGI("Cannot allocate memory for struct msg_data_t\n");
 	}
+
 	return data;
 }
 
@@ -260,10 +263,11 @@ struct msg_data_t *gen_message_event(
 		      uint32_t id)
 {
 	uint32_t i = 0;
+	struct msg_data_t *data = NULL;
 	uint32_t payload_len = events_count * (sizeof(id) * 4) +
 							sizeof(events_count);
-	struct msg_data_t *data;
 	char *p;
+
 	data = malloc(sizeof(*data) + payload_len);
 	if (data != NULL) {
 		memset(data, 0, sizeof(*data) + payload_len);
@@ -279,7 +283,7 @@ struct msg_data_t *gen_message_event(
 			pack_int32(p,events[i].value);
 		}
 	} else {
-		LOGE("Failed to create buffer for data\n");
+		LOGI("Cannot allocate memory for struct msg_data_t\n");
 	}
 	return data;
 }
