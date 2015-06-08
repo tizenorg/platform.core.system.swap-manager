@@ -717,6 +717,11 @@ static int update_process_data(procNode **prochead, pid_t* pidarray, int pidcoun
 			is_new_node = 1;
 		}
 
+		if(procnode == NULL) {
+			LOGE("failed to create new process\n");
+			return errno;
+		}
+
 		if (datatype == PROCDATA_STAT) {
 			ret = parse_proc_stat_file_bypid(buf,
 							 &(procnode->proc_data),
@@ -1184,6 +1189,10 @@ static int update_thread_data(int pid)
 			if((procnode = find_node(*thread_prochead, tid)) == NULL)
 			{
 				procnode = add_node(thread_prochead, tid);
+				if(procnode == NULL) {
+					LOGE("Fail in update_thread_data: add_node return NULL\n");
+					goto exit;
+				}
 				if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data), 0)) < 0))
 				{
 					LOGE("Failed to get proc stat file by tid(%d). add node\n", tid);
@@ -1445,6 +1454,10 @@ static int fill_system_cpu_info(struct system_info_t *sys_info)
 	if (num_of_cpu != 0)
 	{
 		sys_info->cpu_load = malloc( num_of_cpu * sizeof(*sys_info->cpu_load) );
+		if(sys_info->cpu_load == NULL) {
+			LOGI("Cannot allocate memory for cpu_load\n");
+			return 1;
+		}
 		pcpu_usage = sys_info->cpu_load;
 		for(i = 0; i < num_of_cpu; i++)
 		{

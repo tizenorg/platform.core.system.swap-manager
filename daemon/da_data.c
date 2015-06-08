@@ -224,10 +224,14 @@ struct msg_data_t *gen_message_terminate(uint32_t id)
 	uint32_t payload_len = sizeof(uint32_t);
 	struct msg_data_t *data = malloc(sizeof(*data) + payload_len);
 	char *p;
-	fill_data_msg_head(data,NMSG_TERMINATE, 0, payload_len);
-	// TODO fill good value
-	p = data->payload;
-	pack_int32(p, id);
+
+	if(data) {
+		fill_data_msg_head(data,NMSG_TERMINATE, 0, payload_len);
+		// TODO fill good value
+		p = data->payload;
+		pack_int32(p, id);
+	} else
+		LOGI("Cannot allocate memory for struct msg_data_t\n");
 	return data;
 }
 
@@ -239,8 +243,12 @@ struct msg_data_t *gen_message_error(const char * err_msg)
 	char *p;
 	fill_data_msg_head(data, NMSG_ERROR, 0, payload_len);
 
-	p = data->payload;
-	pack_str(p,err_msg);
+	if(data) {
+		p = data->payload;
+		pack_str(p,err_msg);
+	} else
+		LOGI("Cannot allocate memory for struct msg_data_t\n");
+
 	return data;
 }
 
@@ -257,18 +265,21 @@ struct msg_data_t *gen_message_event(
 	memset(data,0,sizeof(*data) + payload_len);
 	char *p;
 
-	fill_data_msg_head(data, NMSG_RECORD, 0, payload_len);
+	if(data) {
+		fill_data_msg_head(data, NMSG_RECORD, 0, payload_len);
 
-	p = data->payload;
-	pack_int32(p, events_count);
+		p = data->payload;
+		pack_int32(p, events_count);
 
-	/* FIXME events[i].type, events[i].code should be uint16_t */
-	for (i=0; i<events_count; i++){
-		pack_int32(p,id);
-		pack_int32(p, (int32_t) events[i].type);
-		pack_int32(p, (int32_t) events[i].code);
-		pack_int32(p,events[i].value);
-	}
+		/* FIXME events[i].type, events[i].code should be uint16_t */
+		for (i=0; i<events_count; i++){
+			pack_int32(p,id);
+			pack_int32(p, (int32_t) events[i].type);
+			pack_int32(p, (int32_t) events[i].code);
+			pack_int32(p,events[i].value);
+		}
+	} else
+		LOGI("Cannot allocate memory for struct msg_data_t\n");
 
 	return data;
 }
