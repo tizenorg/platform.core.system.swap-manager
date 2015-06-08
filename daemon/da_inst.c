@@ -70,37 +70,59 @@ static int data_list_make_hash(struct data_list_t *what)
 static struct data_list_t *new_data(void)
 {
 	struct data_list_t *lib = malloc(sizeof(*lib));
-	lib->next = NULL;
-	lib->prev = NULL;
-	lib->hash = 0;
-	lib->size = 0;
-	lib->list = NULL;
+
+	if (lib) {
+		lib->next = NULL;
+		lib->prev = NULL;
+		lib->hash = 0;
+		lib->size = 0;
+		lib->list = NULL;
+	} else
+		LOGI("Cannot allocate memory for struct data_list_t\n");
+
 	return lib;
 }
 
 struct lib_list_t *new_lib(void)
 {
 	struct lib_list_t *lib = (struct lib_list_t *)new_data();
-	lib->lib = malloc(sizeof(*lib->lib));
-	memset(lib->lib, 0, sizeof(*lib->lib));
+
+	if (lib) {
+		lib->lib = malloc(sizeof(*lib->lib));
+		if (lib->lib)
+			memset(lib->lib, 0, sizeof(*lib->lib));
+		else {
+			LOGI("Cannot locate memory for new lib\n");
+		}
+	}
 	return lib;
 }
 
 struct app_list_t *new_app(void)
 {
 	struct app_list_t *app = (struct app_list_t *)new_data();
-	app->app = malloc(sizeof(*app->app));
-	memset(app->app, 0, sizeof(*app->app));
+
+	if (app) {
+		app->app = malloc(sizeof(*app->app));
+		if (app->app)
+			memset(app->app, 0, sizeof(*app->app));
+		else {
+			LOGI("Cannot allocate memory for new app\n");
+		}
+	}
 	return app;
 }
 
 struct probe_list_t *new_probe(void)
 {
 	struct probe_list_t *probe = malloc(sizeof(*probe));
-	probe->next = NULL;
-	probe->prev = NULL;
-	probe->size = 0;
-	probe->func = NULL;
+	if(probe) {
+		probe->next = NULL;
+		probe->prev = NULL;
+		probe->size = 0;
+		probe->func = NULL;
+	} else
+		LOGI("Cannot allocate memory for struct probe_list_t\n");
 	return probe;
 }
 
@@ -519,6 +541,11 @@ static int generate_msg(struct msg_t **msg, struct lib_list_t *lib_list, struct 
 
 	// add header size
 	*msg = malloc(size + sizeof(**msg));
+	if (*msg == NULL) {
+		LOGI("Cannot allocate memory for struct msg_t \n");
+		return 0;
+	}
+
 	memset(*msg, '*', size);
 
 	p = (char *)*msg;

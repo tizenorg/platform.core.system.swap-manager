@@ -616,7 +616,7 @@ static enum HostMessageT get_ack_msg_id(const enum HostMessageT id)
 		return NMSG_GET_PROCESS_ADD_INFO_ACK;
 	default:
 		LOGE("Fatal: unknown message ID [0x%X]\n", id);
-		exit(EXIT_FAILURE);
+		_Exit(EXIT_FAILURE);
 	}
 }
 
@@ -630,6 +630,11 @@ int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 					 sizeof(err) + //return ID
 					 payload_size;
 		msg = malloc(loglen);
+		if (msg == NULL) {
+			LOGE("Cannot allocate memory for msg\n");
+			return 1;
+		}
+
 		char *p = msg->payload;
 
 		resp = get_ack_msg_id(resp);
@@ -663,9 +668,13 @@ int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 static struct msg_t *gen_stop_msg(void)
 {
 	struct msg_t *res = malloc(sizeof(*res));
-	memset(res, 0, sizeof(*res));
-	res->id = NMSG_STOP;
-	res->len = 0;
+	if (res) {
+		memset(res, 0, sizeof(*res));
+		res->id = NMSG_STOP;
+		res->len = 0;
+	} else {
+		LOGE("Cannot allocate memory for struct msg_t\n");
+	}
 	return res;
 }
 
@@ -806,7 +815,7 @@ static void get_file_md5sum(md5_byte_t digest[16], const char *filename)
 	md5_finish(&md5_state, digest);
 }
 
-static const char* basename(const char *filename)
+static const char* get_basename(const char *filename)
 {
 	const char *p = strrchr(filename, '/');
 	return p ? p + 1 : NULL;
@@ -830,13 +839,17 @@ static int check_windows_path(const char *path)
 
 static struct binary_ack* binary_ack_alloc(const char *filename)
 {
-	struct binary_ack *ba = malloc(sizeof(*ba));
+	struct binary_ack *ba = NULL;
 	struct stat decoy;
 	char builddir[PATH_MAX];
 	char binpath[PATH_MAX];
 
 	builddir[0]='\0';
 	binpath[0]='\0';
+	ba = malloc(sizeof(*ba));
+
+	if (ba == NULL)
+		return NULL;
 
 	if (stat(filename, &decoy) == 0) {
 		ba->type = get_binary_type(filename);
@@ -846,7 +859,7 @@ static struct binary_ack* binary_ack_alloc(const char *filename)
 
 		if (builddir[0] != '\0')
 			snprintf(binpath, sizeof(binpath), check_windows_path(builddir) ?
-				 "%s\\%s" : "%s/%s", builddir, basename(filename) ?: "");
+				 "%s\\%s" : "%s/%s", builddir, get_basename(filename) ?: "");
 
 		ba->binpath = strdup(binpath);
 		get_file_md5sum(ba->digest, filename);
@@ -901,8 +914,13 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 					 + sizeof(return_id)
 					 + sizeof(binary_ack_count)
 					 + total_size);
-	char *p = msg_reply->payload;
+	char *p;
 
+	if(msg_reply == NULL) {
+		LOGE("MSG_BINARY_INFO error: Cannot allocate memory for msg_reply\n");
+		return -1;
+	}
+	p = msg_reply->payload;
 	msg_reply->id = NMSG_BINARY_INFO_ACK;
 	msg_reply->len = total_size + sizeof(return_id)
 				    + sizeof(binary_ack_count);
