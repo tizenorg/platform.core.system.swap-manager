@@ -594,7 +594,6 @@ static void write_msg_error(const char *err_str)
 		LOGE("cannot generate error message\n");
 		return;
 	}
-
 	if (write_to_buf(err_msg) != 0)
 		LOGE("write to buf fail\n");
 	free_msg_data(err_msg);
@@ -623,7 +622,7 @@ static enum HostMessageT get_ack_msg_id(const enum HostMessageT id)
 		return NMSG_GET_PROCESS_ADD_INFO_ACK;
 	default:
 		LOGE("Fatal: unknown message ID [0x%X]\n", id);
-		exit(EXIT_FAILURE);
+		_Exit(EXIT_FAILURE);
 	}
 }
 
@@ -683,15 +682,15 @@ exit:
 static struct msg_t *gen_stop_msg(void)
 {
 	struct msg_t *res = NULL;
+
 	res = malloc(sizeof(*res));
 	if (res != NULL) {
 		memset(res, 0, sizeof(*res));
 		res->id = NMSG_STOP;
 		res->len = 0;
 	} else {
-		LOGE("Cannot allocates memory for res\n");
+		LOGE("Cannot allocate memory for struct msg_t\n");
 	}
-
 	return res;
 }
 
@@ -832,7 +831,7 @@ static void get_file_md5sum(md5_byte_t digest[16], const char *filename)
 	md5_finish(&md5_state, digest);
 }
 
-static const char* basename(const char *filename)
+static const char* get_basename(const char *filename)
 {
 	const char *p = strrchr(filename, '/');
 	return p ? p + 1 : NULL;
@@ -856,17 +855,17 @@ static int check_windows_path(const char *path)
 
 static struct binary_ack* binary_ack_alloc(const char *filename)
 {
-	struct binary_ack *ba;
+	struct binary_ack *ba = NULL;
 	struct stat decoy;
 	char builddir[PATH_MAX];
 	char binpath[PATH_MAX];
 
 	builddir[0]='\0';
 	binpath[0]='\0';
-
 	ba = malloc(sizeof(*ba));
+
 	if (ba == NULL) {
-		LOGE("Cannot allocates memory for binary ack struct\n");
+		LOGE("cannot allocate memory for binary_ack\n");
 		goto exit_fail;
 	}
 
@@ -878,7 +877,7 @@ static struct binary_ack* binary_ack_alloc(const char *filename)
 
 		if (builddir[0] != '\0')
 			snprintf(binpath, sizeof(binpath), check_windows_path(builddir) ?
-				 "%s\\%s" : "%s/%s", builddir, basename(filename) ?: "");
+				 "%s\\%s" : "%s/%s", builddir, get_basename(filename) ?: "");
 
 		ba->binpath = strdup(binpath);
 		get_file_md5sum(ba->digest, filename);
