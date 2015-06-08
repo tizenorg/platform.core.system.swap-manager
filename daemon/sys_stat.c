@@ -717,6 +717,12 @@ static int update_process_data(procNode **prochead, pid_t* pidarray, int pidcoun
 			is_new_node = 1;
 		}
 
+		if (procnode == NULL) {
+			LOGE("failed to create new procnode\n");
+			ret = errno;
+			goto exit;
+		}
+
 		if (datatype == PROCDATA_STAT) {
 			ret = parse_proc_stat_file_bypid(buf,
 							 &(procnode->proc_data),
@@ -746,6 +752,7 @@ static int update_process_data(procNode **prochead, pid_t* pidarray, int pidcoun
 	del_notfound_node(prochead);
 	reset_found_node(*prochead);
 
+exit:
 	return ret;
 }
 
@@ -1169,21 +1176,26 @@ static int update_thread_data(int pid)
 	thread_prochead = (procNode **)&(node->thread_prochead);
 
 	while ((readdir_r(taskdir, dirent_r, &entry) == 0) && entry) {
-		if(*entry->d_name > '0' &&	*entry->d_name <= '9')
+		if (*entry->d_name > '0' &&	*entry->d_name <= '9')
 		{
 			tid = atoi(entry->d_name);
 			snprintf(buf, sizeof(buf), "/proc/%d/task/%d", pid, tid);
 
-			if(unlikely(stat(buf, &sb) == -1))
+			if (unlikely(stat(buf, &sb) == -1))
 			{
 				del_node(thread_prochead, tid);
 				ret = errno;
 				continue;
 			}
 
-			if((procnode = find_node(*thread_prochead, tid)) == NULL)
+			if ((procnode = find_node(*thread_prochead, tid)) == NULL)
 			{
 				procnode = add_node(thread_prochead, tid);
+				if (procnode == NULL) {
+					LOGE("Fail in update_thread_data: add_node return NULL\n");
+					ret = errno;
+					goto exit;
+				}
 				if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data), 0)) < 0))
 				{
 					LOGE("Failed to get proc stat file by tid(%d). add node\n", tid);
@@ -1417,7 +1429,7 @@ static int fill_system_threads_info(float factor, struct system_info_t * sys_inf
 					      proc->proc_data.stime -
 					      proc->saved_utime -
 					      proc->saved_stime) * factor;
-			if(thread_load > 100.0f)
+			if (thread_load > 100.0f)
 				thread_load = 100.0f;
 
 			proc->proc_data.cpu_load = thread_load;
@@ -1445,6 +1457,10 @@ static int fill_system_cpu_info(struct system_info_t *sys_info)
 	if (num_of_cpu != 0)
 	{
 		sys_info->cpu_load = malloc( num_of_cpu * sizeof(*sys_info->cpu_load) );
+		if (sys_info->cpu_load == NULL) {
+			LOGI("Cannot allocate memory for cpu_load\n");
+			return 1;
+		}
 		pcpu_usage = sys_info->cpu_load;
 		for(i = 0; i < num_of_cpu; i++)
 		{

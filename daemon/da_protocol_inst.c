@@ -75,6 +75,11 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 	size = sizeof(*func) + par_count + 1 +
 	       sizeof(char) /* sizeof(char) for ret_type */;
 	func = malloc(size);
+	if (func == NULL) {
+		LOGE("Cannot allocate memory for struct us_func_inst_plane_t\n");
+		goto err_ret;
+	}
+
 	if (!parse_int64(msg, &(func->func_addr))) {
 		LOGE("func addr parsing error\n");
 		goto err_ret;
