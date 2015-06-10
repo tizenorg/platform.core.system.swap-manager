@@ -30,6 +30,13 @@
 #include <sstream>
 
 
+static inline std::string int2str(int val)
+{
+        std::stringstream ss;
+        ss << val;
+        return ss.str();
+}
+
 static inline std::string addr2hex(unsigned long val)
 {
     std::stringstream ss;

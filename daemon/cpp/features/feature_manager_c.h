@@ -29,6 +29,7 @@ extern "C" {
 
 
 #include <stdint.h>
+#include <stddef.h>
 
 
 int fm_init(void);
@@ -38,6 +39,10 @@ int fm_start(void);
 int fm_stop(void);
 
 int fm_set(uint64_t f0, uint64_t f1);
+
+int fm_app_add(uint32_t app_type, const char *id, const char *path,
+               const void *data, size_t size);
+void fm_app_clear(void);
 
 
 #ifdef __cplusplus
