@@ -257,6 +257,11 @@ struct app_info_t {
 	uint32_t app_type;
 	char *app_id;
 	char *exe_path;
+
+	struct {
+		size_t size;
+		char data[8];
+	} setup_data;
 };
 
 

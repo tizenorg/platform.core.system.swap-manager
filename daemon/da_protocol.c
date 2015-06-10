@@ -534,6 +534,7 @@ int check_running_status(const struct prof_session_t *prof_session)
 
 static void reset_app_inst(struct user_space_inst_t *us_inst)
 {
+	fm_app_clear();
 	free_data_list((struct data_list_t **)&us_inst->app_inst_list);
 	us_inst->app_num = 0;
 	us_inst->app_inst_list = NULL;
