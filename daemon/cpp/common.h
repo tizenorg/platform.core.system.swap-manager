@@ -37,6 +37,31 @@ static inline std::string addr2hex(unsigned long val)
     return "0x" + ss.str();
 }
 
+static inline bool str2pid(const char *str, pid_t &pid)
+{
+    char c;
+    std::stringstream ss(str);
+    ss >> pid;
+    if (ss.fail() || ss.get(c)) {
+        // not an integer
+        return false;
+    }
+    return true;
+}
+
+static inline bool buf2uint64(const char *buf, size_t len, uint64_t &out)
+{
+    if (len != 8)
+        return false;
+
+    out = 0;
+    for (int i = len - 1; i >= 0; --i) {
+        out <<= 8;
+        out += (uint8_t)buf[i];
+    }
+
+    return true;
+}
 
 static inline ssize_t write_to_file(const char *filename,
                                     const void *buf, size_t len)

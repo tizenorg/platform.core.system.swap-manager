@@ -83,7 +83,10 @@ SRC_CPP := \
 	cpp/features/feature.cpp \
 	cpp/features/feature_manager.cpp \
 	cpp/features/feature_manager_c.cpp \
-	cpp/features/feature_wsp.cpp
+	cpp/features/feature_wsp.cpp \
+\
+	cpp/inst/AppInst.cpp \
+	cpp/inst/AppInstCont.cpp
 
 OBJS_C := $(SRC_C:.c=.o)
 OBJS_CPP := $(SRC_CPP:.cpp=.o)
