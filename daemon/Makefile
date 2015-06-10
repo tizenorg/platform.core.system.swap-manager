@@ -84,6 +84,7 @@ SRC_CPP := \
 	cpp/features/feature_manager.cpp \
 	cpp/features/feature_manager_c.cpp \
 	cpp/features/feature_wsp.cpp \
+	cpp/features/feature_nsp.cpp \
 \
 	cpp/inst/AppInst.cpp \
 	cpp/inst/AppInstCont.cpp
@@ -103,14 +104,19 @@ all: debug
 GENERATED_DIR = include/generated
 GENERATED_WSI_PROF_H = include/generated/wsi_prof.h
 GENERATED_WSP_H = include/generated/wsp_data.h
+GENERATED_NSP_H = include/generated/nsp_data.h
 GENERATED_HEADERS := \
 	$(GENERATED_WSI_PROF_H) \
-	$(GENERATED_WSP_H)
+	$(GENERATED_WSP_H) \
+	$(GENERATED_NSP_H)
 
 $(GENERATED_WSI_PROF_H): ../scripts/gen_wsi_prof.sh
 	sh $< > $@
 
 $(GENERATED_WSP_H): ../scripts/gen_wsp_data.sh
+	sh $< > $@
+
+$(GENERATED_NSP_H): ../scripts/gen_nsp_data.sh
 	sh $< > $@
 
 $(GENERATED_DIR):
