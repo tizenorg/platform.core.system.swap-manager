@@ -30,6 +30,7 @@
 #include "da_inst.h"
 #include "da_protocol_check.h"
 #include "ld_preload_probe_lib.h"
+#include "cpp/features/feature_manager_c.h"
 
 //----------------- hash
 static uint32_t calc_lib_hash(struct us_lib_inst_t *lib)
@@ -286,6 +287,37 @@ int parse_lib_inst_list(struct msg_buf_t *msg,
 	return 1;
 }
 
+static int parse_inst_app_setup_data(struct msg_buf_t *msg,
+                                    struct app_info_t *app_info)
+{
+	switch (app_info->app_type) {
+	case APP_TYPE_TIZEN: {
+		void *data = msg->cur_pos;
+		enum { data_len = 8 };
+		uint64_t val;
+
+		/* skip 8 bytes */
+		if (!parse_int64(msg, &val)) {
+			LOGE("main address parsing error\n");
+			return -EINVAL;
+		}
+
+		app_info->setup_data.size = data_len;
+		memcpy(app_info->setup_data.data, data, data_len);
+		return 0;
+	}
+	case APP_TYPE_RUNNING:
+	case APP_TYPE_COMMON:
+	case APP_TYPE_WEB:
+		app_info->setup_data.size = 0;
+		return 0;
+	default:
+               return -EINVAL;
+	}
+
+	return 0;
+}
+
 int parse_inst_app(struct msg_buf_t *msg, struct app_list_t **dest)
 {
 	int res = 1;
@@ -331,6 +363,11 @@ int parse_inst_app(struct msg_buf_t *msg, struct app_list_t **dest)
 		goto exit_free_err;
 	}
 
+	if (parse_inst_app_setup_data(msg, app_info)) {
+		LOGE("setup data parsing error\n");
+		goto exit_free_err;
+	}
+
 	(*dest)->size += (end - start) + sizeof((*dest)->func_num);
 	(*dest)->hash = calc_app_hash(app_info);
 	goto exit;
@@ -357,12 +394,24 @@ int parse_app_inst_list(struct msg_buf_t *msg,
 
 	parse_deb("app_int_num = %d\n", *num);
 	for (i = 0; i < *num; i++) {
+		int err;
+		struct app_info_t *info;
+
 		parse_deb("app_int #%d\n", i);
 		if (!parse_inst_app(msg, &app)) {
 			// TODO maybe need free allocated memory up there
 			LOGE("parse is inst app #%d failed\n", i + 1);
 			return 0;
 		}
+
+		info = app->app;
+		err = fm_app_add(info->app_type, info->app_id, info->exe_path,
+				 info->setup_data.data, info->setup_data.size);
+		if (err) {
+			LOGE("add app, ret=%d\n", err);
+			return 0;
+		}
+
 		data_list_append((struct data_list_t **)app_list,
 				 (struct data_list_t *)app);
 	}

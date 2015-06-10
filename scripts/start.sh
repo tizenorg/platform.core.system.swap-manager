@@ -43,6 +43,7 @@ if [ ! -e /sys/kernel/debug/swap/writer/raw ]; then
     insmod swap_task_data.ko        || exit 116
     insmod swap_preload.ko          || exit 117
     insmod swap_wsp.ko              || exit 118
+    insmod swap_nsp.ko              || exit 119
 
 fi
 
