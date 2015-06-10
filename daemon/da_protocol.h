@@ -176,11 +176,6 @@ enum probe_type {
 #define IS_OPT_SET_IN(OPT, reg) (reg & (OPT))
 #define IS_OPT_SET(OPT) IS_OPT_SET_IN((OPT), prof_session.conf.use_features0)
 
-enum app_type {
-	AT_TIZEN	=0x01,
-	AT_LAUNCHED	=0x02,
-	AT_COMMON	=0x03
-};
 enum supported_device {
 	DEVICE_FLASH,
 	DEVICE_CPU,
