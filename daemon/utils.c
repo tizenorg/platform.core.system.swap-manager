@@ -160,8 +160,7 @@ int exec_app_tizen(const char *app_id, const char *exec_path)
 		while (ret == -1 && errno == EINTR);
 		return 0;
 	} else { /* child */
-		execl(LAUNCH_APP_PATH, LAUNCH_APP_NAME, app_id, LAUNCH_APP_SDK,
-		      DA_PRELOAD_EXEC, NULL);
+		execl(LAUNCH_APP_PATH, LAUNCH_APP_NAME, app_id, NULL);
 		/* FIXME: If code flows here, it deserves greater attention */
 		_Exit(EXIT_FAILURE);
 	}
@@ -178,7 +177,7 @@ int exec_app_common(const char* exec_path)
 		return -1;
 	}
 
-	snprintf(command, sizeof(command), "%s %s", DA_PRELOAD_TIZEN, exec_path);
+	sprintf(command, "%s", exec_path);
 	LOGI("cmd: %s\n", command);
 
 	pid = fork();
@@ -215,7 +214,8 @@ int exec_app_web(const char *app_id)
 	} else { /* child */
 		execl(WRT_LAUNCHER_PATH,
 		      WRT_LAUNCHER_NAME,
-		      WRT_LAUNCHER_START,
+		      (is_feature_enabled(FL_WEB_PROFILING) ?
+		       WRT_LAUNCHER_START_DEBUG : WRT_LAUNCHER_START),
 		      app_id,
 		      NULL);
 		/* FIXME: If code flows here, it deserves greater attention */
@@ -254,9 +254,6 @@ void kill_app_web(const char *app_id)
 	}
 }
 
-#define STRDEFINE_L2(x) #x
-#define STRDEFINE(x) STRDEFINE_L2(x)
-
 // find process id from executable binary path
 static pid_t find_pid_from_path(const char *path)
 {
@@ -264,7 +261,7 @@ static pid_t find_pid_from_path(const char *path)
 	char cmdline[PATH_MAX];
 	DIR *proc;
 	FILE *fp = NULL;
-	static const char scan_format[] = "%" STRDEFINE(BUFFER_MAX) "s";
+	static const char scan_format[] = "%" STR_VALUE(BUFFER_MAX) "s";
 	char dirent_buffer[ sizeof(struct dirent) + PATH_MAX + 1 ] = {0,};
 	struct dirent *dirent_r = (struct dirent *)dirent_buffer;
 	struct dirent *entry;
@@ -274,8 +271,10 @@ static pid_t find_pid_from_path(const char *path)
 	LOGI("look for <%s>\n", path);
 
 	proc = opendir(PROC_FS);
-	if (!proc)
+	if (!proc) {
+		LOGE("cannot open proc fs <%s>\n", PROC_FS);
 		goto out;
+	}
 
 	while ((readdir_r(proc, dirent_r, &entry) == 0) && entry) {
 		pid = (pid_t)atoi(entry->d_name);

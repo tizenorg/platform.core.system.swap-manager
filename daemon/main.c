@@ -50,6 +50,7 @@
 #include "debug.h"
 #include "utils.h"
 #include "smack.h"
+#include "cpp/features/feature_manager_c.h"
 
 #define SINGLETON_LOCKFILE			"/tmp/da_manager.lock"
 #define PORTFILE					"/tmp/port.da"
@@ -290,6 +291,11 @@ static int initializeManager(FILE *portfile)
 		return -1;
 	}
 
+	if (fm_init() != 0) {
+		LOGE("Cannot init feature manager\n");
+		return -1;
+	}
+
 	if (initialize_system_info() < 0) {
 		write_int(portfile, ERR_INITIALIZE_SYSTEM_INFO_FAILED);
 		return -1;
@@ -364,6 +370,7 @@ static void terminate(int sig)
 		stop_all_no_lock();
 		_unlink_files();
 		_close_server_socket();
+		fm_uninit();
 		exit_buf();
 		remove_buf_modules();
 		if (sig != 0) {

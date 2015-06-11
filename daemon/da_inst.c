@@ -27,6 +27,8 @@
 // TODO check memory (malloc, free)
 
 #include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <sys/types.h>
 #include <linux/limits.h>
 
@@ -36,11 +38,14 @@
 #include "debug.h"
 #include "daemon.h"
 
+#include "ld_preload_probes.h"
+
 struct lib_list_t *new_lib_inst_list = NULL;
 
 uint32_t app_count = 0;
 char *packed_app_list = NULL;
 char *packed_lib_list = NULL;
+char *packed_ld_lib_list = NULL;
 
 static struct _msg_target_t *lib_maps_message = NULL;
 static pthread_mutex_t lib_inst_list_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -315,14 +320,27 @@ static struct data_list_t *data_list_find_data(struct data_list_t *whered, struc
 	return NULL;
 }
 
+// Check whether functions are equal. If so, returns first argument, otherwise - NULL
+static struct probe_list_t *probes_equal(struct probe_list_t *first, struct probe_list_t *second)
+{
+	if (first->size != second->size)
+		return NULL;
+
+	if (first->func->func_addr != second->func->func_addr)
+		return NULL;
+
+	if (first->func->probe_type != second->func->probe_type)
+		return NULL;
+
+	return first;
+}
+
 static struct probe_list_t *find_probe(struct data_list_t *where, struct probe_list_t *probe)
 {
 	struct probe_list_t *p ;
 	for (p = where->list; p != NULL; p = p->next)
-		if (p->size == probe->size)
-			if (p->func->func_addr == probe->func->func_addr)
-				if (strcmp(p->func->args, probe->func->args) == 0)
-					break;
+		if (probes_equal(p, probe))
+			break;
 
 	return p;
 }
@@ -514,7 +532,6 @@ static char *pack_data_list_to_array(struct data_list_t *list, uint32_t *len, ui
 		cnt++;
 	}
 
-	size += sizeof(uint32_t);
 	*len = size;
 	*count = cnt;
 
@@ -522,7 +539,6 @@ static char *pack_data_list_to_array(struct data_list_t *list, uint32_t *len, ui
 		res = malloc(size);
 		to = res;
 		if (to != NULL) {
-			pack_int32(to, cnt);
 			for (p = list; p != NULL; p = p->next)
 				to = pack_data_to_array(p, to, pack);
 		} else {
@@ -544,26 +560,39 @@ static char *pack_app_list_to_array(struct app_list_t *list, uint32_t *size, uin
 					count,  pack_app_head_to_array);
 }
 
-static int generate_msg(struct msg_t **msg, struct lib_list_t *lib_list, struct app_list_t *app_list)
+static int generate_msg(struct msg_t **msg, struct lib_list_t *lib_list,
+			struct lib_list_t *ld_lib_list,
+			struct app_list_t *app_list)
 {
 	uint32_t i,
 		 size = 0,
 		 libs_size = 0,
+		 ld_libs_size = 0,
 		 apps_size = 0,
 		 libs_count = 0,
+		 ld_libs_count = 0,
 		 apps_count = 0;
 		 int res = 1; /* no error */
 	char	 *p = NULL;
 
 	packed_lib_list = pack_lib_list_to_array(lib_list, &libs_size, &libs_count);
+	if (ld_lib_list != NULL)
+		packed_ld_lib_list = pack_lib_list_to_array(ld_lib_list,
+							    &ld_libs_size,
+							    &ld_libs_count);
 	// print_buf(packed_lib_list, libs_size, "LIBS");
 
 	packed_app_list = pack_app_list_to_array(app_list, &apps_size, &apps_count);
 	// print_buf(packed_app_list, apps_size, "APPS");
 
-	size = apps_count * libs_size + apps_size;
+	size = /* total libs size */
+	       apps_count * (libs_size + ld_libs_size +
+			     sizeof(((struct user_space_inst_t *)0)->lib_num)) +
+	       /* applications size */
+	       apps_size + sizeof(((struct user_space_inst_t *)0)->app_num);
 
-	LOGI("size = %d, apps= %d, libs = %d\n", size, apps_count, libs_count);
+	LOGI("size = %d, apps= %d, libs = %d, ld_libs = %d\n", size, apps_count,
+	     libs_count, ld_libs_count);
 
 	// add header size
 	*msg = malloc(size + sizeof(**msg));
@@ -581,22 +610,29 @@ static int generate_msg(struct msg_t **msg, struct lib_list_t *lib_list, struct 
 	pack_int32(p, apps_count);
 
 	struct app_list_t *app = app_list;
-	char *app_p = packed_app_list + sizeof(((struct user_space_inst_t *)0)->app_num);
+	char *app_p = packed_app_list;
 
 	for (i = 0; i < apps_count; i++) {
+		/* app probes pack */
 		memcpy(p, app_p, app->size);
 		p += app->size;
+		/* libs probes pack */
+		pack_int32(p, libs_count + ld_libs_count);
 		memcpy(p, packed_lib_list, libs_size);
 		p += libs_size;
-
+		/* ld probes pack */
+		if (ld_lib_list != NULL) {
+			memcpy(p, packed_ld_lib_list, ld_libs_size);
+			p += ld_libs_size;
+		}
 		app_p += app->size;
 		app = app->next;
 	}
 exit_free:
 	free(packed_lib_list);
 	free(packed_app_list);
+	free(packed_ld_lib_list);
 
-	// print_buf((char *)*msg, size, "ANSWER");
 	return res;
 }
 
@@ -658,7 +694,7 @@ static void generate_maps_inst_msg(struct user_space_inst_t *us_inst)
 		free(lib_maps_message);
 
 	lib_maps_message = malloc(total_len);
-	lib_maps_message->type = MSG_MAPS_INST_LIST;
+	lib_maps_message->type = APP_MSG_MAPS_INST_LIST;
 	lib_maps_message->length = total_len;
 
 	/* pack data */
@@ -683,6 +719,96 @@ static void generate_maps_inst_msg(struct user_space_inst_t *us_inst)
 	print_buf((char *)lib_maps_message, total_len, "lib_maps_message");
 
 	unlock_lib_maps_message();
+}
+
+static inline bool is_always_probing_feature(enum feature_code fv)
+{
+	if ((fv & FL_FILE_API_ALWAYS_PROBING) ||
+	    (fv & FL_MEMORY_ALLOC_ALWAYS_PROBING) ||
+	    (fv & FL_NETWORK_API_ALWAYS_PROBING) ||
+	    (fv & FL_OPENGL_API_ALWAYS_PROBING) ||
+	    (fv & FL_OSP_UI_API_ALWAYS_PROBING))
+		return true;
+
+	return false;
+}
+
+#define PRELOAD_ADD_BIN "/sys/kernel/debug/swap/preload/target_binaries/bins_add"
+
+static int add_bins_to_preload(struct user_space_inst_t *us_inst)
+{
+	struct lib_list_t *lib = us_inst->lib_inst_list;
+	struct app_list_t *app = us_inst->app_inst_list;
+	uint32_t total_maps_count = 0;
+	char real_path_buf[PATH_MAX];
+	char *resolved, *p;
+	FILE *preload_p;
+
+	preload_p = fopen(PRELOAD_ADD_BIN, "w");
+	if (preload_p == NULL)
+		return -EINVAL;
+
+	while (lib != NULL) {
+		total_maps_count++;
+
+		p = lib->lib->bin_path;
+		fwrite(p, strlen(p) + 1, 1, preload_p);
+		fflush(preload_p);
+
+		LOGI("lib #%u <%s>\n", total_maps_count, lib->lib->bin_path);
+		lib = (struct lib_list_t *)lib->next;
+	}
+
+	while (app != NULL) {
+		resolved = realpath((const char *)app->app->exe_path, real_path_buf);
+		if (resolved != NULL) {
+			total_maps_count++;
+			fwrite(resolved, strlen(resolved) + 1, 1, preload_p);
+			fflush(preload_p);
+
+			LOGI("app #%u <%s>\n", total_maps_count, resolved);
+		}
+
+		app = (struct app_list_t *)app->next;
+	}
+
+	fclose(preload_p);
+
+	return 0;
+}
+
+#undef PRELOAD_ADD_BIN
+
+#define PRELOAD_CLEAN "/sys/kernel/debug/swap/preload/target_binaries/bins_remove"
+
+static int clean_bins_preload(void)
+{
+	FILE *preload_p;
+
+	preload_p = fopen(PRELOAD_CLEAN, "w");
+	if (preload_p == NULL)
+		return -EINVAL;
+
+	fwrite("c", strlen("c") + 1, 1, preload_p);
+
+	fclose(preload_p);
+
+	return 0;
+}
+
+#undef PRELOAD_CLEAN
+
+static int write_bins_to_preload(struct user_space_inst_t *us_inst)
+{
+	int ret;
+
+	ret = clean_bins_preload();
+	if (ret != 0)
+		return ret;
+
+	ret = add_bins_to_preload(us_inst);
+
+	return ret;
 }
 
 void send_maps_inst_msg_to(struct target *t)
@@ -739,7 +865,14 @@ int msg_start(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 		goto msg_start_exit;
 	}
 
-	generate_msg(msg, us_inst->lib_inst_list, us_inst->app_inst_list);
+	if (!add_preload_probes(&us_inst->lib_inst_list)) {
+		LOGE("cannot add preload probe\n");
+		res = 1;
+		goto msg_start_exit;
+	}
+
+	generate_msg(msg, us_inst->lib_inst_list, us_inst->ld_lib_inst_list,
+		     us_inst->app_inst_list);
 
 	if (*msg != NULL) {
 		p = (char *)*msg;
@@ -750,6 +883,8 @@ int msg_start(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 		goto msg_start_exit;
 	}
 
+	if (write_bins_to_preload(us_inst))
+		LOGE("Error adding binaries\n");
 	generate_maps_inst_msg(us_inst);
 
 msg_start_exit:
@@ -786,7 +921,7 @@ int msg_swap_inst_add(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 
 	// generate msg to send
 	if (us_inst->app_inst_list != NULL) {
-		generate_msg(msg, new_lib_inst_list, us_inst->app_inst_list);
+		generate_msg(msg, new_lib_inst_list, NULL, us_inst->app_inst_list);
 		p = (char *)*msg;
 		pack_int32(p, NMSG_SWAP_INST_ADD);
 	}
@@ -806,6 +941,8 @@ int msg_swap_inst_add(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 	new_lib_inst_list = NULL;
 	*err = ERR_NO;
 
+	if (write_bins_to_preload(us_inst))
+		LOGE("Error adding binaries\n");
 	generate_maps_inst_msg(us_inst);
 	send_maps_inst_msg_to_all_targets();
 
@@ -841,7 +978,7 @@ int msg_swap_inst_remove(struct msg_buf_t *data, struct user_space_inst_t *us_in
 	}
 
 	if (us_inst->app_inst_list != NULL) {
-		if (!generate_msg(msg, new_lib_inst_list, us_inst->app_inst_list)) {
+		if (!generate_msg(msg, new_lib_inst_list, NULL, us_inst->app_inst_list)) {
 			LOGE("generate msg\n");
 			res = 1;
 			goto msg_swap_inst_remove_exit;
@@ -854,6 +991,8 @@ int msg_swap_inst_remove(struct msg_buf_t *data, struct user_space_inst_t *us_in
 	new_lib_inst_list = NULL;
 	*err = ERR_NO;
 
+	if (write_bins_to_preload(us_inst))
+		LOGE("Error adding binaries\n");
 	generate_maps_inst_msg(us_inst);
 	send_maps_inst_msg_to_all_targets();
 
@@ -889,3 +1028,108 @@ void msg_swap_free_all_data(struct user_space_inst_t *us_inst)
 		LOGI("free us_inst->app_isnt_list finish\n");
 	}
 }
+
+/******************************************************************************/
+int ld_add_probes_by_feature(uint64_t to_enable_features_0,
+			     uint64_t to_enable_features_1,
+			     uint64_t to_disable_features_0,
+			     uint64_t to_disable_features_1,
+			     struct user_space_inst_t *us_inst,
+			     struct msg_t **msg_reply_add,
+			     struct msg_t **msg_reply_remove)
+{
+	int i, res;
+	char *p;
+	struct feature_list_t f;
+	char buf[1024] = "";
+
+	/* lock list access */
+	lock_lib_list();
+
+	for (i = 0; i != feature_to_data_count; i++) {
+		f = feature_to_data[i];
+		LOGI("check feature %016X\n", f.feature_value);
+		if ((f.feature_value & to_enable_features_0) |
+		    (f.feature_value & to_enable_features_1) == f.feature_value) {
+
+			buf[0] = '\0';
+
+			feature_code_str(f.feature_value, f.feature_value, &buf[0],
+					 sizeof(buf));
+			LOGI("Set LD probes for %016LX <%s>\n", f.feature_value, &buf[0]);
+
+			feature_add_lib_inst_list(f.feature_ld, &us_inst->ld_lib_inst_list);
+		}
+	}
+
+	// rm probes from new if its presents in cur
+	if (!resolve_collisions_for_add_msg(&us_inst->ld_lib_inst_list, &new_lib_inst_list)) {
+		LOGE("resolve collision\n");
+		res = 1;
+		goto msg_swap_inst_add_exit;
+	};
+
+	// generate msg to send
+	if (us_inst->app_inst_list != NULL) {
+		generate_msg(msg_reply_add, NULL, new_lib_inst_list, us_inst->app_inst_list);
+		p = (char *)msg_reply_add;
+		pack_int32(p, NMSG_SWAP_INST_ADD);
+	}
+	// apply changes to cur state
+	if (!data_list_move_with_hash(
+		(struct data_list_t **)&us_inst->ld_lib_inst_list,
+		(struct data_list_t **)&new_lib_inst_list,
+		cmp_libs))
+	{
+		LOGE("data move\n");
+		res = 1;
+		goto msg_swap_inst_add_exit;
+	};
+
+	// free new_list
+	free_data_list((struct data_list_t **)&new_lib_inst_list);
+	new_lib_inst_list = NULL;
+
+    if (write_bins_to_preload(us_inst))
+        LOGE("Error adding binaries\n");
+	generate_maps_inst_msg(us_inst);
+	send_maps_inst_msg_to_all_targets();
+
+msg_swap_inst_add_exit:
+	/* unlock list access */
+	unlock_lib_list();
+
+	return res;
+}
+
+/*********************
+ * for debug
+ * TODO remove unnecessary code
+void print_all_ld()
+{
+	int i, j, k;
+	struct feature_list_t f;
+	struct ld_feature_list_el_t *libs;
+
+	for (i = 0; i != feature_to_data_count; i++) {
+		printf("%i\n", i);
+		f = feature_to_data[i];
+		printf("f = %p\n", f);
+		libs = f.feature_ld;
+		printf("libs = %p\n", libs);
+
+		printf("libs_count = %p\n", libs->lib_count);
+
+		struct ld_lib_list_el_t *lib = libs->libs;
+		for (j = 0; j != libs->lib_count; j++) {
+			printf(" lib_name = %s\n", lib[j].lib_name);
+			printf("  probe count = %u\n", lib[j].probe_count);
+
+			struct ld_probe_el_t *pr = lib[j].probes;
+			for (k = 0; k != lib[j].probe_count; k++) {
+				printf("  probe #%u  %p:%p\n", k+1, pr[k].orig_addr, pr[k].handler_addr);
+			}
+		}
+	}
+}
+*/

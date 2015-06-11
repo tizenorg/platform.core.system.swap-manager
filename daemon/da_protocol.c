@@ -48,11 +48,43 @@
 #include "debug.h"
 #include "md5.h"
 #include "da_data.h"
+#include "wsi.h"
 
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <ctype.h>
+
+#include "x_define_api_id_list.h"
+
+#define X(id, func_name, file_name, lib_name, feature, always_feature) \
+	uint32_t id_ ## id;	\
+	char name_ ## id [sizeof(func_name)];
+
+struct packed_probe_map_t {
+	uint32_t count;
+	X_API_MAP_LIST
+} __attribute__((packed)) ;
+#undef X
+
+
+static struct packed_probe_map_t packed_probe_map = {
+
+	.count = 0
+#define X(id, func_name, file_name, lib_name, feature, always_feature) \
+	+1
+	X_API_MAP_LIST
+#undef X
+	,
+
+#define X(id, func_name, file_name, lib_name, feature, always_feature) \
+	.id_ ## id = id,\
+	.name_ ## id = func_name,
+	X_API_MAP_LIST
+#undef X
+};
+
+
 
 static pthread_mutex_t stop_all_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -70,39 +102,17 @@ static void print_conf(struct conf_t *conf);
 
 char *msg_ID_str(enum HostMessageT ID)
 {
-	check_and_return(NMSG_KEEP_ALIVE);
-	check_and_return(NMSG_START);
-	check_and_return(NMSG_STOP);
-	check_and_return(NMSG_CONFIG);
-	check_and_return(NMSG_BINARY_INFO);
-	check_and_return(NMSG_GET_TARGET_INFO);
-	check_and_return(NMSG_SWAP_INST_ADD);
-	check_and_return(NMSG_SWAP_INST_REMOVE);
-	check_and_return(NMSG_GET_SCREENSHOT);
-	check_and_return(NMSG_GET_PROCESS_ADD_INFO);
+/* check msg ID */
+#define X(id, val) check_and_return(id);
+	MSG_ID_LIST
+#undef X
 
-	check_and_return(NMSG_KEEP_ALIVE_ACK);
-	check_and_return(NMSG_START_ACK);
-	check_and_return(NMSG_STOP_ACK);
-	check_and_return(NMSG_CONFIG_ACK);
-	check_and_return(NMSG_BINARY_INFO_ACK);
-	check_and_return(NMSG_SWAP_INST_ACK);
-	check_and_return(NMSG_GET_TARGET_INFO_ACK);
-	check_and_return(NMSG_SWAP_INST_ADD_ACK);
-	check_and_return(NMSG_SWAP_INST_REMOVE_ACK);
-	check_and_return(NMSG_GET_PROCESS_ADD_INFO_ACK);
+/* check msg ack ID */
+#define X(id, val) check_and_return(id ## _ACK);
+	MSG_ID_LIST
+#undef X
 
-	check_and_return(NMSG_PROCESS_INFO);
-	check_and_return(NMSG_TERMINATE);
-	check_and_return(NMSG_ERROR);
-	check_and_return(NMSG_SAMPLE);
-	check_and_return(NMSG_SYSTEM);
-	check_and_return(NMSG_IMAGE);
-	check_and_return(NMSG_RECORD);
-	check_and_return(NMSG_FUNCTION_ENTRY);
-	check_and_return(NMSG_FUNCTION_EXIT);
-	check_and_return(NMSG_CONTEXT_SWITCH_ENTRY);
-	check_and_return(NMSG_CONTEXT_SWITCH_EXIT);
+
 	return "HZ";
 }
 
@@ -156,8 +166,8 @@ static char *msgErrStr(enum ErrorCode err)
 		}							\
 	}
 #define print_feature_0(f) print_feature(f, feature0, to, ", \n\t")
-static void feature_code_str(uint64_t feature0, uint64_t feature1, char *to,
-			     uint32_t buflen)
+void feature_code_str(uint64_t feature0, uint64_t feature1, char *to,
+		      uint32_t buflen)
 {
 	int lenin = 0;
 	print_feature_0(FL_FUNCTION_PROFILING);
@@ -193,6 +203,10 @@ static void feature_code_str(uint64_t feature0, uint64_t feature1, char *to,
 	print_feature_0(FL_SYSTEM_NETWORK);
 	print_feature_0(FL_SYSTEM_DEVICE);
 	print_feature_0(FL_SYSTEM_ENERGY);
+	print_feature_0(FL_APP_STARTUP);
+	print_feature_0(FL_WEB_PROFILING);
+	print_feature_0(FL_WEB_STARTUP_PROFILING);
+	print_feature_0(FL_SYSTEM_FILE_ACTIVITY);
 
 	goto exit;
 err_exit:
@@ -497,6 +511,7 @@ int check_running_status(const struct prof_session_t *prof_session)
 
 static void reset_app_inst(struct user_space_inst_t *us_inst)
 {
+	fm_app_clear();
 	free_data_list((struct data_list_t **)&us_inst->app_inst_list);
 	us_inst->app_num = 0;
 	us_inst->app_inst_list = NULL;
@@ -529,49 +544,6 @@ static size_t str_array_getsize(const char **strings, size_t len)
 	return size;
 }
 
-
-static struct msg_t *gen_target_info_reply(struct target_info_t *target_info)
-{
-	struct msg_t *msg;
-	char *p = NULL;
-	uint32_t ret_id = ERR_NO;
-
-	msg = malloc(sizeof(*msg) +
-		     sizeof(ret_id) +
-		     sizeof(*target_info) -
-		     sizeof(target_info->network_type) +
-		     strlen(target_info->network_type) + 1 +
-		     sizeof(uint32_t) + /* devices count */
-		     str_array_getsize(supported_devices_strings,
-				       supported_devices_count));
-	if (!msg) {
-		LOGE("Cannot alloc target info msg\n");
-		free(msg);
-		return NULL;
-	}
-
-	msg->id = NMSG_GET_TARGET_INFO_ACK;
-	p = msg->payload;
-
-	pack_int32(p, ret_id);
-	pack_int64(p, target_info->sys_mem_size);
-	pack_int64(p, target_info->storage_size);
-	pack_int32(p, target_info->bluetooth_supp);
-	pack_int32(p, target_info->gps_supp);
-	pack_int32(p, target_info->wifi_supp);
-	pack_int32(p, target_info->camera_count);
-	pack_str(p, target_info->network_type);
-	pack_int32(p, target_info->max_brightness);
-	pack_int32(p, target_info->cpu_core_count);
-	pack_int32(p, supported_devices_count);
-	p = pack_str_array(p, supported_devices_strings,
-			   supported_devices_count);
-
-	msg->len = p - msg->payload;
-
-	return msg;
-}
-
 static int send_reply(struct msg_t *msg)
 {
 	printBuf((char *)msg, msg->len + sizeof (*msg));
@@ -602,27 +574,13 @@ static void write_msg_error(const char *err_str)
 static enum HostMessageT get_ack_msg_id(const enum HostMessageT id)
 {
 	switch (id) {
-	case NMSG_KEEP_ALIVE:
-		return NMSG_KEEP_ALIVE_ACK;
-	case NMSG_START:
-		return NMSG_START_ACK;
-	case NMSG_STOP:
-		return NMSG_STOP_ACK;
-	case NMSG_CONFIG:
-		return NMSG_CONFIG_ACK;
-	case NMSG_BINARY_INFO:
-		return NMSG_BINARY_INFO_ACK;
-	case NMSG_GET_TARGET_INFO:
-		return NMSG_GET_TARGET_INFO_ACK;
-	case NMSG_SWAP_INST_ADD:
-		return NMSG_SWAP_INST_ADD_ACK;
-	case NMSG_SWAP_INST_REMOVE:
-		return NMSG_SWAP_INST_REMOVE_ACK;
-	case NMSG_GET_PROCESS_ADD_INFO:
-		return NMSG_GET_PROCESS_ADD_INFO_ACK;
+		#define X(id, val) case id: return id ## _ACK;
+		MSG_ID_LIST
+		#undef X
 	default:
-		LOGE("Fatal: unknown message ID [0x%X]\n", id);
-		_Exit(EXIT_FAILURE);
+		LOGW("Unknown message ID [0x%X]\n", id);
+		LOGW("Generated ack ID [0x%X]\n", id | NMSG_ACK_FLAG);
+		return id | NMSG_ACK_FLAG;
 	}
 }
 
@@ -702,6 +660,11 @@ enum ErrorCode stop_all_no_lock(void)
 
 	// stop all only if it has not been called yet
 	if (check_running_status(&prof_session)) {
+		if (is_feature_enabled(FL_WEB_PROFILING)) {
+			wsi_stop_profiling();
+			wsi_destroy();
+		}
+
 		msg = gen_stop_msg();
 		terminate_all();
 		stop_profiling();
@@ -770,46 +733,64 @@ enum ErrorCode stop_all(void)
 }
 
 struct binary_ack {
+	char *bin_path;
 	uint32_t type;
-	char *binpath;
+	char *local_bin_path;
 	md5_byte_t digest[16];
 };
 
 static void binary_ack_free(struct binary_ack *ba)
 {
-	if (ba)
-		free(ba->binpath);
+	if (ba) {
+		free(ba->bin_path);
+		free(ba->local_bin_path);
+	}
 	free(ba);
 }
 
 static size_t binary_ack_size(const struct binary_ack *ba)
 {
 	/* MD5 is 16 bytes, so 16*2 hex digits */
-	return sizeof(uint32_t) + strlen(ba->binpath) + 1
-		+ 2*16 + 1;
+	return strlen(ba->bin_path) + 1 +
+	       sizeof(uint32_t) +
+	       strlen(ba->local_bin_path) + 1 +
+	       2*16 + 1;
 }
 
-static size_t binary_ack_pack(char *s, const struct binary_ack *ba)
+static size_t binary_ack_pack(char *to, const struct binary_ack *ba)
 {
-	unsigned int len = strlen(ba->binpath) + 1;
+	char *head;
+	size_t len;
 	int i;
-	*(uint32_t *) s = ba->type;
-	s += sizeof(uint32_t);
 
-	if (len)
-		memcpy(s, ba->binpath, len);
-	s += len;
+	head = to;
 
-	for (i = 0; i!= 16; ++i) {
+	if (to == NULL)
+		goto exit;
+
+	len = strlen(ba->bin_path) + 1;
+	memcpy(to, ba->bin_path, len);
+	to += len;
+
+	*(uint32_t *) to = ba->type;
+	to += sizeof(uint32_t);
+
+	len = strlen(ba->local_bin_path) + 1;
+	memcpy(to, ba->local_bin_path, len);
+	to += len;
+
+	for (i = 0; i != 16; ++i) {
 		/* we should use snprintf, snprintf prints data including
 		 * terminate '\0' so we need print 3 symbols
 		 */
-		snprintf(s, 3, "%02x", ba->digest[i]);
-		s += 2;
+		snprintf(to, 3, "%02x", ba->digest[i]);
+		to += 2;
 	}
-	*s = '\0';
+	*to = '\0';
+	to += 1;
 
-	return sizeof(uint32_t) + len + 2*16 + 1;
+exit:
+	return (size_t)(to - head);
 }
 
 static void get_file_md5sum(md5_byte_t digest[16], const char *filename)
@@ -858,16 +839,18 @@ static struct binary_ack* binary_ack_alloc(const char *filename)
 	struct binary_ack *ba = NULL;
 	struct stat decoy;
 	char builddir[PATH_MAX];
-	char binpath[PATH_MAX];
+	char local_bin_path[PATH_MAX];
 
 	builddir[0]='\0';
-	binpath[0]='\0';
+	local_bin_path[0]='\0';
 	ba = malloc(sizeof(*ba));
 
 	if (ba == NULL) {
 		LOGE("cannot allocate memory for binary_ack\n");
 		goto exit_fail;
 	}
+
+	ba->bin_path = strdup(filename);
 
 	if (stat(filename, &decoy) == 0) {
 		ba->type = get_binary_type(filename);
@@ -876,14 +859,14 @@ static struct binary_ack* binary_ack_alloc(const char *filename)
 			get_build_dir(builddir, filename);
 
 		if (builddir[0] != '\0')
-			snprintf(binpath, sizeof(binpath), check_windows_path(builddir) ?
+			snprintf(local_bin_path, sizeof(local_bin_path), check_windows_path(builddir) ?
 				 "%s\\%s" : "%s/%s", builddir, get_basename(filename) ?: "");
 
-		ba->binpath = strdup(binpath);
+		ba->local_bin_path = strdup(local_bin_path);
 		get_file_md5sum(ba->digest, filename);
 	} else {
 		ba->type = BINARY_TYPE_FILE_NOT_EXIST;
-		ba->binpath = strdup(filename);
+		ba->local_bin_path = strdup(filename);
 		memset(ba->digest, 0x00, sizeof(ba->digest));
 	}
 
@@ -928,7 +911,7 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 			LOGW("binary is not ELF binary <%s>\n", str);
 		}
 
-		if (new->binpath[0] == '\0')
+		if (new->local_bin_path[0] == '\0')
 			LOGW("section '.debug_str' not found in <%s>\n", str);
 		acks[i] = new;
 		total_size += binary_ack_size(new);
@@ -969,6 +952,23 @@ exit_fail_free_ack:
 		binary_ack_free(acks[j]);
 exit_fail:
 	return -1;
+}
+
+static int process_msg_get_probe_map()
+{
+	int res;
+	res = sendACKToHost(NMSG_GET_PROBE_MAP, ERR_NO,
+			    (void *)&packed_probe_map,
+			    sizeof(struct packed_probe_map_t));
+	return  -(res != 0);
+}
+
+static int process_msg_version()
+{
+	int res;
+	res = sendACKToHost(NMSG_VERSION, ERR_NO, PROTOCOL_VERSION,
+			      sizeof(PROTOCOL_VERSION));
+	return  -(res != 0);
 }
 
 static void get_serialized_time(uint32_t dst[2])
@@ -1104,12 +1104,14 @@ static int process_msg_get_screenshot(struct msg_buf_t *msg_control)
 	enum ErrorCode err_code = ERR_UNKNOWN;
 
 	// send config message to target process
-	sendlog.type = MSG_CAPTURE_SCREEN;
+	sendlog.type = APP_MSG_CAPTURE_SCREEN;
 	sendlog.length = 0;
 	log_len = sizeof(sendlog.type) + sizeof(sendlog.length) + sendlog.length;
 
 	if (target_send_msg_to_all(&sendlog) == 0)
 		err_code = ERR_NO;
+
+	sendACKToHost(NMSG_GET_SCREENSHOT, err_code, 0, 0);
 
 	return -(err_code != ERR_NO);
 }
@@ -1222,10 +1224,65 @@ send_ack:
 	return -(err_code != ERR_NO);
 }
 
-int host_message_handler(struct msg_t *msg)
+int process_msg_get_target_info()
 {
 	struct target_info_t target_info;
+	enum ErrorCode error_code = ERR_NO;
+	uint32_t payload_len = 0;
+	char *payload;
+	char *p = NULL;
+
+	fill_target_info(&target_info);
+
+	payload = malloc(sizeof(target_info) -
+			 sizeof(target_info.network_type) +
+			 strlen(target_info.network_type) + 1 +
+			 sizeof(uint32_t) + /* devices count */
+			 str_array_getsize(supported_devices_strings,
+					   supported_devices_count));
+
+	if (payload == NULL) {
+		LOGE("Cannot alloc target info msg\n");
+		/* TODO set error out of memory */
+		error_code = ERR_UNKNOWN;
+		goto send_ack;
+	}
+
+	p = payload;
+
+	pack_int64(p, target_info.sys_mem_size);
+	pack_int64(p, target_info.storage_size);
+	pack_int32(p, target_info.bluetooth_supp);
+	pack_int32(p, target_info.gps_supp);
+	pack_int32(p, target_info.wifi_supp);
+	pack_int32(p, target_info.camera_count);
+	pack_str(p, target_info.network_type);
+	pack_int32(p, target_info.max_brightness);
+	pack_int32(p, target_info.cpu_core_count);
+	pack_int32(p, supported_devices_count);
+	p = pack_str_array(p, supported_devices_strings,
+			   supported_devices_count);
+
+	payload_len = p - payload;
+
+send_ack:
+	if (sendACKToHost(NMSG_GET_TARGET_INFO, error_code, payload, payload_len) != 0) {
+		LOGE("Cannot send ACK");
+		error_code = ERR_UNKNOWN;
+		goto exit;
+	}
+
+exit:
+	free(payload);
+	reset_target_info(&target_info);
+	return -(error_code != ERR_NO);
+}
+
+
+int host_message_handler(struct msg_t *msg)
+{
 	struct msg_t *msg_reply = NULL;
+	struct msg_t *msg_reply_additional = NULL;
 	struct msg_buf_t msg_control;
 	struct conf_t conf;
 	enum ErrorCode error_code = ERR_NO;
@@ -1237,6 +1294,10 @@ int host_message_handler(struct msg_t *msg)
 	init_parse_control(&msg_control, msg);
 
 	switch (msg->id) {
+	case NMSG_VERSION:
+		return process_msg_version();
+	case NMSG_GET_PROBE_MAP:
+		return process_msg_get_probe_map();
 	case NMSG_KEEP_ALIVE:
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
@@ -1250,15 +1311,17 @@ int host_message_handler(struct msg_t *msg)
 		}
 		break;
 	case NMSG_CONFIG:
-		error_code = ERR_NO;
+//		error_code = ERR_NO;
 		if (!parse_msg_config(&msg_control, &conf)) {
 			LOGE("config parsing error\n");
-			sendACKToHost(msg->id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
-			return -1;
+			error_code = ERR_WRONG_MESSAGE_FORMAT;
+			goto send_ack;
 		}
-		if (reconfigure(conf) != 0) {
+
+		if (reconfigure(conf, &msg_reply, &msg_reply_additional ) != 0) {
 			LOGE("Cannot change configuration\n");
-			return -1;
+			error_code = ERR_UNKNOWN;
+			goto send_ack;
 		}
 		//write to device
 
@@ -1275,14 +1338,34 @@ int host_message_handler(struct msg_t *msg)
 		*((uint64_t *)msg->payload) = feature0;
 
 		if (ioctl_send_msg(msg) != 0) {
+			LOGI("send probes\n");
 			LOGE("ioctl send error\n");
-			sendACKToHost(msg->id, ERR_UNKNOWN, 0, 0);
-			return -1;
+			error_code = ERR_UNKNOWN;
+			goto send_ack;
 		}
+
+		if (msg_reply != NULL) {
+			LOGI("send ld preload add probes\n");
+			if (ioctl_send_msg(msg_reply) != 0) {
+				error_code = ERR_UNKNOWN;
+				LOGE("ioclt send error\n");
+				goto send_ack;
+			}
+		}
+
+		if (msg_reply_additional != NULL) {
+			LOGI("send ld preload remove probes\n");
+			if (ioctl_send_msg(msg_reply_additional) != 0) {
+				error_code = ERR_UNKNOWN;
+				LOGE("ioclt send error\n");
+				goto send_ack;
+			}
+		}
+
 		//send ack to host
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		// send config message to target process
-		sendlog.type = MSG_OPTION;
+		sendlog.type = APP_MSG_CONFIG;
 		sendlog.length = snprintf(sendlog.data, sizeof(sendlog.data),
 					  "%llu",
 					  (unsigned long long)
@@ -1319,19 +1402,7 @@ int host_message_handler(struct msg_t *msg)
 		}
 		goto send_ack;
 	case NMSG_GET_TARGET_INFO:
-		fill_target_info(&target_info);
-		msg_reply = gen_target_info_reply(&target_info);
-		if (!msg_reply) {
-			LOGE("cannot generate reply message\n");
-			sendACKToHost(msg->id, ERR_UNKNOWN, 0, 0);
-			return -1;
-		}
-		if (send_reply(msg_reply) != 0) {
-			LOGE("Cannot send reply\n");
-		}
-		free(msg_reply);
-		reset_target_info(&target_info);
-		break;
+		return process_msg_get_target_info();
 	case NMSG_GET_SCREENSHOT:
 		return process_msg_get_screenshot(&msg_control);
 	case NMSG_GET_PROCESS_ADD_INFO:
@@ -1348,10 +1419,12 @@ send_ack:
 	sendACKToHost(msg->id, error_code, 0, 0);
 	if (msg_reply != NULL)
 		free(msg_reply);
+
+	if (msg_reply_additional != NULL)
+		free(msg_reply_additional);
+
 	return (error_code == ERR_NO);
 }
-
-// testing
 
 static void print_conf(struct conf_t *conf)
 {

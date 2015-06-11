@@ -29,6 +29,7 @@
  */
 
 
+#include <stdlib.h>
 #include <sys/smack.h>
 #include <attr/xattr.h>
 #include "smack.h"
@@ -45,4 +46,24 @@ void fd_setup_attributes(int fd)
 void set_label_for_all(const char *path)
 {
 	smack_lsetlabel(path, "*", SMACK_LABEL_ACCESS);
+}
+
+int apply_smack_rules(const char* subject, const char* object,
+		    const char* access_type)
+{
+	struct smack_accesses *rules = NULL;
+	int ret = 0;
+
+	if (smack_accesses_new(&rules))
+		return -1;
+
+	if (smack_accesses_add(rules, subject, object, access_type)) {
+		smack_accesses_free(rules);
+		return -1;
+	}
+
+	ret = smack_accesses_apply(rules);
+	smack_accesses_free(rules);
+
+	return ret;
 }

@@ -1,14 +1,11 @@
 /*
  *  DA manager
  *
- * Copyright (c) 2000 - 2013 Samsung Electronics Co., Ltd. All rights reserved.
+ * Copyright (c) 2014 Samsung Electronics Co., Ltd. All rights reserved.
  *
  * Contact:
  *
- * Jaewon Lim		<jaewon81.lim@samsung.com>
- * Woojin Jung		<woojin2.jung@samsung.com>
- * Juyoung Kim		<j0.kim@samsung.com>
- * Nikita Kalyazin	<n.kalyazin@samsung.com>
+ * Ruslan Soloviev <r.soloviev@samsung.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,18 +20,27 @@
  * limitations under the License.
  *
  * Contributors:
- * - S-Core Co., Ltd
- * - Samsung RnD Institute Russia
+ * - Samsung Research Russia
  *
  */
 
 
-#ifndef _SMACK_H_
-#define _SMACK_H_
+#ifndef WSI_H_
+#define WSI_H_
 
-void fd_setup_attributes(int fd);
-void set_label_for_all(const char *path);
-int apply_smack_rules(const char* subject, const char* object,
-		      const char* access_type);
+#include "da_inst.h"
 
-#endif /* _SMACK_H_ */
+enum web_prof_state_t {
+	PROF_OFF,
+	PROF_ON
+};
+
+int wsi_set_profile(const struct app_info_t *app_info);
+int wsi_set_smack_rules(const struct app_info_t *app_info);
+int wsi_enable_profiling(enum web_prof_state_t mode);
+int wsi_init(const char *address, int port);
+int wsi_start_profiling(void);
+void wsi_destroy(void);
+void wsi_stop_profiling(void);
+
+#endif /* WSI_H_ */
