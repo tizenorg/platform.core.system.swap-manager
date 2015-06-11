@@ -28,12 +28,13 @@
 #ifndef _TARGER_H_
 #define _TARGER_H_
 
-
+#include "malloc_debug_disable.h"
 #include <inttypes.h>
 #include <pthread.h>
 
 #include <Ecore.h>
 
+#include "malloc_debug.h"
 #include "da_protocol.h"
 
 

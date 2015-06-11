@@ -12,7 +12,15 @@ BuildRequires:  aul-devel
 BuildRequires:  vconf-devel
 BuildRequires:  capi-system-info-devel
 BuildRequires:  capi-system-runtime-info-devel
+BuildRequires:  libwebsockets-devel
+BuildRequires:  libjson-devel
 BuildRequires:  pkgconfig(ecore)
+BuildRequires:  swap-probe-devel
+BuildRequires:  webkit2-efl
+BuildRequires:  webkit2-efl-debuginfo
+BuildRequires:  launchpad
+BuildRequires:  app-core-efl
+BuildRequires:  app-core-common-devel
 %if "%_project" != "Kirana_SWA_OPEN:Build" && "%_project" != "Kirana_SWA_OPEN:Daily"
 Requires:  swap-modules
 %endif
@@ -44,6 +52,7 @@ cd daemon
 %{_prefix}/bin/da_manager
 /opt/swap/sdk/start.sh
 /opt/swap/sdk/stop.sh
+/opt/swap/sdk/init_preload.sh
 
 %changelog
 

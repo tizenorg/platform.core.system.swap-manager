@@ -37,6 +37,13 @@ if [ ! -e /sys/kernel/debug/swap/writer/raw ]; then
     insmod swap_sampler.ko          || exit 110
     insmod swap_energy.ko           || exit 111
     insmod swap_message_parser.ko   || exit 112  # parser is loaded
+    insmod swap_retprobe.ko         || exit 113  # retprobe is loaded
+    insmod swap_fbiprobe.ko         || exit 114  # fbi is loaded
+    insmod swap_webprobe.ko         || exit 115  # webprobe is loaded
+    insmod swap_task_data.ko        || exit 116
+    insmod swap_preload.ko          || exit 117
+    insmod swap_wsp.ko              || exit 118
+    insmod swap_nsp.ko              || exit 119
 
 fi
 
@@ -85,6 +92,12 @@ then
 	# lcd min (white min - black min) / 2: 179 / 1
 	echo 179 > `ls /sys/kernel/debug/swap/energy/lcd/*/min_num` &&
 	echo 1000000 > `ls /sys/kernel/debug/swap/energy/lcd/*/min_denom`
+fi
+
+#Preload
+if [ -d /sys/kernel/debug/swap/preload/ ]
+then
+	./init_preload.sh
 fi
 
 exit $ERR_NO
