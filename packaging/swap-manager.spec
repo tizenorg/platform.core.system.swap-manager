@@ -3,7 +3,7 @@ Summary:    SWAP manager
 Version:    3.0
 Release:    1
 Group:      System/Libraries
-License:	Apache License, Version 2
+License:    Apache-2.0
 Source:    %{name}_%{version}.tar.gz
 BuildRequires:  smack-devel
 BuildRequires:  libattr-devel

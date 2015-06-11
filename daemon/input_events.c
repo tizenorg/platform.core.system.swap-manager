@@ -81,6 +81,10 @@ static const char *input_key_devices[] = {
 	"sci-keypad",
 	/* target: Kiran, kernel: 3.10.17, buttons: menu, back */
 	"ist30xx_ts_tinput",
+	/* target: tv emulator, remo, kernel: 3.12.18 */
+	"wt61p807 rc",
+	/* target: tv kernel: 3.10.30 */
+	"wt61p807 rc device",
 	NULL
 };
 
@@ -93,6 +97,8 @@ static const char *input_touch_devices[] = {
 	"MELPAS MMS114 Touchscreen",
 	/* target: Kiran, kernel: 3.10.17 */
 	"ist30xx_ts_input",
+	/* target: tv emulator, kernel: 3.12.18 */
+	"ImExPS/2 Generic Explorer Mouse",
 	NULL
 };
 
@@ -168,6 +174,10 @@ static void _get_fds(input_dev *dev, int input_id)
 				dev[count].fd = open(dev[count].fileName,
 						     O_RDWR | O_NONBLOCK);
 				count++;
+				if (count >= MAX_DEVICE - 1) {
+					LOGE("too match device found!");
+					break;
+				}
 			}
 		}
 	}
@@ -199,10 +209,15 @@ static int deviceEventHandler(input_dev *dev, int input_type)
 			     count,
 			     input_type == INPUT_ID_KEY ? STR_KEY : STR_TOUCH);
 			log = gen_message_event(in_ev, count, input_type);
-			printBuf((char *)log, MSG_DATA_HDR_LEN + log->len);
-			if (write_to_buf(log) != 0)
-				LOGE("write to buf fail\n");
-			free_msg_data(log);
+			if (log != NULL) {
+				printBuf((char *)log, MSG_DATA_HDR_LEN + log->len);
+				if (write_to_buf(log) != 0)
+					LOGE("write to buf fail\n");
+				free_msg_data(log);
+			} else {
+				LOGE("cannot generate message event."
+				     "message missed\n");
+			}
 		}
 	} else {
 		LOGW("unknown input_type\n");
@@ -319,16 +334,21 @@ void write_input_event(int id, struct input_event *ev)
 
 int init_input_events(void)
 {
+	int res = 0;
+
 	_get_fds(g_key_dev, INPUT_ID_KEY);
+	_get_fds(g_touch_dev, INPUT_ID_TOUCH);
 	if (g_key_dev[0].fd == ARRAY_END) {
 		LOGE("No key devices found.\n");
-		return -1;
+		res = -1;
 	}
-	_get_fds(g_touch_dev, INPUT_ID_TOUCH);
+	/*
+	 * Some targets has no touch devices.
+	 * So we should print error but do not return error code.
+	 */
 	if (g_touch_dev[0].fd == ARRAY_END) {
 		LOGE("No touch devices found.\n");
-		return -1;
 	}
 
-	return 0;
+	return res;
 }
