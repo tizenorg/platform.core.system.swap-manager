@@ -32,6 +32,7 @@
 #include "nsp_data.h"               /* auto generate */
 #include "inst/AppInstTizen.h"
 #include "inst/AppInstCont.h"
+#include "elf/FileElf.h"
 
 
 static const char path_enabled[] = "/sys/kernel/debug/swap/nsp/enabled";
@@ -108,6 +109,22 @@ static int nspDisable()
     return 0;
 }
 
+static uint32_t getAddrPlt(const char *path, const char *name)
+{
+    FileElf elf;
+
+    if (elf.open(path)) {
+        LOGE("cannot open ELF file '%s'\n", path);
+        return 0;
+    }
+
+    uint32_t addr;
+    int ret = elf.getAddrPlt(&name, &addr, 1);
+    elf.close();
+
+    return ret ? 0 : addr;
+}
+
 class FeatureNSP : public Feature
 {
     int doInit()
@@ -129,8 +146,26 @@ class FeatureNSP : public Feature
             return ret;
         }
 
-        cmd = "b " + addr2hex(ADDR_DLOPEN_PLT_LPAD) + ":"
-            + addr2hex(ADDR_DLSYM_PLT_LPAD) + ":" + PATH_LAUNCHPAD;
+        uint32_t dlopenAddr = ADDR_DLOPEN_PLT_LPAD;
+        if (dlopenAddr == 0)
+            dlopenAddr = getAddrPlt(PATH_LAUNCHPAD, "dlopen");
+
+        if (dlopenAddr == 0) {
+            LOGE("not found 'dlopen@plt' addr in '%s'\n", PATH_LAUNCHPAD);
+            return -EINVAL;
+        }
+
+        uint32_t dlsymAddr = ADDR_DLSYM_PLT_LPAD;
+        if (dlsymAddr == 0)
+            dlopenAddr = getAddrPlt(PATH_LAUNCHPAD, "dlsym");
+
+        if (dlopenAddr == 0) {
+            LOGE("not found 'dlsym@plt' addr in '%s'\n", PATH_LAUNCHPAD);
+            return -EINVAL;
+        }
+
+        cmd = "b " + addr2hex(dlopenAddr) + ":"
+            + addr2hex(dlsymAddr) + ":" + PATH_LAUNCHPAD;
         ret = write_to_file(path_cmd, cmd);
         if (ret < 0) {
             LOGE("write to file '%s', cmd=%s\n", path_cmd, cmd.c_str());

@@ -60,7 +60,7 @@ SRC_C := \
 	da_inst.c \
 	daemon.c \
 	debug.c \
-	elf.c \
+	elf_aux.c \
 	ioctl_commands.c \
 	main.c \
 	sys_stat.c \
@@ -87,7 +87,10 @@ SRC_CPP := \
 	cpp/features/feature_nsp.cpp \
 \
 	cpp/inst/AppInst.cpp \
-	cpp/inst/AppInstCont.cpp
+	cpp/inst/AppInstCont.cpp \
+\
+	cpp/elf/File.cpp \
+	cpp/elf/FileElf.cpp
 
 OBJS_C := $(SRC_C:.c=.o)
 OBJS_CPP := $(SRC_CPP:.cpp=.o)

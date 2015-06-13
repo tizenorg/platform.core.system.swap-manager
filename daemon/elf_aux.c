@@ -38,7 +38,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
-#include "elf.h"
+#include "elf_aux.h"
 #include "debug.h"
 
 #define SIZEOF_VOID_P 4

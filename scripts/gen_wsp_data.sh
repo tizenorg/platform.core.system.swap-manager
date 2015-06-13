@@ -30,7 +30,7 @@ get_addr()
 
 	if [[ -z "$addr" ]]; then
 		echo "ERROR: symbol '$name' not found" >&2
-		exit 1
+		addr=0
 	fi
 
 	echo 0x$addr

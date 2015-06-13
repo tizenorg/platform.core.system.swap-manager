@@ -43,7 +43,7 @@
 #include "daemon.h"
 #include "sys_stat.h"
 #include "transfer_thread.h"
-#include "elf.h"
+#include "elf_aux.h"
 #include "ioctl_commands.h"
 #include "debug.h"
 #include "md5.h"

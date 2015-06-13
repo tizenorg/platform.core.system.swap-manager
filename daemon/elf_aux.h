@@ -27,8 +27,8 @@
  */
 
 
-#ifndef _ELF_
-#define _ELF_
+#ifndef _ELF_AUX_
+#define _ELF_AUX_
 #include <limits.h>
 enum binary_type_t {
 	BINARY_TYPE_NO_PIE = 0,
@@ -39,4 +39,4 @@ enum binary_type_t {
 
 uint32_t get_binary_type(const char *path);
 void get_build_dir(char builddir[PATH_MAX], const char *path);
-#endif				/* _ELF_ */
+#endif /* _ELF_AUX_ */

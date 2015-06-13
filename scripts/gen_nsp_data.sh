@@ -48,8 +48,8 @@ addr_dlopen_plt=$(cat $tmp | grep " <dlopen@" | cut -f1 -d' ')
 addr_dlsym_plt=$(cat $tmp | grep " <dlsym@" | cut -f1 -d' ')
 rm $tmp
 
-check_null_or_exit addr_dlopen_plt
-check_null_or_exit addr_dlsym_plt
+addr_dlopen_plt=${addr_dlopen_plt:-0}
+addr_dlsym_plt=${addr_dlsym_plt:-0}
 
 
 PATH_LIBAPPCORE_EFL=$(gen_define_str PATH_LIBAPPCORE_EFL $path_app_core_efl)

@@ -29,19 +29,59 @@
 #include "common.h"
 #include "debug.h"
 #include "wsp_data.h"       /* auto generate */
+#include "elf/FileElf.h"
 
 
 static const char path_enabled[] = "/sys/kernel/debug/swap/wsp/enabled";
 static const char path_cmd[] = "/sys/kernel/debug/swap/wsp/cmd";
+static const char ewebkit_path[] = "/usr/lib/libewebkit2.so";
 
+
+static std::string rmPlt(const std::string &name)
+{
+    static const char postfix[] = "@plt";
+    static const size_t postfixSize= sizeof(postfix) - 1;
+
+    if (name.size() <= postfixSize)
+        return std::string();
+
+    if (name.find(postfix) == std::string::npos)
+        return std::string();
+
+    return name.substr(0, name.size() - postfixSize);
+}
 
 class FeatureWSP : public Feature
 {
     int doInit()
     {
         for (int ret, i = 0; i < wsp_data_cnt; ++i) {
-            const std::string name(wsp_data[i].name);
-            const unsigned long addr = wsp_data[i].addr;
+            const std::string name (wsp_data[i].name);
+            unsigned long addr = wsp_data[i].addr;
+
+            if (addr == 0) {
+                FileElf elf;
+
+                ret = elf.open(ewebkit_path);
+                if (ret) {
+                    LOGE("cannot open ELF file '%s'\n", ewebkit_path);
+                    return ret;
+                }
+
+                std::string str = rmPlt(name);
+                const char *s = str.c_str();
+                uint32_t a;
+
+                ret = elf.getAddrPlt(&s, &a, 1);
+                elf.close();
+
+                if (ret) {
+                    LOGE("get plt addr for '%s'\n", s);
+                    return ret;
+                }
+
+                addr = a;
+            }
 
             if (addr == 0) {
                 LOGE("address for '%s' is not found\n", name.c_str());
