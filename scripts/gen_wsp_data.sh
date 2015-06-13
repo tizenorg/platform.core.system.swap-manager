@@ -1,8 +1,17 @@
 #!/bin/bash
 
 
-path_libewebkit2=`rpm -ql webkit2-efl | grep "libewebkit2.so$" | head -1`
-path_libewebkit2_debuginfo=`rpm -ql webkit2-efl-debuginfo | grep "libewebkit2.so.debug$" | head -1`
+script_dir=$(readlink -f $0 | xargs dirname)
+source $script_dir/dyn_vars
+
+if [ "$__tizen_profile_name__" == "tv" ]; then
+	webkit_package_name=webkit2-efl-tv
+else
+	webkit_package_name=webkit2-efl
+fi
+
+path_libewebkit2=`rpm -ql $webkit_package_name | grep "libewebkit2.so$" | head -1`
+path_libewebkit2_debuginfo=`rpm -ql ${webkit_package_name}-debuginfo | grep "libewebkit2.so.debug$" | head -1`
 
 
 g_names=()
@@ -53,13 +62,23 @@ gen_array()
 }
 
 
-add_func soup_requester_request@plt soup_request
-add_func _ZN7WebCore18MainResourceLoader15willSendRequestERNS_15ResourceRequestERKNS_16ResourceResponseE main_res_will
-add_func _ZN7WebCore18MainResourceLoader7addDataEPKcib main_res_add
-add_func _ZN7WebCore18MainResourceLoader16didFinishLoadingEd main_res_finish
-add_func _ZN7WebCore14ResourceLoader15willSendRequestERNS_15ResourceRequestERKNS_16ResourceResponseE res_will
-add_func _ZN7WebCore14ResourceLoader16didFinishLoadingEPNS_14ResourceHandleEd res_finish
-add_func _ZN6WebKit20LayerTreeCoordinator24flushPendingLayerChangesEv redraw
+if [ "$__tizen_profile_name__" == "tv" ]; then
+	add_func soup_requester_request_uri@plt soup_request
+	add_func _ZN7WebCore14ResourceLoader15willSendRequestERNS_15ResourceRequestERKNS_16ResourceResponseE main_res_will
+	add_func _ZN7WebCore11CachedImage7addDataEPKcj main_res_add
+	add_func _ZN7WebCore14ResourceLoader16didFinishLoadingEd main_res_finish
+	add_func _ZN7WebCore14ResourceLoader15willSendRequestERNS_15ResourceRequestERKNS_16ResourceResponseE res_will
+	add_func _ZN7WebCore14ResourceLoader16didFinishLoadingEPNS_14ResourceHandleEd res_finish
+	add_func _ZN7WebCore22CompositingCoordinator24flushPendingLayerChangesEv redraw
+else
+	add_func soup_requester_request@plt soup_request
+	add_func _ZN7WebCore18MainResourceLoader15willSendRequestERNS_15ResourceRequestERKNS_16ResourceResponseE main_res_will
+	add_func _ZN7WebCore18MainResourceLoader7addDataEPKcib main_res_add
+	add_func _ZN7WebCore18MainResourceLoader16didFinishLoadingEd main_res_finish
+	add_func _ZN7WebCore14ResourceLoader15willSendRequestERNS_15ResourceRequestERKNS_16ResourceResponseE res_will
+	add_func _ZN7WebCore14ResourceLoader16didFinishLoadingEPNS_14ResourceHandleEd res_finish
+	add_func _ZN6WebKit20LayerTreeCoordinator24flushPendingLayerChangesEv redraw
+fi
 
 IFS=$'\n'
 

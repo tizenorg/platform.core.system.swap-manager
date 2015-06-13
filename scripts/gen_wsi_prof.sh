@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 get_addr()
 {
@@ -13,12 +13,20 @@ get_addr()
 	echo 0x$addr
 }
 
-lib_file=$(rpm -ql webkit2-efl-debuginfo | grep "libewebkit2.so.debug$" | head -1)
+script_dir=$(readlink -f $0 | xargs dirname)
+source $script_dir/dyn_vars
+
+if [ "$__tizen_profile_name__" == "tv" ]; then
+	webkit_package_name=webkit2-efl-tv
+else
+	webkit_package_name=webkit2-efl
+fi
+lib_file=$(rpm -ql ${webkit_package_name}-debuginfo | grep "/usr/lib/debug/usr/lib/libewebkit2.so.debug$" | head -1)
 tmp=$(mktemp)
 
 readelf -sW ${lib_file} | grep " FUNC " > ${tmp}
 
-inspector_addr=$(get_addr ewk_context_inspector_server_start);
+inspector_addr=$(get_addr 'ewk_\(context\|view\)_inspector_server_start');
 willexecute_addr=$(get_addr _ZN3JSC16ProfileGenerator11willExecuteEPNS_9ExecStateERKNS_14CallIdentifierE);
 didexecute_addr=$(get_addr _ZN3JSC16ProfileGenerator10didExecuteEPNS_9ExecStateERKNS_14CallIdentifierE);
 

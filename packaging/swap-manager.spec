@@ -16,8 +16,13 @@ BuildRequires:  libwebsockets-devel
 BuildRequires:  libjson-devel
 BuildRequires:  pkgconfig(ecore)
 BuildRequires:  swap-probe-devel
+%if "%{?tizen_profile_name}" == "tv"
+BuildRequires:  webkit2-efl-tv
+BuildRequires:  webkit2-efl-tv-debuginfo
+%else
 BuildRequires:  webkit2-efl
 BuildRequires:  webkit2-efl-debuginfo
+%endif
 BuildRequires:  launchpad
 BuildRequires:  app-core-efl
 BuildRequires:  app-core-common-devel
@@ -35,6 +40,9 @@ This binary will be installed in target.
 %setup -q -n %{name}_%{version}
 
 %build
+pushd scripts
+echo "__tizen_profile_name__="%{?tizen_profile_name} > dyn_vars
+popd
 cd daemon
 make
 
