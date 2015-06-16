@@ -305,7 +305,7 @@ out:
 	return pid;
 }
 
-static pid_t get_pid_by_path(const char *binary_path)
+pid_t get_pid_by_path(const char *binary_path)
 {
 	pid_t pkg_pid;
 	int len;
