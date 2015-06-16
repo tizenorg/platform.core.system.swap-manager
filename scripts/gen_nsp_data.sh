@@ -40,7 +40,9 @@ check_null_or_exit addr_appcore_efl_main
 # get dlopen@plt and dlsym@plt addrs
 path_launchpad=$(rpm -ql launchpad | grep launchpad-loader | head -1)
 path_launchpad=${path_launchpad:-$(rpm -ql launchpad | grep launchpad-process-pool | head -1)}
+path_launchpad_daemon=$(rpm -ql aul | grep launchpad_preloading_preinitializing_daemon | head -1)
 check_null_or_exit path_launchpad
+check_null_or_exit path_launchpad_daemon
 
 tmp=$(mktemp)
 su root -c "objdump -d --section=.plt $path_launchpad" | grep ">:"  > $tmp
@@ -58,7 +60,7 @@ ADDR_APPCORE_EFL_MAIN=$(gen_define ADDR_APPCORE_EFL_MAIN 0x$addr_appcore_efl_mai
 PATH_LAUNCHPAD=$(gen_define_str PATH_LAUNCHPAD $path_launchpad)
 ADDR_DLOPEN_PLT_LPAD=$(gen_define ADDR_DLOPEN_PLT_LPAD 0x$addr_dlopen_plt)
 ADDR_DLSYM_PLT_LPAD=$(gen_define ADDR_DLSYM_PLT_LPAD 0x$addr_dlsym_plt)
-
+PATH_LAUNCHPAD_DAEMON=$(gen_define_str PATH_LAUNCHPAD_DAEMON $path_launchpad_daemon)
 
 NSP_DEFINES="
 $PATH_LIBAPPCORE_EFL
@@ -66,6 +68,7 @@ $ADDR_APPCORE_EFL_MAIN
 $PATH_LAUNCHPAD
 $ADDR_DLOPEN_PLT_LPAD
 $ADDR_DLSYM_PLT_LPAD
+$PATH_LAUNCHPAD_DAEMON
 "
 
 cat << EOF

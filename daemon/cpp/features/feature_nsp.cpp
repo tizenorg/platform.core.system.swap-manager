@@ -23,6 +23,7 @@
 #include <string>
 #include <errno.h>
 #include <appcore/appcore-common.h>
+#include <pkgmgr-info.h>
 #include "feature.h"
 #include "feature_manager.h"
 
@@ -47,9 +48,28 @@ enum {
 
 static int addApp(const AppInstTizen &app)
 {
-    std::string cmd("a " + app.info().path());
+    int ret;
+    pkgmgrinfo_appinfo_h handle;
+    bool is_process_pool = 0;
+    const char *app_id;
 
-    int ret = write_to_file(path_cmd, cmd);
+    app_id = app.info().id().c_str();
+
+    ret = pkgmgrinfo_appinfo_get_appinfo(app_id, &handle);
+    if (ret < 0) {
+        LOGE("can't get pkginfo for '%s'\n", app_id);
+        return ret;
+    }
+    ret = pkgmgrinfo_appinfo_is_process_pool(handle, &is_process_pool);
+    pkgmgrinfo_appinfo_destroy_appinfo(handle);
+    if (ret < 0) {
+        LOGE("can't get process pool\n");
+        return ret;
+    }
+
+    std::string cmd("a " + int2str(is_process_pool) + ":" + app.info().path());
+
+    ret = write_to_file(path_cmd, cmd);
     if (ret < 0) {
         LOGE("write to file '%s', cmd=%s\n", path_cmd, cmd.c_str());
         return ret;
@@ -173,6 +193,19 @@ class FeatureNSP : public Feature
         }
 
         cmd = "l " + addr2hex(ADDR_APPCORE_EFL_MAIN) + ":" + PATH_LIBAPPCORE_EFL;
+        ret = write_to_file(path_cmd, cmd);
+        if (ret < 0) {
+            LOGE("write to file '%s', cmd=%s\n", path_cmd, cmd.c_str());
+            return ret;
+        }
+
+        int launchpad_pid = get_pid_by_path(PATH_LAUNCHPAD_DAEMON);
+        if (launchpad_pid == 0) {
+            LOGE("not found pid of '%s'\n", PATH_LAUNCHPAD_DAEMON);
+            return -EINVAL;
+        }
+
+        cmd = "p " + int2str(launchpad_pid);
         ret = write_to_file(path_cmd, cmd);
         if (ret < 0) {
             LOGE("write to file '%s', cmd=%s\n", path_cmd, cmd.c_str());
