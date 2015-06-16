@@ -67,6 +67,7 @@ int exec_app_common(const char* exec_path);
 int exec_app_web(const char *app_id);
 void kill_app_web(const char *app_id);
 float get_uptime(void);
+pid_t get_pid_by_path(const char *binary_path);
 #ifdef __cplusplus
 }
 #endif

@@ -25,7 +25,9 @@ INCLUDE := \
 	-I/usr/include/eina-1 \
 	-I/usr/include/eina-1/eina \
 	-I/usr/include/efl-1 \
-	-I/usr/include/eo-1
+	-I/usr/include/eo-1 \
+	-I/usr/include/glib-2.0 \
+	-I/usr/lib/glib-2.0/include/
 
 FLAGS := \
 	$(COMM_FLAGS) \
@@ -49,7 +51,9 @@ LDFLAGS := \
 	-lecore \
 	-lcapi-system-info \
 	-lwebsockets \
-	-ljson-c
+	-ljson-c \
+	-lglib-2.0 \
+	-lpkgmgr-info
 
 SRC_C := \
 	buffer.c \
