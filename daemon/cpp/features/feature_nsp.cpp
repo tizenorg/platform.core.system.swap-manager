@@ -23,6 +23,7 @@
 #include <string>
 #include <errno.h>
 #include <appcore/appcore-common.h>
+#include <pkgmgr-info.h>
 #include "feature.h"
 #include "feature_manager.h"
 
@@ -47,9 +48,28 @@ enum {
 
 static int addApp(const AppInstTizen &app)
 {
-    std::string cmd("a " + app.info().path());
+    int ret;
+    pkgmgrinfo_appinfo_h handle;
+    bool isProcessPool = 0;
+    const char *appId;
 
-    int ret = write_to_file(path_cmd, cmd);
+    appId = app.info().id().c_str();
+
+    ret = pkgmgrinfo_appinfo_get_appinfo(appId, &handle);
+    if (ret < 0) {
+        LOGE("can't get pkginfo for '%s'\n", appId);
+        return ret;
+    }
+    ret = pkgmgrinfo_appinfo_is_process_pool(handle, &isProcessPool);
+    pkgmgrinfo_appinfo_destroy_appinfo(handle);
+    if (ret < 0) {
+        LOGE("can't get process pool\n");
+        return ret;
+    }
+
+    std::string cmd("a " + int2str(isProcessPool) + ":" + app.info().path());
+
+    ret = write_to_file(path_cmd, cmd);
     if (ret < 0) {
         LOGE("write to file '%s', cmd=%s\n", path_cmd, cmd.c_str());
         return ret;
@@ -146,26 +166,52 @@ class FeatureNSP : public Feature
             return ret;
         }
 
-        uint32_t dlopenAddr = ADDR_DLOPEN_PLT_LPAD;
-        if (dlopenAddr == 0)
-            dlopenAddr = getAddrPlt(PATH_LAUNCHPAD, "dlopen");
+        uint32_t dlopenAddrPool = ADDR_DLOPEN_PLT_LPAD_POOL;
+        if (dlopenAddrPool == 0)
+            dlopenAddrPool = getAddrPlt(PATH_LAUNCHPAD_POOL, "dlopen");
 
-        if (dlopenAddr == 0) {
-            LOGE("not found 'dlopen@plt' addr in '%s'\n", PATH_LAUNCHPAD);
+        if (dlopenAddrPool == 0) {
+            LOGE("not found 'dlopen@plt' addr in '%s'\n", PATH_LAUNCHPAD_POOL);
             return -EINVAL;
         }
 
-        uint32_t dlsymAddr = ADDR_DLSYM_PLT_LPAD;
-        if (dlsymAddr == 0)
-            dlopenAddr = getAddrPlt(PATH_LAUNCHPAD, "dlsym");
+        uint32_t dlsymAddrPool = ADDR_DLSYM_PLT_LPAD_POOL;
+        if (dlsymAddrPool == 0)
+            dlopenAddrPool = getAddrPlt(PATH_LAUNCHPAD_POOL, "dlsym");
 
-        if (dlopenAddr == 0) {
-            LOGE("not found 'dlsym@plt' addr in '%s'\n", PATH_LAUNCHPAD);
+        if (dlopenAddrPool == 0) {
+            LOGE("not found 'dlsym@plt' addr in '%s'\n", PATH_LAUNCHPAD_POOL);
             return -EINVAL;
         }
 
-        cmd = "b " + addr2hex(dlopenAddr) + ":"
-            + addr2hex(dlsymAddr) + ":" + PATH_LAUNCHPAD;
+        cmd = "b " + addr2hex(dlopenAddrPool) + ":"
+            + addr2hex(dlsymAddrPool) + ":" + PATH_LAUNCHPAD_POOL;
+        ret = write_to_file(path_cmd, cmd);
+        if (ret < 0) {
+            LOGE("write to file '%s', cmd=%s\n", path_cmd, cmd.c_str());
+            return ret;
+        }
+
+        uint32_t dlopenAddrDaemon = ADDR_DLOPEN_PLT_LPAD_DAEMON;
+        if (dlopenAddrDaemon == 0)
+            dlopenAddrDaemon = getAddrPlt(PATH_LAUNCHPAD_DAEMON, "dlopen");
+
+        if (dlopenAddrDaemon == 0) {
+            LOGE("not found 'dlopen@plt' addr in '%s'\n", PATH_LAUNCHPAD_DAEMON);
+            return -EINVAL;
+        }
+
+        uint32_t dlsymAddrDaemon = ADDR_DLSYM_PLT_LPAD_DAEMON;
+        if (dlsymAddrDaemon == 0)
+            dlopenAddrDaemon = getAddrPlt(PATH_LAUNCHPAD_DAEMON, "dlsym");
+
+        if (dlopenAddrDaemon == 0) {
+            LOGE("not found 'dlsym@plt' addr in '%s'\n", PATH_LAUNCHPAD_DAEMON);
+            return -EINVAL;
+        }
+
+        cmd = "d " + addr2hex(dlopenAddrDaemon) + ":"
+            + addr2hex(dlsymAddrDaemon) + ":" + PATH_LAUNCHPAD_DAEMON;
         ret = write_to_file(path_cmd, cmd);
         if (ret < 0) {
             LOGE("write to file '%s', cmd=%s\n", path_cmd, cmd.c_str());
