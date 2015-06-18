@@ -16,7 +16,7 @@ if [ ! -e /sys/kernel/debug/swap/writer/raw ]; then
 
 fi
 
-# Energy coefficients
+# Energy coefficients (before)
 # CPU coefficients are divided by 10^6 because
 #  - they were calculated for mAs
 #  - SWAP modules count nanoseconds
@@ -28,25 +28,49 @@ fi
 #  - they were calculated for mAs
 #  - result should be exposed in uAs
 
-# cpu idle: 62.27 / 1
-echo 62270 > /sys/kernel/debug/swap/energy/cpu_idle/numerator &&
+# cpu idle: 62.27 / 1 (before)
+# cpu0 running: 213.21 / 1 (before)
+# cpuN running: 97.29 / 1 (before)
+# flash read:  74.32 / 33154239 (before)
+# flash write : 141.54 / 27920983 (before)
+
+# Energy coefficients (after)
+# CPU coefficients
+#  - result will expose in uAh
+# Flash coefficients
+#  - result will expose in uAh
+
+# wifi coefficient
+#  - result will expose in uAh
+
+#cpu idle: 3.15234056e-21 * 10^9 * 3600 (after)
+echo 11 > /sys/kernel/debug/swap/energy/cpu_idle/numerator &&
 echo 1000000000 > /sys/kernel/debug/swap/energy/cpu_idle/denominator &&
 
-# cpu0 running: 213.21 / 1
-echo 213210 > /sys/kernel/debug/swap/energy/cpu_running/numerator &&
+# cpu0 running: 9.84873971e-21 * 10^9 * 3600(after)
+echo 35 > /sys/kernel/debug/swap/energy/cpu_running/numerator &&
 echo 1000000000 > /sys/kernel/debug/swap/energy/cpu_running/denominator &&
 
-# cpuN running: 97.29 / 1
-echo 97290 > /sys/kernel/debug/swap/energy/cpuN_running/numerator &&
+# cpuN running: 2.18675205e-20 * 10^9 * 3600(after)
+echo 78 > /sys/kernel/debug/swap/energy/cpuN_running/numerator &&
 echo 1000000000 > /sys/kernel/debug/swap/energy/cpuN_running/denominator &&
 
-# flash read:  74.32 / 33154239
-echo 74320 > /sys/kernel/debug/swap/energy/flash_read/numerator &&
-echo 33154239 > /sys/kernel/debug/swap/energy/flash_read/denominator &&
+# flash read:   6.52076299e-21 * 10^9 * 3600(after)
+echo 23 > /sys/kernel/debug/swap/energy/flash_read/numerator &&
+echo 1000000000 > /sys/kernel/debug/swap/energy/flash_read/denominator &&
 
-# flash write: 141.54 / 27920983
-echo 141540 > /sys/kernel/debug/swap/energy/flash_write/numerator &&
-echo 27920983 > /sys/kernel/debug/swap/energy/flash_write/denominator &&
+# flash write : 2.74158641e-19 * 3600(after)
+echo 986 > /sys/kernel/debug/swap/energy/flash_write/numerator &&
+echo 1000000000 > /sys/kernel/debug/swap/energy/flash_write/denominator &&
+
+# recv : 1.54440608e-15 * 10^9 * 3600
+echo 5544 > /sys/kernel/debug/swap/energy/wf_recv/numerator &&
+echo 1000000 > /sys/kernel/debug/swap/energy/wf_recv/denominator &&
+
+
+# send : 1.74609171e-15 * 10^9 * 3600
+echo 6264 > /sys/kernel/debug/swap/energy/wf_send/numerator &&
+echo 1000000 > /sys/kernel/debug/swap/energy/wf_send/denominator &&
 
 # LCD:
 if [ -d /sys/kernel/debug/swap/energy/lcd/ ]
