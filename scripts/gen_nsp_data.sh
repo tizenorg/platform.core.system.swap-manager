@@ -38,49 +38,34 @@ addr_appcore_efl_main=$(readelf -s ${path_app_core_efl} | grep appcore_efl_main 
 check_null_or_exit addr_appcore_efl_main
 
 # get dlopen@plt and dlsym@plt addrs
-path_launchpad_pool=$(rpm -ql launchpad | grep launchpad-loader | head -1)
-path_launchpad_pool=${path_launchpad_pool:-$(rpm -ql launchpad | grep launchpad-process-pool | head -1)}
-path_launchpad_daemon=$(rpm -ql aul | grep launchpad_preloading_preinitializing_daemon | head -1)
-check_null_or_exit path_launchpad_pool
-check_null_or_exit path_launchpad_daemon
+path_launchpad=$(rpm -ql launchpad | grep launchpad-loader | head -1)
+path_launchpad=${path_launchpad:-$(rpm -ql launchpad | grep launchpad-process-pool | head -1)}
+check_null_or_exit path_launchpad
 
 tmp=$(mktemp)
-su root -c "objdump -d --section=.plt $path_launchpad_pool" | grep ">:"  > $tmp
-addr_dlopen_plt_pool=$(cat $tmp | grep " <dlopen@" | cut -f1 -d' ')
-addr_dlsym_plt_pool=$(cat $tmp | grep " <dlsym@" | cut -f1 -d' ')
+su root -c "objdump -d --section=.plt $path_launchpad" | grep ">:"  > $tmp
+addr_dlopen_plt=$(cat $tmp | grep " <dlopen@" | cut -f1 -d' ')
+addr_dlsym_plt=$(cat $tmp | grep " <dlsym@" | cut -f1 -d' ')
 rm $tmp
 
-addr_dlopen_plt_pool=${addr_dlopen_plt_pool:-0}
-addr_dlsym_plt_pool=${addr_dlsym_plt_pool:-0}
+addr_dlopen_plt=${addr_dlopen_plt:-0}
+addr_dlsym_plt=${addr_dlsym_plt:-0}
 
-tmp=$(mktemp)
-su root -c "objdump -d --section=.plt $path_launchpad_daemon" | grep ">:"  > $tmp
-addr_dlopen_plt_daemon=$(cat $tmp | grep " <dlopen@" | cut -f1 -d' ')
-addr_dlsym_plt_daemon=$(cat $tmp | grep " <dlsym@" | cut -f1 -d' ')
-rm $tmp
-
-addr_dlopen_plt_daemon=${addr_dlopen_plt_daemon:-0}
-addr_dlsym_plt_daemon=${addr_dlsym_plt_daemon:-0}
 
 PATH_LIBAPPCORE_EFL=$(gen_define_str PATH_LIBAPPCORE_EFL $path_app_core_efl)
 ADDR_APPCORE_EFL_MAIN=$(gen_define ADDR_APPCORE_EFL_MAIN 0x$addr_appcore_efl_main)
 
-PATH_LAUNCHPAD_POOL=$(gen_define_str PATH_LAUNCHPAD_POOL $path_launchpad_pool)
-ADDR_DLOPEN_PLT_LPAD_POOL=$(gen_define ADDR_DLOPEN_PLT_LPAD_POOL 0x$addr_dlopen_plt_pool)
-ADDR_DLSYM_PLT_LPAD_POOL=$(gen_define ADDR_DLSYM_PLT_LPAD_POOL 0x$addr_dlsym_plt_pool)
-PATH_LAUNCHPAD_DAEMON=$(gen_define_str PATH_LAUNCHPAD_DAEMON $path_launchpad_daemon)
-ADDR_DLOPEN_PLT_LPAD_DAEMON=$(gen_define ADDR_DLOPEN_PLT_LPAD_DAEMON 0x$addr_dlopen_plt_daemon)
-ADDR_DLSYM_PLT_LPAD_DAEMON=$(gen_define ADDR_DLSYM_PLT_LPAD_DAEMON 0x$addr_dlsym_plt_daemon)
+PATH_LAUNCHPAD=$(gen_define_str PATH_LAUNCHPAD $path_launchpad)
+ADDR_DLOPEN_PLT_LPAD=$(gen_define ADDR_DLOPEN_PLT_LPAD 0x$addr_dlopen_plt)
+ADDR_DLSYM_PLT_LPAD=$(gen_define ADDR_DLSYM_PLT_LPAD 0x$addr_dlsym_plt)
+
 
 NSP_DEFINES="
 $PATH_LIBAPPCORE_EFL
 $ADDR_APPCORE_EFL_MAIN
-$PATH_LAUNCHPAD_POOL
-$ADDR_DLOPEN_PLT_LPAD_POOL
-$ADDR_DLSYM_PLT_LPAD_POOL
-$PATH_LAUNCHPAD_DAEMON
-$ADDR_DLOPEN_PLT_LPAD_DAEMON
-$ADDR_DLSYM_PLT_LPAD_DAEMON
+$PATH_LAUNCHPAD
+$ADDR_DLOPEN_PLT_LPAD
+$ADDR_DLSYM_PLT_LPAD
 "
 
 cat << EOF
