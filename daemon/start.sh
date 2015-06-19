@@ -2,7 +2,7 @@
 
 export PATH=$PATH:/usr/sbin/
 
-if [ ! -e /sys/kernel/debug/swap/writer/raw ]; then
+if [ ! -e /sys/kernel/debug/swap/enable ]; then
 
     insmod swap_master.ko || exit 1
     insmod swap_buffer.ko || exit 1  # buffer is loaded
