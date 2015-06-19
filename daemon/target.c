@@ -83,17 +83,29 @@ void target_dtor(struct target *t)
 int target_accept(struct target *t, int sockfd)
 {
 	int sock;
+	int res = 1; /* error by default */
 
 	sock = accept4(sockfd, NULL, NULL, SOCK_CLOEXEC);
-	if (sock == UNKNOWN_FD)
-		return 1;
+	if (sock == UNKNOWN_FD) {
+		LOGE("Cannot accept socket\n");
+		goto exit_error;
+	}
 
 	/* accept succeed */
-	fd_setup_attributes(sock);
+	res = fd_setup_attributes(sock);
+	if (res != 0) {
+		LOGE("cannot set attribs for sock %d err #%d", sock, res);
+		goto exit_disconnect;
+	}
 
 	t->socket = sock;
 
 	return 0;
+
+exit_disconnect:
+	close(sock);
+exit_error:
+	return res;
 }
 
 int target_send_msg(struct target *t, struct msg_target_t *msg)

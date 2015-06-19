@@ -154,7 +154,10 @@ static int makeTargetServerSocket()
 		return -1;
 	}
 
-	fd_setup_attributes(manager.target_server_socket);
+	if (fd_setup_attributes(manager.target_server_socket) != 0) {
+		LOGE("cannot set attr for target_server_socket\n");
+		return -1;
+	}
 
 	memset(&serverAddrUn, '\0', sizeof(serverAddrUn));
 	serverAddrUn.sun_family = AF_UNIX;

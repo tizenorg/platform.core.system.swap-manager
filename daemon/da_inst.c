@@ -745,8 +745,10 @@ static int add_bins_to_preload(struct user_space_inst_t *us_inst)
 	FILE *preload_p;
 
 	preload_p = fopen(PRELOAD_ADD_BIN, "w");
-	if (preload_p == NULL)
+	if (preload_p == NULL) {
+		LOGE("cannot open %s\n", PRELOAD_ADD_BIN);
 		return -EINVAL;
+	}
 
 	while (lib != NULL) {
 		total_maps_count++;
@@ -780,16 +782,19 @@ static int add_bins_to_preload(struct user_space_inst_t *us_inst)
 #undef PRELOAD_ADD_BIN
 
 #define PRELOAD_CLEAN "/sys/kernel/debug/swap/preload/target_binaries/bins_remove"
+#define PRELOAD_CLEAN_CMD "c"
 
 static int clean_bins_preload(void)
 {
 	FILE *preload_p;
 
 	preload_p = fopen(PRELOAD_CLEAN, "w");
-	if (preload_p == NULL)
+	if (preload_p == NULL) {
+		LOGE("cannot open <%s>\n", PRELOAD_CLEAN);
 		return -EINVAL;
+	}
 
-	fwrite("c", strlen("c") + 1, 1, preload_p);
+	fwrite(PRELOAD_CLEAN_CMD, strlen(PRELOAD_CLEAN_CMD) + 1, 1, preload_p);
 
 	fclose(preload_p);
 
@@ -803,11 +808,18 @@ static int write_bins_to_preload(struct user_space_inst_t *us_inst)
 	int ret;
 
 	ret = clean_bins_preload();
-	if (ret != 0)
-		return ret;
+	if (ret != 0) {
+		LOGE("cannot clean bins preload\n");
+		goto exit;
+	}
 
 	ret = add_bins_to_preload(us_inst);
+	if (ret != 0) {
+		LOGE("cannot add bins to preload\n");
+		goto exit;
+	}
 
+exit:
 	return ret;
 }
 
