@@ -23,7 +23,7 @@ if [ -e $config_file ]; then
 	fi
 fi
 
-if [ ! -e /sys/kernel/debug/swap/writer/raw ]; then
+if [ ! -e /sys/kernel/debug/swap/enable ]; then
 
     insmod swap_master.ko           || exit 101
     insmod swap_buffer.ko           || exit 102  # buffer is loaded
