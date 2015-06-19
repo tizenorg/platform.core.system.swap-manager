@@ -32,7 +32,7 @@
 #ifndef _SMACK_H_
 #define _SMACK_H_
 
-void fd_setup_attributes(int fd);
+int fd_setup_attributes(int fd);
 void set_label_for_all(const char *path);
 int apply_smack_rules(const char* subject, const char* object,
 		      const char* access_type);
