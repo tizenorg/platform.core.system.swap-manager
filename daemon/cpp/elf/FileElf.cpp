@@ -62,7 +62,7 @@ FileElf::Data *FileElf::getSection(const Elf32_Shdr *shdr)
         return 0;
 
     data->size = shdr->sh_size;
-    data->data = new char[data->size];
+    data->data = ::operator new(data->size);
     if (data->data == 0) {
         delete data;
         return 0;
@@ -93,7 +93,7 @@ FileElf::Data *FileElf::getSection(const std::string &name)
 
 void FileElf::putSection(const Data *data)
 {
-    delete []data->data;
+    ::operator delete(data->data);
     delete data;
 }
 
@@ -126,7 +126,10 @@ int FileElf::readSectionsInfo()
     const char *strData = reinterpret_cast<const char *>(data->data);
     const char *strDataEnd = strData + data->size;
     if (strData == 0)
-        return -ENOMEM;
+    {
+        ret = -ENOMEM;
+        goto putSect;
+    }
 
     for (int i = 0; i < _fhdr.e_shnum; ++i) {
         Elf32_Shdr shdr;
@@ -190,7 +193,8 @@ int FileElf::makeRelocMap(const uint8_t jump_slot)
 
     if (dataRel->size % sizeof(Elf32_Rel)) {
         LOGE("'%s' section incorrect\n", nameRel);
-        return -EINVAL;
+        ret = -EINVAL;
+        goto putSectRel;
     }
     rel = reinterpret_cast<Elf32_Rel *>(dataRel->data);
     relCnt = dataRel->size / sizeof(Elf32_Rel);
@@ -206,7 +210,7 @@ int FileElf::makeRelocMap(const uint8_t jump_slot)
     if (dataSym->size % sizeof(Elf32_Sym)) {
         LOGE("'%s' section incorrect\n", nameSym);
         ret = -EINVAL;
-        goto putSectRel;
+        goto putSectSym;
     }
     sym = reinterpret_cast<Elf32_Sym *>(dataSym->data);
     symCnt = dataSym->size / sizeof(Elf32_Sym);
@@ -324,6 +328,7 @@ int FileElf::getAddrPlt(const char *names[], uint32_t addrs[], size_t cnt)
         addrs[i] = it == funcMap.end() ? 0 : it->second;
     }
 
+    putSection(data);
     return 0;
 }
 
