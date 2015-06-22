@@ -141,6 +141,13 @@ int wsi_set_smack_rules(const struct app_info_t *app_info)
 	size_t id_maxlen = 128;
 
 	app_id = malloc(sizeof(char) * (strnlen(app_info->app_id, id_maxlen) + 1));
+
+	if (app_id == NULL) {
+		LOGE("app id alloc error\n");
+		ret = 1;
+		goto exit;
+	}
+
 	strcpy(app_id, app_info->app_id);
 	package_id = strtok(app_id, delim);
 
@@ -152,7 +159,7 @@ int wsi_set_smack_rules(const struct app_info_t *app_info)
 	}
 
 	free(app_id);
-
+exit:
 	return ret;
 }
 
@@ -184,7 +191,14 @@ static void send_request(const char *method)
 {
 #define	MAX_REQUEST_LENGTH	128
 
-	json_object *jobj = json_object_new_object();
+	json_object *jobj = NULL;
+	jobj = json_object_new_object();
+
+	if (jobj == NULL) {
+		LOGE("cannot create json object\n");
+		return;
+	}
+
 	char buf[LWS_SEND_BUFFER_PRE_PADDING + MAX_REQUEST_LENGTH +
 		 LWS_SEND_BUFFER_POST_PADDING];
 	const char *payload;
