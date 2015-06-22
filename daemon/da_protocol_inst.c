@@ -409,6 +409,7 @@ int parse_app_inst_list(struct msg_buf_t *msg,
 				 info->setup_data.data, info->setup_data.size);
 		if (err) {
 			LOGE("add app, ret=%d\n", err);
+			free_app(app);
 			return 0;
 		}
 
@@ -452,7 +453,19 @@ static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
 	for (i = 0; i < num; i++) {
 		parse_deb("app_int #%d\n", i);
 		probe_el = new_probe();
+
+		if (probe_el == NULL) {
+			LOGE("probe alloc error\n");
+			return 0;
+		}
+
 		func = malloc(sizeof(struct ld_preload_probe_t));
+
+		if (func == NULL) {
+			LOGE("func alloc error\n");
+			free(probe_el);
+			return 0;
+		}
 
 		func->orig_addr = ld_lib.probes[i].orig_addr;
 		func->probe_type = SWAP_LD_PROBE;
@@ -555,12 +568,14 @@ int add_preload_probes(struct lib_list_t **lib_list)
 
 	if (preload_lib == NULL) {
 		LOGE("preload lib alloc error\n");
-		return 0;
+		ret = 0;
+		goto free_caller_probe;
 	}
 
 	if (get_caller_probe == NULL || get_call_type_probe == NULL) {
 		LOGE("probe alloc error\n");
-		return 0;
+		ret = 0;
+		goto free_caller_probe;
 	}
 
 	preload_lib->lib->bin_path = probe_lib;
@@ -569,13 +584,15 @@ int add_preload_probes(struct lib_list_t **lib_list)
 	/* Add get_caller probe */
 	ret = create_preload_probe_func(&get_caller_probe, get_caller_addr, 4);
 	if (ret != 0)
-		return ret;
+		goto free_caller_probe;
+
 	probe_list_append(preload_lib, get_caller_probe);
 
 	/* Add get_call_type probe */
 	ret = create_preload_probe_func(&get_call_type_probe, get_call_type_addr, 5);
 	if (ret != 0)
-		return ret;
+		goto free_call_type_probe;
+
 	probe_list_append(preload_lib, get_call_type_probe);
 
 	preload_lib->func_num = 2;
@@ -585,4 +602,11 @@ int add_preload_probes(struct lib_list_t **lib_list)
 	data_list_append((struct data_list_t **)lib_list, (struct data_list_t *)preload_lib);
 
 	return 1;
+
+free_caller_probe:
+	free(get_caller_probe);
+free_call_type_probe:
+	free(get_call_type_probe);
+
+	return ret;
 }
