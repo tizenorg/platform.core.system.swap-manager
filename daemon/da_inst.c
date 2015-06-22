@@ -1038,7 +1038,7 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 			     struct msg_t **msg_reply_add,
 			     struct msg_t **msg_reply_remove)
 {
-	int i, res;
+	int i, res = 0;
 	char *p;
 	struct feature_list_t f;
 	char buf[1024] = "";
