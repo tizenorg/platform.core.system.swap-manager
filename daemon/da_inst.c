@@ -171,6 +171,19 @@ exit_fail:
 	return NULL;
 }
 
+void free_app(struct app_list_t *app)
+{
+	free_app_info(app->app);
+	free_data_list((struct data_list_t *)app);
+}
+
+void free_app_info(struct app_info_t *app_info)
+{
+	free(app_info->app_id);
+	free(app_info->exe_path);
+	free(app_info);
+}
+
 struct probe_list_t *new_probe(void)
 {
 	struct probe_list_t *probe;
@@ -1038,7 +1051,7 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 			     struct msg_t **msg_reply_add,
 			     struct msg_t **msg_reply_remove)
 {
-	int i, res;
+	int i, res = 0;
 	char *p;
 	struct feature_list_t f;
 	char buf[1024] = "";
