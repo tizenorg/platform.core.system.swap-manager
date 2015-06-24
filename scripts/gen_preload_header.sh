@@ -4,8 +4,8 @@ preload_library_path="/lib/"
 preload_open_function="dlopen@@GLIBC"
 handlers_lib="/usr/lib/da_probe_tizen.so"
 linker_path="/lib/"
-linker_pattern="ld[.-].*"
 linker_sym="_r_debug"
+test_bin="/usr/bin/WebProcess"
 
 output=$1
 
@@ -37,7 +37,13 @@ function print_probe_lib()
 function print_linker()
 {
     filename=$1
-    el=$(readelf -p .interp /usr/bin/gcc | grep "/lib/" | awk '{print $3}')
+
+    if [ ! -f $test_bin ]; then
+        echo "[ERROR] No ${test_bin} to get linker path"
+        exit 1
+    fi
+
+    el=$(readelf -p .interp $test_bin | grep "/lib/" | awk '{print $3}')
     linker=$(readlink -f $el)
     r_debug_offset=$(readelf -sW $linker | grep $linker_sym | awk '{print $2}' | uniq)
 
