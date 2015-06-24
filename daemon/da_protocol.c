@@ -1078,7 +1078,7 @@ int recv_msg_from_sock(int sock, struct msg_target_t *msg)
 			return 1;
 
 		if (msg_data->len > TARGER_MSG_MAX_LEN - 12)
-			return 1
+			return 1;
 
 		ret = recv(sock, msg_data->payload,
 			   msg_data->len, MSG_WAITALL);
