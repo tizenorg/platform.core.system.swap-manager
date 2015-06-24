@@ -1077,7 +1077,9 @@ int recv_msg_from_sock(int sock, struct msg_target_t *msg)
 		if (ret != n)
 			return 1;
 
-		/* TODO: check msg_data->len */
+		if (msg_data->len > TARGER_MSG_MAX_LEN - 12)
+			return 1
+
 		ret = recv(sock, msg_data->payload,
 			   msg_data->len, MSG_WAITALL);
 
@@ -1088,7 +1090,9 @@ int recv_msg_from_sock(int sock, struct msg_target_t *msg)
 	}
 
 	if (msg->length > 0) {
-		/* TODO: check msg->length */
+		if (msg->length >= TARGER_MSG_MAX_LEN)
+			return 1;
+
 		ret = recv(sock, msg->data, msg->length, MSG_WAITALL);
 		if (ret != msg->length)
 			return 1;
