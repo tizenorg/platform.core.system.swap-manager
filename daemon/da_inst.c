@@ -171,6 +171,19 @@ exit_fail:
 	return NULL;
 }
 
+void free_lib(struct lib_list_t *lib)
+{
+	free_us_lib_inst(lib->lib);
+	lib->lib = NULL;
+	free_data((struct data_list_t *)lib);
+}
+
+void free_us_lib_inst(struct us_lib_inst_t *us_lib_inst)
+{
+	free(us_lib_inst->bin_path);
+	free(us_lib_inst);
+}
+
 void free_app(struct app_list_t *app)
 {
 	free_app_info(app->app);
