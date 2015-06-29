@@ -109,11 +109,13 @@ FeatureManager::ErrCode FeatureManager::stop()
         return Err;
     }
 
+    const feature_bs bs_save(_bs_new);
     _bs_new.reset();
     ErrCode ret = doSetFeatures(_bs_new);
     if (ret != Ok)
         shutdownFeatures();
     _st = Off;
+    _bs_new = bs_save;
 
     return ret;
 }
