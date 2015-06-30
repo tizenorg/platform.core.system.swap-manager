@@ -608,6 +608,7 @@ free_caller_probe:
 free_call_type_probe:
 	free(get_call_type_probe);
 
+	preload_lib->lib->bin_path = NULL;
 	free_lib(preload_lib);
 
 	return ret;
