@@ -174,7 +174,6 @@ exit_fail:
 void free_lib(struct lib_list_t *lib)
 {
 	free_us_lib_inst(lib->lib);
-	lib->lib = NULL;
 	free_data((struct data_list_t *)lib);
 }
 
