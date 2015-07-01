@@ -559,19 +559,20 @@ static int create_preload_probe_func(struct probe_list_t **probe,
 
 int add_preload_probes(struct lib_list_t **lib_list)
 {
-	struct lib_list_t *preload_lib = new_lib();
-	struct probe_list_t
-	    *get_caller_probe = new_probe(),
-	    *get_call_type_probe = new_probe();
+	struct lib_list_t *preload_lib;
+	struct probe_list_t *get_caller_probe, *get_call_type_probe;
 	int ret = 0;
 	struct us_func_inst_plane_t *func = NULL;
 
+	preload_lib = new_lib();
 	if (preload_lib == NULL) {
 		LOGE("preload lib alloc error\n");
 		ret = 0;
-		goto free_caller_probe;
+		goto exit_fail;
 	}
 
+	get_caller_probe = new_probe();
+	get_call_type_probe = new_probe();
 	if (get_caller_probe == NULL || get_call_type_probe == NULL) {
 		LOGE("probe alloc error\n");
 		ret = 0;
@@ -610,6 +611,6 @@ free_call_type_probe:
 
 	preload_lib->lib->bin_path = NULL;
 	free_lib(preload_lib);
-
+exit_fail:
 	return ret;
 }
