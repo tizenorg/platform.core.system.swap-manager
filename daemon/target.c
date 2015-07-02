@@ -106,7 +106,6 @@ int target_recv_msg(struct target *t, struct msg_target_t *msg)
 	return recv_msg_from_sock(t->socket, msg);
 }
 
-
 int target_start(struct target *t, void *(*start_routine) (void *))
 {
 	return thread_start(t->thread, start_routine, (void *)t);
