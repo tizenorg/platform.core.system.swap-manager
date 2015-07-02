@@ -30,6 +30,7 @@
 
 #include "malloc_debug_disable.h"
 #include <inttypes.h>
+#include <stdbool.h>
 #include <pthread.h>
 
 #include <Ecore.h>
@@ -68,7 +69,6 @@ int target_accept(struct target *t, int sockfd);
 
 int target_send_msg(struct target *t, struct msg_target_t *msg);
 int target_recv_msg(struct target *t, struct msg_target_t *msg);
-
 
 int target_start(struct target *t, void *(*start_routine) (void *));
 int target_wait(struct target *t);
