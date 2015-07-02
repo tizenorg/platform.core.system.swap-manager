@@ -724,11 +724,12 @@ static Eina_Bool target_event_cb(void *data, Ecore_Fd_Handler *fd_handler)
  * return plus value if non critical error occur
  * return minus value if critical error occur
  */
-static int targetServerHandler(void)
+static int targetServerHandler(int target_server_socket)
 {
 	int err;
 	struct msg_target_t log;
 	struct target *target;
+	bool is_probe = true;
 
 	target = target_ctor();
 	if (target == NULL) {
@@ -736,24 +737,35 @@ static int targetServerHandler(void)
 		return 1;
 	}
 
-	err = target_accept(target, manager.target_server_socket);
+	if (target_server_socket == manager.target_server_socket)
+		is_probe = true;
+	else if (target_server_socket == manager.ui_target_server_socket)
+		is_probe = false;
+	else {
+		LOGE("wrong socket for target %p\n", target);
+		goto TARGET_CONNECT_FAIL;
+	}
+
+	err = target_accept(target, target_server_socket);
 	if (err == 0) {
-		/* send config message to target process */
-		log.type = APP_MSG_CONFIG;
-		log.length = snprintf(log.data, sizeof(log.data), "%llu",
-				      prof_session.conf.use_features0) + 1;
-		if (target_send_msg(target, &log) != 0)
-			LOGE("fail to send data to target %p\n", target);
+		if (is_probe) {
+			/* send config message to target process */
+			log.type = APP_MSG_CONFIG;
+			log.length = snprintf(log.data, sizeof(log.data), "%llu",
+					      prof_session.conf.use_features0) + 1;
+			if (target_send_msg(target, &log) != 0)
+				LOGE("fail to send data to target %p\n", target);
 
-		/* send current instrument maps */
-		send_maps_inst_msg_to(target);
+			/* send current instrument maps */
+			send_maps_inst_msg_to(target);
 
-		// make event fd
-		target->event_fd = eventfd(EFD_CLOEXEC, EFD_NONBLOCK);
-		if (target->event_fd == -1) {
-			// fail to make event fd
-			LOGE("fail to make event fd for target[%p]\n", target);
-			goto TARGET_CONNECT_FAIL;
+			// make event fd
+			target->event_fd = eventfd(EFD_CLOEXEC, EFD_NONBLOCK);
+			if (target->event_fd == -1) {
+				// fail to make event fd
+				LOGE("fail to make event fd for target[%p]\n", target);
+				goto TARGET_CONNECT_FAIL;
+			}
 		}
 
 		target->handler =
@@ -991,6 +1003,7 @@ static int hostServerHandler(void)
 
 static Ecore_Fd_Handler *host_connect_handler;
 static Ecore_Fd_Handler *target_connect_handler;
+static Ecore_Fd_Handler *ui_target_connect_handler;
 
 static Eina_Bool host_connect_cb(void *data, Ecore_Fd_Handler *fd_handler)
 {
@@ -1005,11 +1018,23 @@ static Eina_Bool host_connect_cb(void *data, Ecore_Fd_Handler *fd_handler)
 
 static Eina_Bool target_connect_cb(void *data, Ecore_Fd_Handler *fd_handler)
 {
-	if (targetServerHandler() < 0) {
+	if (targetServerHandler(manager.target_server_socket) < 0) {
 		// critical error
 		terminate_error("Internal DA framework error, "
 				"Please re-run the profiling "
 				"(targetServerHandler)\n", 1);
+	}
+
+	return ECORE_CALLBACK_RENEW;
+}
+
+static Eina_Bool ui_target_connect_cb(void *data, Ecore_Fd_Handler *fd_handler)
+{
+	if (targetServerHandler(manager.ui_target_server_socket) < 0) {
+		// critical error
+		terminate_error("Internal DA framework error, "
+				"Please re-run the profiling "
+				"(UITargetServerHandler)\n", 1);
 	}
 
 	return ECORE_CALLBACK_RENEW;
@@ -1036,6 +1061,17 @@ static bool initialize_events(void)
 					  NULL, NULL);
 	if (!target_connect_handler) {
 		LOGE("Target server socket add error\n");
+		return false;
+	}
+
+	ui_target_connect_handler =
+		ecore_main_fd_handler_add(manager.ui_target_server_socket,
+					  ECORE_FD_READ,
+					  ui_target_connect_cb,
+					  NULL,
+					  NULL, NULL);
+	if (!ui_target_connect_handler) {
+		LOGE("UI target server socket add error\n");
 		return false;
 	}
 
