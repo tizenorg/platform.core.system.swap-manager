@@ -3,6 +3,7 @@ preload_library_pattern="libdl[.-].*"
 preload_library_path="/lib/"
 preload_open_function="dlopen@@GLIBC"
 handlers_lib="/usr/lib/da_probe_tizen.so"
+ui_viewer_lib="/usr/lib/da_ui_viewer.so"
 linker_path="/lib/"
 linker_sym="_r_debug"
 test_bin="/usr/bin/WebProcess"
@@ -34,6 +35,18 @@ function print_probe_lib()
     echo -e "/bin/echo \"$handlers_lib\" > /sys/kernel/debug/swap/preload/handlers_path" >> $filename
 }
 
+function print_ui_viewer_lib()
+{
+    filename=$1
+    echo -e "/bin/echo \"$ui_viewer_lib\" > /sys/kernel/debug/swap/preload/ui_viewer_path" >> $filename
+}
+
+function print_ui_viewer_app_data()
+{
+    filename=$1
+    echo -e "/bin/echo \"0x00002db0:/usr/apps/org.tizen.setting/bin/setting\" > /sys/kernel/debug/swap/preload/ui_viewer_app_info" >> $filename
+}
+
 function print_linker()
 {
     filename=$1
@@ -59,4 +72,6 @@ function print_linker()
 print_header $output
 print_loader $output
 print_probe_lib $output
+print_ui_viewer_lib $output
 print_linker $output
+print_ui_viewer_app_data $output

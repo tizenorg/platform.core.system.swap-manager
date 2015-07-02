@@ -149,6 +149,12 @@ int exec_app_tizen(const char *app_id, const char *exec_path)
 	LOGI("launch app path is %s, executable path is %s\n"
 	     "launch app name (%s), app_id (%s)\n",
 	     LAUNCH_APP_PATH, exec_path, LAUNCH_APP_NAME, app_id);
+
+	if (apply_smack_rules(app_id, "swap", "r") != 0) {
+		LOGE("Can't apply smack rules for %s\n", app_id);
+		return -1;
+	}
+
 	pid = fork();
 	if (pid == -1)
 		return -1;
