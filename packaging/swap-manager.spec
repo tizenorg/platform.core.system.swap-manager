@@ -40,9 +40,13 @@ BuildRequires:  launchpad-loader
 BuildRequires:  launchpad
 %endif
 BuildRequires:  app-core-efl
+BuildRequires:  evas-devel
+BuildRequires:  elementary-devel
+BuildRequires:  libXext-devel
 %if "%{TIZEN_PRODUCT_TV}" != "1"
 BuildRequires:  app-core-debuginfo
 %endif
+
 %if "%_project" != "Kirana_SWA_OPEN:Build" && "%_project" != "Kirana_SWA_OPEN:Daily"
 Requires:  swap-modules
 %endif
@@ -83,11 +87,17 @@ SWAP_BUILD_CMD+=" WSP_SUPPORT=y"
 SWAP_BUILD_CMD+=" make"
 eval ${SWAP_BUILD_CMD}
 
+cd ../ui_viewer
+$SWAP_BUILD_CONF make
+
 %install
 rm -rf ${RPM_BUILD_ROOT}
 mkdir -p %{buildroot}/usr/share/license
 cp LICENSE %{buildroot}/usr/share/license/%{name}
 cd daemon
+%make_install
+
+cd ../ui_viewer
 %make_install
 
 %files
@@ -98,6 +108,8 @@ cd daemon
 /opt/swap/sdk/start.sh
 /opt/swap/sdk/stop.sh
 /opt/swap/sdk/init_preload.sh
+
+%{_prefix}/lib/da_ui_viewer.so
 
 %changelog
 
