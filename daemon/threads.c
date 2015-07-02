@@ -184,7 +184,7 @@ static void* recvThread(void* data)
 			if (chsmack(file_name) == 0) {
 				/* exctract probe message */
 				p += strnlen(file_name, PATH_MAX) + 1;
-				struct msg_data_t *msg_data = (struct msg_data_t *)(p);
+				struct msg_data_t *msg_data;
 
 				/* check packed size */
 				if (log.length != strnlen(file_name, PATH_MAX) + 1 +
@@ -199,6 +199,73 @@ static void* recvThread(void* data)
 				LOGE("chsmack fail\n");
 			}
 
+
+			continue;
+		} else if (log.type == APP_MSG_GET_UI_HIERARCHY) {
+			enum ErrorCode err_code = ERR_UNKNOWN;
+
+			if (log.length == sizeof(uint32_t)) {
+				err_code = *(uint32_t*)log.data;
+			}
+
+			sendACKToHost(NMSG_GET_UI_HIERARCHY, err_code, 0, 0);
+
+			continue;
+		} else if (log.type == APP_MSG_GET_UI_HIERARCHY_DATA) {
+			enum ErrorCode err_code = ERR_NO;
+			char *file_name = log.data;
+			FILE * fp;
+			struct msg_data_t *msg_data;
+			const int len = log.length;
+			char *p = NULL;
+
+			msg_data = malloc(MSG_DATA_HDR_LEN + len);
+			if (!msg_data) {
+				LOGE("Cannot alloc message: %d bytes\n", MSG_DATA_HDR_LEN + len);
+				return NULL;
+			}
+			fill_data_msg_head(msg_data, NMSG_UI_HIERARCHY, 0, len);
+			memcpy(msg_data->payload, log.data, log.length);
+
+			if (access(file_name, F_OK) != -1) {
+				LOGI("APP_MSG_GET_UI_HIERARCHY_DATA> File: <%s>\n",
+				     file_name);
+
+				if (chsmack(file_name) != 0) {
+					LOGE("chsmack failed\n");
+				}
+			} else {
+				LOGE("APP_MSG_GET_UI_HIERARCHY> File not found <%s>\n",
+				     file_name);
+
+				err_code = ERR_WRONG_MESSAGE_DATA;
+			}
+
+			if (write_to_buf(msg_data) != 0)
+				LOGE("write to buf fail\n");
+
+			continue;
+		} else if (log.type == APP_MSG_GET_UI_SCREENSHOT) {
+			enum ErrorCode err_code = ERR_UNKNOWN;
+			char *payload = log.data;
+			int payload_size = log.length;
+
+			LOGI("APP_MSG_GET_UI_SCREENSHOT> log length = %d\n", log.length);
+
+			if (payload_size >= sizeof(uint32_t)) {
+				char *file_name;
+
+				err_code = *(uint32_t*)payload;
+				payload += sizeof(uint32_t);
+				payload_size -= sizeof(uint32_t);
+
+				file_name = payload;
+				if (chsmack(file_name) != 0) {
+					LOGE("chsmack failed\n");
+				}
+			}
+
+			sendACKToHost(NMSG_GET_UI_SCREENSHOT, err_code, payload, payload_size);
 
 			continue;
 		}
