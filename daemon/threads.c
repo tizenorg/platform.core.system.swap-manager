@@ -201,6 +201,72 @@ static void* recvThread(void* data)
 
 
 			continue;
+		} else if (log.type == APP_MSG_GET_UI_HIERARCHY) {
+			enum ErrorCode err_code = ERR_NO;
+			char *file_name = log.data;
+			char *payload;
+			int payload_size = 0;
+			FILE * fp;
+
+			if (access(file_name, F_OK) != -1) {
+				LOGI("APP_MSG_GET_UI_HIERARCHY> File: <%s>\n",
+				     file_name);
+			} else {
+				LOGE("APP_MSG_GET_UI_HIERARCHY> File not found <%s>\n",
+				     file_name);
+
+				err_code = ERR_WRONG_MESSAGE_DATA;
+				goto send_ack;
+			}
+
+			fp = fopen (file_name, "rb");
+
+			if (fp)
+			{
+				fseek(fp, 0, SEEK_END);
+				payload_size = ftell(fp);
+				fseek(fp, 0, SEEK_SET);
+				payload = malloc(payload_size);
+				if (payload)
+					fread(payload, 1, payload_size, fp);
+				else
+					payload_size = 0;
+				fclose (fp);
+			}
+send_ack:
+			sendACKToHost(NMSG_GET_UI_HIERARCHY, err_code, payload, payload_size);
+
+			continue;
+		} else if (log.type == APP_MSG_GET_UI_PROPERTIES) {
+			enum ErrorCode err_code = ERR_NO;
+			char *payload = log.data;
+			int payload_size = log.length;
+
+			LOGI("APP_MSG_GET_UI_PROPERTIES> log length = %d\n", log.length);
+
+			if (!payload_size) {
+				err_code = ERR_UI_OBJ_NOT_FOUND;
+				payload = NULL;
+			}
+
+			sendACKToHost(NMSG_GET_UI_PROPERTIES, err_code, payload, payload_size);
+
+			continue;
+		} else if (log.type == APP_MSG_GET_UI_RENDERING_TIME) {
+			enum ErrorCode err_code = ERR_NO;
+			char *payload = log.data;
+			int payload_size = log.length;
+
+			LOGI("APP_MSG_GET_UI_RENDERING_TIME> log length = %d\n", log.length);
+
+			if (!payload_size) {
+				err_code = ERR_UI_OBJ_NOT_FOUND;
+				payload = NULL;
+			}
+
+			sendACKToHost(NMSG_GET_UI_PROPERTIES, err_code, payload, payload_size);
+
+			continue;
 		}
 #ifdef PRINT_TARGET_LOG
 		else if (log.type == APP_MSG_LOG) {
