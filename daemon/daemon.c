@@ -62,6 +62,7 @@
 #include "smack.h"
 #include "swap_debug.h"
 #include "wsi.h"
+#include "ui_viewer.h"
 
 #define DA_WORK_DIR			"/home/developer/sdk_tools/da/"
 #define DA_READELF_PATH			"/home/developer/sdk_tools/da/readelf"
@@ -239,6 +240,16 @@ static int exec_app(const struct app_info_t *app_info)
 
 	switch (app_info->app_type) {
 	case APP_TYPE_TIZEN:
+		if (is_feature_enabled(FL_UI_VIEWER_PROFILING)) {
+			if (ui_viewer_set_smack_rules(app_info)) {
+				LOGE("Cannot set smack rules for ui viewer\n");
+				res = -1;
+			}
+			if (ui_viewer_set_app_info(app_info)) {
+				LOGE("Cannot set app info for ui viewer\n");
+				res = -1;
+			}
+		}
 		if (exec_app_tizen(app_info->app_id, app_info->exe_path)) {
 			LOGE("Cannot exec tizen app %s\n", app_info->app_id);
 			res = -1;
@@ -724,7 +735,7 @@ static Eina_Bool target_event_cb(void *data, Ecore_Fd_Handler *fd_handler)
  * return plus value if non critical error occur
  * return minus value if critical error occur
  */
-static int targetServerHandler(void)
+static int targetServerHandler(bool is_probe_sock)
 {
 	int err;
 	struct msg_target_t log;
@@ -736,7 +747,11 @@ static int targetServerHandler(void)
 		return 1;
 	}
 
-	err = target_accept(target, manager.target_server_socket);
+	if (is_probe_sock)
+		err = target_accept(target, manager.target_server_socket);
+	else
+		err = target_accept(target, manager.ui_target_server_socket);
+
 	if (err == 0) {
 		/* send config message to target process */
 		log.type = APP_MSG_CONFIG;
@@ -1011,6 +1026,7 @@ static int hostServerHandler(void)
 
 static Ecore_Fd_Handler *host_connect_handler;
 static Ecore_Fd_Handler *target_connect_handler;
+static Ecore_Fd_Handler *ui_target_connect_handler;
 
 static Eina_Bool host_connect_cb(void *data, Ecore_Fd_Handler *fd_handler)
 {
@@ -1025,7 +1041,9 @@ static Eina_Bool host_connect_cb(void *data, Ecore_Fd_Handler *fd_handler)
 
 static Eina_Bool target_connect_cb(void *data, Ecore_Fd_Handler *fd_handler)
 {
-	if (targetServerHandler() < 0) {
+	bool is_probe_sock = *(bool*)data;
+
+	if (targetServerHandler(is_probe_sock) < 0) {
 		// critical error
 		terminate_error("Internal DA framework error, "
 				"Please re-run the profiling "
@@ -1035,8 +1053,12 @@ static Eina_Bool target_connect_cb(void *data, Ecore_Fd_Handler *fd_handler)
 	return ECORE_CALLBACK_RENEW;
 }
 
+static bool is_probe_true = true;
+static bool is_probe_false = false;
+
 static bool initialize_events(void)
 {
+
 	host_connect_handler =
 		ecore_main_fd_handler_add(manager.host_server_socket,
 					  ECORE_FD_READ,
@@ -1052,10 +1074,19 @@ static bool initialize_events(void)
 		ecore_main_fd_handler_add(manager.target_server_socket,
 					  ECORE_FD_READ,
 					  target_connect_cb,
-					  NULL,
-					  NULL, NULL);
+					  &is_probe_true, NULL, NULL);
 	if (!target_connect_handler) {
 		LOGE("Target server socket add error\n");
+		return false;
+	}
+
+	ui_target_connect_handler =
+		ecore_main_fd_handler_add(manager.ui_target_server_socket,
+					  ECORE_FD_READ,
+					  target_connect_cb,
+					  &is_probe_false, NULL, NULL);
+	if (!ui_target_connect_handler) {
+		LOGE("UI target server socket add error\n");
 		return false;
 	}
 
