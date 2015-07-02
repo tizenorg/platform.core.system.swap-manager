@@ -121,6 +121,7 @@ typedef struct
 {
 	int host_server_socket;
 	int target_server_socket;
+	int ui_target_server_socket;
 	int apps_to_run;
 	unsigned int config_flag;
 	int app_launch_timerfd;
