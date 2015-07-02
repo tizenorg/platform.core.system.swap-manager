@@ -121,6 +121,7 @@ typedef struct
 {
 	int host_server_socket;
 	int target_server_socket;
+	int ui_target_server_socket;
 	int apps_to_run;
 	unsigned int config_flag;
 	int app_launch_timerfd;
@@ -128,6 +129,7 @@ typedef struct
 	pthread_t sampling_thread;
 	pthread_t replay_thread;
 	pthread_t transfer_thread;
+	pthread_t ui_transfer_thread;
 	int buf_fd;
 	int user_ev_fd;
 	int efd;
