@@ -207,6 +207,7 @@ void feature_code_str(uint64_t feature0, uint64_t feature1, char *to,
 	print_feature_0(FL_WEB_PROFILING);
 	print_feature_0(FL_WEB_STARTUP_PROFILING);
 	print_feature_0(FL_SYSTEM_FILE_ACTIVITY);
+	print_feature_0(FL_UI_VIEWER_PROFILING);
 
 	goto exit;
 err_exit:
@@ -1287,6 +1288,20 @@ exit:
 	return -(error_code != ERR_NO);
 }
 
+static int process_msg_get_ui_hierarchy(void)
+{
+	return 0;
+}
+
+static int process_msg_get_ui_properties(void)
+{
+	return 0;
+}
+
+static int process_msg_get_ui_rendering_time(void)
+{
+	return 0;
+}
 
 int host_message_handler(struct msg_t *msg)
 {
@@ -1416,6 +1431,12 @@ int host_message_handler(struct msg_t *msg)
 		return process_msg_get_screenshot(&msg_control);
 	case NMSG_GET_PROCESS_ADD_INFO:
 		return process_msg_get_process_add_info(&msg_control);
+	case NMSG_GET_UI_HIERARCHY:
+		return process_msg_get_ui_hierarchy();
+	case NMSG_GET_UI_PROPERTIES:
+		return process_msg_get_ui_properties();
+	case NMSG_GET_UI_RENDERING_TIME:
+		return process_msg_get_ui_rendering_time();
 	default:
 		LOGE("unknown message %d <0x%08X>\n", msg->id, msg->id);
 		error_code = ERR_WRONG_MESSAGE_TYPE;
