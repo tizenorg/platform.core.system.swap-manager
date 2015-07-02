@@ -121,6 +121,7 @@ typedef struct
 {
 	int host_server_socket;
 	int target_server_socket;
+	int ui_target_server_socket;
 	int apps_to_run;
 	unsigned int config_flag;
 	int app_launch_timerfd;
@@ -160,6 +161,7 @@ int reconfigure(struct conf_t conf, struct msg_t **msg_reply, struct msg_t **msg
 int is_feature_enabled(enum feature_code fcode);
 int sendACKCodeToHost(enum HostMessageType resp, int msgcode);
 void terminate_all(void);
+void restart_all(void);
 
 #ifdef __cplusplus
 }
