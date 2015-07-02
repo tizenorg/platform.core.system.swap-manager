@@ -55,6 +55,7 @@
 #define SINGLETON_LOCKFILE			"/tmp/da_manager.lock"
 #define PORTFILE					"/tmp/port.da"
 #define UDS_NAME					"/tmp/da.socket"
+#define UIS_NAME					"/tmp/da_ui.socket"
 
 #define INIT_PORT				8001
 #define LIMIT_PORT				8100
@@ -65,6 +66,7 @@ __da_manager manager =
 {
 	.host_server_socket = -1,
 	.target_server_socket = -1,
+	.ui_target_server_socket = -1,
 	.apps_to_run = 0,
 	.config_flag = 0,
 	.app_launch_timerfd = -1,
@@ -116,6 +118,8 @@ static void _close_server_socket(void)
 		close(manager.host_server_socket);
 	if(manager.target_server_socket != -1)
 		close(manager.target_server_socket);
+	if(manager.ui_target_server_socket != -1)
+		close(manager.ui_target_server_socket);
 }
 
 static void _unlink_files(void)
@@ -136,31 +140,31 @@ void unlink_portfile(void)
 // =============================================================================
 
 // return 0 for normal case
-static int makeTargetServerSocket()
+static int makeTargetServerSocket(int *target_server_socket, const char *S_NAME)
 {
 	struct sockaddr_un serverAddrUn;
 
-	if(manager.target_server_socket != -1)
+	if(*target_server_socket != -1)
 		return -1;	// should be never happend
 
 	// remove existed unix domain socket file
-	unlink(UDS_NAME);
+	unlink(S_NAME);
 
-	manager.target_server_socket = socket(AF_UNIX,
+	*target_server_socket = socket(AF_UNIX,
 					      SOCK_STREAM | SOCK_CLOEXEC, 0);
-	if (manager.target_server_socket < 0)
+	if (*target_server_socket < 0)
 	{
 		LOGE("Target server socket creation failed\n");
 		return -1;
 	}
 
-	fd_setup_attributes(manager.target_server_socket);
+	fd_setup_attributes(*target_server_socket);
 
 	memset(&serverAddrUn, '\0', sizeof(serverAddrUn));
 	serverAddrUn.sun_family = AF_UNIX;
-	snprintf(serverAddrUn.sun_path, sizeof(serverAddrUn.sun_path), "%s", UDS_NAME);
+	snprintf(serverAddrUn.sun_path, sizeof(serverAddrUn.sun_path), "%s", S_NAME);
 
-	if (-1 == bind(manager.target_server_socket, (struct sockaddr*) &serverAddrUn,
+	if (-1 == bind(*target_server_socket, (struct sockaddr*) &serverAddrUn,
 					sizeof(serverAddrUn)))
 	{
 		LOGE("Target server socket binding failed\n");
@@ -173,13 +177,13 @@ static int makeTargetServerSocket()
 	}
 
 
-	if (-1 == listen(manager.target_server_socket, 5))
+	if (-1 == listen(*target_server_socket, 5))
 	{
 		LOGE("Target server socket listening failed\n");
 		return -1;
 	}
 
-	LOGI("Created TargetSock %d\n", manager.target_server_socket);
+	LOGI("Created TargetSock %d\n", *target_server_socket);
 	return 0;
 }
 
@@ -300,9 +304,14 @@ static int initializeManager(FILE *portfile)
 		write_int(portfile, ERR_INITIALIZE_SYSTEM_INFO_FAILED);
 		return -1;
 	}
-	// make server socket
-	if (makeTargetServerSocket() != 0) {
+	// make server socket for probe library
+	if (makeTargetServerSocket(&(manager.target_server_socket), UDS_NAME) != 0) {
 		write_int(portfile, ERR_TARGET_SERVER_SOCKET_CREATE_FAILED);
+		return -1;
+	}
+	// make server socket for ui viewer
+	if (makeTargetServerSocket(&(manager.ui_target_server_socket), UIS_NAME) != 0) {
+		write_int(portfile, ERR_UI_TARGET_SERVER_SOCKET_CREATE_FAILED);
 		return -1;
 	}
 	if (!initialize_pthread_sigmask()) {
