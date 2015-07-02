@@ -207,6 +207,7 @@ void feature_code_str(uint64_t feature0, uint64_t feature1, char *to,
 	print_feature_0(FL_WEB_PROFILING);
 	print_feature_0(FL_WEB_STARTUP_PROFILING);
 	print_feature_0(FL_SYSTEM_FILE_ACTIVITY);
+	print_feature_0(FL_UI_VIEWER_PROFILING);
 
 	goto exit;
 err_exit:
@@ -1287,6 +1288,64 @@ exit:
 	return -(error_code != ERR_NO);
 }
 
+static int process_msg_get_ui_hierarchy(void)
+{
+	uint32_t log_len;
+	struct msg_target_t sendlog;
+	enum ErrorCode err_code = ERR_UNKNOWN;
+
+	// send ui hierarchy request to target process
+	sendlog.type = APP_MSG_GET_UI_HIERARCHY;
+	sendlog.length = 0;
+	log_len = sizeof(sendlog.type) + sizeof(sendlog.length) + sendlog.length;
+
+	if (target_send_msg_to_all(&sendlog) == 0)
+		err_code = ERR_NO;
+
+	// in case of success we send ack after a message from ui viewer lib
+	if (err_code != ERR_NO)
+		sendACKToHost(NMSG_GET_UI_PROPERTIES, err_code, 0, 0);
+
+	return -(err_code != ERR_NO);
+}
+
+static int process_msg_get_ui_properties(void)
+{
+	uint32_t log_len;
+	struct msg_target_t sendlog;
+	enum ErrorCode err_code = ERR_UNKNOWN;
+
+	// send ui object properties request to target process
+	sendlog.type = APP_MSG_GET_UI_PROPERTIES;
+	sendlog.length = 0;
+	log_len = sizeof(sendlog.type) + sizeof(sendlog.length) + sendlog.length;
+
+	if (target_send_msg_to_all(&sendlog) == 0)
+		err_code = ERR_NO;
+
+	sendACKToHost(NMSG_GET_UI_PROPERTIES, err_code, 0, 0);
+
+	return -(err_code != ERR_NO);
+}
+
+static int process_msg_get_ui_rendering_time(void)
+{
+	uint32_t log_len;
+	struct msg_target_t sendlog;
+	enum ErrorCode err_code = ERR_UNKNOWN;
+
+	// send ui object rendering time request to target process
+	sendlog.type = APP_MSG_GET_UI_RENDERING_TIME;
+	sendlog.length = 0;
+	log_len = sizeof(sendlog.type) + sizeof(sendlog.length) + sendlog.length;
+
+	if (target_send_msg_to_all(&sendlog) == 0)
+		err_code = ERR_NO;
+
+	sendACKToHost(NMSG_GET_UI_RENDERING_TIME, err_code, 0, 0);
+
+	return -(err_code != ERR_NO);
+}
 
 int host_message_handler(struct msg_t *msg)
 {
@@ -1416,6 +1475,12 @@ int host_message_handler(struct msg_t *msg)
 		return process_msg_get_screenshot(&msg_control);
 	case NMSG_GET_PROCESS_ADD_INFO:
 		return process_msg_get_process_add_info(&msg_control);
+	case NMSG_GET_UI_HIERARCHY:
+		return process_msg_get_ui_hierarchy();
+	case NMSG_GET_UI_PROPERTIES:
+		return process_msg_get_ui_properties();
+	case NMSG_GET_UI_RENDERING_TIME:
+		return process_msg_get_ui_rendering_time();
 	default:
 		LOGE("unknown message %d <0x%08X>\n", msg->id, msg->id);
 		error_code = ERR_WRONG_MESSAGE_TYPE;
