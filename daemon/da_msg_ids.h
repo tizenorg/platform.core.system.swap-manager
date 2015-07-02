@@ -38,6 +38,9 @@ X(NMSG_GET_PROBE_MAP,		0x000A) \
 X(NMSG_KEEP_ALIVE,		0x000F) \
 X(NMSG_GET_SCREENSHOT,		0x0010) \
 X(NMSG_GET_PROCESS_ADD_INFO,	0x0011) \
+X(NMSG_GET_UI_HIERARCHY,	0x0012) \
+X(NMSG_GET_UI_SCREENSHOT,	0x0013) \
+X(NMSG_GET_UI_HIERARCHY_CANCEL,	0x0014) \
 X(NMSG_GET_REAL_PATH,		0x0020)
 
 #define DATA_MSG_ID_LIST \
@@ -52,4 +55,5 @@ X(NMSG_FUNCTION_ENTRY,		0x0008) /* N	irregular	swap instrumentation, Instrumente
 X(NMSG_FUNCTION_EXIT,		0x0009) /* N	irregular	swap instrumentation, Instrumented functions by AppInst and LibInst */ \
 X(NMSG_CONTEXT_SWITCH_ENTRY,	0x0010) /* N	irregular	swap instrumentation for kernel */ \
 X(NMSG_CONTEXT_SWITCH_EXIT,	0x0011) /* N	irregular	swap instrumentation for kernel */ \
+X(NMSG_UI_HIERARCHY,		0x0021) /* N	irregular	ui hierarchy */
 
