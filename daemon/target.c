@@ -112,7 +112,6 @@ int target_recv_msg(struct target *t, struct msg_target_t *msg)
 	return recv_msg_from_sock(t->socket, msg);
 }
 
-
 int target_start(struct target *t, void *(*start_routine) (void *))
 {
 	return thread_start(t->thread, start_routine, (void *)t);
@@ -316,7 +315,25 @@ void target_wait_all(void)
 		LOGI("target destroy [%d] start\n", i);
 		target_dtor(t);
 		LOGI("target destroy [%d] done\n", i);
+		target_use[i] = 0;
 	}
+}
+
+void target_stop_all(void)
+{
+	int i;
+	struct target *t;
+
+	target_array_lock();
+	for (i = 0; i < MAX_TARGET_COUNT; ++i) {
+		if (target_use[i] == 0)
+			continue;
+		t = target_get(i);
+		ecore_main_fd_handler_del(t->handler);
+		t->event_fd_released = 1;
+		target_cnt_sub_and_fetch();
+	}
+	target_array_unlock();
 }
 
 uint64_t target_get_total_alloc(pid_t pid)
