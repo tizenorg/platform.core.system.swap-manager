@@ -30,7 +30,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <libwebsockets.h>
-#include <json/json.h>
+#include <json.h>
 #include <errno.h>
 
 #include "wsi.h"

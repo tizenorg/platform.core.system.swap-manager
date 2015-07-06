@@ -13,7 +13,7 @@ BuildRequires:  vconf-devel
 BuildRequires:  capi-system-info-devel
 BuildRequires:  capi-system-runtime-info-devel
 BuildRequires:  libwebsockets-devel
-BuildRequires:  libjson-devel
+BuildRequires:  pkgconfig(json-c)
 BuildRequires:  pkgconfig(ecore)
 BuildRequires:  swap-probe-devel
 %if "%{?tizen_profile_name}" == "tv"
