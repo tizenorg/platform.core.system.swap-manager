@@ -1076,8 +1076,8 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 	for (i = 0; i != feature_to_data_count; i++) {
 		f = feature_to_data[i];
 		LOGI("check feature %016X\n", f.feature_value);
-		if (((f.feature_value & to_enable_features_0) |
-		    (f.feature_value & to_enable_features_1)) == f.feature_value) {
+		if ((f.feature_value & to_enable_features_0) ||
+		    (f.feature_value & to_enable_features_1 << 64)) {
 			buf[0] = '\0';
 
 			feature_code_str(f.feature_value, f.feature_value, &buf[0],
