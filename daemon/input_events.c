@@ -37,7 +37,7 @@
 #include "da_data.h"
 #include "input_events.h"
 
-#define MAX_DEVICE		10
+#define MAX_DEVICE		20
 #define ARRAY_END		(-11)
 #define BUF_SIZE		1024
 #define MAX_FILENAME 128
