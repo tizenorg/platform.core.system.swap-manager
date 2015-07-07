@@ -603,7 +603,8 @@ int add_preload_probes(struct lib_list_t **lib_list)
 	/* Add write_msg probe */
 	ret = create_preload_probe_func(&write_msg_probe, write_msg_addr, 6);
 	if (ret != 0)
-		return ret;
+		goto free_write_msg_probe;
+
 	probe_list_append(preload_lib, write_msg_probe);
 
 	preload_lib->func_num = 3;
@@ -618,6 +619,8 @@ free_caller_probe:
 	free(get_caller_probe);
 free_call_type_probe:
 	free(get_call_type_probe);
+free_write_msg_probe:
+	free(write_msg_probe);
 
 	preload_lib->lib->bin_path = NULL;
 	free_lib(preload_lib);
