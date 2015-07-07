@@ -1,6 +1,6 @@
 #include "File.h"
 #include <cerrno>
-#include <debug.h>
+#include "swap_debug.h"
 
 
 File::File() :

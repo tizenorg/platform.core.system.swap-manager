@@ -31,7 +31,7 @@
 #include <system_info.h>
 #include <runtime_info.h>
 #include "device_system_info.h"
-#include "debug.h"
+#include "swap_debug.h"
 
 static int is_available(const char *path)
 {

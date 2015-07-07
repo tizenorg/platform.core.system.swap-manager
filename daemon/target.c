@@ -33,7 +33,7 @@
 #include "thread.h"
 #include "daemon.h"	// for manager (it is need delete)
 #include "smack.h"
-#include "debug.h"
+#include "swap_debug.h"
 
 
 static struct target *target_malloc(void);

@@ -29,7 +29,7 @@
 /* SWAP Device ioctl commands */
 
 #include "ioctl_commands.h"
-#include "debug.h"
+#include "swap_debug.h"
 #include "da_protocol.h"
 #include "daemon.h"
 

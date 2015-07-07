@@ -36,7 +36,7 @@
 #include <unistd.h>
 
 #include "daemon.h"
-#include "debug.h"
+#include "swap_debug.h"
 #include <errno.h>
 
 #define DEBUG_LOGFILE		"/tmp/daemonlog.da"

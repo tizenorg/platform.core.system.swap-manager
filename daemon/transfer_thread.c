@@ -34,7 +34,7 @@
 
 #include "daemon.h"
 #include "buffer.h"
-#include "debug.h"
+#include "swap_debug.h"
 #include "transfer_thread.h"
 
 #define BUF_SIZE 4096

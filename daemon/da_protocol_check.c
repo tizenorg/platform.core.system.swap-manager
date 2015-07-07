@@ -23,7 +23,7 @@
  * - Samsung RnD Institute Russia
  *
  */
-#include "debug.h"
+#include "swap_debug.h"
 #include "da_protocol.h"
 #include "da_protocol_check.h"
 

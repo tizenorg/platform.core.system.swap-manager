@@ -34,7 +34,7 @@
 #include <errno.h>
 
 #include "wsi.h"
-#include "debug.h"
+#include "swap_debug.h"
 #include "da_protocol.h"
 #include "ioctl_commands.h"
 #include "smack.h"

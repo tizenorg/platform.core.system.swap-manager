@@ -25,7 +25,7 @@
 #include "feature_manager_c.h"
 #include "feature_manager.h"
 #include "inst/AppInstCont.h"
-#include "debug.h"
+#include "swap_debug.h"
 
 
 static std::string u64toString(uint64_t val)

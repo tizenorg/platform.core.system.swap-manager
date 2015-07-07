@@ -26,7 +26,7 @@
 
 #include "AppInst.h"
 #include "common.h"
-#include "debug.h"
+#include "swap_debug.h"
 
 
 class AppInstTizen : public AppInst

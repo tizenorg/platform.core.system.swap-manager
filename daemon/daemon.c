@@ -60,7 +60,7 @@
 #include "da_data.h"
 #include "input_events.h"
 #include "smack.h"
-#include "debug.h"
+#include "swap_debug.h"
 #include "wsi.h"
 
 #define DA_WORK_DIR			"/home/developer/sdk_tools/da/"

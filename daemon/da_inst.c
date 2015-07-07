@@ -35,7 +35,7 @@
 #include "da_inst.h"
 #include "da_protocol.h"
 #include "da_protocol_inst.h"
-#include "debug.h"
+#include "swap_debug.h"
 #include "daemon.h"
 
 #include "ld_preload_probes.h"

@@ -29,7 +29,7 @@
 #include <errno.h>
 
 
-#include "debug.h"
+#include "swap_debug.h"
 
 
 struct thread {

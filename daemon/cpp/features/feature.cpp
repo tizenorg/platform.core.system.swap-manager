@@ -23,7 +23,7 @@
 
 #include "feature.h"
 #include "feature_manager.h"
-#include "debug.h"
+#include "swap_debug.h"
 
 
 typedef std::lock_guard <std::mutex> lock_guard_mutex;

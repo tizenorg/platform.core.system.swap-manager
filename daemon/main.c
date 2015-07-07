@@ -47,7 +47,7 @@
 #include "da_protocol.h"
 #include "sys_stat.h"
 #include "buffer.h"
-#include "debug.h"
+#include "swap_debug.h"
 #include "utils.h"
 #include "smack.h"
 #include "cpp/features/feature_manager_c.h"

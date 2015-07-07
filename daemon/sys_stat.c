@@ -54,7 +54,7 @@
 #include "device_system_info.h"
 #include "device_vconf.h"
 #include "device_camera.h"
-#include "debug.h"
+#include "swap_debug.h"
 
 // defines for runtime environment
 #define FOR_EACH_CPU

@@ -33,7 +33,7 @@
 #include <dirent.h>
 #include <Ecore.h>
 
-#include "debug.h"
+#include "swap_debug.h"
 #include "da_data.h"
 #include "input_events.h"
 

@@ -45,7 +45,7 @@
 #include "transfer_thread.h"
 #include "elf_aux.h"
 #include "ioctl_commands.h"
-#include "debug.h"
+#include "swap_debug.h"
 #include "md5.h"
 #include "da_data.h"
 #include "wsi.h"

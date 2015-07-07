@@ -1,7 +1,7 @@
 #include "FileElf.h"
 #include <elf.h>
 #include <cerrno>
-#include <debug.h>
+#include "swap_debug.h"
 
 
 static int checkFhdr(const Elf32_Ehdr *fhdr)

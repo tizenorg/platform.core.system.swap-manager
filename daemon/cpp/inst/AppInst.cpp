@@ -25,7 +25,7 @@
 #include "AppInstRunning.h"
 #include "AppInstCommon.h"
 #include "AppInstWeb.h"
-#include "debug.h"
+#include "swap_debug.h"
 
 
 AppInst *AppInst::create(AppType type, const AppInstInfo &info)

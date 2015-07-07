@@ -24,7 +24,7 @@
  *
  */
 
-#include "debug.h"
+#include "swap_debug.h"
 #include "da_protocol.h"
 #include "da_protocol_inst.h"
 #include "da_inst.h"

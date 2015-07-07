@@ -39,7 +39,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include "elf_aux.h"
-#include "debug.h"
+#include "swap_debug.h"
 
 #define SIZEOF_VOID_P 4
 #if SIZEOF_VOID_P == 8

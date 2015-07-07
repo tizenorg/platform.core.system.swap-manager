@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-#include "debug.h"
+#include "swap_debug.h"
 #include "malloc_debug.h"
 
 #ifdef MALLOC_DEBUG_LEVEL

@@ -35,7 +35,7 @@
 #include "daemon.h"
 #include "buffer.h"
 #include "ioctl_commands.h"
-#include "debug.h"
+#include "swap_debug.h"
 
 #define SUBBUF_SIZE 32 * 1024
 #define SUBBUF_NUM 8

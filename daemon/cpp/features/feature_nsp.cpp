@@ -28,7 +28,7 @@
 
 #include "common.h"
 #include "utils.h"
-#include "debug.h"
+#include "swap_debug.h"
 #include "nsp_data.h"               /* auto generate */
 #include "inst/AppInstTizen.h"
 #include "inst/AppInstCont.h"

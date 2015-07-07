@@ -29,7 +29,7 @@
 #include "da_protocol.h"
 #include "daemon.h"
 #include "da_data.h"
-#include "debug.h"
+#include "swap_debug.h"
 
 #include <sys/time.h>
 

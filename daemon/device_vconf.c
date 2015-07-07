@@ -30,7 +30,7 @@
 
 
 #include <vconf.h>
-#include "debug.h"
+#include "swap_debug.h"
 #include "device_vconf.h"
 
 int get_wifi_status(void)

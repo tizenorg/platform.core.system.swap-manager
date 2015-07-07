@@ -48,7 +48,7 @@
 #include "da_protocol.h"
 #include "da_data.h"
 #include "da_inst.h"
-#include "debug.h"
+#include "swap_debug.h"
 #include "buffer.h"
 #include "input_events.h"
 

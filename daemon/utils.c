@@ -47,7 +47,7 @@
 #include "daemon.h"
 #include "utils.h"
 #include "smack.h"
-#include "debug.h"
+#include "swap_debug.h"
 
 #define BUFFER_MAX			1024
 #define SID_APP				5000

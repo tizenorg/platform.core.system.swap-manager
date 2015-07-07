@@ -27,7 +27,7 @@
 #include "feature_manager.h"
 
 #include "common.h"
-#include "debug.h"
+#include "swap_debug.h"
 #include "wsp_data.h"       /* auto generate */
 #include "elf/FileElf.h"
 

@@ -28,7 +28,7 @@
 
 #include <ctype.h>
 
-#include "debug.h"
+#include "swap_debug.h"
 
 #ifdef DEB_PRINTBUF
 //TODO del it or move to debug section
