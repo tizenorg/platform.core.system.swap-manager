@@ -34,7 +34,7 @@ check_null_or_exit()
 path_app_core_efl=$(rpm -ql app-core-efl | grep libappcore-efl | head -1)
 check_null_or_exit path_app_core_efl
 
-addr_appcore_efl_main=$(readelf -s ${path_app_core_efl} | grep appcore_efl_main | awk '{print $2}' | head -1)
+addr_appcore_efl_main=$(parse_elf ${path_app_core_efl} -s appcore_efl_main)
 check_null_or_exit addr_appcore_efl_main
 
 # get dlopen@plt and dlsym@plt addrs
@@ -43,9 +43,8 @@ path_launchpad=${path_launchpad:-$(rpm -ql launchpad | grep launchpad-process-po
 check_null_or_exit path_launchpad
 
 tmp=$(mktemp)
-su root -c "objdump -d --section=.plt $path_launchpad" | grep ">:"  > $tmp
-addr_dlopen_plt=$(cat $tmp | grep " <dlopen@" | cut -f1 -d' ')
-addr_dlsym_plt=$(cat $tmp | grep " <dlsym@" | cut -f1 -d' ')
+addr_dlopen_plt=$(su root -c "parse_elf $path_launchpad -r dlopen")
+addr_dlsym_plt=$(su root -c "parse_elf $path_launchpad -r dlsym")
 rm $tmp
 
 addr_dlopen_plt=${addr_dlopen_plt:-0}

@@ -16,6 +16,7 @@ BuildRequires:  libwebsockets-devel
 BuildRequires:  libjson-devel
 BuildRequires:  pkgconfig(ecore)
 BuildRequires:  swap-probe-devel
+BuildRequires:  swap-probe-elf
 %if "%{?tizen_profile_name}" == "tv"
 BuildRequires:  webkit2-efl-tv
 BuildRequires:  webkit2-efl-tv-debuginfo
