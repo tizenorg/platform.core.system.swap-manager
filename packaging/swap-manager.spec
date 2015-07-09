@@ -19,6 +19,7 @@ BuildRequires:  pkgconfig(ecore)
 BuildRequires:  pkgconfig(callmgr_client)
 %endif
 BuildRequires:  swap-probe-devel
+BuildRequires:  swap-probe-elf
 %if "%{?tizen_profile_name}" == "tv"
 BuildRequires:  webkit2-efl-tv
 BuildRequires:  webkit2-efl-tv-debuginfo
@@ -33,6 +34,7 @@ BuildRequires:  app-core-debuginfo
 Requires:  swap-modules
 %endif
 Requires:  swap-probe
+Requires:  swap-probe-elf
 Requires:  sdbd
 
 %description

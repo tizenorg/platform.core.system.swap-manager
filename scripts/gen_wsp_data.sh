@@ -17,25 +17,38 @@ path_libewebkit2_debuginfo=`rpm -ql ${webkit_package_name}-debuginfo | grep "lib
 g_names=()
 g_nick_names=()
 
+g_names_plt=()
+g_nick_names_plt=()
 
-get_addr()
+get_addrs()
 {
-	name=$1
+	param=$1
+	shift
+	names=($@)
+	len=${#names[@]}
 
-	if [[ "$name" == *@plt ]]; then
-		addr=$(objdump --section=.plt -d $path_libewebkit2 | grep $name | head -1 | cut -f1 -d' ')
+	if [[ "$param" == "-r" ]]; then
+		path_lib=$path_libewebkit2
+
+		for (( i=0; i < ${len}; ++i)); do
+			names[$i]=`echo ${names[$i]} | cut -d'@' -f 1`
+		done
 	else
-		addr=$(readelf -sW $path_libewebkit2_debuginfo | grep " ${name}\(\.part\.[0-9]*\)*$" | grep " FUNC " | head -1 |awk '{print $2}')
+		path_lib=$path_libewebkit2_debuginfo
 	fi
 
-	if [[ -z "$addr" ]]; then
-		echo "ERROR: symbol '$name' not found" >&2
-		addr=0
-	fi
+	addrs=($(parse_elf $path_lib $param ${names[@]}))
 
-	echo 0x$addr
+	for (( i=0; i < ${len}; ++i)); do
+		name=${names[$i]}
+		addr=${addrs[$i]}
+		if [ -z "$addr" -o $((16#$addr)) -eq 0 ]; then
+			addr=0
+			echo "ERROR: symbol '$name' not found" >&2
+		fi
+		echo 0x$addr
+	done
 }
-
 
 add_func()
 {
@@ -46,24 +59,40 @@ add_func()
 	g_nick_names+=($nick_name)
 }
 
+add_func_plt()
+{
+	name=$1
+	nick_name=$2
+
+	g_names_plt+=($name)
+	g_nick_names_plt+=($nick_name)
+}
 
 gen_array()
 {
+	addrs_plt=`get_addrs -r ${g_names_plt[@]}`
+	if [ $? -ne 0 ]; then
+		exit 1;
+	fi
+
+	addrs=`get_addrs -sf ${g_names[@]}`
+	if [ $? -ne 0 ]; then
+		exit 1;
+	fi
+
+	addrs=($addrs_plt $addrs)
+	g_names=(${g_names_plt[@]} ${g_names[@]})
+	g_nick_names=(${g_nick_names_plt[@]} ${g_nick_names[@]})
+
 	len=${#g_names[@]}
 	for (( i=0; i < ${len}; ++i)); do
-		name=${g_names[$i]}
-		addr=`get_addr $name`
-		if [ $? -ne 0 ]; then
-			exit 1;
-		fi
-
-		echo -e "\t{ \"$name\", \"${g_nick_names[$i]}\", $addr },"
+		echo -e "\t{ \"${g_names[$i]}\", \"${g_nick_names[$i]}\", ${addrs[$i]} },"
 	done
 }
 
 
 if [ "$__tizen_profile_name__" == "tv" ]; then
-	add_func soup_requester_request_uri@plt soup_request
+	add_func_plt soup_requester_request_uri@plt soup_request
 	add_func _ZN7WebCore14ResourceLoader15willSendRequestERNS_15ResourceRequestERKNS_16ResourceResponseE main_res_will
 	add_func _ZN7WebCore11CachedImage7addDataEPKcj main_res_add
 	add_func _ZN7WebCore14ResourceLoader16didFinishLoadingEd main_res_finish
@@ -71,7 +100,7 @@ if [ "$__tizen_profile_name__" == "tv" ]; then
 	add_func _ZN7WebCore14ResourceLoader16didFinishLoadingEPNS_14ResourceHandleEd res_finish
 	add_func _ZN7WebCore22CompositingCoordinator24flushPendingLayerChangesEv redraw
 else
-	add_func soup_requester_request@plt soup_request
+	add_func_plt soup_requester_request@plt soup_request
 	add_func _ZN7WebCore18MainResourceLoader15willSendRequestERNS_15ResourceRequestERKNS_16ResourceResponseE main_res_will
 	add_func _ZN7WebCore18MainResourceLoader7addDataEPKcib main_res_add
 	add_func _ZN7WebCore18MainResourceLoader16didFinishLoadingEd main_res_finish

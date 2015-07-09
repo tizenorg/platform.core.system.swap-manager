@@ -1,16 +1,20 @@
 #!/bin/bash
 
-get_addr()
+get_addrs()
 {
-	name=$1
+	names=($@)
+	addrs=($(parse_elf ${lib_file} -sf ${names[@]}))
 
-	addr=$(cat ${tmp} | grep " $name$" | awk '{print $2}')
-	if [ -z "$addr" ]; then
-		echo "ERROR: symbol '$name' not found" >&2
-		exit 1
-	fi
-
-	echo 0x$addr
+	len=${#names[@]}
+	for (( i=0; i < ${len}; ++i)); do
+		name=${names[$i]}
+		addr=${addrs[$i]}
+		if [ -z "$addr" -o $((16#$addr)) -eq 0 ]; then
+			addr=0
+			echo "ERROR: symbol '$name' not found" >&2
+		fi
+		echo 0x$addr
+	done
 }
 
 script_dir=$(readlink -f $0 | xargs dirname)
@@ -24,11 +28,16 @@ fi
 lib_file=$(rpm -ql ${webkit_package_name}-debuginfo | grep "/usr/lib/debug/usr/lib/libewebkit2.so.debug$" | head -1)
 tmp=$(mktemp)
 
-readelf -sW ${lib_file} | grep " FUNC " > ${tmp}
+func_names=()
+func_names+=(ewk_\(context\|view\)_inspector_server_start)
+func_names+=(_ZN3JSC16ProfileGenerator11willExecuteEPNS_9ExecStateERKNS_14CallIdentifierE)
+func_names+=(_ZN3JSC16ProfileGenerator10didExecuteEPNS_9ExecStateERKNS_14CallIdentifierE)
 
-inspector_addr=$(get_addr 'ewk_\(context\|view\)_inspector_server_start');
-willexecute_addr=$(get_addr _ZN3JSC16ProfileGenerator11willExecuteEPNS_9ExecStateERKNS_14CallIdentifierE);
-didexecute_addr=$(get_addr _ZN3JSC16ProfileGenerator10didExecuteEPNS_9ExecStateERKNS_14CallIdentifierE);
+addrs=(`get_addrs ${func_names[@]}`)
+
+inspector_addr=${addrs[0]}
+willexecute_addr=${addrs[1]}
+didexecute_addr=${addrs[2]}
 
 rm ${tmp}
 

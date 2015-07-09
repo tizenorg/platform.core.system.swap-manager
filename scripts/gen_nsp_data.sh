@@ -45,25 +45,22 @@ check_null_or_exit path_launchpad
 
 
 # get appcore_efl_main addr
-addr_appcore_efl_main=$(readelf -s ${path_app_core_efl} | grep appcore_efl_main | awk '{print $2}' | head -1)
+addr_appcore_efl_main=$(parse_elf ${path_app_core_efl} -s appcore_efl_main)
 check_null_or_exit addr_appcore_efl_main
 
 # get __do_app addr
-addr_do_app=$(readelf -s ${dpath_app_core_efl} | grep __do_app | awk '{print $2}' | head -1)
+addr_do_app=$(parse_elf ${dpath_app_core_efl} -s __do_app)
 check_null_or_exit addr_do_app
 
 
 tmp=$(mktemp)
 # launchpad
-su root -c "objdump -d --section=.plt $path_launchpad" | grep ">:"  > $tmp
-addr_dlopen_plt=$(cat $tmp | grep " <dlopen@" | cut -f1 -d' ')
-addr_dlsym_plt=$(cat $tmp | grep " <dlsym@" | cut -f1 -d' ')
+addr_dlopen_plt=$(su root -c "parse_elf $path_launchpad -r dlopen")
+addr_dlsym_plt=$(su root -c "parse_elf $path_launchpad -r dlsym")
 
 # libappcore-efl.so
-objdump -d --section=.plt $path_app_core_efl | grep ">:"  > $tmp
-addr_appcore_init_plt=$(cat $tmp | grep " <appcore_init@" | cut -f1 -d' ')
-addr_elm_run_plt=$(cat $tmp | grep " <elm_run@" | cut -f1 -d' ')
-rm $tmp
+addr_appcore_init_plt=$(parse_elf $path_app_core_efl -r appcore_init)
+addr_elm_run_plt=$(parse_elf $path_app_core_efl -r elm_run)
 
 
 # PLT
