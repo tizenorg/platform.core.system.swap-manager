@@ -22,7 +22,6 @@
 
 #include <string>
 #include <errno.h>
-#include <appcore/appcore-common.h>
 #include "feature.h"
 #include "feature_manager.h"
 
@@ -39,19 +38,15 @@ static const char path_enabled[] = "/sys/kernel/debug/swap/nsp/enabled";
 static const char path_cmd[] = "/sys/kernel/debug/swap/nsp/cmd";
 
 
-enum {
-    CB_OFFSET_CRAEATE = offsetof(struct appcore_ops, create),
-    CB_OFFSET_RESET = offsetof(struct appcore_ops, reset)
-};
-
-
 static int addApp(const AppInstTizen &app)
 {
-    std::string cmd("a " + app.info().path());
+    std::string cmd = "a "
+                    + addr2hex(app.mainOffset()) + ":"
+                    + app.info().path();
 
     int ret = write_to_file(path_cmd, cmd);
     if (ret < 0) {
-        LOGE("write to file '%s', cmd=%s\n", path_cmd, cmd.c_str());
+        LOGE("write to file '%s', cmd='%s'\n", path_cmd, cmd.c_str());
         return ret;
     }
 
@@ -125,61 +120,92 @@ static uint32_t getAddrPlt(const char *path, const char *name)
     return ret ? 0 : addr;
 }
 
+static int initLibAppCore()
+{
+    uint32_t appcoreInitAddr = ADDR_APPCORE_INIT_PLT ?
+                                ADDR_APPCORE_INIT_PLT :
+                                getAddrPlt(PATH_LIBAPPCORE_EFL, "appcore_init");
+
+    if (appcoreInitAddr == 0) {
+        LOGE("not found 'appcore_init@plt' addr in '%s'\n", PATH_LIBAPPCORE_EFL);
+        return -EINVAL;
+    }
+
+    uint32_t elmRunAddr = ADDR_ELM_RUN_PLT ?
+                            ADDR_ELM_RUN_PLT :
+                            getAddrPlt(PATH_LIBAPPCORE_EFL, "elm_run");
+
+    if (elmRunAddr == 0) {
+        LOGE("not found 'elm_run@plt' addr in '%s'\n", PATH_LIBAPPCORE_EFL);
+        return -EINVAL;
+    }
+
+
+    /* cmd: "l appcore_efl_main:__do_app:appcore_init@plt:elm_run@plt:lib_path" */
+    std::string cmd = "l "
+                    + addr2hex(ADDR_APPCORE_EFL_MAIN) + ":"
+                    + addr2hex(ADDR_DO_APP) + ":"
+                    + addr2hex(appcoreInitAddr) + ":"
+                    + addr2hex(elmRunAddr) + ":"
+                    + PATH_LIBAPPCORE_EFL;
+
+    int ret = write_to_file(path_cmd, cmd);
+    if (ret < 0) {
+        LOGE("write to file '%s', cmd='%s'\n", path_cmd, cmd.c_str());
+        return ret;
+    }
+
+    return 0;
+}
+
+static int initLpad()
+{
+    uint32_t dlopenAddr = ADDR_DLOPEN_PLT_LPAD ?
+                            ADDR_DLOPEN_PLT_LPAD :
+                            getAddrPlt(PATH_LAUNCHPAD, "dlopen");
+
+    if (dlopenAddr == 0) {
+        LOGE("not found 'dlopen@plt' addr in '%s'\n", PATH_LAUNCHPAD);
+        return -EINVAL;
+    }
+
+    uint32_t dlsymAddr = ADDR_DLSYM_PLT_LPAD ?
+                            ADDR_DLSYM_PLT_LPAD :
+                            getAddrPlt(PATH_LAUNCHPAD, "dlsym");
+
+    if (dlopenAddr == 0) {
+        LOGE("not found 'dlsym@plt' addr in '%s'\n", PATH_LAUNCHPAD);
+        return -EINVAL;
+    }
+
+    /* cmd: "l dlopen@plt:dlsym@plt:lpad_path" */
+    std::string cmd = "b "
+                    + addr2hex(dlopenAddr) + ":"
+                    + addr2hex(dlsymAddr) + ":"
+                    + PATH_LAUNCHPAD;
+
+    int ret = write_to_file(path_cmd, cmd);
+    if (ret < 0) {
+        LOGE("write to file '%s', cmd='%s'\n", path_cmd, cmd.c_str());
+        return ret;
+    }
+
+    return 0;
+}
+
 class FeatureNSP : public Feature
 {
     int doInit()
     {
         int ret;
-        std::string cmd;
 
-        cmd = "s offset_create " + int2str(CB_OFFSET_CRAEATE);
-        ret = write_to_file(path_cmd, cmd);
-        if (ret < 0) {
-            LOGE("write to file '%s', cmd=%s\n", path_cmd, cmd.c_str());
+        ret = initLibAppCore();
+        if (ret)
             return ret;
-        }
 
-        cmd = "s offset_reset " + int2str(CB_OFFSET_RESET);
-        ret = write_to_file(path_cmd, cmd);
-        if (ret < 0) {
-            LOGE("write to file '%s', cmd=%s\n", path_cmd, cmd.c_str());
-            return ret;
-        }
+        ret = initLpad();
 
-        uint32_t dlopenAddr = ADDR_DLOPEN_PLT_LPAD;
-        if (dlopenAddr == 0)
-            dlopenAddr = getAddrPlt(PATH_LAUNCHPAD, "dlopen");
-
-        if (dlopenAddr == 0) {
-            LOGE("not found 'dlopen@plt' addr in '%s'\n", PATH_LAUNCHPAD);
-            return -EINVAL;
-        }
-
-        uint32_t dlsymAddr = ADDR_DLSYM_PLT_LPAD;
-        if (dlsymAddr == 0)
-            dlopenAddr = getAddrPlt(PATH_LAUNCHPAD, "dlsym");
-
-        if (dlopenAddr == 0) {
-            LOGE("not found 'dlsym@plt' addr in '%s'\n", PATH_LAUNCHPAD);
-            return -EINVAL;
-        }
-
-        cmd = "b " + addr2hex(dlopenAddr) + ":"
-            + addr2hex(dlsymAddr) + ":" + PATH_LAUNCHPAD;
-        ret = write_to_file(path_cmd, cmd);
-        if (ret < 0) {
-            LOGE("write to file '%s', cmd=%s\n", path_cmd, cmd.c_str());
-            return ret;
-        }
-
-        cmd = "l " + addr2hex(ADDR_APPCORE_EFL_MAIN) + ":" + PATH_LIBAPPCORE_EFL;
-        ret = write_to_file(path_cmd, cmd);
-        if (ret < 0) {
-            LOGE("write to file '%s', cmd=%s\n", path_cmd, cmd.c_str());
-            return ret;
-        }
-
-        return 0;
+        return ret;
     }
 
     int doEnable()

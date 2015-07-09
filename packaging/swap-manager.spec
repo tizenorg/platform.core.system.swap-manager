@@ -25,7 +25,7 @@ BuildRequires:  webkit2-efl-debuginfo
 %endif
 BuildRequires:  launchpad
 BuildRequires:  app-core-efl
-BuildRequires:  app-core-common-devel
+BuildRequires:  app-core-debuginfo
 %if "%_project" != "Kirana_SWA_OPEN:Build" && "%_project" != "Kirana_SWA_OPEN:Daily"
 Requires:  swap-modules
 %endif

@@ -30,39 +30,70 @@ check_null_or_exit()
 	fi
 }
 
-# get appcore_efl_main addr
+# get libappcore-efl.so path
 path_app_core_efl=$(rpm -ql app-core-efl | grep libappcore-efl | head -1)
 check_null_or_exit path_app_core_efl
 
-addr_appcore_efl_main=$(readelf -s ${path_app_core_efl} | grep appcore_efl_main | awk '{print $2}' | head -1)
-check_null_or_exit addr_appcore_efl_main
+# get libappcore-efl.so debug_path
+dpath_app_core_efl=$(rpm -ql app-core-debuginfo | grep "libappcore-efl\.so\.debug$" | head -1)
+check_null_or_exit dpath_app_core_efl
 
-# get dlopen@plt and dlsym@plt addrs
+# get launchpad path
 path_launchpad=$(rpm -ql launchpad | grep launchpad-loader | head -1)
 path_launchpad=${path_launchpad:-$(rpm -ql launchpad | grep launchpad-process-pool | head -1)}
 check_null_or_exit path_launchpad
 
+
+# get appcore_efl_main addr
+addr_appcore_efl_main=$(readelf -s ${path_app_core_efl} | grep appcore_efl_main | awk '{print $2}' | head -1)
+check_null_or_exit addr_appcore_efl_main
+
+# get __do_app addr
+addr_do_app=$(readelf -s ${dpath_app_core_efl} | grep __do_app | awk '{print $2}' | head -1)
+check_null_or_exit addr_do_app
+
+
 tmp=$(mktemp)
+# launchpad
 su root -c "objdump -d --section=.plt $path_launchpad" | grep ">:"  > $tmp
 addr_dlopen_plt=$(cat $tmp | grep " <dlopen@" | cut -f1 -d' ')
 addr_dlsym_plt=$(cat $tmp | grep " <dlsym@" | cut -f1 -d' ')
+
+# libappcore-efl.so
+objdump -d --section=.plt $path_app_core_efl | grep ">:"  > $tmp
+addr_appcore_init_plt=$(cat $tmp | grep " <appcore_init@" | cut -f1 -d' ')
+addr_elm_run_plt=$(cat $tmp | grep " <elm_run@" | cut -f1 -d' ')
 rm $tmp
 
+
+# PLT
 addr_dlopen_plt=${addr_dlopen_plt:-0}
 addr_dlsym_plt=${addr_dlsym_plt:-0}
+addr_appcore_init_plt=${addr_appcore_init_plt:-0}
+addr_elm_run_plt=${addr_elm_run_plt:-0}
 
-
+# libappcore-efl
 PATH_LIBAPPCORE_EFL=$(gen_define_str PATH_LIBAPPCORE_EFL $path_app_core_efl)
 ADDR_APPCORE_EFL_MAIN=$(gen_define ADDR_APPCORE_EFL_MAIN 0x$addr_appcore_efl_main)
+ADDR_APPCORE_INIT_PLT=$(gen_define ADDR_APPCORE_INIT_PLT 0x$addr_appcore_init_plt)
+ADDR_ELM_RUN_PLT=$(gen_define ADDR_ELM_RUN_PLT 0x$addr_elm_run_plt)
+ADDR_DO_APP=$(gen_define ADDR_DO_APP 0x$addr_do_app)
 
+# launchpad
 PATH_LAUNCHPAD=$(gen_define_str PATH_LAUNCHPAD $path_launchpad)
 ADDR_DLOPEN_PLT_LPAD=$(gen_define ADDR_DLOPEN_PLT_LPAD 0x$addr_dlopen_plt)
 ADDR_DLSYM_PLT_LPAD=$(gen_define ADDR_DLSYM_PLT_LPAD 0x$addr_dlsym_plt)
 
 
 NSP_DEFINES="
+/* libappcore-efl */
 $PATH_LIBAPPCORE_EFL
 $ADDR_APPCORE_EFL_MAIN
+$ADDR_DO_APP
+$ADDR_APPCORE_INIT_PLT
+$ADDR_ELM_RUN_PLT
+
+/* launchpad */
 $PATH_LAUNCHPAD
 $ADDR_DLOPEN_PLT_LPAD
 $ADDR_DLSYM_PLT_LPAD
