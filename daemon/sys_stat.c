@@ -1234,57 +1234,66 @@ exit:
 // overall information getter functions
 // ========================================================================
 
-#define print_to_buf(buf, buflen, str)				\
-do {								\
-	if (strlen(str) <= buflen) {				\
-		lenin = snprintf(buf + len, buflen, "CDMA,");	\
-		if (lenin <= 0) {				\
-			LOGE("can not pack <%s>\n", str);	\
-			goto exit;				\
-		}						\
-		lenin -= 1;					\
-		len += lenin;					\
-		buflen -= lenin;				\
-	} else {						\
-		LOGE("can not pack <%s>\n", str);		\
-		goto exit;					\
-	}							\
-} while(1)
-
-static int get_device_network_type(char* buf, size_t buflen)
+char *print_to_buf(char *buf, size_t *buflen, char *str)
 {
-	int len = 0, lenin = 0;
+	int len = 0;
+	int lenin = 0;
 
+	if (strlen(str) > *buflen)
+		goto error_exit;
+
+	lenin = snprintf(buf + len, *buflen, str);
+	if (lenin <= 0)
+		goto error_exit;
+
+	buf += lenin;
+	*buflen -= lenin;
+
+	return buf;
+error_exit:
+	LOGE("can not pack <%s>\n", str);
+	return NULL;
+
+}
+
+static int get_device_network_type(char *buf, size_t buflen)
+{
+	int len = 0;
+	char *head = buf;
+
+	memset(buf, 0, buflen);
 	buf[0] = '\0';
 
 	if (is_cdma_available())
-		print_to_buf(buf, buflen, "CDMA,");
+		buf = print_to_buf(buf, &buflen, "CDMA,");
 
 	if (is_edge_available())
-		print_to_buf(buf, buflen, "EDGE,");
+		buf = print_to_buf(buf, &buflen, "EDGE,");
 
 	if (is_gprs_available())
-		print_to_buf(buf, buflen, "GPRS,");
+		buf = print_to_buf(buf, &buflen, "GPRS,");
 
 	if (is_gsm_available())
-		print_to_buf(buf, buflen, "GSM,");
+		buf = print_to_buf(buf, &buflen, "GSM,");
 
 	if (is_hsdpa_available())
-		print_to_buf(buf, buflen, "HSDPA,");
+		buf = print_to_buf(buf, &buflen, "HSDPA,");
 
 	if (is_hspa_available())
-		print_to_buf(buf, buflen, "HSPA,");
+		buf = print_to_buf(buf, &buflen, "HSPA,");
 
 	if (is_hsupa_available())
-		print_to_buf(buf, buflen, "HSUPA,");
+		buf = print_to_buf(buf, &buflen, "HSUPA,");
 
 	if (is_umts_available())
-		print_to_buf(buf, buflen, "UMTS,");
+		buf = print_to_buf(buf, &buflen, "UMTS,");
 
 	if (is_lte_available())
-		print_to_buf(buf, buflen, "LTE,");
+		buf = print_to_buf(buf, &buflen, "LTE,");
 
-exit:
+	len = buf - head;
+	if (len != 0)
+		head[len - 1] = '\0';
 	return len;
 }
 
