@@ -527,7 +527,7 @@ int feature_add_lib_inst_list(struct ld_feature_list_el_t *ld_lib_list,
 		if (!feature_add_inst_lib(ld_lib_list->libs[i], &lib)) {
 			// TODO maybe need free allocated memory up there
 			LOGE("add LD lib #%d failed\n", i + 1);
-			return 0;
+			continue;
 		}
 		data_list_append((struct data_list_t **)lib_list,
 				 (struct data_list_t *)lib);
