@@ -92,6 +92,8 @@ enum ErrorCode {
 #define FL_SYSTEM_ENERGY_OLD (1<<26)
 
 enum feature_code{
+	FL_UNCONDITIONAL		= 0x00000FFFFFFFFULL, // UNCONDITIONAL (always on)
+
 	FL_RESERVED1			= 0x0000000000003ULL, // reserved 0011
 
 	FL_FUNCTION_PROFILING		= 0x0000000000004ULL, // 0x4 * 0x10^00 On/Off the UserSpaceInst
