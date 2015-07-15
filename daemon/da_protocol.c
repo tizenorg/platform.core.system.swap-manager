@@ -156,7 +156,7 @@ static char *msgErrStr(enum ErrorCode err)
 
 
 #define print_feature(f,in,to,delim)					\
-	if (f & in) {							\
+	if ((f & in) == f) {						\
 		if (strlen(dstr(f) delim) + 1 < buflen ) {		\
 			lenin = snprintf(to, buflen, dstr(f) delim );	\
 			to += lenin;					\
@@ -170,6 +170,11 @@ void feature_code_str(uint64_t feature0, uint64_t feature1, char *to,
 		      uint32_t buflen)
 {
 	int lenin = 0;
+	if (feature0 == FL_UNCONDITIONAL) {
+		print_feature(FL_UNCONDITIONAL, feature0, to, ", \n\t");
+		goto exit;
+	}
+
 	print_feature_0(FL_FUNCTION_PROFILING);
 	print_feature_0(FL_MEMORY_ALLOC_PROBING);
 	print_feature_0(FL_FILE_API_PROBING);

@@ -439,7 +439,6 @@ exit_fail:
 	return 0;
 }
 /* ld probes */
-#define NOFEATURE 0x123456
 #include "ld_preload_types.h"
 struct ld_preload_probe_t {
 	uint64_t orig_addr;
