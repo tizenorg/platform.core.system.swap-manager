@@ -425,7 +425,6 @@ int parse_app_inst_list(struct msg_buf_t *msg,
 	return 1;
 }
 /* ld probes */
-#define NOFEATURE 0x123456
 #include "ld_preload_types.h"
 struct ld_preload_probe_t {
 	uint64_t orig_addr;
