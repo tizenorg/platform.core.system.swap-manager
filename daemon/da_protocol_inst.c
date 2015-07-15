@@ -465,18 +465,17 @@ static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
 
 	LOGI("app_int_num = %d\n", num);
 	for (i = 0; i < num; i++) {
-		parse_deb("app_int #%d\n", i);
 		probe_el = new_probe();
 
 		if (probe_el == NULL) {
-			LOGE("probe alloc error\n");
+			LOGE("app_int #%04d: probe alloc error\n", i);
 			return 0;
 		}
 
 		func = malloc(sizeof(struct ld_preload_probe_t));
 
 		if (func == NULL) {
-			LOGE("func alloc error\n");
+			LOGE("app_int #%04d: func alloc error\n", i);
 			free(probe_el);
 			return 0;
 		}
@@ -489,7 +488,7 @@ static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
 		probe_el->size = sizeof(struct ld_preload_probe_t);
 		probe_el->func = (struct us_func_inst_plane_t *)func;
 
-		LOGI("app_int #%d size = %lu\n", i, dest->size);
+		parse_deb("app_int #%04d: set func \"%s\"\n", i, ld_lib.probes[i].name);
 		probe_list_append(dest, probe_el);
 	}
 	dest->func_num = num;
