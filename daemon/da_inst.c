@@ -515,6 +515,17 @@ static int resolve_collisions_for_rm_msg(struct lib_list_t **cur, struct lib_lis
 	return 1;
 }
 
+void app_list_rm_probes_by_addr(struct app_list_t *app_list, uint64_t addr)
+{
+	struct probe_list_t *pr = app_list->list;
+
+	while (pr) {
+		pr = pr->func->func_addr == addr ?
+			probe_list_rm_element(app_list, pr) :
+			pr->next;
+	}
+}
+
 //--------------------------------------pack ----------------------------------
 
 static char *pack_lib_head_to_array(char *to, void *data)
