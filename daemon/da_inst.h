@@ -89,6 +89,8 @@ void free_data_list(struct data_list_t **data);
 void free_app(struct app_list_t *app);
 void free_lib(struct lib_list_t *lib);
 
+void app_list_rm_probes_by_addr(struct app_list_t *app_list, uint64_t addr);
+
 struct app_info_t *app_info_get_first(struct app_list_t **app_list);
 struct app_info_t *app_info_get_next(struct app_list_t **app_list);
 

@@ -288,7 +288,8 @@ int parse_lib_inst_list(struct msg_buf_t *msg,
 }
 
 static int parse_inst_app_setup_data(struct msg_buf_t *msg,
-                                    struct app_info_t *app_info)
+				     struct app_info_t *app_info,
+				     struct app_list_t *app_list)
 {
 	switch (app_info->app_type) {
 	case APP_TYPE_TIZEN: {
@@ -304,6 +305,10 @@ static int parse_inst_app_setup_data(struct msg_buf_t *msg,
 
 		app_info->setup_data.size = data_len;
 		memcpy(app_info->setup_data.data, data, data_len);
+
+		/* FIXME: dog nail */
+		app_list_rm_probes_by_addr(app_list, val);
+
 		return 0;
 	}
 	case APP_TYPE_RUNNING:
@@ -363,7 +368,7 @@ int parse_inst_app(struct msg_buf_t *msg, struct app_list_t **dest)
 		goto exit_free_err;
 	}
 
-	if (parse_inst_app_setup_data(msg, app_info)) {
+	if (parse_inst_app_setup_data(msg, app_info, *dest)) {
 		LOGE("setup data parsing error\n");
 		goto exit_free_err;
 	}
