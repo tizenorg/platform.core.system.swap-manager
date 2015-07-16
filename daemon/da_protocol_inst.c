@@ -28,6 +28,7 @@
 #include "da_protocol.h"
 #include "da_protocol_inst.h"
 #include "da_inst.h"
+#include "md5.h"
 #include "da_protocol_check.h"
 #include "ld_preload_probe_lib.h"
 #include "cpp/features/feature_manager_c.h"
@@ -521,12 +522,43 @@ static int feature_add_inst_lib(struct ld_lib_list_el_t ld_lib,
 
 }
 
+int ld_lib_check_md5(struct ld_lib_list_el_t *lib_el)
+{
+	uint8_t md5_status, i;
+	md5_byte_t digest[16];
+	char digest_str[16*2 + 1];
+
+	md5_status = lib_el->md5->is_checked;
+	if (md5_status == LIB_MD5_OK)
+		return 0;
+
+	if (md5_status == LIB_MD5_NOT_CHECKED) {
+		get_file_md5sum(&digest, lib_el->lib_name);
+
+		md5_to_str(digest_str, digest);
+		digest_str[sizeof(digest_str) - 1] = '\0';
+
+		if (strncmp(digest_str, lib_el->md5->md5_sum,
+			    sizeof(digest_str)) == 0) {
+			lib_el->md5->is_checked = LIB_MD5_OK;
+		} else {
+			LOGE("MD5 mismatch \"%s\" target<%s>:buildin<%s>\n",
+			     lib_el->lib_name, digest_str, lib_el->md5->md5_sum);
+			lib_el->md5->is_checked = LIB_MD5_CHECK_FAIL;
+		}
+	}
+
+	md5_status = lib_el->md5->is_checked;
+	return (md5_status != LIB_MD5_OK);
+}
+
 int feature_add_lib_inst_list(struct ld_feature_list_el_t *ld_lib_list,
 			      struct lib_list_t **lib_list)
 {
 
 	uint32_t i = 0, num;
 	struct lib_list_t *lib = NULL;
+	struct ld_lib_list_el_t *lib_el = NULL;
 
 	num = ld_lib_list->lib_count;
 	if (!check_lib_inst_count(num)) {
@@ -535,7 +567,17 @@ int feature_add_lib_inst_list(struct ld_feature_list_el_t *ld_lib_list,
 	}
 
 	for (i = 0; i < num; i++) {
-		LOGI(">add lib #%d <%s> probes_count=%lu\n", i, ld_lib_list->libs[i].lib_name, ld_lib_list->libs[i].probe_count);
+		lib_el = &ld_lib_list->libs[i];
+
+		LOGI(">add lib #%d <%s> probes_count=%lu\n", i,
+		     lib_el->lib_name, lib_el->probe_count);
+
+		if (ld_lib_check_md5(lib_el) != 0) {
+			LOGE("WRONG MD5: lib #%d <%s> [%s] THIS LIB WILL BE IGNORED\n",
+			     i, lib_el->lib_name, lib_el->md5->md5_sum);
+			continue;
+		}
+
 		if (!feature_add_inst_lib(ld_lib_list->libs[i], &lib)) {
 			// TODO maybe need free allocated memory up there
 			LOGE("add LD lib #%d failed\n", i + 1);

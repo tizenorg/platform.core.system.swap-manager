@@ -1002,10 +1002,17 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 		    (f.feature_value_1 & to_enable_features_1)) {
 			buf[0] = '\0';
 
-			feature_code_str(f.feature_value_0, f.feature_value_1, &buf[0],
-					 sizeof(buf));
+			if (f.feature_value_0 != NOFEATURE) {
+				feature_code_str(f.feature_value_0,
+						 f.feature_value_1, &buf[0],
+						 sizeof(buf));
+			} else {
+				snprintf(buf, sizeof(buf), "NOFEATURE");
+			}
+
 			LOGI("Set LD probes for %016LX:%016LX <%s>\n",
-			     f.feature_value_1, f.feature_value_0, &buf[0]);
+			     f.feature_value_1, f.feature_value_0,
+			     &buf[0]);
 
 			feature_add_lib_inst_list(f.feature_ld, &ld_lib_inst_list_new_add);
 		} else if ((((f.feature_value_0 & to_disable_features_0) &&

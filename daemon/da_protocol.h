@@ -40,6 +40,7 @@
 #define PROTOCOL_VERSION "4.1"
 
 
+#include "md5.h"
 #include "da_msg_ids.h"
 
 enum HostMessageT {
@@ -489,6 +490,8 @@ int parse_int64(struct msg_buf_t *msg, uint64_t *val);
 int parse_string(struct msg_buf_t *msg, char **str);
 int parse_string_no_alloc(struct msg_buf_t *msg, char *str);
 int parse_replay_event_seq(struct msg_buf_t *msg, struct replay_event_seq_t *res);
+
+void get_file_md5sum(md5_byte_t digest[16], const char *filename);
 
 void init_prof_session(struct prof_session_t *prof_session);
 #endif /* _DA_PROTOCOL_ */
