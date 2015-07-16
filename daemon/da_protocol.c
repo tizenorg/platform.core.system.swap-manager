@@ -764,6 +764,21 @@ static void binary_ack_free(struct binary_ack *ba)
 	free(ba);
 }
 
+char *md5_to_str(char *to, md5_byte_t digest[16])
+{
+	int i;
+
+	for (i = 0; i != 16; ++i) {
+		/* we should use snprintf, snprintf prints data including
+		 * terminate '\0' so we need print 3 symbols
+		 */
+		snprintf(to, 3, "%02x", digest[i]);
+		to += 2;
+	}
+
+	return to;
+}
+
 static size_t binary_ack_size(const struct binary_ack *ba)
 {
 	/* MD5 is 16 bytes, so 16*2 hex digits */
@@ -777,7 +792,6 @@ static size_t binary_ack_pack(char *to, const struct binary_ack *ba)
 {
 	char *head;
 	size_t len;
-	int i;
 
 	head = to;
 
@@ -795,13 +809,8 @@ static size_t binary_ack_pack(char *to, const struct binary_ack *ba)
 	memcpy(to, ba->local_bin_path, len);
 	to += len;
 
-	for (i = 0; i != 16; ++i) {
-		/* we should use snprintf, snprintf prints data including
-		 * terminate '\0' so we need print 3 symbols
-		 */
-		snprintf(to, 3, "%02x", ba->digest[i]);
-		to += 2;
-	}
+	to = md5_to_str(to, ba->digest);
+
 	*to = '\0';
 	to += 1;
 
@@ -809,7 +818,7 @@ exit:
 	return (size_t)(to - head);
 }
 
-static void get_file_md5sum(md5_byte_t digest[16], const char *filename)
+void get_file_md5sum(md5_byte_t digest[16], const char *filename)
 {
 	md5_byte_t buffer[1024];
 	ssize_t size;
