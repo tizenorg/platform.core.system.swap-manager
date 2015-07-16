@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # swap disabling
-echo 0 > /sys/kernel/debug/swap/enable
+/bin/echo 0 > /sys/kernel/debug/swap/enable
 
 rmmod swap_nsp
 rmmod swap_wsp
