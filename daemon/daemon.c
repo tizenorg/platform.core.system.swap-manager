@@ -652,6 +652,7 @@ static int target_event_pid_handler(struct target *target)
 		LOGE("Cannot start replay thread\n");
 		return -1;
 	}
+
 	/* posible need some process check right there before start_replay << */
 
 	target->initial_log = 1;
