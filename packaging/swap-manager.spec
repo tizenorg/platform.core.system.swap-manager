@@ -44,7 +44,12 @@ pushd scripts
 echo "__tizen_profile_name__="%{?tizen_profile_name} > dyn_vars
 popd
 cd daemon
-WSP_SUPPORT=y make
+
+%if "%{?tizen_profile_name}" == "tv"
+  make
+%else
+  WSP_SUPPORT=y make
+%endif
 
 %install
 rm -rf ${RPM_BUILD_ROOT}
