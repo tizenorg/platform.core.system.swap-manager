@@ -1018,8 +1018,14 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 	//get time right before ioctl for more accurate start time value
 	get_serialized_time(serialized_time);
 
+	/* TODO move it back */
 	if (ioctl_send_msg(msg_reply) != 0) {
 		LOGE("cannot send message to device\n");
+		goto send_ack;
+	}
+
+	if (start_replay() != 0) {
+		LOGE("Cannot start replay thread\n");
 		goto send_ack;
 	}
 

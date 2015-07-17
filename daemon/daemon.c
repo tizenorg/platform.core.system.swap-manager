@@ -650,16 +650,13 @@ static int target_event_pid_handler(struct target *target)
 		app_info = app_info_get_next(&app);
 	}
 
+	/* TODO move it back */
 	if (app_info == NULL) {
 		LOGE("pid %d not found in app list\n",
 		     target_get_pid(target));
 		return -1;
 	}
 
-	if (start_replay() != 0) {
-		LOGE("Cannot start replay thread\n");
-		return -1;
-	}
 	/* posible need some process check right there before start_replay << */
 
 	target->initial_log = 1;
