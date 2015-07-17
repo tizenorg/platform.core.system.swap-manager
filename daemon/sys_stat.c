@@ -2276,6 +2276,8 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 	int i = 0;
 	int thread_count = 0;
 	char *thread_count_p;
+	float cpu_load_tmp_app = 0.0;
+	float cpu_load_tmp = 0.0;
 
 	msg = malloc(MSG_DATA_HDR_LEN + len);
 	if (!msg) {
@@ -2296,10 +2298,36 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 				pack_float(p, 0.0);
 		}
 
-		//CPU load
+		/* total app load */
+		cpu_load_tmp_app = 0.0;
+		if (IS_OPT_SET(FL_SYSTEM_PROCESS)) {
+			proc = inst_prochead;
+			for (i = 0; i < sys_info->count_of_inst_processes; i++)
+				cpu_load_tmp +=  proc->proc_data.cpu_load;
+		}
+
+		if (IS_OPT_SET(FL_SYSTEM_PROCESSES_LOAD)) {
+			proc = other_prochead;
+			for (i = 0; i < sys_info->count_of_other_processes; i++)
+				cpu_load_tmp += proc->proc_data.cpu_load;
+		}
+
+		/* total cpu load */
+		cpu_load_tmp = 0.0;
+		for (i = 0; i < num_of_cpu; i++) {
+			cpu_load_tmp += sys_info->cpu_load[i];
+		}
+
+		/* calculate correction value */
+		if (cpu_load_tmp_app > cpu_load_tmp)
+			cpu_load_tmp = (cpu_load_tmp_app - cpu_load_tmp) / num_of_cpu;
+		else
+			cpu_load_tmp = 0.0;
+
 		for (i = 0; i < num_of_cpu; i++) {
 			if (sys_info->cpu_load)
-				pack_float(p, sys_info->cpu_load[i]);
+				pack_float(p, sys_info->cpu_load[i] +
+					   cpu_load_tmp);
 			else
 				pack_float(p, 0.0);
 		}
