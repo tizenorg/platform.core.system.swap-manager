@@ -504,6 +504,14 @@ static void reconfigure_recording(struct conf_t conf)
 	uint64_t to_enable = (new_features ^ old_features) & new_features;
 	uint64_t to_disable = (new_features ^ old_features) & old_features;
 
+	/* fill actual features fm suppor */
+	uint64_t fm_f0 = conf.use_features0
+		       & (
+			  FL_APP_STARTUP |
+			  FL_WEB_STARTUP_PROFILING
+			 );
+	uint64_t fm_f1 = conf.use_features1 & 0;
+
 	if (IS_OPT_SET_IN(FL_RECORDING, to_disable)) {
 		del_input_events();
 		prof_session.conf.use_features0 &= ~FL_RECORDING;
@@ -514,7 +522,7 @@ static void reconfigure_recording(struct conf_t conf)
 		prof_session.conf.use_features0 |= FL_RECORDING;
 	}
 
-	fm_set(conf.use_features0, conf.use_features1);
+	fm_set(fm_f0, fm_f1);
 }
 
 static void reconfigure_ld_probes(struct conf_t conf, struct msg_t **msg_reply, struct msg_t **msg_reply_additional)

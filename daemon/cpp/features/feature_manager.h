@@ -82,9 +82,13 @@ public:
     static std::string featureName(size_t num);
     static std::string featureName(const Feature *feature);
     static size_t featureNum(const Feature *feature);
+    static uint64_t f0() { return _f0; }
+    static uint64_t f1() { return _f1; }
 
     static const size_t UNKNOWN_FEATURE_NUM;
 private:
+    static uint64_t _f0;
+    static uint64_t _f1;
     static Feature *_features[FEATURES_MAX];
     static const char *_names[FEATURES_MAX];
 };

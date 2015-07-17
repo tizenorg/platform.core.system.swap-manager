@@ -92,14 +92,25 @@ extern "C" int fm_stop(void)
     return 0;
 }
 
+static uint64_t checkSupportFeatures(uint64_t f, uint64_t fs, size_t offset)
+{
+    if (f != fs) {
+        uint64_t diff = f ^ fs;
+
+        for (int i = 0; diff; diff >>= 1, ++i) {
+            if (diff & 1)
+                LOGW("feature[%d] is not support\n", i + offset);
+        }
+    }
+
+    return f & fs;
+}
+
 extern "C" int fm_set(uint64_t f0, uint64_t f1)
 {
-    /* fill actual features (f0_support and f1_support) */
-    const uint64_t f0_support = f0 & (FL_WEB_STARTUP_PROFILING |
-                                      FL_APP_STARTUP
-                                     );
-    const uint64_t f1_support = f1 & (0);
-    std::string f(u64toString(f1_support) + u64toString(f0_support));
+    const uint64_t fSupport0 = checkSupportFeatures(f0, FeatureRegister::f0(), 0);
+    const uint64_t fSupport1 = checkSupportFeatures(f1, FeatureRegister::f1(), 64);
+    const std::string f(u64toString(fSupport1) + u64toString(fSupport0));
 
     if (fm->setFeatures(feature_bs(f)) != FeatureManager::Ok) {
         LOGE("set features\n");
