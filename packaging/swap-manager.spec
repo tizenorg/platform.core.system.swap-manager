@@ -44,7 +44,7 @@ pushd scripts
 echo "__tizen_profile_name__="%{?tizen_profile_name} > dyn_vars
 popd
 cd daemon
-make
+WSP_SUPPORT=y make
 
 %install
 rm -rf ${RPM_BUILD_ROOT}
