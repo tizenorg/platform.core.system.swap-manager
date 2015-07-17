@@ -1023,6 +1023,12 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 		goto send_ack;
 	}
 
+	/* TODO move it back */
+	if (start_replay() != 0) {
+		LOGE("Cannot start replay thread\n");
+		goto send_ack;
+	}
+
 	running_status_on(&prof_session);
 
 	if (start_profiling() < 0) {
