@@ -43,6 +43,7 @@
 #include <fcntl.h>		// for open
 #include <grp.h>		// for setgroups
 #include <sys/wait.h> /* waitpid */
+#include <time.h>
 
 #include "daemon.h"
 #include "utils.h"
@@ -461,15 +462,13 @@ static char *dereference_tizen_exe_path(const char *path, char *resolved)
 
 float get_uptime(void)
 {
-	const char *LINUX_UPTIME_FILE = "/proc/uptime";
-	FILE *fp = fopen(LINUX_UPTIME_FILE, "r");
-	float uptime;
-	if (!fp)
-		return 0.0;
+	struct timespec t;
+	int ret;
+	float uptime = 0.0;
 
-	if (fscanf(fp, "%f", &uptime) != 1)
-		uptime = 0.0;
+	ret = clock_gettime(CLOCK_BOOTTIME, &t);
+	if(!ret)
+		uptime = ((float)t.tv_sec + (t.tv_nsec / 1000000000.0));
 
-	fclose(fp);
 	return uptime;
 }
