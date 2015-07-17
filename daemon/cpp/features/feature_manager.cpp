@@ -213,6 +213,8 @@ static const char defFeatureName[] = "UNKNOWN";
 const size_t FeatureRegister::UNKNOWN_FEATURE_NUM = -1;
 Feature *FeatureRegister::_features[FEATURES_MAX];
 const char *FeatureRegister::_names[FEATURES_MAX];
+uint64_t FeatureRegister::_f0 = 0;
+uint64_t FeatureRegister::_f1 = 0;
 
 FeatureRegister::FeatureRegister(Feature *feature, size_t num, const char *name)
 {
@@ -228,6 +230,11 @@ FeatureRegister::FeatureRegister(Feature *feature, size_t num, const char *name)
 
     _features[num] = feature;
     _names[num] = name;
+
+    if (num < 64)
+        _f0 |= (uint64_t)1 << num;
+    else
+        _f1 |= (uint64_t)1 << (num - 64);
 }
 
 Feature *FeatureRegister::feature(size_t num)
