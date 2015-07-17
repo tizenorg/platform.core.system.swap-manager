@@ -84,7 +84,6 @@ SRC_CPP := \
 	cpp/features/feature.cpp \
 	cpp/features/feature_manager.cpp \
 	cpp/features/feature_manager_c.cpp \
-	cpp/features/feature_wsp.cpp \
 	cpp/features/feature_nsp.cpp \
 \
 	cpp/inst/AppInst.cpp \
@@ -92,10 +91,6 @@ SRC_CPP := \
 \
 	cpp/elf/File.cpp \
 	cpp/elf/FileElf.cpp
-
-OBJS_C := $(SRC_C:.c=.o)
-OBJS_CPP := $(SRC_CPP:.cpp=.o)
-OBJS := $(OBJS_C) $(OBJS_CPP)
 
 TARGET = da_manager
 DASCRIPT = da_command
@@ -108,18 +103,25 @@ all: debug
 
 GENERATED_DIR = include/generated
 GENERATED_WSI_PROF_H = include/generated/wsi_prof.h
-GENERATED_WSP_H = include/generated/wsp_data.h
 GENERATED_NSP_H = include/generated/nsp_data.h
 GENERATED_HEADERS := \
 	$(GENERATED_WSI_PROF_H) \
-	$(GENERATED_WSP_H) \
 	$(GENERATED_NSP_H)
 
 $(GENERATED_WSI_PROF_H): ../scripts/gen_wsi_prof.sh
 	sh $< > $@
 
-$(GENERATED_WSP_H): ../scripts/gen_wsp_data.sh
+
+# WSP
+ifeq ($(WSP_SUPPORT),y)
+  SRC_CPP += cpp/features/feature_wsp.cpp
+  GENERATED_WSP_H = include/generated/wsp_data.h
+  GENERATED_HEADERS += $(GENERATED_WSP_H)
+
+  $(GENERATED_WSP_H): ../scripts/gen_wsp_data.sh
 	sh $< > $@
+endif # WSP_SUPPORT
+
 
 $(GENERATED_NSP_H): ../scripts/gen_nsp_data.sh
 	sh $< > $@
@@ -135,6 +137,10 @@ rmheaders:
 release: CFLAGS += -DNOLOGI=1
 release: CPPFLAGS += -DNOLOGI=1
 release: debug
+
+OBJS_C := $(SRC_C:.c=.o)
+OBJS_CPP := $(SRC_CPP:.cpp=.o)
+OBJS := $(OBJS_C) $(OBJS_CPP)
 
 .c.o:
 	$(CC) $(CFLAGS) -c -o $@ $<
