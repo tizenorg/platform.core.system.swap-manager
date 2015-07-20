@@ -15,6 +15,7 @@ BuildRequires:  capi-system-runtime-info-devel
 BuildRequires:  libwebsockets-devel
 BuildRequires:  pkgconfig(json-c)
 BuildRequires:  pkgconfig(ecore)
+BuildRequires:  pkgconfig(callmgr_client)
 BuildRequires:  swap-probe-devel
 %if "%{?tizen_profile_name}" == "tv"
 BuildRequires:  webkit2-efl-tv

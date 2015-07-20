@@ -26,7 +26,8 @@ INCLUDE := \
 	-I/usr/include/eina-1/eina \
 	-I/usr/include/efl-1 \
 	-I/usr/include/json-c \
-	-I/usr/include/eo-1
+	-I/usr/include/eo-1 \
+	-I/usr/include/callmgr_client
 
 FLAGS := \
 	$(COMM_FLAGS) \
@@ -50,7 +51,8 @@ LDFLAGS := \
 	-lecore \
 	-lcapi-system-info \
 	-lwebsockets \
-	-ljson-c
+	-ljson-c \
+	-lcallmgr_client
 
 SRC_C := \
 	buffer.c \

@@ -30,6 +30,7 @@
 
 
 #include <vconf.h>
+#include <call-manager.h>
 #include "swap_debug.h"
 #include "device_vconf.h"
 
@@ -113,13 +114,23 @@ int get_rssi_status(void)
 
 int get_call_status(void)
 {
-	int call_status = 0;
+	cm_client_h cm_handle = NULL;
+	cm_call_status_e call_status = CM_CALL_STATUS_MAX;
 	int res = 0;
 
-	res = vconf_get_int(VCONFKEY_CALL_STATE, &call_status);
+	res = cm_init(&cm_handle);
 	if (res < 0) {
-		LOG_ONCE_W("get err #%d\n", res);
-		call_status = VCONFKEY_CALL_OFF;
+		LOG_ONCE_W("call init err #%d\n", res);
+	} else {
+		res = cm_get_call_status(cm_handle, &call_status);
+		if (res < 0) {
+			LOG_ONCE_W("call get err #%d\n", res);
+		}
+
+		res = cm_deinit(cm_handle);
+		if (res < 0) {
+			LOG_ONCE_W("call deinit err #%d\n", res);
+		}
 	}
 
 	return call_status;
