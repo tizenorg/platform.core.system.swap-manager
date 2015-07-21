@@ -26,13 +26,21 @@ INCLUDE := \
 	-I/usr/include/eina-1/eina \
 	-I/usr/include/efl-1 \
 	-I/usr/include/json-c \
-	-I/usr/include/eo-1 \
-	-I/usr/include/callmgr_client
+	-I/usr/include/eo-1
+# CALL_MNGR
+ifeq ($(CALL_MNGR),y)
+INCLUDE += -I/usr/include/callmgr_client
+endif # CALL_MNGR
 
 FLAGS := \
 	$(COMM_FLAGS) \
 	$(INCLUDE) \
 	$(DEBUG_FLAGS)
+
+# CALL_MNGR
+ifeq ($(CALL_MNGR),y)
+FLAGS += -DCALL_MNGR
+endif # CALL_MNGR
 
 ifeq (arm, $(findstring arm, $(shell uname -sm)))
 	FLAGS += -DDEVICE_ONLY
@@ -51,8 +59,12 @@ LDFLAGS := \
 	-lecore \
 	-lcapi-system-info \
 	-lwebsockets \
-	-ljson-c \
-	-lcallmgr_client
+	-ljson-c
+
+# CALL_MNGR
+ifeq ($(CALL_MNGR),y)
+LDFLAGS += -lcallmgr_client
+endif # CALL_MNGR
 
 SRC_C := \
 	buffer.c \

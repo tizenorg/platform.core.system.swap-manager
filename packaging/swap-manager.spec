@@ -15,7 +15,9 @@ BuildRequires:  capi-system-runtime-info-devel
 BuildRequires:  libwebsockets-devel
 BuildRequires:  pkgconfig(json-c)
 BuildRequires:  pkgconfig(ecore)
+%if "%{?tizen_profile_name}" == "mobile"
 BuildRequires:  pkgconfig(callmgr_client)
+%endif
 BuildRequires:  swap-probe-devel
 %if "%{?tizen_profile_name}" == "tv"
 BuildRequires:  webkit2-efl-tv
@@ -46,11 +48,16 @@ echo "__tizen_profile_name__="%{?tizen_profile_name} > dyn_vars
 popd
 cd daemon
 
-%if "%{?tizen_profile_name}" == "tv"
-  make
-%else
-  WSP_SUPPORT=y make
+SWAP_BUILD_CONF=""
+%if "%{?tizen_profile_name}" == "mobile"
+SWAP_BUILD_CONF=$SWAP_BUILD_CONF CALL_MNGR=y
 %endif
+
+%if "%{?tizen_profile_name}" != "tv"
+SWAP_BUILD_CONF=$SWAP_BUILD_CONF WSP_SUPPORT=y
+%endif
+
+$SWAP_BUILD_CONF make
 
 %install
 rm -rf ${RPM_BUILD_ROOT}
