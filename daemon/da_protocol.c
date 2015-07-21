@@ -661,8 +661,7 @@ enum ErrorCode stop_all_no_lock(void)
 	// stop all only if it has not been called yet
 	if (check_running_status(&prof_session)) {
 		if (is_feature_enabled(FL_WEB_PROFILING)) {
-			wsi_stop_profiling();
-			wsi_destroy();
+			wsi_stop();
 		}
 
 		msg = gen_stop_msg();
