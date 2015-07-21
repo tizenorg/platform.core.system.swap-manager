@@ -76,12 +76,15 @@ void print_buf(char *buf, int len, const char *info);
 	#define LOG_ONCE_VAR TOKENPASTE2(log_once_var_, __LINE__)
 	#define INIT_LOG_ONCE static char LOG_ONCE_VAR = 0
 
-	#define LOG_ONCE(W_E,...)				\
-		INIT_LOG_ONCE;					\
-		if (LOG_ONCE_VAR == 0) {			\
-			TOKENPASTE2(LOG, W_E)(__VA_ARGS__);	\
-			LOG_ONCE_VAR = 1;			\
-		}
+	#define LOG_ONCE(W_E,...)					\
+		do {							\
+			INIT_LOG_ONCE;					\
+			if (LOG_ONCE_VAR == 0) {			\
+				TOKENPASTE2(LOG, W_E)(__VA_ARGS__);	\
+				LOG_ONCE_VAR = 1;			\
+			}						\
+		} while (0)
+
 	#define LOG_ONCE_E(...) LOG_ONCE(E, __VA_ARGS__)
 	#define LOG_ONCE_W(...) LOG_ONCE(W, __VA_ARGS__)
 #else
