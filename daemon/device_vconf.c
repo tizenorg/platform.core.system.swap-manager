@@ -30,7 +30,9 @@
 
 
 #include <vconf.h>
+#ifdef CALL_MNGR
 #include <call-manager.h>
+#endif
 #include "swap_debug.h"
 #include "device_vconf.h"
 
@@ -114,6 +116,7 @@ int get_rssi_status(void)
 
 int get_call_status(void)
 {
+#ifdef CALL_MNGR
 	cm_client_h cm_handle = NULL;
 	cm_call_status_e call_status = CM_CALL_STATUS_MAX;
 	int res = 0;
@@ -132,6 +135,9 @@ int get_call_status(void)
 	}
 
 	return call_status;
+#else
+	return 0;
+#endif
 }
 
 int get_dnet_status(void)
