@@ -67,8 +67,6 @@
 #define DA_READELF_PATH			"/home/developer/sdk_tools/da/readelf"
 #define SCREENSHOT_DIR			"/tmp/da"
 
-#define WSI_HOST			"127.0.0.1"
-
 #define MAX_APP_LAUNCH_TIME		60
 #define MAX_CONNECT_TIMEOUT_TIME	5*60
 
@@ -289,15 +287,8 @@ static int exec_app(const struct app_info_t *app_info)
 			break;
 		}
 
-		if (wsi_init(WSI_HOST, 0)) {
-			LOGE("Cannot init web application profiling\n");
-			res = -1;
-		} else {
-			if (wsi_start_profiling()) {
-				LOGE("Cannot start web application profiling\n");
-				res = -1;
-			}
-		}
+		wsi_start();
+
 		break;
 	default:
 		LOGE("Unknown app type %d\n", app_info->app_type);

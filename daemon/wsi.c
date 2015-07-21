@@ -58,11 +58,14 @@ enum protocol_names {
 	PROTOCOL_PROFILING
 };
 
+const char WSI_HOST[] = "127.0.0.1";
 struct libwebsocket_context *context;
 struct libwebsocket *wsi;
 
 int pstate = PSTATE_DEFAULT;
 int request_id = 1;
+
+static void wsi_destroy(void);
 
 static int set_profile_info(const char *path, const char *info)
 {
@@ -383,7 +386,7 @@ static void *handle_ws_responses(void *arg)
 	return NULL;
 }
 
-int wsi_init(const char *address, int port)
+static int wsi_init(const char *address, int port)
 {
 	if (!port) {
 		char buf[sizeof(struct msg_t) + sizeof(uint32_t)];
@@ -408,7 +411,7 @@ int wsi_init(const char *address, int port)
 	return 0;
 }
 
-void wsi_destroy(void)
+static void wsi_destroy(void)
 {
 	if (CHKSTAT(pstate, PSTATE_CONNECTED)) {
 		if (CHKSTAT(pstate, PSTATE_WAIT_ACK))
@@ -420,7 +423,7 @@ void wsi_destroy(void)
 	}
 }
 
-int wsi_start_profiling(void)
+static int wsi_start_profiling(void)
 {
 	pthread_t tid;
 
@@ -435,10 +438,45 @@ int wsi_start_profiling(void)
 	return 0;
 }
 
-void wsi_stop_profiling(void)
+static void wsi_stop_profiling(void)
 {
 	if (CHKSTAT(pstate, PSTATE_CONNECTED)) {
 		send_request("Profiler.stop");
 		send_request("Profiler.disable");
 	}
+}
+
+static void *do_start(void *arg)
+{
+	if (wsi_init(WSI_HOST, 0)) {
+		LOGE("Cannot init web application profiling\n");
+		goto out;
+	}
+
+	if (wsi_start_profiling())
+		LOGE("Cannot start web application profiling\n");
+
+out:
+	return NULL;
+}
+
+int wsi_start(void)
+{
+	int ret;
+	pthread_t t;
+
+	/* FIXME: call pthread_joun() */
+	ret = pthread_create(&t, NULL, &do_start, NULL);
+	if (ret) {
+		LOGE("Can't create do_start thread\n");
+		destroy_wsi_conn(context);
+	}
+
+	return ret;
+}
+
+void wsi_stop(void)
+{
+	wsi_stop_profiling();
+	wsi_destroy();
 }

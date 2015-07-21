@@ -38,9 +38,8 @@ enum web_prof_state_t {
 int wsi_set_profile(const struct app_info_t *app_info);
 int wsi_set_smack_rules(const struct app_info_t *app_info);
 int wsi_enable_profiling(enum web_prof_state_t mode);
-int wsi_init(const char *address, int port);
-int wsi_start_profiling(void);
-void wsi_destroy(void);
-void wsi_stop_profiling(void);
+
+int wsi_start(void);
+void wsi_stop(void);
 
 #endif /* WSI_H_ */
