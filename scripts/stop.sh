@@ -3,23 +3,23 @@
 # swap disabling
 /bin/echo 0 > /sys/kernel/debug/swap/enable
 
-rmmod swap_nsp
-rmmod swap_wsp
-rmmod swap_preload
-rmmod swap_task_data
-rmmod swap_webprobe
-rmmod swap_fbiprobe
-rmmod swap_retprobe
-rmmod swap_message_parser
-rmmod swap_energy
-rmmod swap_sampler
-rmmod swap_ks_features
-rmmod swap_us_manager
-rmmod swap_uprobe
-rmmod swap_kprobe
-rmmod swap_writer
-rmmod swap_driver
-rmmod swap_ksyms
-rmmod swap_buffer
-rmmod swap_master
+/usr/sbin/rmmod swap_nsp
+/usr/sbin/rmmod swap_wsp
+/usr/sbin/rmmod swap_preload
+/usr/sbin/rmmod swap_task_data
+/usr/sbin/rmmod swap_webprobe
+/usr/sbin/rmmod swap_fbiprobe
+/usr/sbin/rmmod swap_retprobe
+/usr/sbin/rmmod swap_message_parser
+/usr/sbin/rmmod swap_energy
+/usr/sbin/rmmod swap_sampler
+/usr/sbin/rmmod swap_ks_features
+/usr/sbin/rmmod swap_us_manager
+/usr/sbin/rmmod swap_uprobe
+/usr/sbin/rmmod swap_kprobe
+/usr/sbin/rmmod swap_writer
+/usr/sbin/rmmod swap_driver
+/usr/sbin/rmmod swap_ksyms
+/usr/sbin/rmmod swap_buffer
+/usr/sbin/rmmod swap_master
 
