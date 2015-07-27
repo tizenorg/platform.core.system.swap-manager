@@ -48,16 +48,16 @@ echo "__tizen_profile_name__="%{?tizen_profile_name} > dyn_vars
 popd
 cd daemon
 
-SWAP_BUILD_CONF=""
 %if "%{?tizen_profile_name}" == "mobile"
-SWAP_BUILD_CONF=$SWAP_BUILD_CONF CALL_MNGR=y
+SWAP_BUILD_CMD+=" CALL_MNGR=y"
 %endif
 
 %if "%{?tizen_profile_name}" != "tv"
-SWAP_BUILD_CONF=$SWAP_BUILD_CONF WSP_SUPPORT=y
+SWAP_BUILD_CMD+=" WSP_SUPPORT=y"
 %endif
 
-$SWAP_BUILD_CONF make
+SWAP_BUILD_CMD+=" make"
+eval ${SWAP_BUILD_CMD}
 
 %install
 rm -rf ${RPM_BUILD_ROOT}
