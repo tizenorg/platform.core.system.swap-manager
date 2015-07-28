@@ -65,6 +65,8 @@ struct libwebsocket *wsi;
 int pstate = PSTATE_DEFAULT;
 int request_id = 1;
 
+pthread_t wsi_start_thread = -1;
+
 static void wsi_destroy(void);
 
 static int set_profile_info(const char *path, const char *info)
@@ -405,8 +407,10 @@ static int wsi_init(const char *address, int port)
 		return 1;
 	}
 
-	if (init_wsi_conn(&context, &wsi, address, port) != 0)
+	if (init_wsi_conn(&context, &wsi, address, port) != 0) {
+		LOGE("cannot init wsi connection\n");
 		return 1;
+	}
 
 	return 0;
 }
@@ -448,6 +452,8 @@ static void wsi_stop_profiling(void)
 
 static void *do_start(void *arg)
 {
+	LOGI("wsi thread started\n");
+
 	if (wsi_init(WSI_HOST, 0)) {
 		LOGE("Cannot init web application profiling\n");
 		goto out;
@@ -457,18 +463,18 @@ static void *do_start(void *arg)
 		LOGE("Cannot start web application profiling\n");
 
 out:
+	LOGI("wsi thread finished\n");
 	return NULL;
 }
 
 int wsi_start(void)
 {
 	int ret;
-	pthread_t t;
 
-	/* FIXME: call pthread_joun() */
-	ret = pthread_create(&t, NULL, &do_start, NULL);
+	ret = pthread_create(&wsi_start_thread, NULL, &do_start, NULL);
 	if (ret) {
 		LOGE("Can't create do_start thread\n");
+		wsi_start_thread = -1;
 		destroy_wsi_conn(context);
 	}
 
@@ -477,6 +483,16 @@ int wsi_start(void)
 
 void wsi_stop(void)
 {
+	void *thread_ret = NULL;
+
 	wsi_stop_profiling();
+
+	if (is_feature_enabled(FL_WEB_PROFILING)) {
+		if (wsi_enable_profiling(PROF_OFF))
+			LOGE("Cannot disable web application profiling\n");
+	}
+
+	pthread_join(wsi_start_thread, &thread_ret);
+	wsi_start_thread = -1;
 	wsi_destroy();
 }
