@@ -492,7 +492,9 @@ void wsi_stop(void)
 			LOGE("Cannot disable web application profiling\n");
 	}
 
-	pthread_join(wsi_start_thread, &thread_ret);
+	if (wsi_start_thread != -1)
+		pthread_join(wsi_start_thread, &thread_ret);
+
 	wsi_start_thread = -1;
 	wsi_destroy();
 }

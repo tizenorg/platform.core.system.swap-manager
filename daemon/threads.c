@@ -392,7 +392,7 @@ static void *replay_thread(void *arg)
 
 	struct replay_event_t * pevent = NULL;
 
-	LOGI_th_rep("replay events thread started\n");
+	LOGI("replay events thread started. event num = %d\n", event_seq->event_num);
 	if (event_seq->event_num != 0)
 	{
 		pevent = event_seq->events;
