@@ -128,6 +128,7 @@ typedef struct
 	pthread_t sampling_thread;
 	pthread_t replay_thread;
 	pthread_t transfer_thread;
+	pthread_t host_control_sock_thread;
 	int buf_fd;
 	int user_ev_fd;
 	int efd;

@@ -451,6 +451,11 @@ int start_profiling(void)
 	if (IS_OPT_SET(FL_RECORDING))
 		add_input_events();
 
+	if (start_app_launch_timer(get_apps_to_run()) < 0) {
+		res = -1;
+		goto recording_stop;
+	}
+
 	while (app_info != NULL) {
 		if (exec_app(app_info)) {
 			LOGE("Cannot exec app\n");
@@ -458,11 +463,6 @@ int start_profiling(void)
 			goto recording_stop;
 		}
 		app_info = app_info_get_next(&app);
-	}
-
-	if (start_app_launch_timer(get_apps_to_run()) < 0) {
-		res = -1;
-		goto recording_stop;
 	}
 
 	goto exit;
@@ -837,79 +837,90 @@ static Ecore_Fd_Handler *host_data_handler;
 // return plus value if non critical error occur
 // return minus value if critical error occur
 // return -11 if socket closed
-static int controlSocketHandler(int efd)
+static void *host_control_sock_thread(void *args)
 {
 	ssize_t recv_len;
 	struct msg_t msg_head;
 	struct msg_t *msg;
-	int res = 0;
+	int err = 0;
 
-	if (manager.connect_timeout_timerfd >= 0) {
-		LOGI("release connect timeout timer\n");
-		close(manager.connect_timeout_timerfd);
-		manager.connect_timeout_timerfd = -1;
-	}
-	// Receive header
-	recv_len = recv(manager.host.control_socket,
-			&msg_head, MSG_CMD_HDR_LEN, 0);
-
-	// error or close request from host
-	if (recv_len == -1 || recv_len == 0) {
-		LOGW("error or close request from host. "
-		     "MSG_ID = 0x%08X; recv_len = %d\n",
-		     msg_head.id, recv_len);
-		return -11;
-	} else {
-		if (msg_head.len > HOST_CTL_MSG_MAX_LEN) {
-			LOGE("Too long message. size = %u\n", msg_head.len);
-			recv_msg_tail(manager.host.control_socket, msg_head.len);
-			sendACKToHost(msg_head.id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
-			return -1;
+	while (!err) {
+		if (manager.connect_timeout_timerfd >= 0) {
+			LOGI("release connect timeout timer\n");
+			close(manager.connect_timeout_timerfd);
+			manager.connect_timeout_timerfd = -1;
 		}
+		/* Receive header */
+		recv_len = recv(manager.host.control_socket,
+				&msg_head, MSG_CMD_HDR_LEN, 0);
+
+		/* error or close request from host */
+		if (recv_len == -1 || recv_len == 0) {
+			LOGW("error or close request from host. "
+			     "header recv_len = %d\n",
+			     recv_len);
+			err = -11;
+			continue;
+		}
+
+		/* some data received */
+
+		/* check payload length */
+		if (msg_head.len > HOST_CTL_MSG_MAX_LEN) {
+			LOGE("Too long message. MSG_ID = 0x%08X; size = %u\n",
+			     msg_head.id, msg_head.len);
+			recv_msg_tail(manager.host.control_socket, msg_head.len);
+			sendACKToHost(msg_head.id, ERR_TO_LONG_MESSAGE, 0, 0);
+			continue;
+		}
+
+		/* recv payload */
 		msg = malloc(MSG_CMD_HDR_LEN + msg_head.len);
 		if (!msg) {
-			LOGE("Cannot alloc msg\n");
+			LOGE("Cannot alloc msg. MSG_ID = 0x%08X; size = %u\n",
+			     msg_head.id, msg_head.len);
 			recv_msg_tail(manager.host.control_socket, msg_head.len);
 			sendACKToHost(msg_head.id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
-			return -1;
+			continue;
 		}
+
 		msg->id = msg_head.id;
 		msg->len = msg_head.len;
 		if (msg->len > 0) {
-			// Receive payload (if exists)
+			/* Receive payload (if exists) */
 			recv_len = recv(manager.host.control_socket,
 					msg->payload, msg->len, MSG_WAITALL);
-			if (recv_len == -1) {
-				LOGE("error or close request from host. recv_len = %d\n",
-				     recv_len);
+			if (recv_len == -1 || recv_len == 0) {
+				LOGW("error or close request from host. "
+				     "MSG_ID = 0x%08X; payload recv_len = %d\n",
+				     msg_head.id, recv_len);
 				free(msg);
-				return -11;
+				err = -11;
+				continue;
 			}
 		}
+
 		printBuf((char *)msg, MSG_CMD_HDR_LEN + msg->len);
-		res = host_message_handler(msg);
+		host_message_handler(msg);
 		free(msg);
 	}
 
-	return res;
+	/*  connection closed */
+	LOGI("Connection closed. Termination. (%d)\n",
+	     manager.host.control_socket);
+	/* splice will fail without next cmd */
+	manager.host.data_socket = -1;
+	stop_all();
+	ecore_main_loop_quit();
+
+	manager.host.control_socket = -1;
+	LOGI("Control socket thread finished\n");
+	return NULL;
 }
 
+/* This callback for flush ecore queue */
 static Eina_Bool host_ctrl_cb(void *data, Ecore_Fd_Handler *fd_handler)
 {
-	int result = controlSocketHandler(manager.efd);
-	if (result == -11) {
-		// socket close
-		//if the host disconnected.
-		//In all other cases daemon must report an error and continue the loop
-		//close connect_timeoutt and host socket and quit
-		LOGI("Connection closed. Termination. (%d)\n",
-		     manager.host.control_socket);
-		manager.host.data_socket = -1; //splice will fail without that
-		ecore_main_loop_quit();
-	} else if (result < 0) {
-		LOGE("Control socket handler. err #%d\n", result);
-	}
-
 	return ECORE_CALLBACK_RENEW;
 }
 
@@ -952,6 +963,7 @@ static int hostServerHandler(void)
 			manager.host.control_socket = csocket;
 			unlink_portfile();
 			LOGI("host control socket connected = %d\n", csocket);
+
 			host_ctrl_handler =
 				ecore_main_fd_handler_add(manager.host.control_socket,
 							  ECORE_FD_READ,
@@ -961,8 +973,22 @@ static int hostServerHandler(void)
 			if (!host_ctrl_handler) {
 				LOGE("Failed to add host control socket fd\n");
 				close(csocket);
+			}
+
+			if (manager.host_control_sock_thread != -1) {
+				LOGI("replay already started\n");
 				return -1;
 			}
+
+			if (pthread_create(&(manager.host_control_sock_thread),
+					   NULL,
+					   host_control_sock_thread,
+					   NULL) < 0)
+			{
+				LOGE("Failed to create replay thread\n");
+				return -1;
+			}
+
 		} else {
 			manager.host.data_socket = csocket;
 			LOGI("host data socket connected = %d\n", csocket);
