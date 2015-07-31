@@ -1239,20 +1239,22 @@ char *print_to_buf(char *buf, size_t *buflen, char *str)
 	int len = 0;
 	int lenin = 0;
 
-	if (strlen(str) > *buflen)
-		goto error_exit;
+	if (strlen(str) > *buflen) {
+		LOGE("can not pack <%s>\n", str);
+		goto exit;
+	}
 
 	lenin = snprintf(buf + len, *buflen, str);
-	if (lenin <= 0)
-		goto error_exit;
+	if (lenin <= 0) {
+		LOGE("can not pack <%s>\n", str);
+		goto exit;
+	}
 
 	buf += lenin;
 	*buflen -= lenin;
 
+exit:
 	return buf;
-error_exit:
-	LOGE("can not pack <%s>\n", str);
-	return NULL;
 
 }
 
