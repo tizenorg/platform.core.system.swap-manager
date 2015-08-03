@@ -237,17 +237,16 @@ int data_list_append(struct data_list_t **to, struct data_list_t *from)
 	return 0;
 }
 
-
 static int data_list_append_probes_hash(struct data_list_t *to, struct data_list_t *from)
 {
 	struct probe_list_t *p = from->list;
 	struct probe_list_t *last = p;
 
-	to->size += p->size;
 	to->func_num += from->func_num;
 	for (p = from->list; p != NULL; p = p->next) {
 		data_list_add_probe_to_hash(to, p);
 		last = p;
+		to->size += p->size;
 	}
 
 	last->next = to->list;
@@ -671,6 +670,10 @@ exit_free:
 	free(packed_app_list);
 	free(packed_ld_lib_list);
 
+	packed_lib_list = NULL;
+	packed_lib_list = NULL;
+	packed_ld_lib_list = NULL;
+
 	return res;
 }
 
@@ -1080,6 +1083,8 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 	char *p;
 	struct feature_list_t f;
 	char buf[1024] = "";
+	struct lib_list_t *ld_lib_inst_list_new_add = NULL;
+	struct lib_list_t *ld_lib_inst_list_new_remove = NULL;
 
 	/* lock list access */
 	lock_lib_list();
@@ -1095,12 +1100,22 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 					 sizeof(buf));
 			LOGI("Set LD probes for %016LX <%s>\n", f.feature_value, &buf[0]);
 
-			feature_add_lib_inst_list(f.feature_ld, &us_inst->ld_lib_inst_list);
+			feature_add_lib_inst_list(f.feature_ld, &ld_lib_inst_list_new_add);
+		} else if ((f.feature_value & to_disable_features_0) ||
+			   (f.feature_value & to_disable_features_1 << 64)) {
+			buf[0] = '\0';
+
+			feature_code_str(f.feature_value, f.feature_value, &buf[0],
+					 sizeof(buf));
+			LOGI("Set LD probes for %016LX <%s>\n", f.feature_value, &buf[0]);
+
+			feature_add_lib_inst_list(f.feature_ld, &ld_lib_inst_list_new_remove);
 		}
 	}
 
+	/* === ld preload add probes === */
 	// rm probes from new if its presents in cur
-	if (!resolve_collisions_for_add_msg(&us_inst->ld_lib_inst_list, &new_lib_inst_list)) {
+	if (!resolve_collisions_for_add_msg(&us_inst->ld_lib_inst_list, &ld_lib_inst_list_new_add)) {
 		LOGE("resolve collision\n");
 		res = 1;
 		goto msg_swap_inst_add_exit;
@@ -1108,14 +1123,14 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 
 	// generate msg to send
 	if (us_inst->app_inst_list != NULL) {
-		generate_msg(msg_reply_add, NULL, new_lib_inst_list, us_inst->app_inst_list);
+		generate_msg(msg_reply_add, NULL, ld_lib_inst_list_new_add, us_inst->app_inst_list);
 		p = (char *)msg_reply_add;
 		pack_int32(p, NMSG_SWAP_INST_ADD);
 	}
 	// apply changes to cur state
 	if (!data_list_move_with_hash(
 		(struct data_list_t **)&us_inst->ld_lib_inst_list,
-		(struct data_list_t **)&new_lib_inst_list,
+		(struct data_list_t **)&ld_lib_inst_list_new_add,
 		cmp_libs))
 	{
 		LOGE("data move\n");
@@ -1123,9 +1138,28 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 		goto msg_swap_inst_add_exit;
 	};
 
-	// free new_list
-	free_data_list((struct data_list_t **)&new_lib_inst_list);
-	new_lib_inst_list = NULL;
+	/* === ld preload remove probes === */
+	/* rm probes from new if its presents in cur */
+	if (!resolve_collisions_for_rm_msg(&us_inst->ld_lib_inst_list, &ld_lib_inst_list_new_remove)) {
+		LOGE("resolve collision\n");
+		res = 1;
+		goto msg_swap_inst_add_exit;
+	};
+
+	/* generate msg to send */
+	if (us_inst->app_inst_list != NULL) {
+		generate_msg(msg_reply_add, NULL, ld_lib_inst_list_new_remove, us_inst->app_inst_list);
+		p = (char *)msg_reply_add;
+		pack_int32(p, NMSG_SWAP_INST_REMOVE);
+	}
+
+	/* free new_list */
+	free_data_list((struct data_list_t **)&ld_lib_inst_list_new_add);
+	ld_lib_inst_list_new_add = NULL;
+
+	free_data_list((struct data_list_t **)&ld_lib_inst_list_new_remove);
+	ld_lib_inst_list_new_remove = NULL;
+
 
     if (write_bins_to_preload(us_inst))
         LOGE("Error adding binaries\n");
