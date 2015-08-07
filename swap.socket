@@ -1,0 +1,13 @@
+[Unit]
+Description=debug_socket
+
+[Socket]
+User=developer
+Group=developer
+ListenStream=/tmp/da.socket
+SocketMode=0777
+SmackLabelIPIn=*
+SmackLabelIPOut=@
+
+[Install]
+WantedBy=sockets.target

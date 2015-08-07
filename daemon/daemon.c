@@ -67,7 +67,7 @@
 #define DA_READELF_PATH			"/home/developer/sdk_tools/da/readelf"
 #define SCREENSHOT_DIR			"/tmp/da"
 
-#define MAX_APP_LAUNCH_TIME		60
+#define MAX_APP_LAUNCH_TIME		4*60
 #define MAX_CONNECT_TIMEOUT_TIME	5*60
 
 
@@ -269,11 +269,6 @@ static int exec_app(const struct app_info_t *app_info)
 			res = -1;
 		}
 
-		if (wsi_set_smack_rules(app_info)) {
-			LOGE("Cannot set web application smack rules\n");
-			res = -1;
-		}
-
 		if (exec_app_web(app_info->app_id)) {
 			LOGE("Cannot exec web app %s\n", app_info->app_id);
 			res = -1;
@@ -433,14 +428,6 @@ int start_profiling(void)
 		LOGE("No app info found\n");
 		return -1;
 	}
-	// remove previous screen capture files
-	remove_indir(SCREENSHOT_DIR);
-	if (mkdir(SCREENSHOT_DIR, 0777) == -1 && errno != EEXIST) {
-		GETSTRERROR(errno, buf);
-		LOGW("Failed to create directory for screenshot : %s\n", buf);
-	}
-
-	set_label_for_all(SCREENSHOT_DIR);
 
 	if (samplingStart() < 0) {
 		LOGE("Cannot start sampling\n");
