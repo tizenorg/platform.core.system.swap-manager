@@ -1,5 +1,7 @@
 #!/bin/sh
 
+export PATH=$PATH:/usr/sbin/
+
 if [ ! -e /sys/kernel/debug/swap/writer/raw ]; then
 
     insmod swap_buffer.ko || exit 1  # buffer is loaded

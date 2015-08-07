@@ -1,5 +1,7 @@
 #!/bin/sh
 
+export PATH=$PATH:/usr/sbin/
+
 rmmod swap_message_parser
 rmmod swap_energy
 rmmod swap_sampler
