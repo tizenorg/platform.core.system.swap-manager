@@ -43,6 +43,7 @@
 #include <fcntl.h>		// for open
 #include <grp.h>		// for setgroups
 #include <sys/wait.h> /* waitpid */
+#include <aul.h>
 
 #include "daemon.h"
 #include "utils.h"
@@ -382,6 +383,16 @@ int kill_app(const char *binary_path)
 	}
 
 	if (pkg_pid != 0) {
+		int res = aul_terminate_pid_async(pkg_pid);
+
+		if (res == 0) {
+			LOGI("aul_terminate_pid_async [%d] success\n", pkg_pid);
+			goto exit_success;
+		} else {
+			LOGW("aul_terminate_pid_async [%d] fail ret = %d\n",
+			     pkg_pid, res);
+		}
+
 		if (kill(pkg_pid, FINISH_SIG) == -1) {
 			GETSTRERROR(errno, err_buf);
 			LOGE("cannot kill %d -%d errno<%s>\n", pkg_pid, FINISH_SIG,
@@ -397,6 +408,7 @@ int kill_app(const char *binary_path)
 	} else
 		LOGI("cannot kill <%s>; process not found\n", binary_path);
 
+exit_success:
 	return 0;
 }
 

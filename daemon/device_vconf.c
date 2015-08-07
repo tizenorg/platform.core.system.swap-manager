@@ -151,17 +151,21 @@ int get_dnet_status(void)
 		dnet_status = VCONFKEY_DNET_OFF;
 	}
 
+	LOG_ONCE_W("get %d #%d\n", dnet_status, res);
 	return dnet_status;
 }
 
 int get_camera_status(void)
 {
 	int camera_status = 0;
+	int res = 0;
 
-	if (vconf_get_int(VCONFKEY_CAMERA_STATE, &camera_status) < 0) {
+	res = vconf_get_int(VCONFKEY_CAMERA_STATE, &camera_status);
+	if (res < 0) {
 		camera_status = VCONFKEY_CAMERA_STATE_NULL;
 	}
 
+	LOG_ONCE_W("get %d #%d\n", camera_status, res);
 	return camera_status;
 }
 
@@ -177,6 +181,7 @@ int get_sound_status(void)
 		sound_status = 0;
 	}
 
+	LOG_ONCE_W("get %d #%d\n", sound_status, res);
 	return sound_status;
 }
 
@@ -191,6 +196,7 @@ int get_audio_status(void)
 		LOG_ONCE_W("get err #%d\n", res);
 		audio_state = 0;
 	}
+	LOG_ONCE_W("get %d #%d\n", audio_state, res);
 
 	return !!audio_state;
 }
