@@ -1340,12 +1340,12 @@ static int update_cpus_info(int event_num, float elapsed)
 								(float)cpuptr->total_ticks)) * 100.0f;
 				}
 
-				LOGI_th_samp("System cpu usage log : %d, %Ld, %Ld\n",
-						i, cpuptr->idle_ticks, cpuptr->total_ticks);
 				if(unlikely(cpuptr->cpu_usage < 0))
 				{
 					cpuptr->cpu_usage = 0.0f;
 				}
+				LOGI_th_samp("System cpu usage log : %d, %Ld, %Ld cpu[%f%%]\n",
+						i, cpuptr->idle_ticks, cpuptr->total_ticks, cpuptr->cpu_usage);
 			}
 			else	// previous sampling is not just before 1 period
 			{
@@ -1384,6 +1384,8 @@ static int update_cpus_info(int event_num, float elapsed)
 		{
 			cpuptr->cpu_usage = 0.0f;
 		}
+
+		LOGI_th_samp("System cpu [%d] usage : %f%%\n", i, cpuptr->cpu_usage);
 	}
 
 	return 0;
@@ -1643,7 +1645,6 @@ static void get_disk_stat(uint32_t *reads, uint32_t *bytes_reads,
 
 	if (fp == NULL)
 		return;
-
 
 	rewind(fp);
 	fflush(fp);
@@ -2107,6 +2108,7 @@ int initialize_system_info(void)
 		num_of_cpu = 1;
 	Hertz = sysconf(_SC_CLK_TCK);
 	LOGI("Hertz : %d\n", Hertz);
+	LOGE("CPU nums : %d\n", num_of_cpu);
 
 	// alloc for cpus
 	if(cpus == NULL)
