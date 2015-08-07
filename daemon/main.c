@@ -135,15 +135,56 @@ void unlink_portfile(void)
 // =============================================================================
 // making sockets
 // =============================================================================
+#include <systemd/sd-daemon.h>
+int test_get_fd_from_systemd(int fdd)
+{
+	int n;
+	int fd;
 
+	char *pid;
+	char *fds;
+
+//	char buf[128];
+//	sprintf(buf, "%d", getpid());
+//	setenv("LISTEN_PID", buf, 1);
+//	setenv("LISTEN_FDS", "true", 1);
+
+	pid = getenv("LISTEN_PID");
+	fds = getenv("LISTEN_FDS");
+
+	if (!pid) {
+		LOGE("LISTEN_PID not set\n");
+	} else {
+		LOGE("LISTEN_PID = %s %d\n", pid, getpid());
+	}
+
+	if (!fds) {
+		LOGE("LISTEN_FDS not set\n");
+	} else {
+		
+		LOGE("LISTEN_FDS = %s\n", fds);
+	}
+
+
+	n  = sd_listen_fds(0);
+	LOGE("start = %d; n = %d;\n", SD_LISTEN_FDS_START, n);
+//	fd = fdd;
+	for (fd = SD_LISTEN_FDS_START; fd < SD_LISTEN_FDS_START+n;++fd) {
+		LOGE("fd = %d;\n", fd);
+		if (0 < sd_is_socket_unix(fd, SOCK_STREAM, 1, UDS_NAME, 0))
+			return fd;
+	}
+	return -1;
+}
 // return 0 for normal case
 static int makeTargetServerSocket()
 {
 	struct sockaddr_un serverAddrUn;
+	int r;
 
 	if(manager.target_server_socket != -1)
 		return -1;	// should be never happend
-
+/*
 	// remove existed unix domain socket file
 	unlink(UDS_NAME);
 
@@ -154,9 +195,18 @@ static int makeTargetServerSocket()
 		LOGE("Target server socket creation failed\n");
 		return -1;
 	}
+*/
+	LOGE("manager.target_server_socket = %d\n", manager.target_server_socket);
+	manager.target_server_socket = test_get_fd_from_systemd(manager.target_server_socket);
+	if (manager.target_server_socket < 0) {
+		LOGE("Target server socket creation failed\n");
+		return -1;
+	}
+	LOGE("test_get_fd_from_systemd = %d\n", manager.target_server_socket);
 
-	fd_setup_attributes(manager.target_server_socket);
 
+//	fd_setup_attributes(manager.target_server_socket);
+/*
 	memset(&serverAddrUn, '\0', sizeof(serverAddrUn));
 	serverAddrUn.sun_family = AF_UNIX;
 	snprintf(serverAddrUn.sun_path, sizeof(serverAddrUn.sun_path), "%s", UDS_NAME);
@@ -172,7 +222,7 @@ static int makeTargetServerSocket()
 	{
 		LOGE("Failed to change mode for socket file : errno(%d)\n", errno);
 	}
-
+*/
 
 	if (-1 == listen(manager.target_server_socket, 5))
 	{
@@ -435,8 +485,15 @@ int main()
 
 	//for terminal exit
 	setup_signals();
-	daemon(0, 1);
-	LOGI("--- daemonized (pid %d) ---\n", getpid());
+//	daemon(0, 1);
+//	LOGI("--- daemonized (pid %d) ---\n", getpid());
+//while(1) {
+//	get_dnet_status();
+//	get_camera_status();
+//	get_sound_status();
+//	get_audio_status();
+//	sleep(1);
+//}
 
 	FILE *portfile = fopen(PORTFILE, "w");
 	if (!portfile) {

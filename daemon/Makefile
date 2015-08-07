@@ -6,11 +6,11 @@ COMM_FLAGS := -Wall -g -O0
 DEBUG_FLAGS = \
 	-DDEBUG \
 	-DUSE_LOG_ONCE \
+#	-DTHREAD_SAMPLING_DEBUG \
 #	-DMALLOC_DEBUG_LEVEL=1 \
 #	-DMALLOC_DEBUG_LEVEL=2 \
 #	-DDEB_PRINTBUF \
 #	-DPARSE_DEBUG_ON \
-#	-DTHREAD_SAMPLING_DEBUG \
 #	-DTHREAD_REPLAY_DEBUG \
 #	-DNOLOGI=1
 
@@ -26,7 +26,9 @@ INCLUDE := \
 	-I/usr/include/eina-1/eina \
 	-I/usr/include/efl-1 \
 	-I/usr/include/json-c \
-	-I/usr/include/eo-1
+	-I/usr/include/eo-1 \
+	-I/usr/include/aul
+
 # CALL_MNGR
 ifeq ($(CALL_MNGR),y)
 INCLUDE += -I/usr/include/call-manager/
@@ -70,7 +72,9 @@ LDFLAGS := \
 	-lecore \
 	-lcapi-system-info \
 	-lwebsockets \
-	-lparserelf
+	-lparserelf \
+	-lsystemd \
+	-laul
 
 # CALL_MNGR
 ifeq ($(CALL_MNGR),y)
@@ -126,8 +130,8 @@ SRC_CPP := \
 
 TARGET = da_manager
 DASCRIPT = da_command
-START_SH = ../scripts/start.sh
-STOP_SH = ../scripts/stop.sh
+START_SH = ../scripts/start.sh ../scripts/ins_modules.sh ../scripts/service_init.sh ../scripts/service_preinit.sh
+STOP_SH = ../scripts/stop.sh ../scripts/rm_modules.sh
 INIT_PRELOAD_SH = ../scripts/init_preload.sh
 PRELOAD_SCRIPT = ../scripts/gen_preload_header.sh
 

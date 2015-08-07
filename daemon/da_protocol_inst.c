@@ -303,6 +303,8 @@ static int parse_inst_app_setup_data(struct msg_buf_t *msg,
 			return -EINVAL;
 		}
 
+		LOGW("main = 0x%lx", val);
+
 		app_info->setup_data.size = data_len;
 		memcpy(app_info->setup_data.data, data, data_len);
 
