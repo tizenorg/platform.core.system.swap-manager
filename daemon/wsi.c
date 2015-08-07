@@ -160,6 +160,10 @@ fail:
 
 int wsi_set_smack_rules(const struct app_info_t *app_info)
 {
+#ifdef DEVICE_ONLY
+	LOGW("DEVICE_ONLY mode. wsi set smack rules disabled\n");
+	return 0;
+#else
 	const char SUBJECT[] = "swap";
 	const char ACCESS_TYPE[] = "rw";
 	const char delim[] = ".";
@@ -189,6 +193,7 @@ int wsi_set_smack_rules(const struct app_info_t *app_info)
 	free(app_id);
 exit:
 	return ret;
+#endif
 }
 
 int wsi_enable_profiling(enum web_prof_state_t mode)
