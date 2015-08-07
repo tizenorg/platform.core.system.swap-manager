@@ -5,6 +5,10 @@ Release:    1
 Group:      System/Libraries
 License:    Apache-2.0
 Source:    %{name}_%{version}.tar.gz
+
+# TODO REMOVE IT!!!
+#BuildRequires: coregl
+
 BuildRequires:  smack-devel
 BuildRequires:  libattr-devel
 BuildRequires:  glib2-devel
@@ -19,6 +23,7 @@ BuildRequires:  libjson-devel
 BuildRequires:  pkgconfig(json-c)
 %endif
 BuildRequires:  pkgconfig(ecore)
+BuildRequires:  pkgconfig(libsystemd-daemon)
 %if "%{?tizen_profile_name}" == "mobile"
 BuildRequires:  call-manager
 BuildRequires:  libcall-manager-devel
@@ -95,6 +100,23 @@ $SWAP_BUILD_CONF make
 rm -rf ${RPM_BUILD_ROOT}
 mkdir -p %{buildroot}/usr/share/license
 cp LICENSE %{buildroot}/usr/share/license/%{name}
+
+#systemd
+mkdir -p %{buildroot}%{_libdir}/systemd/system
+
+%ifarch %{arm}
+install -m 0644 swap.service %{buildroot}%{_libdir}/systemd/system/swap.service
+install -m 0644 swap.init.service %{buildroot}%{_libdir}/systemd/system/swap.init.service
+install -m 0644 swap.socket %{buildroot}%{_libdir}/systemd/system/swap.socket
+
+mkdir -p %{buildroot}/%{_libdir}/systemd/system/sockets.target.wants/
+mkdir -p %{buildroot}/%{_libdir}/systemd/system/sockets.target.wants
+
+ln -s %{_libdir}/systemd/system/swap.init.service %{buildroot}/%{_libdir}/systemd/system/sockets.target.wants/
+ln -s %{_libdir}/systemd/system/swap.socket %{buildroot}/%{_libdir}/systemd/system/sockets.target.wants/
+
+%endif
+
 cd daemon
 %make_install
 
@@ -106,9 +128,30 @@ mkdir -p /opt/usr/etc
 touch /opt/usr/etc/resourced_proc_exclude.ini
 
 %files
+#systemd
+%ifarch %{arm}
+%{_libdir}/systemd/system/swap.init.service
+%{_libdir}/systemd/system/swap.service
+%{_libdir}/systemd/system/swap.socket
+
+%{_libdir}/systemd/system/sockets.target.wants/swap.init.service
+%{_libdir}/systemd/system/sockets.target.wants/swap.socket
+%endif
+
+
 /usr/share/license/%{name}
 %manifest swap-manager.manifest
+
+%ifarch %{arm}
 %defattr(-,root,root,-)
+/opt/swap/sdk/service_init.sh
+/opt/swap/sdk/service_preinit.sh
+
+%defattr(-,developer,developer,-)
+%else
+
+%defattr(-,root,root,-)
+%endif
 %{_prefix}/bin/da_manager
 /opt/swap/sdk/start.sh
 /opt/swap/sdk/stop.sh

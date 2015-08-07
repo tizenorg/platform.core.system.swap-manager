@@ -1,13 +1,51 @@
 <manifest>
 	<define>
-		<domain name="swap" />
-    <permit>
-		<smack permit="system::use_internet" type="rw" />
-		<smack permit="system::debugging_network" type="rw" />
-		<smack permit="sdbd" type="rw" />
-    </permit>
+		<domain name="swap" policy="shared"/>
+		<provide>
+				<label name="swap::share" type="rw" />
+		</provide>
+		<permit>
+			<smack permit="system::use_internet" type="rwxat" />
+			<smack permit="system::debugging_network" type="rw" />
+
+			<smack permit="sdbd" type="rwx" />
+			<smack permit="device::input" type="rwx" />
+			<smack permit="device::bklight" type="rwx" />
+		</permit>
+
+		<request>
+			<smack request="swap::share" type="rw" />
+
+			<smack request="device::input" type="rwx" />
+			<smack request="device::bklight" type="rwx" />
+			<smack request="_" type="rwx" />
+            <smack request="aul::terminate" type="x" />
+            <smack request="launchpad-loader" type="rwx" />
+
+
+			<smack request="^" type="rwx" />
+			<smack request="aul" type="rwx" />
+
+			<smack request="tizen::vconf::camcorder" type="rl" />
+			<smack request="tizen::vconf::camcorder" type="rwl" />
+			<smack request="tizen::vconf::setting::admin" type="rl" />
+			<smack request="tizen::vconf::public::r" type="rl" />
+
+			<smack request="tizen::vconf::telephony::admin" type="rwl" />
+			<smack request="tizen::vconf::public::r::platform::rw" type="rwl" />
+			<smack request="tizen::vconf::location::enable" type="rwl" />
+
+			<smack request="wrt::wrt-launcher" type="rx" />
+			<smack request="launchpad" type="rwx"/>
+
+
+		</request>
+
 	</define>
 	<request>
 		<domain name="swap" />
 	</request>
+	<assign>
+		<filesystem path="/tmp/da/*" label="*"/>
+	</assign>
 </manifest>
