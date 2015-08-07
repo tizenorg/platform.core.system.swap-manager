@@ -22,4 +22,3 @@
 /usr/sbin/rmmod swap_ksyms
 /usr/sbin/rmmod swap_buffer
 /usr/sbin/rmmod swap_master
-
