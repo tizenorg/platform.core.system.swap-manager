@@ -11,6 +11,7 @@
 #undef calloc
 #undef malloc
 #undef free
+#undef getline
 
 #if MALLOC_DEBUG_LEVEL == 2
 #define logi LOGI
@@ -166,15 +167,36 @@ void add_malloc(struct mlist_t **list, void *addr, int line,
 
 }
 
+ssize_t getline_call_d(int line, const char *file_name, const char *func_name,
+		     char **lineptr, size_t *n, FILE *stream)
+{
+	logi("getline>\n");
+	char *lineptr_sv = *lineptr;
+	char *addr = NULL;
+	logi("getline> lineptr = %p n =  = %p stream = %p ('%s': %s +%d)\n",
+	     lineptr, n, stream,
+	     file_name, func_name, line);
+	ssize_t size_readed = getline(lineptr, n, stream);
+	addr = *lineptr;
+
+
+	if (lineptr_sv == NULL && addr != NULL) {
+		struct mlist_t *file_el = find_list(file_name);
+		add_malloc(&(file_el->addr), addr, file_name, func_name, line, *n);
+	}
+
+	return size_readed;
+}
+
 char *strdub_call_d(int line, const char *file_name, const char *func_name,
 		    char *str)
 {
 	logi("strdup>\n");
 	void *addr = strdup(str);
-	logi("strdup> 0x%0lX (%d:%s '%s')\n", addr, line, func_name, file_name);
+	logi("strdup> 0x%0lX ('%s': %s +%d)\n", addr, file_name, func_name, line);
 	struct mlist_t *file_el = find_list(file_name);
 
-	add_malloc(&(file_el->addr), addr, line, file_name, func_name, strlen(str) + 1);
+	add_malloc(&(file_el->addr), addr, file_name, func_name, line, strlen(str) + 1);
 
 	return addr;
 }
@@ -184,10 +206,10 @@ void *malloc_call_d(int line, const char *file_name, const char *func_name,
 {
 	logi("malloc>\n");
 	void *addr = malloc(size);
-	logi("malloc> 0x%0lX (%d:%s '%s')\n", addr, line, func_name, file_name);
+	logi("malloc> 0x%0lX [%lu] ('%s': %s +%d)\n", addr, size, file_name, func_name, line);
 	struct mlist_t *file_el = find_list(file_name);
 
-	add_malloc(&(file_el->addr), addr, line, file_name, func_name, size);
+	add_malloc(&(file_el->addr), addr, file_name, func_name, line, size);
 
 	return addr;
 }
@@ -198,10 +220,10 @@ void *calloc_call_d(int line, const char *file_name, const char *func_name,
 
 	logi("calloc>\n");
 	void *addr = calloc(n, size);
-	logi("calloc> 0x%0lX (%d:%s '%s')\n", addr, line, func_name, file_name);
+	logi("calloc> 0x%0lX ('%s': %s +%d)\n", addr, file_name, func_name, line);
 	struct mlist_t *file_el = find_list(file_name);
 
-	add_malloc(&(file_el->addr), addr, line, file_name, func_name,
+	add_malloc(&(file_el->addr), addr, file_name, func_name, line,
 		   size * n);
 
 	return addr;
@@ -223,13 +245,13 @@ void free_call_d(int line, const char *file_name, const char *function,
 		}
 
 	} else {
-		logi("free addr 0x%08lX (%d:%s '%s')\n",
-		     addr, line, function, file_name);
+		logi("free addr 0x%08lX ('%s': %s +%d)\n",
+		     addr, file_name, function, line);
 		free(addr);
 		return;
 	}
-	LOGW("cannot free element!!! 0x%08lX (%d:%s '%s')\n",
-	     addr, line, function, file_name);
+	LOGW("cannot free element!!! 0x%08lX ('%s': %s +%d)\n",
+	     addr, file_name, function, line);
 
 }
 
@@ -238,6 +260,7 @@ void free_call_d(int line, const char *file_name, const char *function,
 #define malloc(size) malloc_call_d( __LINE__ , __FILE__, __FUNCTION__, size)
 #define calloc(num, size) calloc_call_d( __LINE__ , __FILE__, __FUNCTION__, num, size)
 #define free(addr) free_call_d(__LINE__, __FILE__, __func__, addr)
+#define getline(lineptr, n, stream) getline_call_d(__LINE__, __FILE__, __func__, lineptr, n, stream)
 
 #else
 
