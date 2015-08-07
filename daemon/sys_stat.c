@@ -694,6 +694,7 @@ static int update_process_data(procNode **prochead, pid_t* pidarray, int pidcoun
 	int i, ret = 0, is_new_node = 0;
 	char buf[PROCPATH_MAX];
 	procNode* procnode;
+//	return ret;
 
 	for(i = 0; i < pidcount; i++)
 	{
@@ -828,12 +829,14 @@ static int update_system_cpu_frequency(int cur_index)
 // return negative value for error
 static void init_system_cpu_data()
 {
+//	return;
 	manager.fd.procstat = fopen(PROCSTAT, "r");
 }
 
 static int update_system_cpu_data(int cur_index)
 {
 /* 	LOGI(">\n"); */
+//	return 0;
 
 	FILE* fp = manager.fd.procstat;
 	int num;
@@ -934,6 +937,7 @@ static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 		const char* name;	// memory slot name
 		unsigned long* slot;	// memory value slot
 	} mem_t;
+//	return 0;
 
 	int meminfo_fd = manager.fd.procmeminfo;
 	char *head, *tail;
@@ -1018,6 +1022,7 @@ static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 //static
 static unsigned long get_system_total_memory(void)
 {
+//	return 0;
 	int meminfo_fd = manager.fd.procmeminfo;
 	char *head, *tail;
 	int num;
@@ -1162,6 +1167,7 @@ static int update_thread_data(int pid)
 	static char dirent_buffer[ sizeof(struct dirent) + PATH_MAX + 1 ] = {0,};
 	static struct dirent *dirent_r = (struct dirent *)dirent_buffer;
 
+//	return ret;
 	snprintf(path, sizeof(path), "/proc/%d/task", pid);
 
 	if(!(taskdir = opendir(path)))
@@ -1340,12 +1346,12 @@ static int update_cpus_info(int event_num, float elapsed)
 								(float)cpuptr->total_ticks)) * 100.0f;
 				}
 
-				LOGI_th_samp("System cpu usage log : %d, %Ld, %Ld\n",
-						i, cpuptr->idle_ticks, cpuptr->total_ticks);
 				if(unlikely(cpuptr->cpu_usage < 0))
 				{
 					cpuptr->cpu_usage = 0.0f;
 				}
+				LOGI_th_samp("System cpu usage log : %d, %Ld, %Ld cpu[%f%%]\n",
+						i, cpuptr->idle_ticks, cpuptr->total_ticks, cpuptr->cpu_usage);
 			}
 			else	// previous sampling is not just before 1 period
 			{
@@ -1384,6 +1390,8 @@ static int update_cpus_info(int event_num, float elapsed)
 		{
 			cpuptr->cpu_usage = 0.0f;
 		}
+
+		LOGI_th_samp("System cpu [%d] usage : %f%%\n", i, cpuptr->cpu_usage);
 	}
 
 	return 0;
@@ -1396,6 +1404,7 @@ static int fill_system_processes_info(procNode *prochead, float factor,
 	procNode* proc;
 	float thread_load;
 	uint32_t app_count = 0;
+///	return 0;
 
 	LOGI_th_samp("prochead = %X\n", (unsigned int)prochead);
 
@@ -1435,6 +1444,7 @@ static int fill_system_threads_info(float factor, struct system_info_t * sys_inf
 	procNode* inst_proc;
 	procNode* proc;
 	float thread_load;
+///	return;
 
 	for (inst_proc = inst_prochead; inst_proc != NULL; inst_proc = inst_proc->next)
 		for (proc = inst_proc->thread_prochead; proc != NULL; proc = proc->next) {
@@ -1528,6 +1538,7 @@ static int skip_tokens(FILE * fp, unsigned int count)
 
 static void init_network_stat()
 {
+//	return;
 	manager.fd.networkstat = fopen("/proc/net/dev", "r");
 }
 
@@ -1536,6 +1547,7 @@ static void get_network_stat(uint32_t *recv, uint32_t *send)
 	FILE *fp = manager.fd.networkstat;
 	uintmax_t irecv, isend;
 	char ifname[SMALL_BUFFER + 1]; /* on changing this size, change fscanf params */
+//	return;
 	if (fp == NULL)
 		return;
 
@@ -1643,7 +1655,6 @@ static void get_disk_stat(uint32_t *reads, uint32_t *bytes_reads,
 
 	if (fp == NULL)
 		return;
-
 
 	rewind(fp);
 	fflush(fp);
@@ -1877,6 +1888,7 @@ static int get_inst_pid_array(pid_t *arr, const int n)
 static int get_other_pid_array(pid_t inst_pid[], const int inst_n, pid_t arr[],
 			       const int n)
 {
+//	return 0;
 	DIR *d = opendir("/proc");
 	struct dirent *dirent;
 	int count = 0, i = 0;
