@@ -1,0 +1,14 @@
+[Unit]
+Description=swap
+
+[Service]
+User=root
+Group=root
+SmackProcessLabel=swap
+PermissionsStartOnly=true
+
+After=swap.init.service
+Requires=swap.init.service
+
+PreExecStart=/usr/bin/dbus-send --system --type=method_call --print-reply --dest=org.tizen.system.busactd /Org/Tizen/System/BusActD org.tizen.system.busactd.SystemD.StartUnit string:swap.init.service string:no-block
+ExecStart=/usr/bin/da_manager

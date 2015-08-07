@@ -27,7 +27,9 @@ INCLUDE := \
 	-I/usr/include/efl-1 \
 	-I/usr/include/json-c \
 	-I/usr/include/eo-1 \
-	-I/usr/include/evas-1
+	-I/usr/include/evas-1 \
+	-I/usr/include/aul
+
 # CALL_MNGR
 ifeq ($(CALL_MNGR),y)
 INCLUDE += -I/usr/include/call-manager/
@@ -71,7 +73,9 @@ LDFLAGS := \
 	-lecore \
 	-lcapi-system-info \
 	-lwebsockets \
-	-lparserelf
+	-lparserelf \
+	-lsystemd \
+	-laul
 
 # CALL_MNGR
 ifeq ($(CALL_MNGR),y)
@@ -129,7 +133,7 @@ SRC_CPP := \
 
 TARGET = da_manager
 DASCRIPT = da_command
-START_SH = ../scripts/start.sh
+START_SH = ../scripts/start.sh ../scripts/service_init.sh ../scripts/service_preinit.sh
 STOP_SH = ../scripts/stop.sh
 INIT_PRELOAD_SH = ../scripts/init_preload.sh
 PRELOAD_SCRIPT = ../scripts/gen_preload_header.sh
