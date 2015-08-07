@@ -1,13 +1,113 @@
 <manifest>
 	<define>
-		<domain name="swap" />
-    <permit>
-		<smack permit="system::use_internet" type="rw" />
-		<smack permit="system::debugging_network" type="rw" />
-		<smack permit="sdbd" type="rw" />
-    </permit>
+		<domain name="swap" policy="shared"/>
+		<provide>
+				<label name="swap::share" type="rw" />
+		</provide>
+		<permit>
+			<smack permit="system::use_internet" type="rwxat" />
+			<smack permit="system::debugging_network" type="rw" />
+
+			<smack permit="sdbd" type="rwx" />
+			<smack permit="device::input" type="rwx" />
+			<smack permit="device::bklight" type="rwx" />
+		</permit>
+
+		<request>
+			<smack request="swap::share" type="rw" />
+
+			<smack request="device::input" type="rwx" />
+			<smack request="device::bklight" type="rwx" />
+			<smack request="_" type="rwx" />
+            <smack request="aul::terminate" type="x" />
+            <smack request="launchpad-loader" type="rwx" />
+
+
+
+			<smack request="^" type="rwx" />
+			<smack request="aul" type="rwx" />
+
+			<smack request="tizen::vconf::camcorder" type="rl" />
+			<smack request="tizen::vconf::camcorder" type="rwl" />
+			<smack request="tizen::vconf::setting::admin" type="rl" />
+			<smack request="tizen::vconf::public::r" type="rl" />
+
+			<smack request="tizen::vconf::telephony::admin" type="rwl" />
+			<smack request="tizen::vconf::public::r::platform::rw" type="rwl" />
+			<smack request="tizen::vconf::location::enable" type="rwl" />
+
+
+			<smack request="wrt::wrt-launcher" type="rx" />
+			<smack request="launchpad" type="rwx"/>
+
+
+		<smack request="system::use_internet" type="rwxat" />
+
+			<smack request="dbus" type="rx" />
+			<smack request="security-server" type="rx" />
+			<smack request="sensord" type="rx" />
+			<smack request="deviced" type="rx" />
+			<smack request="xorg" type="rx" />
+			<smack request="pulseaudio" type="rx" />
+			<smack request="alarm-server" type="rx" />
+			<smack request="sound_server" type="rx" />
+			<smack request="e17" type="rx" />
+
+
+<smack request="alarm-server" type="rwx"/>
+<smack request="aul" type="rwx"/>
+<smack request="connman" type="rwx"/>
+<smack request="data-provider-master::bin" type="rwx"/>
+<smack request="dbus" type="rwx"/>
+<smack request="deviced" type="rwx"/>
+<smack request="dlogutil" type="rwx"/>
+<smack request="e17" type="rwx"/>
+<smack request="isf" type="rwx"/>
+<smack request="key-manager" type="rwx"/>
+<smack request="location_fw" type="rwx"/>
+<smack request="media-server" type="rwx"/>
+<smack request="msg-service" type="rwx"/>
+<smack request="net-config" type="rwx"/>
+<smack request="privacy-manager" type="rwx"/>
+<smack request="pulseaudio" type="rwx"/>
+<smack request="resourced" type="rwx"/>
+<smack request="sdbd" type="rwx"/>
+<smack request="security-server" type="rwx"/>
+<smack request="sensord" type="rwx"/>
+<smack request="sound_server" type="rwx"/>
+<smack request="starter" type="rwx"/>
+<smack request="swap" type="rwx"/>
+<smack request="xorg" type="rwx"/>
+<smack request="systemd" type="rwx"/>
+<smack request="syslogd" type="rwx"/>
+<smack request="atspi" type="rwx"/>
+<smack request="data-router" type="rwx"/>
+<smack request="mtp-responder" type="rwx"/>
+<smack request="org.tizen.volume" type="rwx"/>
+<smack request="org.tizen.indicator" type="rwx"/>
+<smack request="org.tizen.homescreen" type="rwx"/>
+<smack request="esd" type="rwx"/>
+<smack request="org.tizen.quickpanel" type="rwx"/>
+<smack request="spreadtrum-utils" type="rwx"/>
+<smack request="telephony_framework" type="rwx"/>
+<smack request="context-service" type="rwx"/>
+<smack request="wrt_launchpad_daemon" type="rwx"/>
+<smack request="sync-service" type="rwx"/>
+<smack request="callmgr" type="rwx"/>
+<smack request="cbhm" type="rwx"/>
+<smack request="org.tizen.lockscreen" type="rwx"/>
+<smack request="wifi-direct" type="rwx"/>
+<smack request="push-service" type="rwx"/>
+<smack request="system-apps" type="rwx"/>
+<smack request="org.tizen.lockscreen" type="rwx"/>
+
+		</request>
+
 	</define>
 	<request>
 		<domain name="swap" />
 	</request>
+	<assign>
+		<filesystem path="/tmp/da/*" label="*"/>
+	</assign>
 </manifest>
