@@ -1505,8 +1505,9 @@ static void skip_lines(FILE * fp, unsigned int count)
 	for (index = 0; index != count; ++index) {
 		if (getline(&buffer, &buflen, fp) < 0)
 			LOGE("file scan fail\n");
+		free(buffer);
+		buffer = NULL;
 	}
-	free(buffer);
 }
 
 static int skip_tokens(FILE * fp, unsigned int count)
