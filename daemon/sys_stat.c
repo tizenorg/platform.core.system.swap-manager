@@ -2305,13 +2305,13 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 		if (IS_OPT_SET(FL_SYSTEM_PROCESS)) {
 			proc = inst_prochead;
 			for (i = 0; i < sys_info->count_of_inst_processes; i++)
-				cpu_load_tmp +=  proc->proc_data.cpu_load;
+				cpu_load_tmp_app +=  proc->proc_data.cpu_load;
 		}
 
 		if (IS_OPT_SET(FL_SYSTEM_PROCESSES_LOAD)) {
 			proc = other_prochead;
 			for (i = 0; i < sys_info->count_of_other_processes; i++)
-				cpu_load_tmp += proc->proc_data.cpu_load;
+				cpu_load_tmp_app += proc->proc_data.cpu_load;
 		}
 
 		/* total cpu load */
