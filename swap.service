@@ -1,0 +1,7 @@
+[Unit]
+Description=swap
+
+[Service]
+Type=forking
+SmackProcessLabel=swap
+ExecStart=/usr/bin/da_manager

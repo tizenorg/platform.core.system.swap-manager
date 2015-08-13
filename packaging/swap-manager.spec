@@ -34,10 +34,32 @@ make
 rm -rf ${RPM_BUILD_ROOT}
 mkdir -p %{buildroot}/usr/share/license
 cp LICENSE %{buildroot}/usr/share/license/%{name}
+
+mkdir -p %{buildroot}%{_libdir}/systemd/system
+
+%ifarch %{ix86}
+install -m 0644 swap.service %{buildroot}%{_libdir}/systemd/system/swap.service
+mkdir -p %{buildroot}/%{_libdir}/systemd/system/emulator.target.wants
+ln -s %{_libdir}/systemd/system/swap.service %{buildroot}/%{_libdir}/systemd/system/emulator.target.wants/
+%else
+install -m 0644 swap.service %{buildroot}%{_libdir}/systemd/system/swap.service
+mkdir -p %{buildroot}/%{_libdir}/systemd/system/multi-user.target.wants
+ln -s %{_libdir}/systemd/system/swap.service %{buildroot}/%{_libdir}/systemd/system/multi-user.target.wants/
+%endif
+
 cd daemon
 %make_install
 
 %files
+%{_libdir}/systemd/system/swap.service
+
+%ifarch %{ix86}
+%{_libdir}/systemd/system/emulator.target.wants/swap.service
+%else
+
+%{_libdir}/systemd/system/multi-user.target.wants/swap.service
+%endif
+
 /usr/share/license/%{name}
 %manifest swap-manager.manifest
 %defattr(-,root,root,-)
