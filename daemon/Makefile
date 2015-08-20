@@ -59,7 +59,8 @@ LDFLAGS := \
 	-lecore \
 	-lcapi-system-info \
 	-lwebsockets \
-	-ljson-c
+	-ljson-c \
+	-lparserelf
 
 # CALL_MNGR
 ifeq ($(CALL_MNGR),y)

@@ -54,9 +54,6 @@ check_null_or_exit addr_do_app
 
 
 tmp=$(mktemp)
-# launchpad
-addr_dlopen_plt=$(su root -c "parse_elf $path_launchpad -r dlopen")
-addr_dlsym_plt=$(su root -c "parse_elf $path_launchpad -r dlsym")
 
 # libappcore-efl.so
 addr_appcore_init_plt=$(parse_elf $path_app_core_efl -r appcore_init)
@@ -64,8 +61,8 @@ addr_elm_run_plt=$(parse_elf $path_app_core_efl -r elm_run)
 
 
 # PLT
-addr_dlopen_plt=${addr_dlopen_plt:-0}
-addr_dlsym_plt=${addr_dlsym_plt:-0}
+addr_dlopen_plt=0
+addr_dlsym_plt=0
 addr_appcore_init_plt=${addr_appcore_init_plt:-0}
 addr_elm_run_plt=${addr_elm_run_plt:-0}
 
