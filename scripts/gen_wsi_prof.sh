@@ -25,7 +25,13 @@ if [ "$__tizen_profile_name__" == "tv" ]; then
 else
 	webkit_package_name=webkit2-efl
 fi
-lib_file=$(rpm -ql ${webkit_package_name}-debuginfo | grep "/usr/lib/debug/usr/lib/libewebkit2.so.debug$" | head -1)
+
+if [ "$__tizen_product_tv__" == "1" ]; then
+	lib_file=$(rpm -ql ${webkit_package_name} | grep "/usr/lib/libewebkit2.so$" | head -1)
+else
+	lib_file=$(rpm -ql ${webkit_package_name}-debuginfo | grep "/usr/lib/debug/usr/lib/libewebkit2.so.debug$" | head -1)
+fi
+
 tmp=$(mktemp)
 
 func_names=()
