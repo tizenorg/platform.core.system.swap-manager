@@ -30,6 +30,9 @@ private:
     int makeRelocMap(const uint8_t jump_slot);
     const Elf32_Shdr *getShdr(const std::string &name);
 
+    int doGetAddrPltARM(const char *names[], uint32_t addrs[], size_t cnt);
+    int doGetAddrPlt386(const char *names[], uint32_t addrs[], size_t cnt);
+
     typedef std::map <std::string, Elf32_Shdr> ShdrMap;
     typedef std::map <uint32_t, std::string> RelocMap;
 

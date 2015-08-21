@@ -1,7 +1,9 @@
 #include "FileElf.h"
 #include <elf.h>
 #include <cerrno>
+#include <cstring>
 #include "swap_debug.h"
+#include <parse_elf.h>
 
 
 static int checkFhdr(const Elf32_Ehdr *fhdr)
@@ -254,13 +256,8 @@ putSectRel:
     return ret;
 }
 
-int FileElf::getAddrPlt(const char *names[], uint32_t addrs[], size_t cnt)
+int FileElf::doGetAddrPltARM(const char *names[], uint32_t addrs[], size_t cnt)
 {
-    if (_fhdr.e_machine != EM_ARM) {
-        LOGE("mach[%lu] is not support\n", _fhdr.e_machine);
-        return -EINVAL;
-    }
-
     int ret = makeRelocMap(R_ARM_JUMP_SLOT);
     if (ret)
         return ret;
@@ -329,6 +326,34 @@ int FileElf::getAddrPlt(const char *names[], uint32_t addrs[], size_t cnt)
 
     putSection(data);
     return 0;
+}
+
+int FileElf::doGetAddrPlt386(const char *names[], uint32_t addrs[], size_t cnt)
+{
+    const char *filename = this->path().c_str();
+    int ret;
+
+    ret = get_plt_addrs(filename, names, cnt, &addrs);
+    if (ret != 0) {
+        LOGE("Error getting .plt: %s\n", get_str_error(ret));
+        return -EINVAL;
+    }
+
+    return 0;
+}
+
+int FileElf::getAddrPlt(const char *names[], uint32_t addrs[], size_t cnt)
+{
+    switch (_fhdr.e_machine) {
+    case EM_ARM:
+        return doGetAddrPltARM(names, addrs, cnt);
+    case EM_386:
+        return doGetAddrPlt386(names, addrs, cnt);
+    default:
+        LOGE("mach[%lu] is not support\n", _fhdr.e_machine);
+    }
+
+    return -EINVAL;
 }
 
 FileElf::FileElf()
