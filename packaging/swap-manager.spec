@@ -22,14 +22,18 @@ BuildRequires:  swap-probe-devel
 BuildRequires:  swap-probe-elf
 %if "%{?tizen_profile_name}" == "tv"
 BuildRequires:  webkit2-efl-tv
+%if "%{TIZEN_PRODUCT_TV}" != "1"
 BuildRequires:  webkit2-efl-tv-debuginfo
+%endif
 %else
 BuildRequires:  webkit2-efl
 BuildRequires:  webkit2-efl-debuginfo
 %endif
 BuildRequires:  launchpad
 BuildRequires:  app-core-efl
+%if "%{TIZEN_PRODUCT_TV}" != "1"
 BuildRequires:  app-core-debuginfo
+%endif
 %if "%_project" != "Kirana_SWA_OPEN:Build" && "%_project" != "Kirana_SWA_OPEN:Daily"
 Requires:  swap-modules
 %endif
@@ -47,6 +51,7 @@ This binary will be installed in target.
 %build
 pushd scripts
 echo "__tizen_profile_name__="%{?tizen_profile_name} > dyn_vars
+echo "__tizen_product_tv__="%{?TIZEN_PRODUCT_TV} >> dyn_vars
 popd
 cd daemon
 

@@ -11,7 +11,13 @@ else
 fi
 
 path_libewebkit2=`rpm -ql $webkit_package_name | grep "libewebkit2.so$" | head -1`
-path_libewebkit2_debuginfo=`rpm -ql ${webkit_package_name}-debuginfo | grep "libewebkit2.so.debug$" | head -1`
+
+if [ "$__tizen_profile_name__" == "1" ]; then
+	path_libewebkit2_debuginfo=$path_libewebkit2
+else
+	path_libewebkit2_debuginfo=`rpm -ql ${webkit_package_name}-debuginfo | grep "libewebkit2.so.debug$" | head -1`
+fi
+
 
 
 g_names=()
