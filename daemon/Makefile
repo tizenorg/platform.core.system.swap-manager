@@ -37,6 +37,13 @@ FLAGS := \
 	$(INCLUDE) \
 	$(DEBUG_FLAGS)
 
+
+# set profile info
+ifeq ($(PROFILE_TV),y)
+FLAGS += -DPROFILE_TV
+endif # PROFILE_TV
+
+
 # CALL_MNGR
 ifeq ($(CALL_MNGR),y)
 FLAGS += -DCALL_MNGR

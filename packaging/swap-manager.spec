@@ -59,7 +59,9 @@ cd daemon
 SWAP_BUILD_CMD+=" CALL_MNGR=y"
 %endif
 
-%if "%{?tizen_profile_name}" != "tv"
+%if "%{?tizen_profile_name}" == "tv"
+SWAP_BUILD_CMD+=" PROFILE_TV=y"
+%else
 SWAP_BUILD_CMD+=" WSP_SUPPORT=y"
 %endif
 
