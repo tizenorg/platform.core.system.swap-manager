@@ -61,6 +61,7 @@ SWAP_BUILD_CMD+=" CALL_MNGR=y"
 
 %if "%{?tizen_profile_name}" != "tv"
 SWAP_BUILD_CMD+=" WSP_SUPPORT=y"
+SWAP_BUILD_CMD+=" PROFILE_TV=y"
 %endif
 
 SWAP_BUILD_CMD+=" make"
