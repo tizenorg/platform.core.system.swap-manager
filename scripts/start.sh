@@ -16,8 +16,8 @@ PATH=$PATH:/usr/sbin/
 
 config_file="/etc/config/model-config.xml"
 if [ -e $config_file ]; then
-	grep -i "feature/container[^>]*>[[:blank:]]*false" "$config_file" > /dev/null
-	if [ $? -ne 0 ]; then
+	grep -i "feature/container[^>]*>[[:blank:]]*true" "$config_file" > /dev/null
+	if [ $? -eq 0 ]; then
 		/bin/echo $ERR_CONTAINER_NOT_SUPPORTED_ST
 		exit $ERR_CONTAINER_NOT_SUPPORTED
 	fi
