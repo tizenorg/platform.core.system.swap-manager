@@ -362,10 +362,17 @@ static int find_alternative_bin_path(const char *binary_path, char *alter_bin_pa
 
 int kill_app(const char *binary_path)
 {
+#ifdef PROFILE_TV
+	/* usage of SIGTERM signal isn't possible on TV */
+	enum { FINISH_SIG = SIGKILL };
+#else /* PROFILE_TV */
+	enum { FINISH_SIG = SIGTERM };
+#endif /* PROFILE_TV */
+
 	pid_t pkg_pid;
 	char alter_bin_path[PATH_MAX];
 
-	LOGI("kill %s (%d)\n", binary_path, SIGKILL);
+	LOGI("kill %s (%d)\n", binary_path, FINISH_SIG);
 
 	pkg_pid = get_pid_by_path(binary_path);
 
@@ -375,9 +382,9 @@ int kill_app(const char *binary_path)
 	}
 
 	if (pkg_pid != 0) {
-		if (kill(pkg_pid, SIGTERM) == -1) {
+		if (kill(pkg_pid, FINISH_SIG) == -1) {
 			GETSTRERROR(errno, err_buf);
-			LOGE("cannot kill %d -%d errno<%s>\n", pkg_pid, SIGKILL,
+			LOGE("cannot kill %d -%d errno<%s>\n", pkg_pid, FINISH_SIG,
 			     err_buf);
 			return -1;
 		} else {
@@ -385,7 +392,7 @@ int kill_app(const char *binary_path)
 			// returns control immediately after send signal
 			// without it app_launch returns err on start app
 			sleep(1);
-			LOGI("killed %d -%d\n", pkg_pid, SIGKILL);
+			LOGI("killed %d -%d\n", pkg_pid, FINISH_SIG);
 		}
 	} else
 		LOGI("cannot kill <%s>; process not found\n", binary_path);
