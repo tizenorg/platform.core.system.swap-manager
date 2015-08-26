@@ -25,25 +25,25 @@ fi
 
 if [ ! -e /sys/kernel/debug/swap/enable ]; then
 
-    insmod swap_master.ko           || exit 101
-    insmod swap_buffer.ko           || exit 102  # buffer is loaded
-    insmod swap_ksyms.ko            || exit 103
-    insmod swap_driver.ko           || exit 104  # driver is loaded
-    insmod swap_writer.ko           || exit 105
-    insmod swap_kprobe.ko           || exit 106  # kprobe is loaded
-    insmod swap_uprobe.ko           || exit 107  # uprobe is loaded
-    insmod swap_us_manager.ko       || exit 108  # us_manager is loaded
-    insmod swap_ks_features.ko      || exit 109  # ks_features is loaded
-    insmod swap_sampler.ko          || exit 110
-    insmod swap_energy.ko           || exit 111
-    insmod swap_message_parser.ko   || exit 112  # parser is loaded
-    insmod swap_retprobe.ko         || exit 113  # retprobe is loaded
-    insmod swap_fbiprobe.ko         || exit 114  # fbi is loaded
-    insmod swap_webprobe.ko         || exit 115  # webprobe is loaded
-    insmod swap_task_data.ko        || exit 116
-    insmod swap_preload.ko          || exit 117
-    insmod swap_wsp.ko              || exit 118
-    insmod swap_nsp.ko              || exit 119
+    /usr/sbin/insmod swap_master.ko           || exit 101
+    /usr/sbin/insmod swap_buffer.ko           || exit 102  # buffer is loaded
+    /usr/sbin/insmod swap_ksyms.ko            || exit 103
+    /usr/sbin/insmod swap_driver.ko           || exit 104  # driver is loaded
+    /usr/sbin/insmod swap_writer.ko           || exit 105
+    /usr/sbin/insmod swap_kprobe.ko           || exit 106  # kprobe is loaded
+    /usr/sbin/insmod swap_uprobe.ko           || exit 107  # uprobe is loaded
+    /usr/sbin/insmod swap_us_manager.ko       || exit 108  # us_manager is loaded
+    /usr/sbin/insmod swap_ks_features.ko      || exit 109  # ks_features is loaded
+    /usr/sbin/insmod swap_sampler.ko          || exit 110
+    /usr/sbin/insmod swap_energy.ko           || exit 111
+    /usr/sbin/insmod swap_message_parser.ko   || exit 112  # parser is loaded
+    /usr/sbin/insmod swap_retprobe.ko         || exit 113  # retprobe is loaded
+    /usr/sbin/insmod swap_fbiprobe.ko         || exit 114  # fbi is loaded
+    /usr/sbin/insmod swap_webprobe.ko         || exit 115  # webprobe is loaded
+    /usr/sbin/insmod swap_task_data.ko        || exit 116
+    /usr/sbin/insmod swap_preload.ko          || exit 117
+    /usr/sbin/insmod swap_wsp.ko              || exit 118
+    /usr/sbin/insmod swap_nsp.ko              || exit 119
 
 fi
 
