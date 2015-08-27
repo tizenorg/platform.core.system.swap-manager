@@ -97,7 +97,7 @@ gen_array()
 }
 
 
-if [ "$__tizen_profile_name__" == "tv" ]; then
+if [ "$__tizen_profile_name__" == "tv" ] || [ "$__tizen_product_2_4_wearable__" == "1" ]; then
 	add_func_plt soup_requester_request_uri@plt soup_request
 	add_func _ZN7WebCore14ResourceLoader15willSendRequestERNS_15ResourceRequestERKNS_16ResourceResponseE main_res_will
 	add_func _ZN7WebCore11CachedImage7addDataEPKcj main_res_add

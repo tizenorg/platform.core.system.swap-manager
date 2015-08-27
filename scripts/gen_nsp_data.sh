@@ -46,8 +46,15 @@ fi
 check_null_or_exit dpath_app_core_efl
 
 # get launchpad path
-path_launchpad=$(rpm -ql launchpad | grep launchpad-loader | head -1)
-path_launchpad=${path_launchpad:-$(rpm -ql launchpad | grep launchpad-process-pool | head -1)}
+if [ "$__tizen_product_2_4_wearable__" == "1" ]; then
+	path_launchpad=$(rpm -ql launchpad-loader | grep launchpad-loader | head -1)
+	path_launchpad=${path_launchpad:-$(rpm -ql launchpad-process-pool | grep launchpad-process-pool | head -1)}
+else
+	path_launchpad=$(rpm -ql launchpad | grep launchpad-loader | head -1)
+	path_launchpad=${path_launchpad:-$(rpm -ql launchpad | grep launchpad-process-pool | head -1)}
+fi
+
+
 check_null_or_exit path_launchpad
 
 

@@ -29,7 +29,12 @@ BuildRequires:  webkit2-efl-tv-debuginfo
 BuildRequires:  webkit2-efl
 BuildRequires:  webkit2-efl-debuginfo
 %endif
+%if "%{sec_product_feature_profile_wearable}" == "1"
+BuildRequires:  launchpad-process-pool
+BuildRequires:  launchpad-loader
+%else
 BuildRequires:  launchpad
+%endif
 BuildRequires:  app-core-efl
 %if "%{TIZEN_PRODUCT_TV}" != "1"
 BuildRequires:  app-core-debuginfo
@@ -52,6 +57,7 @@ This binary will be installed in target.
 pushd scripts
 echo "__tizen_profile_name__="%{?tizen_profile_name} > dyn_vars
 echo "__tizen_product_tv__="%{?TIZEN_PRODUCT_TV} >> dyn_vars
+echo "__tizen_product_2_4_wearable__="%{sec_product_feature_profile_wearable} >> dyn_vars
 popd
 cd daemon
 
@@ -62,7 +68,9 @@ SWAP_BUILD_CMD+=" CALL_MNGR=y"
 %if "%{?tizen_profile_name}" == "tv"
 SWAP_BUILD_CMD+=" PROFILE_TV=y"
 %else
+%if "%{sec_product_feature_profile_wearable}" != "1"
 SWAP_BUILD_CMD+=" WSP_SUPPORT=y"
+%endif
 %endif
 
 SWAP_BUILD_CMD+=" make"
