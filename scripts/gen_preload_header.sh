@@ -22,7 +22,7 @@ function print_loader()
     filename=$1
     el=$(find $preload_library_path -regextype posix-extended -regex $preload_library_path$preload_library_pattern | head -n1)
     preload_lib=$(readlink -f $el)
-	addr=$(parse_elf $preload_lib -s $preload_open_function)
+    addr=$(parse_elf $preload_lib -sa | grep "$preload_open_function@\|$preload_open_function$" | head -1 | cut -f1 -d' ')
 
     echo -e "/bin/echo \"$preload_lib\" > /sys/kernel/debug/swap/preload/loader/loader_path" >> $filename
     echo -e "/bin/echo 0x$addr > /sys/kernel/debug/swap/preload/loader/loader_offset" >> $filename
@@ -60,3 +60,7 @@ print_header $output
 print_loader $output
 print_probe_lib $output
 print_linker $output
+
+# check addresses
+grep 0x00000000 $output && echo "ERROR: generate preload info" >&2 && exit 1
+echo 0
