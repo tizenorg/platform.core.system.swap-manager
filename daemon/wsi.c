@@ -30,8 +30,14 @@
 #include <string.h>
 #include <pthread.h>
 #include <libwebsockets.h>
-#include <json.h>
 #include <errno.h>
+
+#ifdef OLD_JSON
+#include <json/json.h>
+#else /* OLD_JSON */
+#include <json.h>
+#endif /* OLD_JSON */
+
 
 #include "wsi.h"
 #include "swap_debug.h"

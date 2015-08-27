@@ -13,7 +13,11 @@ BuildRequires:  vconf-devel
 BuildRequires:  capi-system-info-devel
 BuildRequires:  capi-system-runtime-info-devel
 BuildRequires:  libwebsockets-devel
+%if "%{sec_product_feature_profile_wearable}" == "1"
+BuildRequires:  libjson-devel
+%else
 BuildRequires:  pkgconfig(json-c)
+%endif
 BuildRequires:  pkgconfig(ecore)
 %if "%{?tizen_profile_name}" == "mobile"
 BuildRequires:  pkgconfig(callmgr_client)
@@ -68,7 +72,9 @@ SWAP_BUILD_CMD+=" CALL_MNGR=y"
 %if "%{?tizen_profile_name}" == "tv"
 SWAP_BUILD_CMD+=" PROFILE_TV=y"
 %else
-%if "%{sec_product_feature_profile_wearable}" != "1"
+%if "%{sec_product_feature_profile_wearable}" == "1"
+SWAP_BUILD_CMD+=" OLD_JSON=y"
+%else
 SWAP_BUILD_CMD+=" WSP_SUPPORT=y"
 %endif
 %endif

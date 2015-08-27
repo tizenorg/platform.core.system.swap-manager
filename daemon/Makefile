@@ -43,6 +43,10 @@ ifeq ($(PROFILE_TV),y)
 FLAGS += -DPROFILE_TV
 endif # PROFILE_TV
 
+# set using old json
+ifeq ($(OLD_JSON),y)
+FLAGS += -DOLD_JSON
+endif # OLD_JSON
 
 # CALL_MNGR
 ifeq ($(CALL_MNGR),y)
@@ -66,13 +70,19 @@ LDFLAGS := \
 	-lecore \
 	-lcapi-system-info \
 	-lwebsockets \
-	-ljson-c \
 	-lparserelf
 
 # CALL_MNGR
 ifeq ($(CALL_MNGR),y)
 LDFLAGS += -lcallmgr_client
 endif # CALL_MNGR
+
+# set using old json
+ifeq ($(OLD_JSON),y)
+LDFLAGS += -ljson
+else
+LDFLAGS += -ljson-c
+endif # OLD_JSON
 
 SRC_C := \
 	buffer.c \
