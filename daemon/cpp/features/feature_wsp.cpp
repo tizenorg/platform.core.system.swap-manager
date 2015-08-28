@@ -74,7 +74,7 @@ class FeatureWSP : public Feature
 
                 std::string str = rmPlt(name);
                 const char *s = str.c_str();
-                uint32_t a;
+                uint32_t a = 0;
 
                 ret = elf.getAddrPlt(&s, &a, 1);
                 elf.close();

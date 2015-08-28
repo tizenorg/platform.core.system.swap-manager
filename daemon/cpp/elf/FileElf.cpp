@@ -330,13 +330,21 @@ int FileElf::doGetAddrPltARM(const char *names[], uint32_t addrs[], size_t cnt)
 
 int FileElf::doGetAddrPlt386(const char *names[], uint32_t addrs[], size_t cnt)
 {
-    const char *filename = this->path().c_str();
+    Elf_Addr *elf_addrs = NULL;
+    std::string filename(path());
     int ret;
+    size_t i;
 
-    ret = get_plt_addrs(filename, names, cnt, &addrs);
+    ret = get_plt_addrs(filename.c_str(), names, cnt, &elf_addrs);
     if (ret != 0) {
         LOGE("Error getting .plt: %s\n", get_str_error(ret));
         return -EINVAL;
+    }
+    if (elf_addrs != NULL) {
+        for (i = 0; i < cnt; i++) {
+            addrs[i] = (uint32_t)elf_addrs[i];
+        }
+        free(elf_addrs);
     }
 
     return 0;
