@@ -117,7 +117,7 @@ static uint32_t getAddrPlt(const char *path, const char *name)
         return 0;
     }
 
-    uint32_t addr;
+    uint32_t addr = 0;
     int ret = elf.getAddrPlt(&name, &addr, 1);
     elf.close();
 
