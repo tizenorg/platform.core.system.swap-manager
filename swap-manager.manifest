@@ -1,11 +1,18 @@
 <manifest>
 	<define>
 		<domain name="swap" />
-    <permit>
+	<permit>
 		<smack permit="system::use_internet" type="rw" />
 		<smack permit="system::debugging_network" type="rw" />
 		<smack permit="sdbd" type="rw" />
-    </permit>
+	</permit>
+	<request>
+		<smack request="_" type="rw" />
+		<smack request="system::homedir" type="rw" />
+		<smack request="device::bklight" type="rw" />
+		<smack request="device::input" type="rw" />
+		<smack request="launchpad" type="rw" />
+	</request>
 	</define>
 	<request>
 		<domain name="swap" />
