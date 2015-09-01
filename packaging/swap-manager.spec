@@ -39,12 +39,8 @@ mkdir -p %{buildroot}%{_libdir}/systemd/system
 
 %ifarch %{ix86}
 install -m 0644 swap.service %{buildroot}%{_libdir}/systemd/system/swap.service
-mkdir -p %{buildroot}/%{_libdir}/systemd/system/emulator.target.wants
-ln -s %{_libdir}/systemd/system/swap.service %{buildroot}/%{_libdir}/systemd/system/emulator.target.wants/
 %else
 install -m 0644 swap.service %{buildroot}%{_libdir}/systemd/system/swap.service
-mkdir -p %{buildroot}/%{_libdir}/systemd/system/multi-user.target.wants
-ln -s %{_libdir}/systemd/system/swap.service %{buildroot}/%{_libdir}/systemd/system/multi-user.target.wants/
 %endif
 
 cd daemon
