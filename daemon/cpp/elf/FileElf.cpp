@@ -338,6 +338,7 @@ int FileElf::doGetAddrPlt386(const char *names[], uint32_t addrs[], size_t cnt)
     ret = get_plt_addrs(filename.c_str(), names, cnt, &elf_addrs);
     if (ret != 0) {
         LOGE("Error getting .plt: %s\n", get_str_error(ret));
+        free(elf_addrs);
         return -EINVAL;
     }
     if (elf_addrs != NULL) {
