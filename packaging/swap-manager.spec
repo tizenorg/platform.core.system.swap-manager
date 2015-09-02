@@ -49,13 +49,6 @@ cd daemon
 %files
 %{_libdir}/systemd/system/swap.service
 
-%ifarch %{ix86}
-%{_libdir}/systemd/system/emulator.target.wants/swap.service
-%else
-
-%{_libdir}/systemd/system/multi-user.target.wants/swap.service
-%endif
-
 /usr/share/license/%{name}
 %manifest swap-manager.manifest
 %defattr(-,root,root,-)
