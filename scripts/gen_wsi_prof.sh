@@ -35,7 +35,12 @@ fi
 tmp=$(mktemp)
 
 func_names=()
-func_names+=(ewk_\(context\|view\)_inspector_server_start)
+
+if [ "$__tizen_profile_name__" == "tv" ]; then
+	func_names+=(ewk_view_inspector_server_start)
+else
+	func_names+=(ewk_context_inspector_server_start)
+fi
 func_names+=(_ZN3JSC16ProfileGenerator11willExecuteEPNS_9ExecStateERKNS_14CallIdentifierE)
 func_names+=(_ZN3JSC16ProfileGenerator10didExecuteEPNS_9ExecStateERKNS_14CallIdentifierE)
 
