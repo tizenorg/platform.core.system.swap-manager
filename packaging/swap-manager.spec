@@ -50,6 +50,7 @@ Requires:  swap-modules
 Requires:  swap-probe
 Requires:  swap-probe-elf
 Requires:  sdbd
+Requires:  libwebsockets
 
 %description
 SWAP manager is a part of data collection back-end for DA.
