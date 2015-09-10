@@ -12,6 +12,7 @@ BuildRequires:  aul-devel
 BuildRequires:  vconf-devel
 BuildRequires:  capi-system-info-devel
 BuildRequires:  capi-system-runtime-info-devel
+BuildRequires:  libwebsockets
 BuildRequires:  libwebsockets-devel
 %if "%{sec_product_feature_profile_wearable}" == "1"
 BuildRequires:  libjson-devel
