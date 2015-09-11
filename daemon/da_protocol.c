@@ -1233,6 +1233,53 @@ send_ack:
 	return -(err_code != ERR_NO);
 }
 
+int process_msg_get_real_path(struct msg_buf_t *msg)
+{
+	char *file_path = NULL;
+	char *resolved_path= NULL;
+	enum ErrorCode err_code = ERR_UNKNOWN;
+	uint32_t response_len = 0;
+
+	/* get file path */
+	file_path = parse_string_inplace(msg);
+	if (file_path == NULL) {
+		LOGE("NMSG_GET_REAL_PATH error: wrong string\n");
+		err_code = ERR_WRONG_MESSAGE_DATA;
+		goto send_fail;
+	}
+
+	/* resolve file path */
+	resolved_path = realpath(file_path, NULL);
+	LOGE("NMSG_GET_REAL_PATH resolved path <%s>\n", resolved_path);
+	if (resolved_path == NULL) {
+		LOGE("NMSG_GET_REAL_PATH error: cannot resolve path <%s>\n",
+		      file_path);
+		err_code = ERR_WRONG_MESSAGE_DATA;
+		goto send_fail;
+	}
+
+	response_len = strnlen(resolved_path, PATH_MAX) + 1;
+	if (resolved_path == (PATH_MAX + 1)) {
+		LOGE("NMSG_GET_REAL_PATH error: cannot resolve path <%s>"
+		     "too long path\n", file_path);
+		err_code = ERR_WRONG_MESSAGE_DATA;
+		goto send_fail;
+	}
+
+	err_code = ERR_NO;
+	goto send_ack;
+
+send_fail:
+	response_len = 0;
+	free(resolved_path);
+	resolved_path = "";
+send_ack:
+	/* success */
+	sendACKToHost(NMSG_GET_PROCESS_ADD_INFO, err_code, resolved_path, response_len);
+
+	return -(err_code != ERR_NO);
+}
+
 int process_msg_get_target_info()
 {
 	struct target_info_t target_info;
@@ -1416,6 +1463,8 @@ int host_message_handler(struct msg_t *msg)
 		return process_msg_get_screenshot(&msg_control);
 	case NMSG_GET_PROCESS_ADD_INFO:
 		return process_msg_get_process_add_info(&msg_control);
+	case NMSG_GET_REAL_PATH:
+		return process_msg_get_real_path(&msg_control);
 	default:
 		LOGE("unknown message %d <0x%08X>\n", msg->id, msg->id);
 		error_code = ERR_WRONG_MESSAGE_TYPE;
