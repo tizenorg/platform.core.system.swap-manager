@@ -25,6 +25,7 @@
  */
 
 #define MSG_ID_LIST \
+X(NMSG_UNKNOWN,			0x0000) \
 X(NMSG_VERSION,			0x0001) \
 X(NMSG_START,			0x0002) \
 X(NMSG_STOP,			0x0003) \

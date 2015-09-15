@@ -1468,6 +1468,7 @@ int host_message_handler(struct msg_t *msg)
 	default:
 		LOGE("unknown message %d <0x%08X>\n", msg->id, msg->id);
 		error_code = ERR_WRONG_MESSAGE_TYPE;
+		msg->id = NMSG_UNKNOWN;
 		goto send_ack;
 	}
 
