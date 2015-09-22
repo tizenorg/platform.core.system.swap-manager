@@ -1250,7 +1250,7 @@ int process_msg_get_real_path(struct msg_buf_t *msg)
 
 	/* resolve file path */
 	resolved_path = realpath(file_path, NULL);
-	LOGE("NMSG_GET_REAL_PATH resolved path <%s>\n", resolved_path);
+	LOGI("NMSG_GET_REAL_PATH resolved path <%s>\n", resolved_path);
 	if (resolved_path == NULL) {
 		LOGE("NMSG_GET_REAL_PATH error: cannot resolve path <%s>\n",
 		      file_path);
@@ -1275,7 +1275,7 @@ send_fail:
 	resolved_path = "";
 send_ack:
 	/* success */
-	sendACKToHost(NMSG_GET_PROCESS_ADD_INFO, err_code, resolved_path, response_len);
+	sendACKToHost(NMSG_GET_REAL_PATH, err_code, resolved_path, response_len);
 
 	return -(err_code != ERR_NO);
 }
