@@ -318,6 +318,12 @@ void terminate_all()
 
 	// wait for all other thread exit
 	target_wait_all();
+
+	/* FIXME this terminate needs to kill aplications which
+	 * did not connect to da_manager through port by some
+	 * reasons
+	 */
+	terminate_profiling_apps();
 }
 
 // terminate all profiling by critical error
@@ -392,8 +398,10 @@ static int launch_timer_start(void)
 	return res;
 }
 
-int prepare_profiling(void)
+/* terminate all profiling applications */
+int terminate_profiling_apps(void)
 {
+	int res = 0;
 	struct app_list_t *app = NULL;
 	const struct app_info_t *app_info = NULL;
 
@@ -403,14 +411,22 @@ int prepare_profiling(void)
 		return -1;
 	}
 
-	//all apps
+	/* all apps */
 	while (app_info != NULL) {
 		if (kill_app_by_info(app_info) != 0) {
 			LOGE("kill app failed\n");
-			return -1;
+			res = -1;
 		}
 		app_info = app_info_get_next(&app);
 	}
+
+	return res;
+}
+
+int prepare_profiling(void)
+{
+	/* terminate all profiling applications */
+	terminate_profiling_apps();
 	//init rw for systeminfo
 	//init recv send network systeminfo
 	sys_stat_prepare();
