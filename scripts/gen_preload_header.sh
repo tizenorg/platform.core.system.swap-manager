@@ -1,7 +1,7 @@
 #!/bin/bash
 preload_library_pattern="libdl[.-].*"
 preload_library_path="/lib/"
-preload_open_function="dlopen"
+preload_open_function="dlopen@"
 handlers_lib="/usr/lib/da_probe_tizen.so"
 linker_path="/lib/"
 linker_sym="_r_debug"
