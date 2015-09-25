@@ -60,6 +60,17 @@
 #define CLRSTAT(S, F)				((S) &= ~(F))
 #define CHKSTAT(S, F)				(((S) & (F)) ? 1: 0)
 
+
+#define LOG_STATUS LOGW(">>>>> state : %s %s %s %s %s %s\n",\
+	CHKSTAT(pstate, PSTATE_DEFAULT)?"PSTATE_DEFAULT":"",\
+	CHKSTAT(pstate, PSTATE_CONNECTED)?"PSTATE_CONNECTED":"",\
+	CHKSTAT(pstate, PSTATE_PROFILING)?"PSTATE_PROFILING":"",\
+	CHKSTAT(pstate, PSTATE_WAIT_ACK)?"PSTATE_WAIT_ACK":"",\
+	CHKSTAT(pstate, PSTATE_TIMEOUT)?"PSTATE_TIMEOUT":"",\
+	CHKSTAT(pstate, PSTATE_START)?"PSTATE_START":"",\
+	CHKSTAT(pstate, PSTATE_DISCONNECT)?"PSTATE_DISCONNECT":"")
+
+
 enum protocol_names {
 	PROTOCOL_PROFILING
 };
@@ -72,6 +83,7 @@ int pstate = PSTATE_DEFAULT;
 int request_id = 1;
 
 pthread_t wsi_start_thread = -1;
+pthread_t wsi_handle_thread = -1;
 
 static void wsi_destroy(void);
 
@@ -151,15 +163,8 @@ int wsi_set_smack_rules(const struct app_info_t *app_info)
 	char *package_id;
 	size_t id_maxlen = 128;
 
-	app_id = malloc(sizeof(char) * (strnlen(app_info->app_id, id_maxlen) + 1));
-
-	if (app_id == NULL) {
-		LOGE("app id alloc error\n");
-		ret = 1;
-		goto exit;
-	}
-
-	strcpy(app_id, app_info->app_id);
+	app_id = strndup(app_info->app_id, id_maxlen);
+	app_id[id_maxlen] = '\0';
 	package_id = strtok(app_id, delim);
 
 	if (package_id != NULL) {
@@ -223,16 +228,21 @@ static void send_request(const char *method)
 		LOGE("cannot parse json object (method: %s)\n", method);
 		return;
 	}
-	strncpy(buf, payload, MAX_REQUEST_LENGTH);
 
-	if (libwebsocket_write(wsi, (unsigned char *)buf, strlen(payload),
+	if (strnlen(payload, MAX_REQUEST_LENGTH) != MAX_REQUEST_LENGTH)
+		LOGI("json generated len: %d; msg: %s\n", strlen(payload), payload);
+	else
+		LOGE("bad payload!!!\n");
+
+	strncpy(buf, payload, MAX_REQUEST_LENGTH - 1);
+
+	if (libwebsocket_write(wsi, (unsigned char *)buf, strnlen(payload, MAX_REQUEST_LENGTH - 1) + 1,
 			       LWS_WRITE_TEXT) < 0) {
 		LOGE("cannot write to web socket (method: %s)\n", method);
 		return;
 	}
 
 	SETSTAT(pstate, PSTATE_WAIT_ACK);
-	LOGI("json message send; len: %d; msg: %s\n", strlen(payload), payload);
 }
 
 static int profiling_callback(struct libwebsocket_context *context,
@@ -252,10 +262,12 @@ static int profiling_callback(struct libwebsocket_context *context,
 		send_request("Profiler.start");
 		break;
 
+	case LWS_CALLBACK_DEL_POLL_FD:
+		LOGE("LWS_CALLBACK_DEL_POLL_FD\n");
 	case LWS_CALLBACK_CLOSED:
 		LOGI("Connection closed\n");
 		CLRSTAT(pstate, PSTATE_CONNECTED);
-		CLRSTAT(pstate, PSTATE_DISCONNECT);
+		SETSTAT(pstate, PSTATE_DISCONNECT);
 		break;
 
 	case LWS_CALLBACK_CLIENT_RECEIVE:
@@ -314,13 +326,65 @@ static int profiling_callback(struct libwebsocket_context *context,
 		break;
 
 	case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
-		LOGE("Web socket connection error\n");
+		LOGE("Web socket connection error. Falling down\n");
 		/*
 		 * TODO: need report to host about error. May be should stop
 		 * web profiling and/or launching web application
 		 */
 		break;
-
+/*
+	case LWS_CALLBACK_ESTABLISHED:
+		LOGE("LWS_CALLBACK_ESTABLISHED\n");
+		break;
+	case LWS_CALLBACK_RECEIVE:
+		LOGE("LWS_CALLBACK_RECEIVE\n");
+		break;
+	case LWS_CALLBACK_CLIENT_RECEIVE_PONG :
+		LOGE("LWS_CALLBACK_CLIENT_RECEIVE_PONG\n");
+		break;
+	case LWS_CALLBACK_CLIENT_WRITEABLE:
+		LOGE("LWS_CALLBACK_CLIENT_WRITEABLE\n");
+		break;
+	case LWS_CALLBACK_SERVER_WRITEABLE:
+		LOGE("LWS_CALLBACK_SERVER_WRITEABLE\n");
+		break;
+	case LWS_CALLBACK_HTTP:
+		LOGE("LWS_CALLBACK_HTTP\n");
+		break;
+	case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
+		LOGE("LWS_CALLBACK_FILTER_NETWORK_CONNECTION\n");
+		break;
+	case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
+		LOGE("LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION\n");
+		break;
+	case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
+		LOGE("LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS\n");
+		break;
+	case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS:
+		LOGE("LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS\n");
+		break;
+	case LWS_CALLBACK_OPENSSL_PERFORM_CLIENT_CERT_VERIFICATION:
+		LOGE("LWS_CALLBACK_OPENSSL_PERFORM_CLIENT_CERT_VERIFICATION\n");
+		break;
+	case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
+		LOGE("LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER\n");
+		break;
+	case LWS_CALLBACK_CONFIRM_EXTENSION_OKAY:
+		LOGE("LWS_CALLBACK_CONFIRM_EXTENSION_OKAY\n");
+		break;
+	case LWS_CALLBACK_CLIENT_CONFIRM_EXTENSION_SUPPORTED:
+		LOGE("LWS_CALLBACK_CLIENT_CONFIRM_EXTENSION_SUPPORTED\n");
+		break;
+	case LWS_CALLBACK_ADD_POLL_FD:
+		LOGE("LWS_CALLBACK_ADD_POLL_FD\n");
+		break;
+	case LWS_CALLBACK_SET_MODE_POLL_FD:
+		LOGE("LWS_CALLBACK_SET_MODE_POLL_FD\n");
+		break;
+	case LWS_CALLBACK_CLEAR_MODE_POLL_FD:
+		LOGE("LWS_CALLBACK_CLEAR_MODE_POLL_FD\n");
+		break;
+*/
 	default:
 		LOGW("Message unknown. Reason: %d\n", reason);
 		break;
@@ -343,7 +407,7 @@ static int init_wsi_conn(struct libwebsocket_context **context,
 			 struct libwebsocket **wsi,
 			 const char *address, int port)
 {
-	struct lws_context_creation_info info;
+	static struct lws_context_creation_info info;
 	char host[32];
 	char origin[32];
 	const char *page = "/devtools/page/1";
@@ -351,6 +415,7 @@ static int init_wsi_conn(struct libwebsocket_context **context,
 
 	sprintf(host, "%s:%d", address, port);
 	sprintf(origin, "http://%s:%d", address, port);
+	LOGI(" host =<%s> origin = <%s>\n", host, origin);
 
 	memset(&info, 0, sizeof(info));
 
@@ -388,9 +453,13 @@ static int init_wsi_conn(struct libwebsocket_context **context,
 static void *handle_ws_responses(void *arg)
 {
 	while (CHKSTAT(pstate, PSTATE_START | PSTATE_PROFILING |
-		       PSTATE_WAIT_ACK))
-		libwebsocket_service(context, 50);
+		       PSTATE_WAIT_ACK) && !CHKSTAT(pstate, PSTATE_DISCONNECT)) {
+			LOG_STATUS;
 
+		int res = libwebsocket_service(context, 1000);
+	}
+
+	LOGI("handle response thread finished\n");
 	return NULL;
 }
 
@@ -424,10 +493,12 @@ static int wsi_init(const char *address, int port)
 static void wsi_destroy(void)
 {
 	if (CHKSTAT(pstate, PSTATE_CONNECTED)) {
-		if (CHKSTAT(pstate, PSTATE_WAIT_ACK))
+		if (CHKSTAT(pstate, PSTATE_WAIT_ACK)) {
 			SETSTAT(pstate, PSTATE_DISCONNECT);
-		else
+		} else {
+			LOGI("destroy context\n");
 			destroy_wsi_conn(context);
+		}
 	} else {
 		LOGW("Try disconnect when web socket not connected\n");
 	}
@@ -435,11 +506,9 @@ static void wsi_destroy(void)
 
 static int wsi_start_profiling(void)
 {
-	pthread_t tid;
-
 	SETSTAT(pstate, PSTATE_START);
 
-	if (pthread_create(&tid, NULL, &handle_ws_responses, NULL)) {
+	if (pthread_create(&wsi_handle_thread, NULL, &handle_ws_responses, NULL)) {
 		LOGE("Can't create handle_ws_ threads\n");
 		destroy_wsi_conn(context);
 		return 1;
@@ -498,9 +567,20 @@ void wsi_stop(void)
 			LOGE("Cannot disable web application profiling\n");
 	}
 
+	SETSTAT(pstate, PSTATE_DISCONNECT);
+
 	if (wsi_start_thread != -1)
 		pthread_join(wsi_start_thread, &thread_ret);
-
 	wsi_start_thread = -1;
-	wsi_destroy();
+
+
+	if (wsi_handle_thread != -1) {
+		LOGI("wait handle thread");
+		pthread_join(wsi_handle_thread, &thread_ret);
+	}
+	wsi_handle_thread = -1;
+
+	destroy_wsi_conn(context);
+
+	CLRSTAT(pstate, PSTATE_DISCONNECT);
 }
