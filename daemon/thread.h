@@ -37,7 +37,7 @@ void thread_dtor(struct thread *t);
 
 
 int thread_start(struct thread *t, void *(*func) (void *), void *data);
-int thread_wait(struct thread *t);
+int target_wait(struct target *t);
 
 
 #endif /* _THREAD_H_ */

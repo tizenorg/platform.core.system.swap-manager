@@ -30,6 +30,7 @@
 
 
 #include "swap_debug.h"
+#include "target.h"
 
 
 struct thread {
@@ -75,16 +76,22 @@ int thread_start(struct thread *t, void *(*func) (void *), void *data)
 	return ret;
 }
 
-int thread_wait(struct thread *t)
+int thread_wait(struct target *t)
 {
 	int ret = ESRCH;
 
-	pthread_mutex_lock(&t->mutex);
-	if (t->run_flag == 1) {
-		ret = pthread_join(t->thread, NULL);
-		t->run_flag = 0;
+	LOGI("lock[%u:%u]>\n", (unsigned int)t->pid, (unsigned int)t->ppid);
+	pthread_mutex_lock(&(t->thread->mutex));
+	LOGI("locked[%u:%u]>\n", (unsigned int)t->pid, (unsigned int)t->ppid);
+	if (t->thread->run_flag == 1) {
+		LOGI("join[%u:%u]>\n", (unsigned int)t->pid, (unsigned int)t->ppid);
+		ret = pthread_join(t->thread->thread, NULL);
+		t->thread->run_flag = 0;
+		LOGI("joined[%u:%u]>\n", (unsigned int)t->pid, (unsigned int)t->ppid);
 	}
-	pthread_mutex_unlock(&t->mutex);
+	LOGI("unlock[%u:%u]>\n", (unsigned int)t->pid, (unsigned int)t->ppid);
+	pthread_mutex_unlock(&(t->thread->mutex));
+	LOGI("unlocked[%u:%u]>\n", (unsigned int)t->pid, (unsigned int)t->ppid);
 
 	return ret;
 }

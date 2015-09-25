@@ -50,6 +50,7 @@ struct target *target_ctor(void)
 		t->socket = UNKNOWN_FD;
 		t->event_fd = UNKNOWN_FD;
 		t->initial_log = 0;
+		t->uninited = 0;
 		t->allocmem = 0;
 
 		t->thread = thread_ctor();
@@ -65,6 +66,7 @@ struct target *target_ctor(void)
 void target_dtor(struct target *t)
 {
 	t->allocmem = 0;
+	t->uninited = 0;
 	t->initial_log = 0;
 
 	if (t->event_fd != -1)
@@ -114,7 +116,7 @@ int target_start(struct target *t, void *(*start_routine) (void *))
 
 int target_wait(struct target *t)
 {
-	return thread_wait(t->thread);
+	return thread_wait(t);
 }
 
 
@@ -160,6 +162,11 @@ static struct target *target_malloc(void)
 
 	target_array_lock();
 	for (i = 0; i < MAX_TARGET_COUNT; i++) {
+		if (target_use[i] == 1 && target_array[i].uninited == 1) {
+			target_dtor(&target_array[i]);
+			target_use[i] = 0;
+		}
+
 		if (target_use[i] == 0) {
 			target_use[i] = 1;
 			t = &target_array[i];
@@ -237,16 +244,34 @@ void target_wait_all(void)
 
 	target_array_lock();
 	for (i = 0; i < MAX_TARGET_COUNT; ++i) {
+		LOGI("target_use [%d] = %d\n", i, target_use[i]);
 		if (target_use[i] == 0)
 			continue;
 
 		t = target_get(i);
+		if (close(t->socket) != 0) {
+			LOGW("target socket already closed %u:%u\n", (unsigned int)t->pid, (unsigned int)t->ppid);
+		}
 
-		LOGI("join recv thread [%d] is started\n", i);
+		LOGI("join recv thread [%d] %u:%u is started\n", i, (unsigned int)t->pid, (unsigned int)t->ppid);
 		target_wait(t);
-		LOGI("join recv thread %d. done\n", i);
+		LOGI("join recv thread [%d] %u:%u done\n", i, (unsigned int)t->pid, (unsigned int)t->ppid);
 	}
+
 	target_array_unlock();
+
+	for (i = 0; i < MAX_TARGET_COUNT; ++i) {
+		if (target_use[i] == 0)
+			continue;
+		t = target_get(i);
+		while (t->uninited != 1) {
+			LOGI("wait uninit [%d] %u:%u\n", i, t->pid, t->ppid);
+			sleep(1);
+		}
+		LOGI("target destroy [%d] start\n", i);
+		target_dtor(t);
+		LOGI("target destroy [%d] done\n", i);
+	}
 }
 
 uint64_t target_get_total_alloc(pid_t pid)

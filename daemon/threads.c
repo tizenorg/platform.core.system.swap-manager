@@ -233,6 +233,7 @@ static void* recvThread(void* data)
 		pass = 1;
 	}
 
+	LOGI("thread finished %u:%u\n", target->pid, target->ppid);
 	return NULL;
 }
 
