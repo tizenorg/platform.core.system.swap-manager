@@ -675,13 +675,14 @@ static int target_event_stop_handler(struct target *target)
 	int cnt;
 	enum app_type_t app_type = target->app_type;
 
-	LOGI("target[%p] close, pid(%d) : (remaining %d target)\n",
-	     target, target_get_pid(target), target_cnt_get() - 1);
+	LOGI("target[%p] close, pid(%d) : (remaining %d target) close ecore handler %p\n",
+	     target, target_get_pid(target), target_cnt_get() - 1, target->handler);
 
 	ecore_main_fd_handler_del(target->handler);
 
-	target_wait(target);
-	target_dtor(target);
+	/* mark target uninitialised */
+	target->event_fd_released = 1;
+
 	// all target client are closed
 	cnt = target_cnt_sub_and_fetch();
 	if (0 == cnt) {

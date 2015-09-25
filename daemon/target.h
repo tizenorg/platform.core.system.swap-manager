@@ -55,6 +55,7 @@ struct target {
 					 * (from recv thread to main thread) */
 	int initial_log;		/* written only by main thread */
 	Ecore_Fd_Handler *handler;	/* calculated when connecting */
+	int event_fd_released;
 
 	struct thread *thread;
 };
