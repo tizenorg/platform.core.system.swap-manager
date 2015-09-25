@@ -29,6 +29,7 @@
 #ifndef _DAEMON_DEBUG_H_
 #define _DAEMON_DEBUG_H_
 
+#include <sys/syscall.h>
 #include <stdint.h>		// for uint64_t, int64_t
 #include <pthread.h>	// for pthread_mutex_t
 #include <stdarg.h>
@@ -96,7 +97,10 @@ static inline void do_log(const char *prefix, const char *funcname, int line, ..
 {
 	va_list ap;
 	const char *fmt;
-	fprintf(stderr, "[%s][%f] (%s:%d):", prefix, get_uptime(), funcname, line);
+	fprintf(stderr, "[%s][%f] PID %u:%u (%s:%d):", prefix, get_uptime(),
+		(unsigned int)getpid(),
+		(unsigned int)syscall(SYS_gettid),
+		funcname, line);
 
 	va_start(ap, line);
 	fmt = va_arg(ap, const char *);
