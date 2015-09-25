@@ -92,11 +92,15 @@ void print_buf(char *buf, int len, const char *info);
 	#define LOG_ONCE_E(...)
 #endif
 
+#include <sys/syscall.h>
 static inline void do_log(const char *prefix, const char *funcname, int line, ...)
 {
 	va_list ap;
 	const char *fmt;
-	fprintf(stderr, "[%s][%f] (%s:%d):", prefix, get_uptime(), funcname, line);
+	fprintf(stderr, "[%s][%f] PID %u:%u (%s:%d):", prefix, get_uptime(),
+		(unsigned int)getpid(),
+		(unsigned int)syscall(__NR_gettid),
+		funcname, line);
 
 	va_start(ap, line);
 	fmt = va_arg(ap, const char *);
