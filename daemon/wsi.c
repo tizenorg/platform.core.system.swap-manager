@@ -55,6 +55,8 @@
 #define PSTATE_TIMEOUT				(1L << ( 3))
 #define PSTATE_START				(1L << ( 4))
 #define PSTATE_DISCONNECT			(1L << ( 5))
+#define PSTATE_INIT_START			(1L << ( 6))
+#define PSTATE_INIT_DONE			(1L << ( 7))
 
 #define SETSTAT(S, F)				((S) |= (F))
 #define CLRSTAT(S, F)				((S) &= ~(F))
@@ -412,6 +414,7 @@ static void *handle_ws_responses(void *arg)
 
 static int wsi_init(const char *address, int port)
 {
+	int res = 0;
 	if (!port) {
 		char buf[sizeof(struct msg_t) + sizeof(uint32_t)];
 		struct msg_t *msg = (struct msg_t *)buf;
@@ -426,15 +429,18 @@ static int wsi_init(const char *address, int port)
 		LOGI("wrt-launcher debug port: %d\n", port);
 	} else {
 		LOGE("wrt-launcher debug port not exist\n");
-		return 1;
+		res = 1;
+		goto exit;
 	}
 
 	if (init_wsi_conn(&context, &wsi, address, port) != 0) {
 		LOGE("cannot init wsi connection\n");
-		return 1;
+		res = 1;
+		goto exit;
 	}
 
-	return 0;
+exit:
+	return res;
 }
 
 static void wsi_destroy(void)
@@ -453,8 +459,6 @@ static void wsi_destroy(void)
 
 static int wsi_start_profiling(void)
 {
-	SETSTAT(pstate, PSTATE_START);
-
 	if (pthread_create(&wsi_handle_thread, NULL, &handle_ws_responses, NULL)) {
 		LOGE("Can't create handle_ws_ threads\n");
 		destroy_wsi_conn(context);
@@ -478,11 +482,17 @@ static void *do_start(void *arg)
 
 	if (wsi_init(WSI_HOST, 0)) {
 		LOGE("Cannot init web application profiling\n");
+		pstate = PSTATE_DEFAULT;
 		goto out;
 	}
 
-	if (wsi_start_profiling())
+	if (wsi_start_profiling()) {
 		LOGE("Cannot start web application profiling\n");
+		pstate = PSTATE_DEFAULT;
+		goto out;
+	}
+
+	SETSTAT(pstate, PSTATE_INIT_DONE);
 
 out:
 	LOGI("wsi thread finished\n");
@@ -492,12 +502,13 @@ out:
 int wsi_start(void)
 {
 	int ret;
+	SETSTAT(pstate, PSTATE_INIT_START);
 
 	ret = pthread_create(&wsi_start_thread, NULL, &do_start, NULL);
 	if (ret) {
 		LOGE("Can't create do_start thread\n");
 		wsi_start_thread = -1;
-		destroy_wsi_conn(context);
+		pstate = PSTATE_DEFAULT;
 	}
 
 	return ret;
@@ -506,6 +517,23 @@ int wsi_start(void)
 void wsi_stop(void)
 {
 	void *thread_ret = NULL;
+
+	if (CHKSTAT(pstate, PSTATE_INIT_START)) {
+		/* init was start */
+		while (!CHKSTAT(pstate, PSTATE_INIT_DONE) && !CHKSTAT(pstate, PSTATE_DEFAULT)) {
+			LOGW("stop request while init not finished. wait.\n");
+			sleep(1);
+		}
+
+		if (CHKSTAT(PSTATE_DEFAULT)) {
+			LOGE("wsi init fail.\n");
+			return;
+		}
+	} else {
+		/* init has not be started */
+		LOGW("Try stop wsi without swi_start call. Ignored.\n");
+		return;
+	}
 
 	wsi_stop_profiling();
 
@@ -529,5 +557,5 @@ void wsi_stop(void)
 
 	destroy_wsi_conn(context);
 
-	CLRSTAT(pstate, PSTATE_DISCONNECT);
+	pstate = PSTATE_DEFAULT;
 }
