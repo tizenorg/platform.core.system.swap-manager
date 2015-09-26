@@ -55,6 +55,8 @@
 #define PSTATE_TIMEOUT				(1L << ( 3))
 #define PSTATE_START				(1L << ( 4))
 #define PSTATE_DISCONNECT			(1L << ( 5))
+#define PSTATE_INIT_START			(1L << ( 6))
+#define PSTATE_INIT_DONE			(1L << ( 7))
 
 #define SETSTAT(S, F)				((S) |= (F))
 #define CLRSTAT(S, F)				((S) &= ~(F))
@@ -486,12 +488,14 @@ static void *do_start(void *arg)
 
 out:
 	LOGI("wsi thread finished\n");
+	SETSTAT(pstate, PSTATE_INIT_DONE);
 	return NULL;
 }
 
 int wsi_start(void)
 {
 	int ret;
+	SETSTAT(pstate, PSTATE_INIT_START);
 
 	ret = pthread_create(&wsi_start_thread, NULL, &do_start, NULL);
 	if (ret) {
@@ -506,6 +510,18 @@ int wsi_start(void)
 void wsi_stop(void)
 {
 	void *thread_ret = NULL;
+
+	if (CHKSTAT(pstate, PSTATE_INIT_START)) {
+		/* init was start */
+		while (!CHKSTAT(pstate, PSTATE_INIT_DONE)) {
+			LOGW("stop request while init not finished. wait.\n");
+			sleep(1);
+		}
+	} else {
+		/* init has not be started */
+		LOGW("Try stop wsi without swi_start call. Ignored.\n");
+		return;
+	}
 
 	wsi_stop_profiling();
 
@@ -529,5 +545,5 @@ void wsi_stop(void)
 
 	destroy_wsi_conn(context);
 
-	CLRSTAT(pstate, PSTATE_DISCONNECT);
+	pstate = PSTATE_DEFAULT;
 }
