@@ -5,6 +5,10 @@
 
 #ifdef MALLOC_DEBUG_LEVEL
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void print_malloc_list(char *file_name, int only_count);
 
 #define malloc(size) malloc_call_d( __LINE__ , __FILE__, __FUNCTION__, size)
@@ -19,6 +23,11 @@ void *calloc_call_d(int line, const char *file_name, const char *func_name,
 
 void free_call_d(int line, const char *file_name, const char *function,
 		 void *addr);
+
+#ifdef __cplusplus
+}
+#endif
+
 #else /* MALLOC_DEBUG_LEVEL */
 
 #define print_malloc_list(...) do{}while(0)
