@@ -394,7 +394,7 @@ int parse_app_inst_list(struct msg_buf_t *msg,
 		!check_lib_inst_count(*num))
 	{
 		LOGE("app num parsing error\n");
-		return 0;
+		goto exit_fail;
 	}
 
 	parse_deb("app_int_num = %d\n", *num);
@@ -406,7 +406,7 @@ int parse_app_inst_list(struct msg_buf_t *msg,
 		if (!parse_inst_app(msg, &app)) {
 			// TODO maybe need free allocated memory up there
 			LOGE("parse is inst app #%d failed\n", i + 1);
-			return 0;
+			goto exit_fail_clean_list;
 		}
 
 		info = app->app;
@@ -414,8 +414,7 @@ int parse_app_inst_list(struct msg_buf_t *msg,
 				 info->setup_data.data, info->setup_data.size);
 		if (err) {
 			LOGE("add app, ret=%d\n", err);
-			free_app(app);
-			return 0;
+			goto exit_fail_release_app;
 		}
 
 		data_list_append((struct data_list_t **)app_list,
@@ -424,10 +423,20 @@ int parse_app_inst_list(struct msg_buf_t *msg,
 
 	if (!parse_replay_event_seq(msg, &prof_session.replay_event_seq)) {
 		LOGE("replay parsing error\n");
-		return 0;
+		goto exit_fail_clean_list;
 	}
 
 	return 1;
+
+exit_fail_release_app:
+	free_app(app);
+exit_fail_clean_list:
+	/* TODO free app list */
+	free_data_list(app_list);
+exit_fail:
+	*num = 0;
+	app_list = NULL;
+	return 0;
 }
 /* ld probes */
 #define NOFEATURE 0x123456
