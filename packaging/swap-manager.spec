@@ -91,6 +91,10 @@ cp LICENSE %{buildroot}/usr/share/license/%{name}
 cd daemon
 %make_install
 
+%post
+mkdir -p /opt/usr/etc
+touch /opt/usr/etc/resourced_proc_exclude.ini
+
 %files
 /usr/share/license/%{name}
 %manifest swap-manager.manifest

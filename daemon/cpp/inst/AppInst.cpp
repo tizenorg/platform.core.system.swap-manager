@@ -24,6 +24,7 @@
  */
 
 
+#include "Anr.h"
 #include "AppInst.h"
 #include "AppInstTizen.h"
 #include "AppInstRunning.h"
@@ -32,9 +33,17 @@
 #include "swap_debug.h"
 
 
-AppInst *AppInst::create(AppType type, const AppInstInfo &info)
+static std::string getAnrName(const AppInstInfo &info)
+{
+    return info.type() == AT_WEB ?
+                info.id() :
+                basename(info.path().c_str());
+}
+
+AppInst *AppInst::create(const AppInstInfo &info)
 {
     AppInst *app(0);
+    AppType type = info.type();
 
     switch (type) {
     case AT_TIZEN:
@@ -63,11 +72,21 @@ AppInst *AppInst::create(AppType type, const AppInstInfo &info)
         }
     }
 
+    if (app) {
+        int ret = Anr::add(getAnrName(info));
+        if (ret)
+            LOGE("failed Anr::add: ret=%d\n", ret);
+    }
+
     return app;
 }
 
 void AppInst::destroy(AppInst *app)
 {
+    int ret = Anr::del(getAnrName(app->info()));
+    if (ret)
+        LOGE("failed Anr::del: ret=%d\n", ret);
+
     app->uninit();
     delete app;
 }

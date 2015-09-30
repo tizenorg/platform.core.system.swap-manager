@@ -120,6 +120,7 @@ SRC_CPP := \
 \
 	cpp/inst/AppInst.cpp \
 	cpp/inst/AppInstCont.cpp \
+	cpp/inst/Anr.cpp \
 \
 	cpp/elf/File.cpp \
 	cpp/elf/FileElf.cpp
