@@ -64,18 +64,21 @@ static inline const char *type2str(AppType type)
 class AppInstInfo
 {
 public:
-    AppInstInfo(const std::string &id, const std::string &path,
+    AppInstInfo(AppType type, const std::string &id, const std::string &path,
                 const ByteArray &data) :
+        _type(type),
         _id(id),
         _path(path),
         _data(data)
     {}
 
+    const AppType type() const { return _type ; }
     const std::string &id() const { return _id; }
     const std::string &path() const { return _path; }
     const ByteArray &data() const { return _data; }
 
 private:
+    enum AppType _type;
     const std::string _id;
     const std::string _path;
     const ByteArray _data;
@@ -85,7 +88,7 @@ private:
 class AppInst
 {
 public:
-    static AppInst *create(AppType type, const AppInstInfo &info);
+    static AppInst *create(const AppInstInfo &info);
     static void destroy(AppInst *app);
 
     const AppInstInfo &info() const { return *_info; }

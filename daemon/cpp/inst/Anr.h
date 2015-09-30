@@ -23,45 +23,16 @@
  *
  */
 
+#ifndef ANR_H
+#define ANR_H
 
-#include "AppInstCont.h"
-#include "AppInst.h"
+#include <string>
 
+namespace Anr {
 
-AppInstCont &AppInstCont::instance()
-{
-    static AppInstCont cont;
+int add(const std::string &name);
+int del(const std::string &name);
 
-    return cont;
-}
+} // namespace Anr
 
-AppInstCont::AppInstCont()
-{
-}
-
-AppInstCont::~AppInstCont()
-{
-    clear();
-}
-
-int AppInstCont::add(AppType type, const std::string &id,
-                     const std::string &path, const ByteArray &data)
-{
-    AppInstInfo info(type, id, path, data);
-
-    AppInst *app = AppInst::create(info);
-    if (app == 0)
-        return -EINVAL;
-
-    _list.push_back(app);
-
-    return 0;
-}
-
-void AppInstCont::clear()
-{
-    for (AppInstList::const_iterator it = _list.begin(); it != _list.end(); ++it)
-        AppInst::destroy(*it);
-
-    _list.clear();
-}
+#endif // ANR_H
