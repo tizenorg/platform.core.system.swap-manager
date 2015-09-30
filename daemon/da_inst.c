@@ -1102,13 +1102,19 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 			LOGI("Set LD probes for %016LX <%s>\n", f.feature_value, &buf[0]);
 
 			feature_add_lib_inst_list(f.feature_ld, &ld_lib_inst_list_new_add);
-		} else if ((f.feature_value & to_disable_features_0) ||
-			   (f.feature_value & to_disable_features_1 << 64)) {
+		} else if (((f.feature_value & to_disable_features_0) &&
+			    !(f.feature_value & ~to_disable_features_0) ||
+			   ((f.feature_value & to_disable_features_1 << 64) &&
+			    !(f.feature_value & ~(to_disable_features_1 << 64))))) {
+			/* If
+			 *   (feature_value & to_disable) == (feature_value & ~to_disable)
+			 * then this is NOFEATURE probe, so, do not remove */
+
 			buf[0] = '\0';
 
 			feature_code_str(f.feature_value, f.feature_value, &buf[0],
 					 sizeof(buf));
-			LOGI("Set LD probes for %016LX <%s>\n", f.feature_value, &buf[0]);
+			LOGI("Remove LD probes for %016LX <%s>\n", f.feature_value, &buf[0]);
 
 			feature_add_lib_inst_list(f.feature_ld, &ld_lib_inst_list_new_remove);
 		}
