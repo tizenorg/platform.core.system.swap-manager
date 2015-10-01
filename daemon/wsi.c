@@ -48,15 +48,15 @@
 
 #define MAX_MSG_LENGTH				4096
 
-#define PSTATE_DEFAULT				(0)
-#define PSTATE_CONNECTED			(1L << ( 0))
-#define PSTATE_PROFILING			(1L << ( 1))
-#define PSTATE_WAIT_ACK				(1L << ( 2))
-#define PSTATE_TIMEOUT				(1L << ( 3))
-#define PSTATE_START				(1L << ( 4))
-#define PSTATE_DISCONNECT			(1L << ( 5))
-#define PSTATE_INIT_START			(1L << ( 6))
-#define PSTATE_INIT_DONE			(1L << ( 7))
+#define PSTATE_DEFAULT				(1L << ( 0))
+#define PSTATE_CONNECTED			(1L << ( 1))
+#define PSTATE_PROFILING			(1L << ( 2))
+#define PSTATE_WAIT_ACK				(1L << ( 3))
+#define PSTATE_TIMEOUT				(1L << ( 4))
+#define PSTATE_START				(1L << ( 5))
+#define PSTATE_DISCONNECT			(1L << ( 6))
+#define PSTATE_INIT_START			(1L << ( 7))
+#define PSTATE_INIT_DONE			(1L << ( 8))
 
 #define SETSTAT(S, F)				((S) |= (F))
 #define CLRSTAT(S, F)				((S) &= ~(F))
@@ -273,6 +273,7 @@ static int profiling_callback(struct libwebsocket_context *context,
 
 	case LWS_CALLBACK_DEL_POLL_FD:
 		LOGE("LWS_CALLBACK_DEL_POLL_FD\n");
+		/* Call through. Connection closed. */
 	case LWS_CALLBACK_CLOSED:
 		LOGI("Connection closed\n");
 		CLRSTAT(pstate, PSTATE_CONNECTED);
@@ -498,6 +499,7 @@ static void *do_start(void *arg)
 		goto out;
 	}
 
+	CLRSTAT(pstate, PSTATE_DEFAULT);
 	SETSTAT(pstate, PSTATE_INIT_DONE);
 
 out:
@@ -526,7 +528,7 @@ void wsi_stop(void)
 
 	if (CHKSTAT(pstate, PSTATE_INIT_START)) {
 		/* init was start */
-		while (!CHKSTAT(pstate, PSTATE_INIT_DONE) && !CHKSTAT(pstate, PSTATE_DEFAULT)) {
+		while (!CHKSTAT(pstate, PSTATE_INIT_DONE | PSTATE_DEFAULT)) {
 			LOGW("stop request while init not finished. wait.\n");
 			sleep(1);
 		}
