@@ -499,8 +499,8 @@ static void *do_start(void *arg)
 		goto out;
 	}
 
-	SETSTAT(pstate, PSTATE_INIT_DONE);
 	CLRSTAT(pstate, PSTATE_DEFAULT);
+	SETSTAT(pstate, PSTATE_INIT_DONE);
 
 out:
 	LOGI("wsi thread finished\n");

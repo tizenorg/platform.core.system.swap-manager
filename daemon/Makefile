@@ -29,7 +29,7 @@ INCLUDE := \
 	-I/usr/include/eo-1
 # CALL_MNGR
 ifeq ($(CALL_MNGR),y)
-INCLUDE += -I/usr/include/call-manager/
+INCLUDE += -I/usr/include/callmgr_client
 endif # CALL_MNGR
 
 FLAGS := \
@@ -74,7 +74,7 @@ LDFLAGS := \
 
 # CALL_MNGR
 ifeq ($(CALL_MNGR),y)
-LDFLAGS += -lcall-manager
+LDFLAGS += -lcallmgr_client
 endif # CALL_MNGR
 
 # set using old json

@@ -20,8 +20,7 @@ BuildRequires:  pkgconfig(json-c)
 %endif
 BuildRequires:  pkgconfig(ecore)
 %if "%{?tizen_profile_name}" == "mobile"
-BuildRequires:  call-manager
-BuildRequires:  libcall-manager-devel
+BuildRequires:  pkgconfig(callmgr_client)
 %endif
 BuildRequires:  swap-probe-devel
 BuildRequires:  swap-probe-elf
