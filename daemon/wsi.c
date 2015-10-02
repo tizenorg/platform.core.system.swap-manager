@@ -430,14 +430,22 @@ static void *handle_ws_responses(void *arg)
 static int wsi_init(const char *address, int port)
 {
 	int res = 0;
+	int i = 0;
 	if (!port) {
 		char buf[sizeof(struct msg_t) + sizeof(uint32_t)];
 		struct msg_t *msg = (struct msg_t *)buf;
 
 		msg->id = NMSG_WRT_LAUNCHER_PORT;
 		msg->len = sizeof(uint32_t);
-		if (!ioctl_send_msg(msg))
-			port = *(int *)&msg->payload;
+
+		for (i = 0; i < 10; i++) {
+			LOGI("Try %d\n", i);
+
+			if (!ioctl_send_msg(msg)) {
+				port = *(int *)&msg->payload;
+				break;
+			}
+		}
 	}
 
 	if (port) {
