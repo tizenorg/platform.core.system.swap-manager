@@ -48,29 +48,32 @@
 
 #define MAX_MSG_LENGTH				4096
 
-#define PSTATE_DEFAULT				(1L << ( 0))
-#define PSTATE_CONNECTED			(1L << ( 1))
-#define PSTATE_PROFILING			(1L << ( 2))
-#define PSTATE_WAIT_ACK				(1L << ( 3))
-#define PSTATE_TIMEOUT				(1L << ( 4))
-#define PSTATE_START				(1L << ( 5))
-#define PSTATE_DISCONNECT			(1L << ( 6))
-#define PSTATE_INIT_START			(1L << ( 7))
-#define PSTATE_INIT_DONE			(1L << ( 8))
+#define PSTATE_DEFAULT				(1UL << ( 0))
+#define PSTATE_CONNECTED			(1UL << ( 1))
+#define PSTATE_PROFILING			(1UL << ( 2))
+#define PSTATE_WAIT_ACK				(1UL << ( 3))
+#define PSTATE_TIMEOUT				(1UL << ( 4))
+#define PSTATE_START				(1UL << ( 5))
+#define PSTATE_DISCONNECT			(1UL << ( 6))
+#define PSTATE_INIT_START			(1UL << ( 7))
+#define PSTATE_INIT_DONE			(1UL << ( 8))
 
-#define SETSTAT(S, F)				((S) |= (F))
+#define SETSTAT(S, F)				((S) |= (F)); LOG_STATUS;
 #define CLRSTAT(S, F)				((S) &= ~(F))
 #define CHKSTAT(S, F)				(((S) & (F)) ? 1: 0)
 
 
-#define LOG_STATUS LOGW(">>>>> state : %s %s %s %s %s %s\n",\
+#define LOG_STATUS LOGW(">>>>> state %x: %s %s %s %s %s %s %s %s %s\n",\
+	pstate,\
 	CHKSTAT(pstate, PSTATE_DEFAULT)?"PSTATE_DEFAULT":"",\
 	CHKSTAT(pstate, PSTATE_CONNECTED)?"PSTATE_CONNECTED":"",\
 	CHKSTAT(pstate, PSTATE_PROFILING)?"PSTATE_PROFILING":"",\
 	CHKSTAT(pstate, PSTATE_WAIT_ACK)?"PSTATE_WAIT_ACK":"",\
 	CHKSTAT(pstate, PSTATE_TIMEOUT)?"PSTATE_TIMEOUT":"",\
 	CHKSTAT(pstate, PSTATE_START)?"PSTATE_START":"",\
-	CHKSTAT(pstate, PSTATE_DISCONNECT)?"PSTATE_DISCONNECT":"")
+	CHKSTAT(pstate, PSTATE_DISCONNECT)?"PSTATE_DISCONNECT":"",\
+	CHKSTAT(pstate, PSTATE_INIT_START)?"PSTATE_INIT_START":"",\
+	CHKSTAT(pstate, PSTATE_INIT_DONE)?"PSTATE_INIT_DONE":"")\
 
 
 enum protocol_names {
@@ -81,7 +84,7 @@ const char WSI_HOST[] = "127.0.0.1";
 struct libwebsocket_context *context;
 struct libwebsocket *wsi;
 
-int pstate = PSTATE_DEFAULT;
+unsigned int pstate = PSTATE_DEFAULT;
 int request_id = 1;
 
 pthread_t wsi_start_thread = -1;
@@ -299,8 +302,10 @@ static int profiling_callback(struct libwebsocket_context *context,
 			res_id = json_object_get_int(jobj);
 			if (res_id == request_id - 1) {
 				CLRSTAT(pstate, PSTATE_WAIT_ACK);
-				if (CHKSTAT(pstate, PSTATE_DISCONNECT))
+				/* FIXME */
+/*				if (CHKSTAT(pstate, PSTATE_DISCONNECT))
 					wsi_destroy();
+*/
 			}
 			break;
 		}
@@ -410,8 +415,10 @@ static int init_wsi_conn(struct libwebsocket_context **context,
 
 static void *handle_ws_responses(void *arg)
 {
-	while (CHKSTAT(pstate, PSTATE_START | PSTATE_PROFILING |
-		       PSTATE_WAIT_ACK) && !CHKSTAT(pstate, PSTATE_DISCONNECT)) {
+	while (CHKSTAT(pstate, PSTATE_START | PSTATE_PROFILING | PSTATE_WAIT_ACK) &&
+	       !CHKSTAT(pstate, PSTATE_DISCONNECT) ||
+	       !CHKSTAT(pstate, PSTATE_DISCONNECT) &&
+	       CHKSTAT(pstate, PSTATE_INIT_DONE | PSTATE_INIT_START)) {
 		libwebsocket_service(context, 1000);
 	}
 
