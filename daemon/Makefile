@@ -130,7 +130,13 @@ DASCRIPT = da_command
 START_SH = ../scripts/start.sh
 STOP_SH = ../scripts/stop.sh
 INIT_PRELOAD_SH = ../scripts/init_preload.sh
+INIT_WSP_SH = ../scripts/init_wsp.sh
 PRELOAD_SCRIPT = ../scripts/gen_preload_header.sh
+SCRIPTS := \
+	$(START_SH) \
+	$(STOP_SH) \
+	$(INIT_PRELOAD_SH) \
+	$(INIT_WSP_SH)
 
 all: debug
 
@@ -145,14 +151,28 @@ $(GENERATED_WSI_PROF_H): ../scripts/gen_wsi_prof.sh
 	sh $< > $@
 
 
+#Preload
+$(INIT_PRELOAD_SH): $(PRELOAD_SCRIPT)
+	bash $< $@
+
 # WSP
+$(INIT_WSP_SH): $(WSP_SCRIPT)
+ifeq ($(WSP_SUPPORT),y)
+	bash $(WSP_SCRIPT) -s > $@
+else # WSP_SUPPORT
+	echo "#!/bin/bash" > $@
+	echo "echo \"Do not init WSP!\" " >> $@
+endif # WSP_SUPPORT
+
 ifeq ($(WSP_SUPPORT),y)
   SRC_CPP += cpp/features/feature_wsp.cpp
   GENERATED_WSP_H = include/generated/wsp_data.h
+  WSP_SCRIPT = ../scripts/gen_wsp_data.sh
   GENERATED_HEADERS += $(GENERATED_WSP_H)
 
-  $(GENERATED_WSP_H): ../scripts/gen_wsp_data.sh
-	sh $< > $@
+  $(GENERATED_WSP_H): $(WSP_SCRIPT)
+	bash $< -h > $@
+
 endif # WSP_SUPPORT
 
 
@@ -182,18 +202,17 @@ OBJS := $(OBJS_C) $(OBJS_CPP)
 	$(CPP) $(CPPFLAGS) -c -o $@ $<
 
 
-debug: rmheaders headers $(OBJS)
+debug: rmheaders headers $(SCRIPTS) $(OBJS)
 	$(CPP) $(OBJS) -o $(TARGET) $(LDFLAGS)
 
 
 install: BINDIR = $(DESTDIR)/usr/bin
 install: OPTDIR = $(DESTDIR)/opt/swap/sdk
-install: $(TARGET)
+install: $(TARGET) $(SCRIPTS)
 	mkdir -p $(BINDIR)
 	mkdir -p $(OPTDIR)
 	install $(TARGET) -t $(BINDIR)
-	bash $(PRELOAD_SCRIPT) $(INIT_PRELOAD_SH)
-	install -m 755 $(INIT_PRELOAD_SH) $(START_SH) $(STOP_SH) -t $(OPTDIR)
+	install -m 755 $(SCRIPTS) -t $(OPTDIR)
 
 clean:
 	rm -f $(TARGET) $(OBJS)

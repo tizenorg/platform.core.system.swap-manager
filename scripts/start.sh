@@ -100,4 +100,10 @@ then
 	./init_preload.sh
 fi
 
+#WSP
+if [ -d /sys/kernel/debug/swap/wsp/ ]
+then
+	./init_wsp.sh
+fi
+
 exit $ERR_NO
