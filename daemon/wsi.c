@@ -138,17 +138,17 @@ int wsi_set_profile(const struct app_info_t *app_info)
 	if (ret)
 		goto fail;
 
-	sprintf(info_tmp, "0x%lx", INSPECTOR_ADDR);
+	snprintf(info_tmp, sizeof(info_tmp), "0x%lx", INSPECTOR_ADDR);
 	ret = set_profile_info(INSPSERVER_START_FILE, info_tmp);
 	if (ret)
 		goto fail;
 
-	sprintf(info_tmp, "0x%lx", WILLEXECUTE_ADDR);
+	snprintf(info_tmp, sizeof(info_tmp), "0x%lx", WILLEXECUTE_ADDR);
 	ret = set_profile_info(WILL_EXECUTE_FILE, info_tmp);
 	if (ret)
 		goto fail;
 
-	sprintf(info_tmp, "0x%lx", DIDEXECUTE_ADDR);
+	snprintf(info_tmp, sizeof(info_tmp), "0x%lx", DIDEXECUTE_ADDR);
 	ret = set_profile_info(DID_EXECUTE_FILE, info_tmp);
 	if (ret)
 		goto fail;
@@ -166,6 +166,7 @@ int wsi_set_smack_rules(const struct app_info_t *app_info)
 	int ret = 0;
 	char *app_id;
 	char *package_id;
+	char *tmp_ch;
 	size_t id_maxlen = 128;
 
 	app_id = strndup(app_info->app_id, id_maxlen);
@@ -175,7 +176,8 @@ int wsi_set_smack_rules(const struct app_info_t *app_info)
 		goto exit;
 	}
 
-	package_id = strtok(app_id, delim);
+	/* TODO do not use strok_r function there */
+	package_id = strtok_r(app_id, delim, &tmp_ch);
 
 	if (package_id != NULL) {
 		ret = apply_smack_rules(SUBJECT, package_id, ACCESS_TYPE);
@@ -377,8 +379,8 @@ static int init_wsi_conn(struct libwebsocket_context **context,
 	const char *page = "/devtools/page/1";
 	int ietf_version = -1; /* latest */
 
-	sprintf(host, "%s:%d", address, port);
-	sprintf(origin, "http://%s:%d", address, port);
+	snprintf(host, sizeof(host), "%s:%d", address, port);
+	snprintf(origin, sizeof(origin), "http://%s:%d", address, port);
 	LOGI(" host =<%s> origin = <%s>\n", host, origin);
 
 	memset(&info, 0, sizeof(info));

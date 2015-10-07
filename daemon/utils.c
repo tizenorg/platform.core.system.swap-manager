@@ -177,8 +177,8 @@ int exec_app_common(const char* exec_path)
 		return -1;
 	}
 
-	sprintf(command, "%s", exec_path);
-	LOGI("cmd: %s\n", command);
+	snprintf(command, sizeof(command), "%s", exec_path);
+	LOGI("cmd: <%s>\n", command);
 
 	pid = fork();
 	if (pid == -1)
@@ -397,6 +397,7 @@ int kill_app(const char *binary_path)
 	} else
 		LOGI("cannot kill <%s>; process not found\n", binary_path);
 
+	LOGI("kill< %s (%d)\n", binary_path, FINISH_SIG);
 	return 0;
 }
 
@@ -479,4 +480,15 @@ float get_uptime(void)
 
 	fclose(fp);
 	return uptime;
+}
+
+void swap_usleep(useconds_t usec)
+{
+	struct timespec req;
+	struct timespec rem;
+	req.tv_sec = usec / 1000000;
+	req.tv_nsec = (usec % 1000000) * 1000;
+	if (nanosleep(&req, &rem) == -1) {
+		LOGW("sleep was terminated by signal\n");
+	}
 }

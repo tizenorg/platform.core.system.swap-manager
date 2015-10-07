@@ -114,7 +114,7 @@ static int insert_buf_modules(void)
 		if (f) {
 			while (NULL != fgets(cmd, sizeof(cmd), f))
 				LOGE("start.sh >%s\n", cmd);
-			fclose(f);
+			pclose(f);
 		} else {
 			LOGE("Cannot open start.sh\n");
 		}

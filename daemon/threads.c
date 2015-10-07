@@ -410,7 +410,7 @@ static void *replay_thread(void *arg)
 		print_replay_event(pevent, i + 1, "\t");
 #endif
 		LOGI_th_rep("%d) sleep %d\n", i, ms);
-		usleep(ms);
+		swap_usleep(ms);
 
 		write_input_event(pevent->id, &pevent->ev);
 
