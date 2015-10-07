@@ -13,6 +13,7 @@ BuildRequires:  vconf-devel
 BuildRequires:  capi-system-info-devel
 BuildRequires:  capi-system-runtime-info-devel
 BuildRequires:  libwebsockets-devel
+BuildRequires:  wrt
 %if "%{sec_product_feature_profile_wearable}" == "1"
 BuildRequires:  libjson-devel
 %else
@@ -103,6 +104,7 @@ touch /opt/usr/etc/resourced_proc_exclude.ini
 /opt/swap/sdk/start.sh
 /opt/swap/sdk/stop.sh
 /opt/swap/sdk/init_preload.sh
+/opt/swap/sdk/init_wsp.sh
 
 %changelog
 
