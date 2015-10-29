@@ -15,6 +15,7 @@
 /usr/sbin/rmmod swap_sampler
 /usr/sbin/rmmod swap_ks_features
 /usr/sbin/rmmod swap_us_manager
+/usr/sbin/rmmod swap_taskctx
 /usr/sbin/rmmod swap_uprobe
 /usr/sbin/rmmod swap_kprobe
 /usr/sbin/rmmod swap_writer

@@ -32,6 +32,7 @@ if [ ! -e /sys/kernel/debug/swap/enable ]; then
     /usr/sbin/insmod swap_writer.ko           || exit 105
     /usr/sbin/insmod swap_kprobe.ko           || exit 106  # kprobe is loaded
     /usr/sbin/insmod swap_uprobe.ko           || exit 107  # uprobe is loaded
+    /usr/sbin/insmod swap_taskctx.ko          || exit 200
     /usr/sbin/insmod swap_us_manager.ko       || exit 108  # us_manager is loaded
     /usr/sbin/insmod swap_ks_features.ko      || exit 109  # ks_features is loaded
     /usr/sbin/insmod swap_sampler.ko          || exit 110
