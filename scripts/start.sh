@@ -41,7 +41,6 @@ if [ ! -e /sys/kernel/debug/swap/enable ]; then
     /usr/sbin/insmod swap_retprobe.ko         || exit 113  # retprobe is loaded
     /usr/sbin/insmod swap_fbiprobe.ko         || exit 114  # fbi is loaded
     /usr/sbin/insmod swap_webprobe.ko         || exit 115  # webprobe is loaded
-    /usr/sbin/insmod swap_task_data.ko        || exit 116
     /usr/sbin/insmod swap_preload.ko          || exit 117
     /usr/sbin/insmod swap_wsp.ko              || exit 118
     /usr/sbin/insmod swap_nsp.ko              || exit 119
