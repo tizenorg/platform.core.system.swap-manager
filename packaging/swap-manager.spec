@@ -5,53 +5,37 @@ Release:    1
 Group:      System/Libraries
 License:    Apache-2.0
 Source:    %{name}_%{version}.tar.gz
-BuildRequires:  smack-devel
-BuildRequires:  libattr-devel
-BuildRequires:  glib2-devel
-BuildRequires:  aul-devel
-BuildRequires:  vconf-devel
-BuildRequires:  capi-system-info-devel
-BuildRequires:  capi-system-runtime-info-devel
-BuildRequires:  libwebsockets-devel
-BuildRequires:  wrt
-%if "%{sec_product_feature_profile_wearable}" == "1"
-BuildRequires:  libjson-devel
-%else
-BuildRequires:  pkgconfig(json-c)
-%endif
-BuildRequires:  pkgconfig(ecore)
-%if "%{?tizen_profile_name}" == "mobile"
-BuildRequires:  call-manager
-BuildRequires:  libcall-manager-devel
-%endif
-BuildRequires:  swap-probe-devel
-BuildRequires:  swap-probe-elf
-%if "%{?tizen_profile_name}" == "tv"
-BuildRequires:  webkit2-efl-tv
-%if "%{TIZEN_PRODUCT_TV}" != "1"
-BuildRequires:  webkit2-efl-tv-debuginfo
-%endif
-%else
-BuildRequires:  webkit2-efl
-BuildRequires:  webkit2-efl-debuginfo
-%endif
-%if "%{sec_product_feature_profile_wearable}" == "1"
-BuildRequires:  launchpad-process-pool
-BuildRequires:  launchpad-loader
-%else
-BuildRequires:  launchpad
-%endif
-BuildRequires:  app-core-efl
-%if "%{TIZEN_PRODUCT_TV}" != "1"
-BuildRequires:  app-core-debuginfo
-%endif
-%if "%_project" != "Kirana_SWA_OPEN:Build" && "%_project" != "Kirana_SWA_OPEN:Daily"
-Requires:  swap-modules
-%endif
-Requires:  swap-probe
-Requires:  swap-probe-elf
-Requires:  sdbd
-Requires:  libwebsockets
+
+
+# setup config
+%define NSP_SUPPORT 0
+%define WSP_SUPPORT 0
+%define WSI_SUPPORT 0
+
+
+BuildRequires: smack-devel
+BuildRequires: libattr-devel
+BuildRequires: glib2-devel
+BuildRequires: aul-devel
+BuildRequires: vconf-devel
+BuildRequires: capi-system-info-devel
+BuildRequires: capi-system-runtime-info-devel
+BuildRequires: pkgconfig(json-c)
+BuildRequires: pkgconfig(ecore)
+BuildRequires: launchpad
+BuildRequires: app-core-efl
+BuildRequires: swap-probe-devel
+BuildRequires: swap-probe-elf
+
+
+# FIXME: add WSP_SUPPORT wrt webkit2-efl and webkit2-efl-debuginfo
+# FIXME: add NSP_SUPPORT app-core-efl-debuginfo
+# FIXME: add WSI_SUPPORT libwebsockets-devel
+
+Requires: swap-modules
+Requires: swap-probe
+Requires: swap-probe-elf
+Requires: sdbd
 
 %description
 SWAP manager is a part of data collection back-end for DA.
@@ -68,22 +52,19 @@ echo "__tizen_product_2_4_wearable__="%{sec_product_feature_profile_wearable} >>
 popd
 cd daemon
 
-%if "%{?tizen_profile_name}" == "mobile"
-SWAP_BUILD_CMD+=" CALL_MNGR=y"
+%if %{NSP_SUPPORT}
+  export NSP_SUPPORT=y
 %endif
 
-%if "%{?tizen_profile_name}" == "tv"
-SWAP_BUILD_CMD+=" PROFILE_TV=y"
-%else
-%if "%{sec_product_feature_profile_wearable}" == "1"
-SWAP_BUILD_CMD+=" OLD_JSON=y"
-%else
-SWAP_BUILD_CMD+=" WSP_SUPPORT=y"
-%endif
+%if %{WSP_SUPPORT}
+  export WSP_SUPPORT=y
 %endif
 
-SWAP_BUILD_CMD+=" make"
-eval ${SWAP_BUILD_CMD}
+%if %{WSI_SUPPORT}
+  export WSI_SUPPORT=y
+%endif
+
+make
 
 %install
 rm -rf ${RPM_BUILD_ROOT}
