@@ -25,25 +25,25 @@ fi
 
 if [ ! -e /sys/kernel/debug/swap/enable ]; then
 
-    /usr/sbin/insmod swap_master.ko           || exit 101
-    /usr/sbin/insmod swap_buffer.ko           || exit 102  # buffer is loaded
-    /usr/sbin/insmod swap_ksyms.ko            || exit 103
-    /usr/sbin/insmod swap_driver.ko           || exit 104  # driver is loaded
-    /usr/sbin/insmod swap_writer.ko           || exit 105
-    /usr/sbin/insmod swap_kprobe.ko           || exit 106  # kprobe is loaded
-    /usr/sbin/insmod swap_uprobe.ko           || exit 107  # uprobe is loaded
-    /usr/sbin/insmod swap_taskctx.ko          || exit 200
-    /usr/sbin/insmod swap_us_manager.ko       || exit 108  # us_manager is loaded
-    /usr/sbin/insmod swap_ks_features.ko      || exit 109  # ks_features is loaded
-    /usr/sbin/insmod swap_sampler.ko          || exit 110
-    /usr/sbin/insmod swap_energy.ko           || exit 111
-    /usr/sbin/insmod swap_message_parser.ko   || exit 112  # parser is loaded
-    /usr/sbin/insmod swap_retprobe.ko         || exit 113  # retprobe is loaded
-    /usr/sbin/insmod swap_fbiprobe.ko         || exit 114  # fbi is loaded
-    /usr/sbin/insmod swap_webprobe.ko         || exit 115  # webprobe is loaded
-    /usr/sbin/insmod swap_preload.ko          || exit 117
-    /usr/sbin/insmod swap_wsp.ko              || exit 118
-    /usr/sbin/insmod swap_nsp.ko              || exit 119
+    /usr/sbin/insmod /opt/swap/sdk/swap_master.ko           || exit 101
+    /usr/sbin/insmod /opt/swap/sdk/swap_buffer.ko           || exit 102  # buffer is loaded
+    /usr/sbin/insmod /opt/swap/sdk/swap_ksyms.ko            || exit 103
+    /usr/sbin/insmod /opt/swap/sdk/swap_driver.ko           || exit 104  # driver is loaded
+    /usr/sbin/insmod /opt/swap/sdk/swap_writer.ko           || exit 105
+    /usr/sbin/insmod /opt/swap/sdk/swap_kprobe.ko           || exit 106  # kprobe is loaded
+    /usr/sbin/insmod /opt/swap/sdk/swap_uprobe.ko           || exit 107  # uprobe is loaded
+    /usr/sbin/insmod /opt/swap/sdk/swap_taskctx.ko          || exit 200
+    /usr/sbin/insmod /opt/swap/sdk/swap_us_manager.ko       || exit 108  # us_manager is loaded
+    /usr/sbin/insmod /opt/swap/sdk/swap_ks_features.ko      || exit 109  # ks_features is loaded
+    /usr/sbin/insmod /opt/swap/sdk/swap_sampler.ko          || exit 110
+    /usr/sbin/insmod /opt/swap/sdk/swap_energy.ko           || exit 111
+    /usr/sbin/insmod /opt/swap/sdk/swap_message_parser.ko   || exit 112  # parser is loaded
+    /usr/sbin/insmod /opt/swap/sdk/swap_retprobe.ko         || exit 113  # retprobe is loaded
+    /usr/sbin/insmod /opt/swap/sdk/swap_fbiprobe.ko         || exit 114  # fbi is loaded
+    /usr/sbin/insmod /opt/swap/sdk/swap_webprobe.ko         || exit 115  # webprobe is loaded
+    /usr/sbin/insmod /opt/swap/sdk/swap_preload.ko          || exit 117
+    /usr/sbin/insmod /opt/swap/sdk/swap_wsp.ko              || exit 118
+    /usr/sbin/insmod /opt/swap/sdk/swap_nsp.ko              || exit 119
 
 fi
 
@@ -97,13 +97,13 @@ fi
 #Preload
 if [ -d /sys/kernel/debug/swap/preload/ ]
 then
-	./init_preload.sh
+	/usr/bin/swap_init_preload.sh
 fi
 
 #WSP
 if [ -d /sys/kernel/debug/swap/wsp/ ]
 then
-	./init_wsp.sh
+	/usr/bin/swap_init_wsp.sh
 fi
 
 exit $ERR_NO

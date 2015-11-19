@@ -353,7 +353,7 @@ static int finalizeManager()
 static void remove_buf_modules(void)
 {
 	LOGI("rmmod buffer start\n");
-	if (system("cd /opt/swap/sdk && ./stop.sh")) {
+	if (system("cd /usr/bin && ./swap_stop.sh")) {
 		LOGW("Cannot remove swap modules\n");
 	}
 	LOGI("rmmod buffer done\n");
