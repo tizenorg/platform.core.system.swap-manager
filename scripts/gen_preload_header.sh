@@ -5,7 +5,7 @@ preload_open_function="dlopen"
 handlers_lib="/usr/lib/da_probe_tizen.so"
 linker_path="/lib/"
 linker_sym="_r_debug"
-test_bin="/usr/bin/WebProcess"
+test_bin="/bin/su"
 
 output=$1
 
