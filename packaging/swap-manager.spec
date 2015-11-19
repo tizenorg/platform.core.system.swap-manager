@@ -101,10 +101,10 @@ touch /opt/usr/etc/resourced_proc_exclude.ini
 %manifest swap-manager.manifest
 %defattr(-,root,root,-)
 %{_prefix}/bin/da_manager
-/opt/swap/sdk/start.sh
-/opt/swap/sdk/stop.sh
-/opt/swap/sdk/init_preload.sh
-/opt/swap/sdk/init_wsp.sh
+/usr/bin/swap_start.sh
+/usr/bin/swap_stop.sh
+/usr/bin/swap_init_preload.sh
+/usr/bin/swap_init_wsp.sh
 
 %changelog
 
