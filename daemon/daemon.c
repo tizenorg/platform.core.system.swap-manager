@@ -259,6 +259,7 @@ static int exec_app(const struct app_info_t *app_info)
 		}
 		break;
 	case APP_TYPE_WEB:
+#ifdef WSI_SUPPORT
 		if (wsi_set_profile(app_info)) {
 			LOGE("Cannot set web application profiling\n");
 			res = -1;
@@ -273,12 +274,14 @@ static int exec_app(const struct app_info_t *app_info)
 			LOGE("Cannot set web application smack rules\n");
 			res = -1;
 		}
+#endif /* WSI_SUPPORT */
 
 		if (exec_app_web(app_info->app_id)) {
 			LOGE("Cannot exec web app %s\n", app_info->app_id);
 			res = -1;
 		}
 
+#ifdef WSI_SUPPORT
 		if (!is_feature_enabled(FL_WEB_PROFILING)) {
 			if (wsi_enable_profiling(PROF_OFF)) {
 				LOGE("Cannot disable web application profiling\n");
@@ -288,6 +291,7 @@ static int exec_app(const struct app_info_t *app_info)
 		}
 
 		wsi_start();
+#endif /* WSI_SUPPORT */
 
 		break;
 	default:

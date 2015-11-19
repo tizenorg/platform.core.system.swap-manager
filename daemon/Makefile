@@ -43,11 +43,6 @@ ifeq ($(PROFILE_TV),y)
 FLAGS += -DPROFILE_TV
 endif # PROFILE_TV
 
-# set using old json
-ifeq ($(OLD_JSON),y)
-FLAGS += -DOLD_JSON
-endif # OLD_JSON
-
 # CALL_MNGR
 ifeq ($(CALL_MNGR),y)
 FLAGS += -DCALL_MNGR
@@ -69,20 +64,12 @@ LDFLAGS := \
 	-lsmack \
 	-lecore \
 	-lcapi-system-info \
-	-lwebsockets \
 	-lparserelf
 
 # CALL_MNGR
 ifeq ($(CALL_MNGR),y)
 LDFLAGS += -lcall-manager
 endif # CALL_MNGR
-
-# set using old json
-ifeq ($(OLD_JSON),y)
-LDFLAGS += -ljson
-else
-LDFLAGS += -ljson-c
-endif # OLD_JSON
 
 SRC_C := \
 	buffer.c \
@@ -109,14 +96,12 @@ SRC_C := \
 	smack.c \
 	malloc_debug.c \
 	target.c \
-	thread.c \
-	wsi.c
+	thread.c
 
 SRC_CPP := \
 	cpp/features/feature.cpp \
 	cpp/features/feature_manager.cpp \
 	cpp/features/feature_manager_c.cpp \
-	cpp/features/feature_nsp.cpp \
 \
 	cpp/inst/AppInst.cpp \
 	cpp/inst/AppInstCont.cpp \
@@ -141,14 +126,7 @@ SCRIPTS := \
 all: debug
 
 GENERATED_DIR = include/generated
-GENERATED_WSI_PROF_H = include/generated/wsi_prof.h
-GENERATED_NSP_H = include/generated/nsp_data.h
-GENERATED_HEADERS := \
-	$(GENERATED_WSI_PROF_H) \
-	$(GENERATED_NSP_H)
-
-$(GENERATED_WSI_PROF_H): ../scripts/gen_wsi_prof.sh
-	sh $< > $@
+GENERATED_HEADERS :=
 
 
 #Preload
@@ -175,9 +153,27 @@ ifeq ($(WSP_SUPPORT),y)
 
 endif # WSP_SUPPORT
 
+# NSP
+ifeq ($(NSP_SUPPORT),y)
+  SRC_CPP += cpp/features/feature_nsp.cpp
+  GENERATED_NSP_H = include/generated/nsp_data.h
+  GENERATED_HEADERS += $(GENERATED_NSP_H)
 
-$(GENERATED_NSP_H): ../scripts/gen_nsp_data.sh
+  $(GENERATED_NSP_H): ../scripts/gen_nsp_data.sh
 	sh $< > $@
+endif # NSP_SUPPORT
+
+# WSI
+ifeq ($(WSI_SUPPORT),y)
+  SRC_C += wsi.c
+  LDFLAGS += -lwebsockets -ljson-c
+  FLAGS += -DWSI_SUPPORT
+  GENERATED_WSI_PROF_H = include/generated/wsi_prof.h
+  GENERATED_HEADERS += $(GENERATED_WSI_PROF_H)
+
+  $(GENERATED_WSI_PROF_H): ../scripts/gen_wsi_prof.sh
+	sh $< > $@
+endif # WSI_SUPPORT
 
 $(GENERATED_DIR):
 	mkdir -p $(GENERATED_DIR)
