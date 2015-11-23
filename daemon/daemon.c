@@ -426,7 +426,8 @@ int terminate_profiling_apps(void)
 int prepare_profiling(void)
 {
 	/* terminate all profiling applications */
-	terminate_profiling_apps();
+	if (!manager.save_swap_cmds)
+		terminate_profiling_apps();
 	//init rw for systeminfo
 	//init recv send network systeminfo
 	sys_stat_prepare();
@@ -472,7 +473,7 @@ int start_profiling(void)
 		goto recording_stop;
 	}
 
-	while (app_info != NULL) {
+	while (!manager.save_swap_cmds && app_info != NULL) {
 		if (exec_app(app_info)) {
 			LOGE("Cannot exec app\n");
 			res = -1;
