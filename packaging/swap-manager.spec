@@ -56,6 +56,12 @@ Requires:  libwebsockets
 SWAP manager is a part of data collection back-end for DA.
 This binary will be installed in target.
 
+%package on-boot
+Summary: Early boot daemon.
+
+%description on-boot
+This package contains a daemon that allows profiling processes at early boot.
+
 %prep
 %setup -q -n %{name}_%{version}
 
@@ -84,11 +90,32 @@ SWAP_BUILD_CMD+=" WSP_SUPPORT=y"
 SWAP_BUILD_CMD+=" make"
 eval ${SWAP_BUILD_CMD}
 
+cd ../early_boot_daemon
+make %{?_smp_mflags}
+
 %install
 rm -rf ${RPM_BUILD_ROOT}
 mkdir -p %{buildroot}/usr/share/license
 cp LICENSE %{buildroot}/usr/share/license/%{name}
 cd daemon
+%make_install
+
+cd ../early_boot_daemon
+# Swap modules if any are installed to /opt/swap/sdk folder, but
+# which partition will be mounted to /opt depends on targed.
+# If location of swap modules will be changed to the default path
+# /lib/modules/kernel-version/, then the code below should be removed.
+%if "%{_repository}" == "emulator"
+  OPT_PART_VAR='/dev/vda2'
+%else
+  %if "%{?tizen_target_name}" == "Z300H"
+    OPT_PART_VAR='/dev/mmcblk0p24'
+  %else
+    echo "Error: Unknown partition map!"
+  %endif
+%endif
+
+export OPT_PART_VAR
 %make_install
 
 %post
@@ -103,6 +130,11 @@ touch /opt/usr/etc/resourced_proc_exclude.ini
 /opt/swap/sdk/start.sh
 /opt/swap/sdk/stop.sh
 /opt/swap/sdk/init_preload.sh
+
+%files on-boot
+%defattr(-,root,root,-)
+%{_bindir}/swap_readerd
+%{_bindir}/swap_on_boot.sh
 
 %changelog
 
