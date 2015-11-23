@@ -56,16 +56,21 @@ Requires:  libwebsockets
 SWAP manager is a part of data collection back-end for DA.
 This binary will be installed in target.
 
+%package on-boot
+Summary: Early boot daemon.
+
+%description on-boot
+This package contains a daemon that allows profiling processes at early boot.
+
 %prep
 %setup -q -n %{name}_%{version}
 
 %build
-pushd scripts
+cd scripts
 echo "__tizen_profile_name__="%{?tizen_profile_name} > dyn_vars
 echo "__tizen_product_tv__="%{?TIZEN_PRODUCT_TV} >> dyn_vars
 echo "__tizen_product_2_4_wearable__="%{sec_product_feature_profile_wearable} >> dyn_vars
-popd
-cd daemon
+cd ../daemon
 
 %if "%{?tizen_profile_name}" == "mobile"
 SWAP_BUILD_CMD+=" CALL_MNGR=y"
@@ -84,11 +89,23 @@ SWAP_BUILD_CMD+=" WSP_SUPPORT=y"
 SWAP_BUILD_CMD+=" make"
 eval ${SWAP_BUILD_CMD}
 
+cd ../early_boot_daemon
+make %{?_smp_mflags}
+
 %install
 rm -rf ${RPM_BUILD_ROOT}
 mkdir -p %{buildroot}/usr/share/license
 cp LICENSE %{buildroot}/usr/share/license/%{name}
 cd daemon
+%make_install
+
+cd ../early_boot_daemon
+%if "%{_repository}" == "emulator"
+OPT_PART_VAR='/dev/vda2'
+%else
+OPT_PART_VAR='/dev/mmcblk0p24'
+%endif
+export OPT_PART_VAR
 %make_install
 
 %post
@@ -103,6 +120,11 @@ touch /opt/usr/etc/resourced_proc_exclude.ini
 /opt/swap/sdk/start.sh
 /opt/swap/sdk/stop.sh
 /opt/swap/sdk/init_preload.sh
+
+%files on-boot
+%defattr(-,root,root,-)
+%{_bindir}/swap_readerd
+%{_bindir}/swap_on_boot.sh
 
 %changelog
 
