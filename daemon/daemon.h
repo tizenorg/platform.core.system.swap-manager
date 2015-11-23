@@ -136,6 +136,7 @@ typedef struct
 	__da_host_info host;
 	__file_descriptors fd;
 	char appPath[128]; // application executable path
+	int save_swap_cmds;
 } __da_manager;
 
 extern __da_manager manager;

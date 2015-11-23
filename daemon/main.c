@@ -93,7 +93,8 @@ __da_manager manager =
 		.networkstat = NULL,
 		.diskstats = NULL
 	},
-	.appPath = {0, }
+	.appPath = {0, },
+	.save_swap_cmds = 0	
 
 	};
 // =============================================================================
@@ -414,8 +415,29 @@ static void setup_signals()
 }
 
 // main function
-int main()
+int main(int argc, char *argv [])
 {
+	if (argc == 2) {
+		const char *save_opt = "--save-swap-cmds";
+		if (strcmp (argv[1], "-h") == 0) {
+			printf ("Usage: %s [--save-swap-cmds]\n", argv[0]);
+			exit (EXIT_SUCCESS);
+		} else if (strcmp (argv[1], save_opt) == 0) {
+			manager.save_swap_cmds = 1;
+			/* Truncate file   */
+			FILE *f = fopen(SWAP_MSG_LOG, "w");
+			if (f == NULL) {
+				int errsv = errno;
+				fprintf (stderr, "Open %s failed:%s\n", SWAP_MSG_LOG, strerror(errsv));
+				return;
+			}
+			fclose (f);
+		} else {
+			fprintf (stderr, "Unknown option: %s\n", argv[1]);
+			fprintf (stderr, "Usage: %s [--save-swap-cmds]\n", argv[0]);
+			exit (EXIT_FAILURE);
+		}
+	}
 
 	if (!ensure_singleton(SINGLETON_LOCKFILE)) {
 		LOGE("Daemon cannot be launched\n");

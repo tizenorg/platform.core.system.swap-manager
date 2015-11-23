@@ -680,6 +680,9 @@ enum ErrorCode stop_all_no_lock(void)
 				free_msg(msg);
 				goto stop_all_exit;
 			}
+			if (manager.save_swap_cmds)
+				log_swap_msg (msg, msg->len + 2*sizeof(uint32_t));
+
 			free_msg(msg);
 		}
 
@@ -1021,6 +1024,9 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 		LOGE("cannot send message to device\n");
 		goto send_ack;
 	}
+
+	if (manager.save_swap_cmds && msg_reply != NULL)
+		log_swap_msg (msg_reply, msg_reply->len + 2*sizeof(uint32_t));
 
 	/* TODO move it back */
 	if (start_replay() != 0) {
@@ -1399,6 +1405,8 @@ int host_message_handler(struct msg_t *msg)
 			error_code = ERR_UNKNOWN;
 			goto send_ack;
 		}
+		if (manager.save_swap_cmds)
+			log_swap_msg (msg, msg->len + 2*sizeof(uint32_t));
 
 		if (msg_reply != NULL) {
 			LOGI("send ld preload add probes\n");
@@ -1407,6 +1415,8 @@ int host_message_handler(struct msg_t *msg)
 				LOGE("ioclt send error\n");
 				goto send_ack;
 			}
+			if (manager.save_swap_cmds)
+				log_swap_msg (msg_reply, msg_reply->len + 2*sizeof(uint32_t));
 		}
 
 		if (msg_reply_additional != NULL) {
@@ -1416,6 +1426,8 @@ int host_message_handler(struct msg_t *msg)
 				LOGE("ioclt send error\n");
 				goto send_ack;
 			}
+			if (manager.save_swap_cmds)
+				log_swap_msg (msg_reply_additional, msg_reply_additional->len + 2*sizeof(uint32_t));
 		}
 
 		//send ack to host
