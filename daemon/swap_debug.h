@@ -42,6 +42,9 @@
 extern "C" {
 #endif
 
+#define SWAP_MSG_LOG "/swap_offline.conf"
+void log_swap_msg(const char *buf, size_t len);
+
 #define printBuf(buf, len) print_buf(buf, len, __func__)
 void print_buf(char *buf, int len, const char *info);
 

@@ -27,6 +27,7 @@
 
 
 #include <ctype.h>
+#include <errno.h>
 
 #include "swap_debug.h"
 
@@ -69,3 +70,15 @@ inline void print_buf(char * buf, int len, const char *info) {
 	return;
 }
 #endif
+
+void log_swap_msg(const char *buf, size_t len)
+{
+	FILE *f = fopen(SWAP_MSG_LOG, "a");
+	if (f == NULL) {
+		int errsv = errno;
+		LOGE("Open %s failed: %s\n", SWAP_MSG_LOG, strerror(errsv));
+		return;
+	}
+	fwrite(buf, 1, len, f);
+	fclose(f);
+}
