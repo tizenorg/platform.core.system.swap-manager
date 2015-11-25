@@ -89,6 +89,7 @@ struct target *target_get(int i);
 
 /* for all targets */
 int target_send_msg_to_all(struct msg_target_t *msg);
+int target_send_terminate_to_all(void);
 void target_wait_all(void);
 uint64_t target_get_total_alloc(pid_t pid);
 

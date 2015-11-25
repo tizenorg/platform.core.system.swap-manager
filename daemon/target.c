@@ -254,6 +254,34 @@ int target_send_msg_to_all(struct msg_target_t *msg)
 	return ret;
 }
 
+int target_send_terminate_to_all(void)
+{
+	int i, ret = 0;
+
+	target_array_lock();
+	for (i = 0; i < MAX_TARGET_COUNT; ++i) {
+		struct target *t;
+		struct msg_target_t msg;
+
+		if (target_use[i] == 0)
+			continue;
+
+		t = target_get(i);
+		if (t->app_type == APP_TYPE_RUNNING) {
+			msg.type = APP_MSG_STOP_WITHOUT_KILL;
+			msg.length = 0;
+		} else {
+			msg.type = APP_MSG_STOP;
+			msg.length = 0;
+		}
+		if (target_send_msg(t, &msg))
+				ret = 1;
+	}
+	target_array_unlock();
+
+	return ret;
+}
+
 void target_wait_all(void)
 {
 	int i;
