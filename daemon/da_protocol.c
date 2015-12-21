@@ -616,7 +616,8 @@ int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 	//set return id
 	pack_int32(p, err);
 	//copy payload data
-	memcpy(p, payload, payload_size);
+	if (payload != NULL)
+		memcpy(p, payload, payload_size);
 
 	LOGI("ACK (%s) errcode<%s> payload=0x%08X; size=%d\n", msg_ID_str(resp),
 			msgErrStr(err_code), (int)payload, payload_size);
