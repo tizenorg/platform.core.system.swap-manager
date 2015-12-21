@@ -2217,8 +2217,9 @@ int fill_target_info(struct target_info_t *target_info)
 	target_info->network_type[0] = 0;
 
 	target_info->sys_mem_size = get_system_total_memory();
-	target_info->storage_size = stat_get_storageinfo(FSINFO_TYPE_TOTAL) *
-		1024 * 1024;
+	target_info->storage_size =
+		(uint64_t)stat_get_storageinfo(FSINFO_TYPE_TOTAL) *
+		(uint64_t)1024 * (uint64_t)1024;
 
 	target_info->bluetooth_supp = is_bluetooth_available();
 	target_info->gps_supp = is_gps_available();
