@@ -36,7 +36,7 @@
 #include <stddef.h>
 #include <linux/input.h>
 
-#define PROTOCOL_VERSION "4.0"
+#define PROTOCOL_VERSION "4.1"
 
 
 #include "da_msg_ids.h"
