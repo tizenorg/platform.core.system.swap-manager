@@ -184,7 +184,7 @@ static void* recvThread(void* data)
 			if (chsmack(file_name) == 0) {
 				/* exctract probe message */
 				p += strnlen(file_name, PATH_MAX) + 1;
-				struct msg_data_t *msg_data;
+				struct msg_data_t *msg_data = (struct msg_data_t *)(p);
 
 				/* check packed size */
 				if (log.length != strnlen(file_name, PATH_MAX) + 1 +
