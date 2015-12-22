@@ -195,27 +195,29 @@ static void _render_obj(Evas *evas, Evas_Object *obj, enum ui_obj_category_t cat
 
 	redraw = _get_redraw(category);
 
+	/* TODO FIXME What the hell is going around? This shouldn't be this way */
 	if (redraw) {
-		struct timeval start_tv, finish_tv;
-		Eina_Bool visible;
-
-		visible = evas_object_visible_get(obj);
-		if (visible) {
-			evas_object_hide(obj);
-			evas_render(evas);
-		}
-		gettimeofday(&start_tv, NULL);
-		evas_object_show(obj);
-		evas_render(evas);
-		gettimeofday(&finish_tv, NULL);
-		if (!visible) {
-			evas_object_hide(obj);
-			evas_render(evas);
-		}
-		timersub(&finish_tv, &start_tv, tv);
-	} else {
-		timerclear(tv);
+//		struct timeval start_tv, finish_tv;
+//		Eina_Bool visible;
+//
+//		visible = evas_object_visible_get(obj);
+//		if (visible) {
+//			evas_object_hide(obj);
+//			evas_render(evas);
+//		}
+//		gettimeofday(&start_tv, NULL);
+//		evas_object_show(obj);
+//		evas_render(evas);
+//		gettimeofday(&finish_tv, NULL);
+//		if (!visible) {
+//			evas_object_hide(obj);
+//			evas_render(evas);
+//		}
+//		timersub(&finish_tv, &start_tv, tv);
+//	} else {
 	}
+		timerclear(tv);
+//	}
 }
 
 static Eina_List *_get_obj(Eina_List *obj_list, Evas_Object *obj)

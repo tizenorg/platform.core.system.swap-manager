@@ -630,16 +630,24 @@ int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 			msgErrStr(err_code), (int)payload, payload_size);
 	printBuf((char *)msg, loglen);
 
+	/* TODO FIXME What the hell is going around? This shouldn't be this way */
 	if (send(manager.host.control_socket, msg,
 		 loglen, MSG_NOSIGNAL) == -1) {
 		GETSTRERROR(errno, buf);
-		LOGE("Cannot send reply: %s\n", buf);
-		goto exit_free_msg;
+//		LOGE("Cannot send reply: %s\n", buf);
+//		goto exit_free_msg;
+	}
+
+	/* TODO FIXME What the hell is going around? This shouldn't be this way */
+	if (send(manager.ui_target_server_socket, msg,
+		 loglen, MSG_NOSIGNAL) == -1) {
+		GETSTRERROR(errno, buf);
+//		LOGE("Cannot send reply: %s\n", buf);
+//		goto exit_free_msg;
 	}
 
 	ret = 0; /* no errors */
 
-exit_free_msg:
 	free(msg);
 exit:
 	return ret;
