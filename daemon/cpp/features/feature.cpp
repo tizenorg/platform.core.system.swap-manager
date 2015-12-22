@@ -81,6 +81,7 @@ int Feature::uninit()
         ret = doDisable();
         if (ret)
             return ret;
+        /* no break. fall throught to 'case F_INIT' */
     case F_INIT:
         ret = doUninit();
         if (ret) {

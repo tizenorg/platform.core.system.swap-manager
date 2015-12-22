@@ -616,7 +616,8 @@ int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 	//set return id
 	pack_int32(p, err);
 	//copy payload data
-	memcpy(p, payload, payload_size);
+	if (payload != NULL && payload_size != 0)
+		memcpy(p, payload, payload_size);
 
 	LOGI("ACK (%s) errcode<%s> payload=0x%08X; size=%d\n", msg_ID_str(resp),
 			msgErrStr(err_code), (int)payload, payload_size);
@@ -839,6 +840,11 @@ static struct binary_ack* binary_ack_alloc(const char *filename)
 	struct stat decoy;
 	char builddir[PATH_MAX];
 	char local_bin_path[PATH_MAX];
+
+	if (filename == NULL) {
+		LOGW("request filename is NULL\n");
+		goto exit_fail;
+	}
 
 	builddir[0]='\0';
 	local_bin_path[0]='\0';
@@ -1137,6 +1143,8 @@ static char *get_process_cmd_line(uint32_t pid)
 		count = read(f, buf, sizeof(buf));
 		if (count >= sizeof(buf))
 			count = sizeof(buf) - 1;
+		if (count == -1)
+			count = 0;
 		buf[count] = '\0';
 		close(f);
 	} else {
