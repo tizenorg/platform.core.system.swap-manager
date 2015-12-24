@@ -253,6 +253,7 @@ static void* recvThread(void* data)
 			if (write_to_buf(msg_data) != 0)
 				LOGE("write to buf fail\n");
 
+			free(msg_data);
 			continue;
 		} else if (log.type == APP_MSG_GET_UI_SCREENSHOT) {
 			enum ErrorCode err_code = ERR_UNKNOWN;

@@ -83,7 +83,8 @@ bool print_log_ui_obj_screenshot(Evas_Object *obj);
 bool printLog(log_t* log, int msgType);
 void raise_app_window(void);
 
-int ui_viewer_capture_screen(char *screenshot_path, Evas_Object *obj);
+int ui_viewer_capture_screen(char *screenshot_path, size_t screenshot_path_len,
+			     Evas_Object *obj);
 
 void ui_viewer_clean_log(void);
 void ui_viewer_log(const char *format, ...);

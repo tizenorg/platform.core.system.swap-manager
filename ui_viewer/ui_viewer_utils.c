@@ -336,11 +336,11 @@ void ui_viewer_log(const char *format, ...)
 
 	pthread_mutex_lock(&log_lock);
 	fp = fopen(log_filename, "a");
-	if (fp == NULL)
-		return;
-	va_start (args, format);
-	vfprintf (fp, format, args);
-	va_end (args);
-	fclose(fp);
+	if (fp != NULL) {
+		va_start (args, format);
+		vfprintf (fp, format, args);
+		va_end (args);
+		fclose(fp);
+	}
 	pthread_mutex_unlock(&log_lock);
 }

@@ -360,7 +360,6 @@ char *pack_ui_obj_info_list(char *to, enum rendering_option_t rendering,
 	info_cnt = eina_list_count(obj_list);
 	to = pack_int8(to, rendering);
 	to = pack_int32(to, info_cnt);
-	pthread_mutex_unlock(&request_lock);
 
 	*cancelled = EINA_FALSE;
 
@@ -374,7 +373,6 @@ char *pack_ui_obj_info_list(char *to, enum rendering_option_t rendering,
 
 	EINA_LIST_FREE(obj_list, obj)
 	{
-		pthread_mutex_lock(&request_lock);
 		// check if hierarchy request is active
 		if (get_hierarchy_status() == HIERARCHY_RUNNING) {
 			to = _pack_ui_obj_info(to, obj, rendering);
@@ -383,13 +381,9 @@ char *pack_ui_obj_info_list(char *to, enum rendering_option_t rendering,
 			// don't save any data if request was cancelled
 			to = start_ptr;
 			*cancelled = EINA_TRUE;
-			pthread_mutex_unlock(&request_lock);
 			break;
 		}
-		pthread_mutex_unlock(&request_lock);
 	}
-
-	pthread_mutex_lock(&request_lock);
 
 	// unref remained objects
 	EINA_LIST_FREE(obj_list, obj)
@@ -1430,8 +1424,8 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		ui_obj_elm_prop_t elm_prop;
 
 		if (!strcmp(type_name, "elm_pan")) {
-			strcpy(elm_prop.text, "");
-			strcpy(elm_prop.style, "");
+			elm_prop.text[0] = '\0';
+			elm_prop.style[0] = '\0';
 			elm_prop.disabled = 0;
 		} else {
 			_strncpy(elm_prop.text, elm_object_text_get(obj), MAX_TEXT_LENGTH);
@@ -1985,7 +1979,7 @@ char *pack_ui_obj_screenshot(char *to, Evas_Object *obj)
 		win_focus = elm_win_focus_get(win_id);
 
 		if (win_focus || _get_shot_in_bg(obj))
-			ui_viewer_capture_screen(screenshot, obj);
+			ui_viewer_capture_screen(screenshot, sizeof(screenshot), obj);
 		else
 			err_code = ERR_UI_OBJ_SCREENSHOT_FAILED;
 		evas_event_thaw(evas);
