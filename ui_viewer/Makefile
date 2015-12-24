@@ -64,7 +64,7 @@ endif
 
 
 # compiler flags
-CFLAGS := $(FLAGS) -D_GNU_SOURCE
+CFLAGS := $(FLAGS) -D_GNU_SOURCE -fPIC
 
 # linker flags
 LDFLAGS := \
