@@ -129,8 +129,9 @@ static void releaseScreenShotX(screenshot_data* sdata)
 	}
 }
 
-static int capture_object(char *screenshot_path, int width, int height,
-			  Evas_Object *obj, const char *type_name) {
+static int capture_object(char *screenshot_path, size_t screenshot_path_len,
+			  int width, int height, Evas_Object *obj,
+			  const char *type_name) {
 	char dstpath[MAX_PATH_LENGTH];
 	Evas_Object *img;
 	Evas *canvas, *sub_canvas;
@@ -226,7 +227,7 @@ finish:
 		 screenshotIndex);
 
 	if (evas_object_image_save(img, dstpath, NULL, "compress=5") != 0) {
-		strcpy(screenshot_path, dstpath);
+		strncpy(screenshot_path, dstpath, screenshot_path_len);
 	} else {
 		ui_viewer_log("ERROR: capture_object : can't save image\n");
 		ret = -1;
@@ -238,7 +239,8 @@ finish:
 	return ret;
 }
 
-int ui_viewer_capture_screen(char *screenshot_path, Evas_Object *obj)
+int ui_viewer_capture_screen(char *screenshot_path, size_t screenshot_path_len,
+			     Evas_Object *obj)
 {
 	int view_w, view_h;
 	int obj_x, obj_y, obj_w, obj_h;
@@ -246,7 +248,7 @@ int ui_viewer_capture_screen(char *screenshot_path, Evas_Object *obj)
 	Evas *evas;
 	char type_name[MAX_PATH_LENGTH];
 
-	if (!screenshot_path) {
+	if (!screenshot_path || !screenshot_path_len) {
 		ui_viewer_log("ui_viewer_capture_screen : no screenshot path\n");
 		ret = -1;
 		return ret;
@@ -271,9 +273,11 @@ int ui_viewer_capture_screen(char *screenshot_path, Evas_Object *obj)
 		width = (obj_w <= view_w) ? obj_w : view_w;
 		height = (obj_h <= view_h) ? obj_h : view_h;
 
-		ret = capture_object(screenshot_path, width, height, obj, type_name);
+		ret = capture_object(screenshot_path, screenshot_path_len,
+				     width, height, obj, type_name);
 	} else if (!strcmp(type_name, "image")) {
-		ret = capture_object(screenshot_path, obj_w, obj_h, obj, type_name);
+		ret = capture_object(screenshot_path, screenshot_path_len,
+				     obj_w, obj_h, obj, type_name);
 	} else if (!strcmp(type_name, "vectors")) {
 		ret = -1;
 	} else if (!strcmp(type_name, "elm_image") ||
@@ -284,7 +288,8 @@ int ui_viewer_capture_screen(char *screenshot_path, Evas_Object *obj)
 		internal_img = elm_image_object_get(obj);
 		evas_object_geometry_get(internal_img, NULL, NULL, &img_w, &img_h);
 
-		ret = capture_object(screenshot_path, img_w, img_h, internal_img, type_name);
+		ret = capture_object(screenshot_path, screenshot_path_len,
+				     img_w, img_h, internal_img, type_name);
 	} else if (obj_x > view_w || obj_y > view_h) {
 		ui_viewer_log("ui_viewer_capture_screen : object %p lies beside view area\n",
 			      obj);
@@ -300,7 +305,7 @@ int ui_viewer_capture_screen(char *screenshot_path, Evas_Object *obj)
 		width = (view_w < obj_w + obj_x) ? (view_w - obj_x) : obj_w;
 		height = (view_h < obj_h + obj_y) ? (view_h - obj_y) : obj_h;
 
-		ret = capture_object(screenshot_path, width, height, obj, type_name);
+		ret = capture_object(screenshot_path, screenshot_path_len, width, height, obj, type_name);
 	}
 
 	if (ret)
