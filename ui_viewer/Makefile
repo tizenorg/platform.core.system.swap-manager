@@ -44,7 +44,6 @@ WARN_CFLAGS = -g                        \
                 -Xlinker                \
                 --no-undefined          \
                 -Wextra                 \
-                -O2                     \
                 -Wwrite-strings         \
                 -Wlogical-op            \
                 -Wpacked                \
