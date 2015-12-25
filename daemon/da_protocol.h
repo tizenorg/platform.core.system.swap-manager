@@ -168,12 +168,16 @@ enum probe_type {
 enum supported_device {
 	DEVICE_FLASH,
 	DEVICE_CPU,
-	DEVICE_LCD
+	DEVICE_LCD,
+	DEVICE_WIFI,
+	DEVICE_BT
 };
 static const char *supported_devices_strings[] = {
 	"FLASH",
 	"CPU",
-	"LCD"
+	"LCD",
+	"WIFI",
+	"BT"
 };
 #define array_size(x) (sizeof(x)/sizeof((x)[0]))
 enum { supported_devices_count = array_size(supported_devices_strings) };
