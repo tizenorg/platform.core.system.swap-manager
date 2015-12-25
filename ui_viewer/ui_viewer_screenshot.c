@@ -203,6 +203,13 @@ static int capture_object(char *screenshot_path, size_t screenshot_path_len,
 			goto finish;
 		}
 
+		// remove invisible image parts
+		if (x < 0)
+			x = 0;
+
+		if (y < 0)
+			y = 0;
+
 		// crop image
 		for (j = 0; j < height; j++) {
 			for (i = 0; i < width * bytes_per_pixel; i++) {
