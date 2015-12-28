@@ -54,6 +54,22 @@ echo 33154239 > /sys/kernel/debug/swap/energy/flash_read/denominator &&
 echo 141540 > /sys/kernel/debug/swap/energy/flash_write/numerator &&
 echo 27920983 > /sys/kernel/debug/swap/energy/flash_write/denominator &&
 
+# recv through wifi : 1.01901550e-05
+/bin/echo 1019 > /sys/kernel/debug/swap/energy/wf_recv/numerator &&
+/bin/echo 100000000 > /sys/kernel/debug/swap/energy/wf_recv/denominator &&
+
+# send through wifi : 2.11865993e-05
+/bin/echo 2118 > /sys/kernel/debug/swap/energy/wf_send/numerator &&
+/bin/echo 100000000 > /sys/kernel/debug/swap/energy/wf_send/denominator &&
+
+# send through bluetooth : 2.53633107e-04
+/bin/echo 2536 > /sys/kernel/debug/swap/energy/hci_send_acl/numerator &&
+/bin/echo 10000000 > /sys/kernel/debug/swap/energy/hci_send_acl/system/denominator &&
+
+# recv through bluetooth : 4.08411717e-04
+/bin/echo 4084 > /sys/kernel/debug/swap/energy/l2cap_recv_acldata/numerator &&
+/bin/echo 10000000 > /sys/kernel/debug/swap/energy/l2cap_recv_acldata/denominator &&
+
 # LCD:
 if [ -d /sys/kernel/debug/swap/energy/lcd/ ]
 then
