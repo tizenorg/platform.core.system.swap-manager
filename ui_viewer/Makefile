@@ -1,6 +1,6 @@
 CC := gcc
 
-COMM_FLAGS := -Wall -g -O0
+COMM_FLAGS := -Wall -g -O2
 
 DEBUG_FLAGS = \
 	-DDEBUG \
@@ -58,7 +58,7 @@ FLAGS := \
 	$(WARN_CFLAGS)
 
 ifeq (arm, $(findstring arm, $(shell uname -sm)))
-	FLAGS += -DDEVICE_ONLY
+	FLAGS += -DDEVICE_ONLY -mno-unaligned-access -mfloat-abi=soft
 endif
 
 
