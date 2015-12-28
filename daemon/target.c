@@ -278,8 +278,8 @@ uint64_t target_get_total_alloc(pid_t pid)
 
 		t = target_get(i);
 		if (target_get_pid(t) == pid) {
-			ret = t->allocmem;
-			goto unlock;
+			ret += t->allocmem;
+			/* TODO FIXME Split target libraries of different kind */
 		}
 	}
 unlock:
