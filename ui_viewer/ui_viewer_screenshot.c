@@ -204,11 +204,15 @@ static int capture_object(char *screenshot_path, size_t screenshot_path_len,
 		}
 
 		// remove invisible image parts
-		if (x < 0)
+		if (x < 0) {
+			width += x;
 			x = 0;
+		}
 
-		if (y < 0)
+		if (y < 0) {
+			height += y;
 			y = 0;
+		}
 
 		// crop image
 		for (j = 0; j < height; j++) {
