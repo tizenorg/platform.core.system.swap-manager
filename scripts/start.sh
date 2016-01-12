@@ -93,7 +93,7 @@ fi
 
 # send through bluetooth : 2.53633107e-04
 /bin/echo 2536 > /sys/kernel/debug/swap/energy/hci_send_acl/numerator
-/bin/echo 10000000 > /sys/kernel/debug/swap/energy/hci_send_acl/system/denominator
+/bin/echo 10000000 > /sys/kernel/debug/swap/energy/hci_send_acl/denominator
 
 # recv through bluetooth : 4.08411717e-04
 /bin/echo 4084 > /sys/kernel/debug/swap/energy/l2cap_recv_acldata/numerator
