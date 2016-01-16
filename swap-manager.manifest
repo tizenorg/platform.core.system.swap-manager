@@ -1,13 +1,5 @@
 <manifest>
-	<define>
-		<domain name="swap" />
-    <permit>
-		<smack permit="system::use_internet" type="rw" />
-		<smack permit="system::debugging_network" type="rw" />
-		<smack permit="sdbd" type="rw" />
-    </permit>
-	</define>
 	<request>
-		<domain name="swap" />
+		<domain name="_"/>
 	</request>
 </manifest>
