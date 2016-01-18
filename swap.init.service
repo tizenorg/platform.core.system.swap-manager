@@ -1,0 +1,11 @@
+[Unit]
+Description=swap
+
+[Service]
+User=root
+Group=root
+SmackProcessLabel=swap
+PermissionsStartOnly=true
+Type=oneshot
+
+ExecStart=/opt/swap/sdk/service_preinit.sh
