@@ -20,13 +20,14 @@ ifeq (arm, $(findstring arm, $(shell uname -sm)))
 endif
 
 COMMON_LIBS := -lglib-2.0 -lpthread
-TARGET_LIBS := $(COMMON_LIBS) -lvconf -lsmack -lcapi-system-info -lecore -leina -lpthread
+TARGET_LIBS := $(COMMON_LIBS) -lvconf -lsmack -lcapi-system-info -lecore -leina -lpthread -lsystemd -laul
 CFLAGS := -Wall -pthread -g -O0 \
 		  -I/usr/include/ecore-1 \
 		  -I/usr/include/eina-1 \
 		  -I/usr/include/eina-1/eina \
 		  -I/usr/include/efl-1 \
-		  -I/usr/include/eo-1
+		  -I/usr/include/eo-1 \
+		  -I/usr/include/aul
 
 DAEMON_SRCS =			\
 	buffer.c		\
@@ -59,6 +60,7 @@ DAEMON_OBJS = $(patsubst %.c,%.o, $(DAEMON_SRCS))
 
 TARGET = da_manager
 START_SH = start.sh
+SERVICE_SH = ../scripts/service_init.sh ../scripts/service_preinit.sh
 STOP_SH = stop.sh
 
 all: debug
@@ -73,7 +75,10 @@ install: $(TARGET)
 	mkdir -p $(BINDIR)
 	mkdir -p $(OPTDIR)
 	install $(TARGET) -t $(BINDIR)
-	install -m 755 $(START_SH) $(STOP_SH) -t $(OPTDIR)
+	mv $(START_SH) swap-$(START_SH)
+	mv $(STOP_SH) swap-$(STOP_SH)
+	install -m 755 swap-$(START_SH) swap-$(STOP_SH) -t $(BINDIR)
+	install -m 755 $(SERVICE_SH) $(OPTDIR)
 
 clean:
 	rm -f $(TARGET) $(DAEMON_OBJS)
