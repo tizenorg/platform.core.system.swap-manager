@@ -138,53 +138,90 @@ void unlink_portfile(void)
 // making sockets
 // =============================================================================
 
-// return 0 for normal case
-static int makeTargetServerSocket(int *target_server_socket, const char *S_NAME)
+#ifdef DEVICE_ONLY
+#include <systemd/sd-daemon.h>
+int create_server_socket(const char *NAME)
+{
+		int n;
+		int fd;
+		char *pid;
+		char *fds;
+
+		pid = getenv("LISTEN_PID");
+		fds = getenv("LISTEN_FDS");
+
+		if (!pid)
+			LOGE("LISTEN_PID not set\n");
+
+		if (!fds)
+			LOGE("LISTEN_FDS not set\n");
+
+		n  = sd_listen_fds(0);
+		LOGI("LISTEN_PID = %s; LISTEN_FDS = %s;"
+		     "sockets [%d-%d]\n",
+		     pid, fds, SD_LISTEN_FDS_START, SD_LISTEN_FDS_START + n);
+
+		for (fd = SD_LISTEN_FDS_START; fd < SD_LISTEN_FDS_START + n; ++fd) {
+			if (0 < sd_is_socket_unix(fd, SOCK_STREAM, 1, NAME, 0))
+				return fd;
+		}
+		LOGI("socket not found\n");
+		return -1;
+}
+#else
+static int create_server_socket(const char *NAME)
+{
+		// remove existed unix domain socket file
+		unlink(NAME);
+
+		*target_server_socket = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+		if (*target_server_socket < 0) {
+			LOGE("Target server socket creation failed\n");
+			return -1;
+		}
+
+		fd_setup_attributes(*target_server_socket);
+
+		memset(&serverAddrUn, '\0', sizeof(serverAddrUn));
+		serverAddrUn.sun_family = AF_UNIX;
+		snprintf(serverAddrUn.sun_path, sizeof(serverAddrUn.sun_path), "%s", NAME);
+
+		if (-1 == bind(*target_server_socket, (struct sockaddr*) &serverAddrUn,
+			       sizeof(serverAddrUn))) {
+			LOGE("Target server socket binding failed\n");
+			return -1;
+		}
+
+		if(chmod(serverAddrUn.sun_path, 0777) < 0)
+			LOGE("Failed to change mode for socket file : errno(%d)\n", errno);
+}
+#endif
+
+/* return 0 for normal case */
+static int make_target_server_socket(int *target_server_socket, const char *S_NAME)
 {
 	struct sockaddr_un serverAddrUn;
+	int sock = -1;
 
 	if(*target_server_socket != -1)
-		return -1;	// should be never happend
+		return -1;      // should be never happend
 
-	// remove existed unix domain socket file
-	unlink(S_NAME);
-
-	*target_server_socket = socket(AF_UNIX,
-					      SOCK_STREAM | SOCK_CLOEXEC, 0);
-	if (*target_server_socket < 0)
-	{
-		LOGE("Target server socket creation failed\n");
+	sock = create_server_socket(S_NAME);
+	if (sock < 0) {
+		LOGE("Target server socket creation failed [sock=%d]\n",sock);
 		return -1;
 	}
 
-	fd_setup_attributes(*target_server_socket);
-
-	memset(&serverAddrUn, '\0', sizeof(serverAddrUn));
-	serverAddrUn.sun_family = AF_UNIX;
-	snprintf(serverAddrUn.sun_path, sizeof(serverAddrUn.sun_path), "%s", S_NAME);
-
-	if (-1 == bind(*target_server_socket, (struct sockaddr*) &serverAddrUn,
-					sizeof(serverAddrUn)))
-	{
-		LOGE("Target server socket binding failed\n");
-		return -1;
-	}
-
-	if(chmod(serverAddrUn.sun_path, 0777) < 0)
-	{
-		LOGE("Failed to change mode for socket file : errno(%d)\n", errno);
-	}
-
-
-	if (-1 == listen(*target_server_socket, 5))
-	{
+	if (listen(sock, 5) == -1) {
 		LOGE("Target server socket listening failed\n");
 		return -1;
 	}
 
+	*target_server_socket = sock;
 	LOGI("Created TargetSock %d\n", *target_server_socket);
 	return 0;
 }
+
 
 // return port number for normal case
 // return negative value for error case
@@ -298,16 +335,20 @@ static int initializeManager(FILE *portfile)
 		write_int(portfile, ERR_INITIALIZE_SYSTEM_INFO_FAILED);
 		return -1;
 	}
+
 	// make server socket for probe library
-	if (makeTargetServerSocket(&(manager.target_server_socket), UDS_NAME) != 0) {
+	if (make_target_server_socket(&(manager.target_server_socket), UDS_NAME) != 0) {
+		LOGW("target server socket cannot be initialised\n");
 		write_int(portfile, ERR_TARGET_SERVER_SOCKET_CREATE_FAILED);
 		return -1;
 	}
 	// make server socket for ui viewer
-	if (makeTargetServerSocket(&(manager.ui_target_server_socket), UIS_NAME) != 0) {
+	if (make_target_server_socket(&(manager.ui_target_server_socket), UIS_NAME) != 0) {
+		LOGW("target server socket cannot be initialised\n");
 		write_int(portfile, ERR_UI_TARGET_SERVER_SOCKET_CREATE_FAILED);
 		return -1;
 	}
+
 	if (!initialize_pthread_sigmask()) {
 		write_int(portfile, ERR_SIGNAL_MASK_SETTING_FAILED);
 		return -1;
@@ -436,8 +477,13 @@ int main()
 
 	//for terminal exit
 	setup_signals();
+
+#ifdef DEVICE_ONLY
+	LOGI("device mode. no demonizing.\n");
+#else
 	daemon(0, 1);
 	LOGI("--- daemonized (pid %d) ---\n", getpid());
+#endif
 
 	FILE *portfile = fopen(PORTFILE, "w");
 	if (!portfile) {

@@ -101,7 +101,7 @@ static void close_buf_ctl(void)
 
 static int insert_buf_modules(void)
 {
-	if (system("cd /opt/swap/sdk && ./start.sh")) {
+	if (system("/usr/bin/swap-start.sh")) {
 		LOGE("Cannot insert swap modules\n");
 		return -1;
 	}
