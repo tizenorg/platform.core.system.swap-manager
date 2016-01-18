@@ -81,3 +81,11 @@ then
 	echo 179 > `ls /sys/kernel/debug/swap/energy/lcd/*/min_num` &&
 	echo 1000000 > `ls /sys/kernel/debug/swap/energy/lcd/*/min_denom`
 fi
+
+# TODO remove it
+#/bin/echo "swap launchpad-loader rx" | smackload
+#/bin/echo "swap org.example.basicuiapplication rx" | smackload
+#/bin/echo "org.example.basicuiapplication swap rwx" | smackload
+#/usr/bin/dbus-send --system --type=method_call --print-reply --dest=org.tizen.system.busactd /Org/Tizen/System/BusActD org.tizen.system.busactd.SystemD.StartUnit string:swap.init.service string:no-block
+#/usr/bin/dbus-send --system --type=method_call --print-reply --dest=org.tizen.system.busactd /Org/Tizen/System/BusActD org.tizen.system.busactd.SystemD.StartUnit string:swap.service string:no-block
+
