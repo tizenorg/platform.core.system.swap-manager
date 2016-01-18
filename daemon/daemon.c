@@ -391,6 +391,27 @@ int prepare_profiling(void)
 
 }
 
+static void init_screen_capture_dir()
+{
+#ifdef DEVICE_ONLY
+	/*
+	 * For devices screenshot directory creates by
+	 * service_preinit.sh because of manager has no
+	 * root privilegies
+	 */
+#else
+	/* For emulator */
+	/* remove previous screen capture files */
+	remove_indir(SCREENSHOT_DIR);
+	if (mkdir(SCREENSHOT_DIR, 0777) == -1 && errno != EEXIST) {
+		GETSTRERROR(errno, buf);
+		LOGW("Failed to create directory for screenshot : %s\n", buf);
+	}
+
+	set_label_for_all(SCREENSHOT_DIR);
+#endif
+}
+
 int start_profiling(void)
 {
 	struct app_list_t *app = NULL;
@@ -403,13 +424,14 @@ int start_profiling(void)
 		return -1;
 	}
 	// remove previous screen capture files
-	remove_indir(SCREENSHOT_DIR);
-	if (mkdir(SCREENSHOT_DIR, 0777) == -1 && errno != EEXIST) {
-		GETSTRERROR(errno, buf);
-		LOGW("Failed to create directory for screenshot : %s\n", buf);
-	}
+	//remove_indir(SCREENSHOT_DIR);
+	//if (mkdir(SCREENSHOT_DIR, 0777) == -1 && errno != EEXIST) {
+	//	GETSTRERROR(errno, buf);
+	//	LOGW("Failed to create directory for screenshot : %s\n", buf);
+	//}
 
-	set_label_for_all(SCREENSHOT_DIR);
+	//set_label_for_all(SCREENSHOT_DIR);
+	init_screen_capture_dir();
 
 	if (samplingStart() < 0) {
 		LOGE("Cannot start sampling\n");
