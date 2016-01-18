@@ -142,8 +142,11 @@ int get_dnet_status(void)
 int get_camera_status(void)
 {
 	int camera_status = 0;
+	int res = 0;
 
-	if (vconf_get_int(VCONFKEY_CAMERA_STATE, &camera_status) < 0) {
+	res = vconf_get_int(VCONFKEY_CAMERA_STATE, &camera_status);
+	if (res < 0) {
+		LOG_ONCE_W("get err #%d <%s>\n", res, VCONFKEY_CAMERA_STATE);
 		camera_status = VCONFKEY_CAMERA_STATE_NULL;
 	}
 
