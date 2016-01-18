@@ -32,14 +32,17 @@
 #include <sys/smack.h>
 #include <attr/xattr.h>
 #include "smack.h"
+#include "debug.h"
 
 #define SELF_LABEL_FILE "/proc/self/attr/current"
 #define SMACK_LABEL_LEN 255
 
 void fd_setup_attributes(int fd)
 {
-	fsetxattr(fd, "security.SMACK64IPIN", "*", 1, 0);
-	fsetxattr(fd, "security.SMACK64IPOUT", "@", 1, 0);
+	if (0 != fsetxattr(fd, "security.SMACK64IPIN", "*", 1, 0))
+		LOGE("fsetxattr(fd, security.SMACK64IPIN, *, 1, 0)): %s\n",strerror(errno));
+	if (0 != fsetxattr(fd, "security.SMACK64IPOUT", "@", 1, 0))
+		LOGE("fsetxattr(fd, security.SMACK64IPOUT, @, 1, 0)): %s\n",strerror(errno));
 }
 
 void set_label_for_all(const char *path)

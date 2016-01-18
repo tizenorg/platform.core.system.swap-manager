@@ -1,0 +1,11 @@
+[Unit]
+Description=SWAP enable
+
+[Service]
+User=root
+Group=root
+SmackProcessLabel=swap
+PermissionsStartOnly=true
+Type=oneshot
+
+ExecStart=/opt/swap/sdk/swap_modules_enable.sh
