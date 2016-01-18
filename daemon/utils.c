@@ -43,6 +43,7 @@
 #include <fcntl.h>		// for open
 #include <grp.h>		// for setgroups
 #include <sys/wait.h> /* waitpid */
+#include <aul.h>
 
 #include "daemon.h"
 #include "utils.h"
@@ -147,8 +148,8 @@ int exec_app_tizen(const char *app_id, const char *exec_path)
 		return -1;
 	}
 	LOGI("launch app path is %s, executable path is %s\n"
-	     "launch app name (%s), app_id (%s)\n",
-	     LAUNCH_APP_PATH, exec_path, LAUNCH_APP_NAME, app_id);
+		 "launch app name (%s), app_id (%s)\n",
+		 LAUNCH_APP_PATH, exec_path, LAUNCH_APP_NAME, app_id);
 	pid = fork();
 	if (pid == -1)
 		return -1;
@@ -161,7 +162,7 @@ int exec_app_tizen(const char *app_id, const char *exec_path)
 		return 0;
 	} else { /* child */
 		execl(LAUNCH_APP_PATH, LAUNCH_APP_NAME, app_id, LAUNCH_APP_SDK,
-		      DA_PRELOAD_EXEC, NULL);
+			  DA_PRELOAD_EXEC, NULL);
 		/* FIXME: If code flows here, it deserves greater attention */
 		_Exit(EXIT_FAILURE);
 	}
@@ -199,8 +200,8 @@ int exec_app_web(const char *app_id)
 	pid_t pid;
 
 	LOGI("wrt-launcher path is %s,\n"
-	     "wrt-launcher name (%s), app_id (%s)\n",
-	     WRT_LAUNCHER_PATH, WRT_LAUNCHER_NAME, app_id);
+		 "wrt-launcher name (%s), app_id (%s)\n",
+		 WRT_LAUNCHER_PATH, WRT_LAUNCHER_NAME, app_id);
 
 	pid = fork();
 	if (pid == -1)
@@ -214,10 +215,10 @@ int exec_app_web(const char *app_id)
 		return 0;
 	} else { /* child */
 		execl(WRT_LAUNCHER_PATH,
-		      WRT_LAUNCHER_NAME,
-		      WRT_LAUNCHER_START,
-		      app_id,
-		      NULL);
+			  WRT_LAUNCHER_NAME,
+			  WRT_LAUNCHER_START,
+			  app_id,
+			  NULL);
 		/* FIXME: If code flows here, it deserves greater attention */
 		LOGE("Cannot run exec!\n");
 		_Exit(EXIT_FAILURE);
@@ -229,8 +230,8 @@ void kill_app_web(const char *app_id)
 	pid_t pid;
 
 	LOGI("wrt-launcher path is %s,\n"
-	     "wrt-launcher name (%s), app_id (%s)\n",
-	     WRT_LAUNCHER_PATH, WRT_LAUNCHER_NAME, app_id);
+		 "wrt-launcher name (%s), app_id (%s)\n",
+		 WRT_LAUNCHER_PATH, WRT_LAUNCHER_NAME, app_id);
 
 	pid = fork();
 	if (pid == -1)
@@ -244,10 +245,10 @@ void kill_app_web(const char *app_id)
 		return;
 	} else { /* child */
 		execl(WRT_LAUNCHER_PATH,
-		      WRT_LAUNCHER_NAME,
-		      WRT_LAUNCHER_KILL,
-		      app_id,
-		      NULL);
+			  WRT_LAUNCHER_NAME,
+			  WRT_LAUNCHER_KILL,
+			  app_id,
+			  NULL);
 		/* FIXME: If code flows here, it deserves greater attention */
 		LOGE("Cannot run exec!\n");
 		_Exit(EXIT_FAILURE);
@@ -376,10 +377,20 @@ int kill_app(const char *binary_path)
 	}
 
 	if (pkg_pid != 0) {
+		int res = aul_terminate_pid(pkg_pid);
+
+		if (res == 0) {
+			LOGI("aul_terminate_pid [%d] success\n", pkg_pid);
+			goto exit_success;
+		} else {
+			LOGW("aul_terminate_pid [%d] fail ret = %d\n",
+			     pkg_pid, res);
+		}
+
 		if (kill(pkg_pid, SIGTERM) == -1) {
 			GETSTRERROR(errno, err_buf);
 			LOGE("cannot kill %d -%d errno<%s>\n", pkg_pid, SIGKILL,
-			     err_buf);
+				 err_buf);
 			return -1;
 		} else {
 			// we need sleep up there because kill() function
@@ -391,6 +402,7 @@ int kill_app(const char *binary_path)
 	} else
 		LOGI("cannot kill <%s>; process not found\n", binary_path);
 
+exit_success:
 	return 0;
 }
 
