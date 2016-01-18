@@ -12,16 +12,47 @@ BuildRequires:  aul-devel
 BuildRequires:  vconf-devel
 BuildRequires:  capi-system-info-devel
 BuildRequires:  capi-system-runtime-info-devel
+BuildRequires:  libwebsockets-devel
+%if "%{sec_product_feature_profile_wearable}" == "1"
+BuildRequires:  libjson-devel
+%else
+BuildRequires:  pkgconfig(json-c)
+%endif
 BuildRequires:  pkgconfig(ecore)
+BuildRequires:  pkgconfig(libsystemd-daemon)
+%if "%{?tizen_profile_name}" == "mobile"
+BuildRequires:  call-manager
+BuildRequires:  libcall-manager-devel
+%endif
+BuildRequires:  swap-probe-devel
+BuildRequires:  swap-probe-elf
+%if "%{?tizen_profile_name}" == "tv"
+BuildRequires:  webkit2-efl-tv
+%if "%{TIZEN_PRODUCT_TV}" != "1"
+BuildRequires:  webkit2-efl-tv-debuginfo
+%endif
+%else
+BuildRequires:  emulator-yagl
+BuildRequires:  webkit2-efl
+BuildRequires:  webkit2-efl-debuginfo
+%endif
+%if "%{sec_product_feature_profile_wearable}" == "1"
+BuildRequires:  launchpad-process-pool
+BuildRequires:  launchpad-loader
+%else
+BuildRequires:  launchpad
+%endif
+BuildRequires:  app-core-efl
+%if "%{TIZEN_PRODUCT_TV}" != "1"
+BuildRequires:  app-core-debuginfo
+%endif
 %if "%_project" != "Kirana_SWA_OPEN:Build" && "%_project" != "Kirana_SWA_OPEN:Daily"
 Requires:  swap-modules
 %endif
 Requires:  swap-probe
+Requires:  swap-probe-elf
 Requires:  sdbd
-
-%ifarch %{arm}
-BuildRequires: systemd-devel
-%endif
+Requires:  libwebsockets
 
 %description
 SWAP manager is a part of data collection back-end for DA.
@@ -31,8 +62,29 @@ This binary will be installed in target.
 %setup -q -n %{name}_%{version}
 
 %build
+pushd scripts
+echo "__tizen_profile_name__="%{?tizen_profile_name} > dyn_vars
+echo "__tizen_product_tv__="%{?TIZEN_PRODUCT_TV} >> dyn_vars
+echo "__tizen_product_2_4_wearable__="%{sec_product_feature_profile_wearable} >> dyn_vars
+popd
 cd daemon
-make
+
+%if "%{?tizen_profile_name}" == "mobile"
+SWAP_BUILD_CMD+=" CALL_MNGR=y"
+%endif
+
+%if "%{?tizen_profile_name}" == "tv"
+SWAP_BUILD_CMD+=" PROFILE_TV=y"
+%else
+%if "%{sec_product_feature_profile_wearable}" == "1"
+SWAP_BUILD_CMD+=" OLD_JSON=y"
+%else
+SWAP_BUILD_CMD+=" WSP_SUPPORT=y"
+%endif
+%endif
+
+SWAP_BUILD_CMD+=" make"
+eval ${SWAP_BUILD_CMD}
 
 %install
 rm -rf ${RPM_BUILD_ROOT}
@@ -103,6 +155,7 @@ cd daemon
 %{_prefix}/bin/da_manager
 /opt/swap/sdk/start.sh
 /opt/swap/sdk/stop.sh
+/opt/swap/sdk/init_preload.sh
 
 %changelog
 
