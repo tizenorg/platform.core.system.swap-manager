@@ -132,6 +132,12 @@ static char *msgErrStr(enum ErrorCode err)
 		return "wrong message data";
 	case ERR_CANNOT_START_PROFILING:
 		return "cannot start profiling";
+	case ERR_UI_OBJ_NOT_FOUND:
+		return "requested ui object is not found";
+	case ERR_UI_OBJ_SCREENSHOT_FAILED:
+		return "taking ui screenshot failed because App is in background";
+	case ERR_NOT_SUPPORTED:
+		return "request not supported by security reason";
 	case ERR_SERV_SOCK_CREATE:
 		return "server socket creation failed (written in /tmp/da.port file)";
 	case ERR_SERV_SOCK_BIND:
@@ -193,6 +199,7 @@ static void feature_code_str(uint64_t feature0, uint64_t feature1, char *to,
 	print_feature_0(FL_SYSTEM_NETWORK);
 	print_feature_0(FL_SYSTEM_DEVICE);
 	print_feature_0(FL_SYSTEM_ENERGY);
+	print_feature_0(FL_UI_VIEWER_PROFILING);
 
 	goto exit;
 err_exit:
@@ -1223,6 +1230,99 @@ send_ack:
 	return -(err_code != ERR_NO);
 }
 
+/* =============== UIHV =============== */
+static int is_feature_enabled(enum feature_code fcode)
+{
+        /* TODO: add check use_features1 */
+        return (fcode & prof_session.conf.use_features0) ? 1 : 0;
+}
+
+static int process_msg_get_ui_hierarchy(struct msg_buf_t *msg)
+{
+	struct msg_target_t sendlog;
+	enum ErrorCode err_code = ERR_UNKNOWN;
+	uint8_t rendering;
+
+	// get rendering time option
+	if (!parse_int8(msg, &rendering)) {
+		LOGE("NMSG_GET_UI_HIERARCHY error: No rendering time option\n");
+		err_code = ERR_WRONG_MESSAGE_DATA;
+		goto send_fail;
+	}
+
+	// send ui hierarchy request to target process
+	sendlog.type = MSG_GET_UI_HIERARCHY;
+	*(uint8_t *)sendlog.data = rendering;
+	sendlog.length = sizeof(uint8_t);
+
+	if (target_send_msg_to_all(&sendlog) == 0)
+		err_code = ERR_NO;
+
+	if (!is_feature_enabled(FL_UI_VIEWER_PROFILING) ||
+	    (target_cnt_get() == 0))
+		err_code = ERR_UNKNOWN;
+send_fail:
+	// in case of success we send ack after a message from ui viewer lib
+	if (err_code != ERR_NO)
+		sendACKToHost(NMSG_GET_UI_HIERARCHY, err_code, 0, 0);
+
+	return -(err_code != ERR_NO);
+}
+
+static int process_msg_get_ui_hierarchy_cancel(void)
+{
+	struct msg_target_t sendlog;
+	enum ErrorCode err_code = ERR_UNKNOWN;
+
+	// send ui hierarchy request to target process
+	sendlog.type = MSG_GET_UI_HIERARCHY_CANCEL;
+
+	if (target_send_msg_to_all(&sendlog) == 0)
+		err_code = ERR_NO;
+
+	if (!is_feature_enabled(FL_UI_VIEWER_PROFILING) ||
+	    (target_cnt_get() == 0))
+		err_code = ERR_UNKNOWN;
+
+	sendACKToHost(NMSG_GET_UI_HIERARCHY_CANCEL, err_code, 0, 0);
+
+	return -(err_code != ERR_NO);
+}
+
+static int process_msg_get_ui_screenshot(struct msg_buf_t *msg)
+{
+	struct msg_target_t sendlog;
+	enum ErrorCode err_code = ERR_UNKNOWN;
+	uint64_t obj_id;
+
+	// get ui object address
+	if (!parse_int64(msg, &obj_id)) {
+		LOGE("NMSG_GET_UI_PROPERTIES error: No object id\n");
+		err_code = ERR_WRONG_MESSAGE_DATA;
+		goto send_fail;
+	}
+
+	// send ui object properties request to target process
+	sendlog.type = MSG_GET_UI_SCREENSHOT;
+	*(uint64_t *)sendlog.data = obj_id;
+	sendlog.length = sizeof(uint64_t);
+
+	if (target_send_msg_to_all(&sendlog) == 0)
+		err_code = ERR_NO;
+
+	if (!is_feature_enabled(FL_UI_VIEWER_PROFILING) ||
+	    (target_cnt_get() == 0))
+		err_code = ERR_UNKNOWN;
+
+send_fail:
+	// in case of success we send ack after a message from ui viewer lib
+	if (err_code != ERR_NO)
+		sendACKToHost(NMSG_GET_UI_SCREENSHOT, err_code, 0, 0);
+
+	return -(err_code != ERR_NO);
+}
+/* =============== UIHV =============== */
+
 int host_message_handler(struct msg_t *msg)
 {
 	struct target_info_t target_info;
@@ -1337,6 +1437,12 @@ int host_message_handler(struct msg_t *msg)
 		return process_msg_get_screenshot(&msg_control);
 	case NMSG_GET_PROCESS_ADD_INFO:
 		return process_msg_get_process_add_info(&msg_control);
+	case NMSG_GET_UI_HIERARCHY:
+		return process_msg_get_ui_hierarchy(&msg_control);
+	case NMSG_GET_UI_HIERARCHY_CANCEL:
+		return process_msg_get_ui_hierarchy_cancel();
+	case NMSG_GET_UI_SCREENSHOT:
+		return process_msg_get_ui_screenshot(&msg_control);
 	default:
 		LOGE("unknown message %d <0x%08X>\n", msg->id, msg->id);
 		error_code = ERR_WRONG_MESSAGE_TYPE;
