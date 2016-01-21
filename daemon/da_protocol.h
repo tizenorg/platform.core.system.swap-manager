@@ -80,6 +80,7 @@ enum ErrorCode {
 	ERR_INITIALIZE_SYSTEM_INFO_FAILED	= -103,	/* initialize system info failed */
 	ERR_HOST_SERVER_SOCKET_CREATE_FAILED	= -104,	/* host server socket create failed */
 	ERR_TARGET_SERVER_SOCKET_CREATE_FAILED	= -105,	/* target server socket create failed */
+	ERR_UI_TARGET_SERVER_SOCKET_CREATE_FAILED = -107, /* ui target server socket create failed */
 
 	ERR_SIGNAL_MASK_SETTING_FAILED		= -106, /* TODO del (old parametr) */
 
@@ -140,7 +141,7 @@ enum feature_code{
 
 	FL_RESERVED4			= 0xe00000000000ULL, // reserved 1110
 
-	FL_ALL_FEATURES			= 0x3FFFFFFFFFFFULL &
+	FL_ALL_FEATURES			= 0x23FFFFFFFFFFFULL &
 					  (~FL_RESERVED1) &
 					  (~FL_RESERVED2) &
 					  (~FL_RESERVED3) &
