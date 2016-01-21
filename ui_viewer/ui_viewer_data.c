@@ -41,7 +41,7 @@ static pthread_mutex_t hierarchy_lock = PTHREAD_MUTEX_INITIALIZER;
 enum hierarchy_status_t hierarchy_status = HIERARCHY_NOT_RUNNING;
 
 static Eina_List *_get_obj(Eina_List *obj_list, Evas_Object *obj);
-static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name);
+static void pack_ui_obj_prop(FILE *file, Evas_Object *obj, const char *type_name);
 static Eina_List *ui_viewer_get_all_objs(void);
 
 static enum ui_obj_category_t _get_object_category(const char *type_name)
@@ -291,7 +291,7 @@ static Evas_Object *_get_win_id(Evas *evas)
 	return win_id;
 }
 
-static char *_pack_ui_obj_info(char *to, Evas_Object *obj,
+static void _pack_ui_obj_info(FILE *file, Evas_Object *obj,
 			       enum rendering_option_t rendering)
 {
 	ui_obj_info_t info;
@@ -301,7 +301,7 @@ static char *_pack_ui_obj_info(char *to, Evas_Object *obj,
 		ui_viewer_log("object %p doesn't exist\n", obj);
 		set_hierarchy_status(HIERARCHY_CANCELLED);
 		print_log_ui_viewer_hierarchy_error();
-		return to;
+		return;
 	}
 
 	evas = evas_object_evas_get(obj);
@@ -325,26 +325,26 @@ static char *_pack_ui_obj_info(char *to, Evas_Object *obj,
 			(unsigned long)info.parent_id);
 
 
-	to = pack_ptr(to, info.id);
-	to = pack_int8(to, info.category);
-	to = pack_int32(to, info.code);
-	to = pack_string(to, info.name);
-	to = pack_timeval(to, info.rendering_tv);
-	to = pack_ptr(to, info.parent_id);
-	to = pack_ui_obj_prop(to, info.id, info.name);
+	write_ptr(file, info.id);
+	write_int8(file, info.category);
+	write_int32(file, info.code);
+	write_string(file, info.name);
+	write_timeval(file, info.rendering_tv);
+	write_ptr(file, info.parent_id);
+	pack_ui_obj_prop(file, info.id, info.name);
 
 	evas_object_unref(obj);
 
-	return to;
+	return;
 }
 
-char *pack_ui_obj_info_list(char *to, enum rendering_option_t rendering,
+void pack_ui_obj_info_list(FILE *file, enum rendering_option_t rendering,
 			    Eina_Bool *cancelled)
 {
 	Eina_List *obj_list;
 	Evas_Object *obj;
 	unsigned int info_cnt;
-	char *start_ptr = to;
+//	char *start_ptr = to;
 	Eina_List *ee_list = NULL, *ee_list_tmp = NULL;
 	Ecore_Evas *ee;
 
@@ -358,8 +358,8 @@ char *pack_ui_obj_info_list(char *to, enum rendering_option_t rendering,
 	pthread_mutex_lock(&request_lock);
 	obj_list = ui_viewer_get_all_objs();
 	info_cnt = eina_list_count(obj_list);
-	to = pack_int8(to, rendering);
-	to = pack_int32(to, info_cnt);
+	write_int8(file, rendering);
+	write_int32(file, info_cnt);
 	pthread_mutex_unlock(&request_lock);
 
 	*cancelled = EINA_FALSE;
@@ -367,7 +367,6 @@ char *pack_ui_obj_info_list(char *to, enum rendering_option_t rendering,
 	if (info_cnt == 0) {
 		ui_viewer_log("no objects exist\n");
 		set_hierarchy_status(HIERARCHY_CANCELLED);
-		to = start_ptr;
 		*cancelled = EINA_TRUE;
 		print_log_ui_viewer_hierarchy_error();
 	}
@@ -377,11 +376,10 @@ char *pack_ui_obj_info_list(char *to, enum rendering_option_t rendering,
 		pthread_mutex_lock(&request_lock);
 		// check if hierarchy request is active
 		if (get_hierarchy_status() == HIERARCHY_RUNNING) {
-			to = _pack_ui_obj_info(to, obj, rendering);
+			_pack_ui_obj_info(file, obj, rendering);
 		} else {
 			ui_viewer_log("break packing hierarchy info\n");
 			// don't save any data if request was cancelled
-			to = start_ptr;
 			*cancelled = EINA_TRUE;
 			pthread_mutex_unlock(&request_lock);
 			break;
@@ -407,7 +405,7 @@ char *pack_ui_obj_info_list(char *to, enum rendering_option_t rendering,
 
 	pthread_mutex_unlock(&request_lock);
 
-	return to;
+	return;
 }
 
 enum hierarchy_status_t get_hierarchy_status(void)
@@ -468,10 +466,10 @@ static Eina_List *ui_viewer_get_all_objs(void)
 				    EINA_TRUE, EINA_TRUE);
 }
 
-static char *_pack_ui_obj_evas_prop(char *to, ui_obj_prop_t *prop)
+static void _pack_ui_obj_evas_prop(FILE *file, ui_obj_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("evas prop: geometry : [%d,%d,%d,%d], "
 			"focus : %d, name : %s, visible : %d, \n\t"
@@ -494,58 +492,56 @@ static char *_pack_ui_obj_evas_prop(char *to, ui_obj_prop_t *prop)
 			prop->size_padding[2], prop->size_padding[3],
 			prop->render_op);
 
-	to = pack_int32(to, prop->geometry[0]);
-	to = pack_int32(to, prop->geometry[1]);
-	to = pack_int32(to, prop->geometry[2]);
-	to = pack_int32(to, prop->geometry[3]);
-	to = pack_int8(to, prop->focus);
-	to = pack_string(to, prop->name);
-	to = pack_int8(to, prop->visible);
-	to = pack_int32(to, prop->color[0]);
-	to = pack_int32(to, prop->color[1]);
-	to = pack_int32(to, prop->color[2]);
-	to = pack_int32(to, prop->color[3]);
-	to = pack_int8(to, prop->anti_alias);
-	to = pack_float(to, prop->scale);
-	to = pack_int32(to, prop->size_min[0]);
-	to = pack_int32(to, prop->size_min[1]);
-	to = pack_int32(to, prop->size_max[0]);
-	to = pack_int32(to, prop->size_max[1]);
-	to = pack_int32(to, prop->size_request[0]);
-	to = pack_int32(to, prop->size_request[1]);
-	to = pack_float(to, prop->size_align[0]);
-	to = pack_float(to, prop->size_align[1]);
-	to = pack_float(to, prop->size_weight[0]);
-	to = pack_float(to, prop->size_weight[1]);
-	to = pack_int32(to, prop->size_padding[0]);
-	to = pack_int32(to, prop->size_padding[1]);
-	to = pack_int32(to, prop->size_padding[2]);
-	to = pack_int32(to, prop->size_padding[3]);
-	to = pack_int8(to, prop->render_op);
-
-	return to;
+	write_int32(file, prop->geometry[0]);
+	write_int32(file, prop->geometry[1]);
+	write_int32(file, prop->geometry[2]);
+	write_int32(file, prop->geometry[3]);
+	write_int8(file, prop->focus);
+	write_string(file, prop->name);
+	write_int8(file, prop->visible);
+	write_int32(file, prop->color[0]);
+	write_int32(file, prop->color[1]);
+	write_int32(file, prop->color[2]);
+	write_int32(file, prop->color[3]);
+	write_int8(file, prop->anti_alias);
+	write_float(file, prop->scale);
+	write_int32(file, prop->size_min[0]);
+	write_int32(file, prop->size_min[1]);
+	write_int32(file, prop->size_max[0]);
+	write_int32(file, prop->size_max[1]);
+	write_int32(file, prop->size_request[0]);
+	write_int32(file, prop->size_request[1]);
+	write_float(file, prop->size_align[0]);
+	write_float(file, prop->size_align[1]);
+	write_float(file, prop->size_weight[0]);
+	write_float(file, prop->size_weight[1]);
+	write_int32(file, prop->size_padding[0]);
+	write_int32(file, prop->size_padding[1]);
+	write_int32(file, prop->size_padding[2]);
+	write_int32(file, prop->size_padding[3]);
+	write_int8(file, prop->render_op);
 }
 
-static char *_pack_ui_obj_elm_prop(char *to, ui_obj_elm_prop_t *prop)
+static void _pack_ui_obj_elm_prop(FILE *file, ui_obj_elm_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("elm prop: text : %s, style : %s, disabled : %d, type : %s\n",
 		      prop->text, prop->style, prop->disabled, prop->type);
 
-	to = pack_string(to, prop->text);
-	to = pack_string(to, prop->style);
-	to = pack_int8(to, prop->disabled);
-	to = pack_string(to, prop->type);
+	write_string(file, prop->text);
+	write_string(file, prop->style);
+	write_int8(file, prop->disabled);
+	write_string(file, prop->type);
 
-	return to;
+	return;
 }
 
-static char *_pack_ui_obj_edje_prop(char *to, ui_obj_edje_prop_t *prop)
+static void _pack_ui_obj_edje_prop(FILE *file, ui_obj_edje_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("edje prop: animation : %d, play : %d, scale : %f, base_scale : %f, "
 		      "size_min : [%d,%d], size_max : [%d,%d]\n",
@@ -553,22 +549,20 @@ static char *_pack_ui_obj_edje_prop(char *to, ui_obj_edje_prop_t *prop)
 		      prop->size_min[0], prop->size_min[1], prop->size_max[0],
 		      prop->size_max[1]);
 
-	to = pack_int8(to, prop->animation);
-	to = pack_int8(to, prop->play);
-	to = pack_float(to, prop->scale);
-	to = pack_float(to, prop->base_scale);
-	to = pack_int32(to, prop->size_min[0]);
-	to = pack_int32(to, prop->size_min[1]);
-	to = pack_int32(to, prop->size_max[0]);
-	to = pack_int32(to, prop->size_max[1]);
-
-	return to;
+	write_int8(file, prop->animation);
+	write_int8(file, prop->play);
+	write_float(file, prop->scale);
+	write_float(file, prop->base_scale);
+	write_int32(file, prop->size_min[0]);
+	write_int32(file, prop->size_min[1]);
+	write_int32(file, prop->size_max[0]);
+	write_int32(file, prop->size_max[1]);
 }
 
-static char *_pack_image_prop(char *to, image_prop_t *prop)
+static void _pack_image_prop(FILE *file, image_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("image prop: load_dpi : %f, source_clip : %d, filled : %d, content_hint : %d, "
 		      "alpha : %d, border : [%d,%d,%d,%d], border_scale : %f, pixels_dirty : %d,\n\t"
@@ -582,55 +576,51 @@ static char *_pack_image_prop(char *to, image_prop_t *prop)
 		      prop->fill[0], prop->fill[1], prop->fill[2], prop->fill[3], prop->load_scale_down,
 		      prop->scale_hint, prop->source_events, prop->frame_count, prop->evas_image_stride);
 
-	to = pack_float(to, prop->load_dpi);
-	to = pack_int8(to, prop->source_clip);
-	to = pack_int8(to, prop->filled);
-	to = pack_int8(to, prop->content_hint);
-	to = pack_int8(to, prop->alpha);
-	to = pack_int32(to, prop->border[0]);
-	to = pack_int32(to, prop->border[1]);
-	to = pack_int32(to, prop->border[2]);
-	to = pack_int32(to, prop->border[3]);
-	to = pack_float(to, prop->border_scale);
-	to = pack_int8(to, prop->pixels_dirty);
-	to = pack_int8(to, prop->load_orientation);
-	to = pack_int8(to, prop->border_center_fill);
-	to = pack_int32(to, prop->size[0]);
-	to = pack_int32(to, prop->size[1]);
-	to = pack_int8(to, prop->source_visible);
-	to = pack_int32(to, prop->fill[0]);
-	to = pack_int32(to, prop->fill[1]);
-	to = pack_int32(to, prop->fill[2]);
-	to = pack_int32(to, prop->fill[3]);
-	to = pack_int32(to, prop->load_scale_down);
-	to = pack_int8(to, prop->scale_hint);
-	to = pack_int8(to, prop->source_events);
-	to = pack_int32(to, prop->frame_count);
-	to = pack_int32(to, prop->evas_image_stride);
-
-	return to;
+	write_float(file, prop->load_dpi);
+	write_int8(file, prop->source_clip);
+	write_int8(file, prop->filled);
+	write_int8(file, prop->content_hint);
+	write_int8(file, prop->alpha);
+	write_int32(file, prop->border[0]);
+	write_int32(file, prop->border[1]);
+	write_int32(file, prop->border[2]);
+	write_int32(file, prop->border[3]);
+	write_float(file, prop->border_scale);
+	write_int8(file, prop->pixels_dirty);
+	write_int8(file, prop->load_orientation);
+	write_int8(file, prop->border_center_fill);
+	write_int32(file, prop->size[0]);
+	write_int32(file, prop->size[1]);
+	write_int8(file, prop->source_visible);
+	write_int32(file, prop->fill[0]);
+	write_int32(file, prop->fill[1]);
+	write_int32(file, prop->fill[2]);
+	write_int32(file, prop->fill[3]);
+	write_int32(file, prop->load_scale_down);
+	write_int8(file, prop->scale_hint);
+	write_int8(file, prop->source_events);
+	write_int32(file, prop->frame_count);
+	write_int32(file, prop->evas_image_stride);
 }
 
-static char *_pack_line_prop(char *to, line_prop_t *prop)
+static void _pack_line_prop(FILE *file, line_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("line prop: xy : [%d,%d,%d,%d]\n",
 		      prop->xy[0], prop->xy[1], prop->xy[2], prop->xy[3]);
 
-	to = pack_int32(to, prop->xy[0]);
-	to = pack_int32(to, prop->xy[1]);
-	to = pack_int32(to, prop->xy[2]);
-	to = pack_int32(to, prop->xy[3]);
-
-	return to;
+	write_int32(file, prop->xy[0]);
+	write_int32(file, prop->xy[1]);
+	write_int32(file, prop->xy[2]);
+	write_int32(file, prop->xy[3]);
 }
 
-static char *_pack_text_prop(char *to, text_prop_t *prop)
+static void _pack_text_prop(FILE *file, text_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("text prop: font : %s, size : %d, text : %s, delim : %s, "
 		      "ellipsis : %s, style : %d, shadow_color : [%d,%d,%d,%d], glow_color : [%d,%d,%d,%d],\n\t"
@@ -644,226 +634,202 @@ static char *_pack_text_prop(char *to, text_prop_t *prop)
 		      prop->style_pad[0], prop->style_pad[1], prop->style_pad[2], prop->style_pad[3],
 		      prop->direction);
 
-	to = pack_string(to, prop->font);
-	to = pack_int32(to, prop->size);
-	to = pack_string(to, prop->text);
-	to = pack_string(to, prop->delim);
-	to = pack_float(to, prop->ellipsis);
-	to = pack_int8(to, prop->style);
-	to = pack_int32(to, prop->shadow_color[0]);
-	to = pack_int32(to, prop->shadow_color[1]);
-	to = pack_int32(to, prop->shadow_color[2]);
-	to = pack_int32(to, prop->shadow_color[3]);
-	to = pack_int32(to, prop->glow_color[0]);
-	to = pack_int32(to, prop->glow_color[1]);
-	to = pack_int32(to, prop->glow_color[2]);
-	to = pack_int32(to, prop->glow_color[3]);
-	to = pack_int32(to, prop->glow2_color[0]);
-	to = pack_int32(to, prop->glow2_color[1]);
-	to = pack_int32(to, prop->glow2_color[2]);
-	to = pack_int32(to, prop->glow2_color[3]);
-	to = pack_int32(to, prop->outline_color[0]);
-	to = pack_int32(to, prop->outline_color[1]);
-	to = pack_int32(to, prop->outline_color[2]);
-	to = pack_int32(to, prop->outline_color[3]);
-	to = pack_int32(to, prop->style_pad[0]);
-	to = pack_int32(to, prop->style_pad[1]);
-	to = pack_int32(to, prop->style_pad[2]);
-	to = pack_int32(to, prop->style_pad[3]);
-	to = pack_int8(to, prop->direction);
-
-	return to;
+	write_string(file, prop->font);
+	write_int32(file, prop->size);
+	write_string(file, prop->text);
+	write_string(file, prop->delim);
+	write_float(file, prop->ellipsis);
+	write_int8(file, prop->style);
+	write_int32(file, prop->shadow_color[0]);
+	write_int32(file, prop->shadow_color[1]);
+	write_int32(file, prop->shadow_color[2]);
+	write_int32(file, prop->shadow_color[3]);
+	write_int32(file, prop->glow_color[0]);
+	write_int32(file, prop->glow_color[1]);
+	write_int32(file, prop->glow_color[2]);
+	write_int32(file, prop->glow_color[3]);
+	write_int32(file, prop->glow2_color[0]);
+	write_int32(file, prop->glow2_color[1]);
+	write_int32(file, prop->glow2_color[2]);
+	write_int32(file, prop->glow2_color[3]);
+	write_int32(file, prop->outline_color[0]);
+	write_int32(file, prop->outline_color[1]);
+	write_int32(file, prop->outline_color[2]);
+	write_int32(file, prop->outline_color[3]);
+	write_int32(file, prop->style_pad[0]);
+	write_int32(file, prop->style_pad[1]);
+	write_int32(file, prop->style_pad[2]);
+	write_int32(file, prop->style_pad[3]);
+	write_int8(file, prop->direction);
 }
 
-static char *_pack_textblock_prop(char *to, textblock_prop_t *prop)
+static void _pack_textblock_prop(FILE *file, textblock_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("textblock prop: replace_char : %s, valign : %f, delim : %s, newline : %d, "
 		      "markup : %s\n",
 		      prop->replace_char, prop->valign, prop->delim, prop->newline,
 		      prop->markup);
 
-	to = pack_string(to, prop->replace_char);
-	to = pack_float(to, prop->valign);
-	to = pack_string(to, prop->delim);
-	to = pack_int8(to, prop->newline);
-	to = pack_string(to, prop->markup);
-
-	return to;
+	write_string(file, prop->replace_char);
+	write_float(file, prop->valign);
+	write_string(file, prop->delim);
+	write_int8(file, prop->newline);
+	write_string(file, prop->markup);
 }
 
-static char *_pack_table_prop(char *to, table_prop_t *prop)
+static void _pack_table_prop(FILE *file, table_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("table prop: homogeneous : %d, align : [%f,%f], padding : [%d,%d], mirrored : %d, "
 		      "col_row_size : [%d,%d]\n",
 		      prop->homogeneous, prop->align[0], prop->align[1], prop->padding[0],
 		      prop->padding[1], prop->mirrored, prop->col_row_size[0], prop->col_row_size[1]);
 
-	to = pack_int8(to, prop->homogeneous);
-	to = pack_float(to, prop->align[0]);
-	to = pack_float(to, prop->align[1]);
-	to = pack_int32(to, prop->padding[0]);
-	to = pack_int32(to, prop->padding[1]);
-	to = pack_int8(to, prop->mirrored);
-	to = pack_int32(to, prop->col_row_size[0]);
-	to = pack_int32(to, prop->col_row_size[1]);
-
-	return to;
+	write_int8(file, prop->homogeneous);
+	write_float(file, prop->align[0]);
+	write_float(file, prop->align[1]);
+	write_int32(file, prop->padding[0]);
+	write_int32(file, prop->padding[1]);
+	write_int8(file, prop->mirrored);
+	write_int32(file, prop->col_row_size[0]);
+	write_int32(file, prop->col_row_size[1]);
 }
 
-static char *_pack_box_prop(char *to, box_prop_t *prop)
+static void _pack_box_prop(FILE *file, box_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("box prop: align : [%f,%f]\n",
 		      prop->align[0], prop->align[1]);
 
-	to = pack_float(to, prop->align[0]);
-	to = pack_float(to, prop->align[1]);
-
-	return to;
+	write_float(file, prop->align[0]);
+	write_float(file, prop->align[1]);
 }
 
-static char *_pack_grid_prop(char *to, grid_prop_t *prop)
+static void _pack_grid_prop(FILE *file, grid_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return ;
 
 	ui_viewer_log("grid prop: mirrored : %d\n",
 		      prop->mirrored);
 
-	to = pack_int8(to, prop->mirrored);
-
-	return to;
+	write_int8(file, prop->mirrored);
 }
 
-static char *_pack_textgrid_prop(char *to, textgrid_prop_t *prop)
+static void _pack_textgrid_prop(FILE *file, textgrid_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("textgrid prop: size : [%d,%d], cell_size : [%d,%d]\n",
 		      prop->size[0], prop->size[1], prop->cell_size[0],
 		      prop->cell_size[1]);
 
-	to = pack_int32(to, prop->size[0]);
-	to = pack_int32(to, prop->size[1]);
-	to = pack_int32(to, prop->cell_size[0]);
-	to = pack_int32(to, prop->cell_size[1]);
-
-	return to;
+	write_int32(file, prop->size[0]);
+	write_int32(file, prop->size[1]);
+	write_int32(file, prop->cell_size[0]);
+	write_int32(file, prop->cell_size[1]);
 }
 
-static char *_pack_bg_prop(char *to, bg_prop_t *prop)
+static void _pack_bg_prop(FILE *file, bg_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("bg prop: color : [%d,%d,%d], option : %d\n",
 		      prop->color[0], prop->color[1], prop->color[2],
 		      prop->option);
 
-	to = pack_int32(to, prop->color[0]);
-	to = pack_int32(to, prop->color[1]);
-	to = pack_int32(to, prop->color[2]);
-	to = pack_int8(to, prop->option);
-
-	return to;
+	write_int32(file, prop->color[0]);
+	write_int32(file, prop->color[1]);
+	write_int32(file, prop->color[2]);
+	write_int8(file, prop->option);
 }
 
-static char *_pack_button_prop(char *to, button_prop_t *prop)
+static void _pack_button_prop(FILE *file, button_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("button prop: initial_timeout : %f, gap_timeout : %f, autorepeat : %d\n",
 		      prop->initial_timeout, prop->gap_timeout, prop->autorepeat);
 
-	to = pack_float(to, prop->initial_timeout);
-	to = pack_float(to, prop->gap_timeout);
-	to = pack_int8(to, prop->autorepeat);
-
-	return to;
+	write_float(file, prop->initial_timeout);
+	write_float(file, prop->gap_timeout);
+	write_int8(file, prop->autorepeat);
 }
 
-static char *_pack_check_prop(char *to, check_prop_t *prop)
+static void _pack_check_prop(FILE *file, check_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("check prop: state : %d\n",
 		      prop->state);
 
-	to = pack_int8(to, prop->state);
-
-	return to;
+	write_int8(file, prop->state);
 }
 
-static char *_pack_colorselector_prop(char *to, colorselector_prop_t *prop)
+static void _pack_colorselector_prop(FILE *file, colorselector_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("colorselector prop: color : [%d,%d,%d,%d], palette_name : %s, "
 		      "mode : %d\n",
 		      prop->color[0], prop->color[1], prop->color[2], prop->color[3], prop->palette_name,
 		      prop->mode);
 
-	to = pack_int32(to, prop->color[0]);
-	to = pack_int32(to, prop->color[1]);
-	to = pack_int32(to, prop->color[2]);
-	to = pack_int32(to, prop->color[3]);
-	to = pack_string(to, prop->palette_name);
-	to = pack_int8(to, prop->mode);
-
-	return to;
+	write_int32(file, prop->color[0]);
+	write_int32(file, prop->color[1]);
+	write_int32(file, prop->color[2]);
+	write_int32(file, prop->color[3]);
+	write_string(file, prop->palette_name);
+	write_int8(file, prop->mode);
 }
 
-static char *_pack_ctxpopup_prop(char *to, ctxpopup_prop_t *prop)
+static void _pack_ctxpopup_prop(FILE *file, ctxpopup_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("ctxpopup prop: horizontal : %d\n",
 		      prop->horizontal);
 
-	to = pack_int8(to, prop->horizontal);
-
-	return to;
+	write_int8(file, prop->horizontal);
 }
 
-static char *_pack_datetime_prop(char *to, datetime_prop_t *prop)
+static void _pack_datetime_prop(FILE *file, datetime_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("datetime prop: format : %s, value : [%d,%d,%d,%d,%d,%d,%d,%d]\n",
 		      prop->format, prop->value[0], prop->value[1], prop->value[2], prop->value[3],
 		      prop->value[4], prop->value[5], prop->value[6], prop->value[7]);
 
-	to = pack_string(to, prop->format);
-	to = pack_int32(to, prop->value[0]);
-	to = pack_int32(to, prop->value[1]);
-	to = pack_int32(to, prop->value[2]);
-	to = pack_int32(to, prop->value[3]);
-	to = pack_int32(to, prop->value[4]);
-	to = pack_int32(to, prop->value[5]);
-	to = pack_int32(to, prop->value[6]);
-	to = pack_int32(to, prop->value[7]);
-
-	return to;
+	write_string(file, prop->format);
+	write_int32(file, prop->value[0]);
+	write_int32(file, prop->value[1]);
+	write_int32(file, prop->value[2]);
+	write_int32(file, prop->value[3]);
+	write_int32(file, prop->value[4]);
+	write_int32(file, prop->value[5]);
+	write_int32(file, prop->value[6]);
+	write_int32(file, prop->value[7]);
 }
 
-static char *_pack_entry_prop(char *to, entry_prop_t *prop)
+static void _pack_entry_prop(FILE *file, entry_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("entry prop: entry : %s, scrollable : %d, panel_show_on_demand : %d, menu_disabled : %d, "
 		      "cnp_mode : %d, editable : %d, hover_style : %s, single_line : %d,\n\t"
@@ -876,46 +842,42 @@ static char *_pack_entry_prop(char *to, entry_prop_t *prop)
 		      prop->cursor_pos, prop->cursor_is_format, prop->cursor_content, prop->selection,
 		      prop->is_visible_format);
 
-	to = pack_string(to, prop->entry);
-	to = pack_int8(to, prop->scrollable);
-	to = pack_int8(to, prop->panel_show_on_demand);
-	to = pack_int8(to, prop->menu_disabled);
-	to = pack_int8(to, prop->cnp_mode);
-	to = pack_int8(to, prop->editable);
-	to = pack_string(to, prop->hover_style);
-	to = pack_int8(to, prop->single_line);
-	to = pack_int8(to, prop->password);
-	to = pack_int8(to, prop->autosave);
-	to = pack_int8(to, prop->prediction_allow);
-	to = pack_int8(to, prop->panel_enabled);
-	to = pack_int32(to, prop->cursor_pos);
-	to = pack_int8(to, prop->cursor_is_format);
-	to = pack_string(to, prop->cursor_content);
+	write_string(file, prop->entry);
+	write_int8(file, prop->scrollable);
+	write_int8(file, prop->panel_show_on_demand);
+	write_int8(file, prop->menu_disabled);
+	write_int8(file, prop->cnp_mode);
+	write_int8(file, prop->editable);
+	write_string(file, prop->hover_style);
+	write_int8(file, prop->single_line);
+	write_int8(file, prop->password);
+	write_int8(file, prop->autosave);
+	write_int8(file, prop->prediction_allow);
+	write_int8(file, prop->panel_enabled);
+	write_int32(file, prop->cursor_pos);
+	write_int8(file, prop->cursor_is_format);
+	write_string(file, prop->cursor_content);
 	free(prop->cursor_content); // we need free it according to efl docs
-	to = pack_string(to, prop->selection);
-	to = pack_int8(to, prop->is_visible_format);
-
-	return to;
+	write_string(file, prop->selection);
+	write_int8(file, prop->is_visible_format);
 }
 
-static char *_pack_flip_prop(char *to, flip_prop_t *prop)
+static void _pack_flip_prop(FILE *file, flip_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("flip prop: interaction : %d, front_visible : %d\n",
 		      prop->interaction, prop->front_visible);
 
-	to = pack_int8(to, prop->interaction);
-	to = pack_int8(to, prop->front_visible);
-
-	return to;
+	write_int8(file, prop->interaction);
+	write_int8(file, prop->front_visible);
 }
 
-static char *_pack_gengrid_prop(char *to, gengrid_prop_t *prop)
+static void _pack_gengrid_prop(FILE *file, gengrid_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("gengrid prop: align : [%f,%f], filled : %d, relative : [%f,%f], "
 		      "multi_select : %d, group_item_size : [%d,%d], select_mode : %d, render_mode : %d,\n\t"
@@ -927,31 +889,29 @@ static char *_pack_gengrid_prop(char *to, gengrid_prop_t *prop)
 		      prop->item_size[1], prop->multi_select_mode, prop->horizontal, prop->wheel_disabled,
 		      prop->items_count);
 
-	to = pack_float(to, prop->align[0]);
-	to = pack_float(to, prop->align[1]);
-	to = pack_int8(to, prop->filled);
-	to = pack_float(to, prop->relative[0]);
-	to = pack_float(to, prop->relative[1]);
-	to = pack_int8(to, prop->multi_select);
-	to = pack_int32(to, prop->group_item_size[0]);
-	to = pack_int32(to, prop->group_item_size[1]);
-	to = pack_int8(to, prop->select_mode);
-	to = pack_int8(to, prop->render_mode);
-	to = pack_int8(to, prop->highlight_mode);
-	to = pack_int32(to, prop->item_size[0]);
-	to = pack_int32(to, prop->item_size[1]);
-	to = pack_int8(to, prop->multi_select_mode);
-	to = pack_int8(to, prop->horizontal);
-	to = pack_int8(to, prop->wheel_disabled);
-	to = pack_int32(to, prop->items_count);
-
-	return to;
+	write_float(file, prop->align[0]);
+	write_float(file, prop->align[1]);
+	write_int8(file, prop->filled);
+	write_float(file, prop->relative[0]);
+	write_float(file, prop->relative[1]);
+	write_int8(file, prop->multi_select);
+	write_int32(file, prop->group_item_size[0]);
+	write_int32(file, prop->group_item_size[1]);
+	write_int8(file, prop->select_mode);
+	write_int8(file, prop->render_mode);
+	write_int8(file, prop->highlight_mode);
+	write_int32(file, prop->item_size[0]);
+	write_int32(file, prop->item_size[1]);
+	write_int8(file, prop->multi_select_mode);
+	write_int8(file, prop->horizontal);
+	write_int8(file, prop->wheel_disabled);
+	write_int32(file, prop->items_count);
 }
 
-static char *_pack_genlist_prop(char *to, genlist_prop_t *prop)
+static void _pack_genlist_prop(FILE *file, genlist_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("genlist prop: multi_select : %d, genlist_mode : %d, items_count : %d, homogeneous : %d, "
 		      "block_count : %d, timeout : %f, reorder_mode : %d,\n\t"
@@ -961,55 +921,49 @@ static char *_pack_genlist_prop(char *to, genlist_prop_t *prop)
 		      prop->block_count, prop->timeout, prop->reorder_mode, prop->decorate_mode,
 		      prop->effect_enabled, prop->select_mode, prop->highlight_mode, prop->realization_mode);
 
-	to = pack_int8(to, prop->multi_select);
-	to = pack_int8(to, prop->genlist_mode);
-	to = pack_int32(to, prop->items_count);
-	to = pack_int8(to, prop->homogeneous);
-	to = pack_int32(to, prop->block_count);
-	to = pack_float(to, prop->timeout);
-	to = pack_int8(to, prop->reorder_mode);
-	to = pack_int8(to, prop->decorate_mode);
-	to = pack_int8(to, prop->effect_enabled);
-	to = pack_int8(to, prop->select_mode);
-	to = pack_int8(to, prop->highlight_mode);
-	to = pack_int8(to, prop->realization_mode);
-
-	return to;
+	write_int8(file, prop->multi_select);
+	write_int8(file, prop->genlist_mode);
+	write_int32(file, prop->items_count);
+	write_int8(file, prop->homogeneous);
+	write_int32(file, prop->block_count);
+	write_float(file, prop->timeout);
+	write_int8(file, prop->reorder_mode);
+	write_int8(file, prop->decorate_mode);
+	write_int8(file, prop->effect_enabled);
+	write_int8(file, prop->select_mode);
+	write_int8(file, prop->highlight_mode);
+	write_int8(file, prop->realization_mode);
 }
 
-static char *_pack_glview_prop(char *to, glview_prop_t *prop)
+static void _pack_glview_prop(FILE *file, glview_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("glview prop: size : [%d,%d], rotation: %d\n",
 		      prop->size[0], prop->size[1], prop->rotation);
 
-	to = pack_int32(to, prop->size[0]);
-	to = pack_int32(to, prop->size[1]);
-	to = pack_int32(to, prop->rotation);
-
-	return to;
+	write_int32(file, prop->size[0]);
+	write_int32(file, prop->size[1]);
+	write_int32(file, prop->rotation);
 }
 
-static char *_pack_icon_prop(char *to, icon_prop_t *prop)
+static void _pack_icon_prop(FILE *file, icon_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("icon prop: lookup : %d, standard : %s\n",
 		      prop->lookup, prop->standard);
 
-	to = pack_int8(to, prop->lookup);
-	to = pack_string(to, prop->standard);
-
-	return to;
+	write_int8(file, prop->lookup);
+	write_string(file, prop->standard);
 }
 
-static char *_pack_elm_image_prop(char *to, elm_image_prop_t *prop)
+static void _pack_elm_image_prop(FILE *file, elm_image_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("elm_image prop: editable : %d, play : %d, smooth : %d, no_scale : %d, "
 		      "animated : %d, aspect_fixed : %d, orient : %d,\n\t"
@@ -1020,83 +974,75 @@ static char *_pack_elm_image_prop(char *to, elm_image_prop_t *prop)
 		      prop->resizable[0], prop->resizable[1], prop->animated_available,
 		      prop->size[0], prop->size[1]);
 
-	to = pack_int8(to, prop->editable);
-	to = pack_int8(to, prop->play);
-	to = pack_int8(to, prop->smooth);
-	to = pack_int8(to, prop->no_scale);
-	to = pack_int8(to, prop->animated);
-	to = pack_int8(to, prop->aspect_fixed);
-	to = pack_int8(to, prop->orient);
-	to = pack_int8(to, prop->fill_outside);
-	to = pack_int8(to, prop->resizable[0]);
-	to = pack_int8(to, prop->resizable[1]);
-	to = pack_int8(to, prop->animated_available);
-	to = pack_int32(to, prop->size[0]);
-	to = pack_int32(to, prop->size[1]);
-
-	return to;
+	write_int8(file, prop->editable);
+	write_int8(file, prop->play);
+	write_int8(file, prop->smooth);
+	write_int8(file, prop->no_scale);
+	write_int8(file, prop->animated);
+	write_int8(file, prop->aspect_fixed);
+	write_int8(file, prop->orient);
+	write_int8(file, prop->fill_outside);
+	write_int8(file, prop->resizable[0]);
+	write_int8(file, prop->resizable[1]);
+	write_int8(file, prop->animated_available);
+	write_int32(file, prop->size[0]);
+	write_int32(file, prop->size[1]);
 }
 
-static char *_pack_index_prop(char *to, index_prop_t *prop)
+static void _pack_index_prop(FILE *file, index_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("index prop: autohide_disabled : %d, omit_enabled : %d, priority : %d, horizontal : %d, "
 		      "change_time : %f,\n\tindicator_disabled : %d, item_level : %d\n",
 		      prop->autohide_disabled, prop->omit_enabled, prop->priority, prop->horizontal,
 		      prop->change_time, prop->indicator_disabled, prop->item_level);
 
-	to = pack_int8(to, prop->autohide_disabled);
-	to = pack_int8(to, prop->omit_enabled);
-	to = pack_int32(to, prop->priority);
-	to = pack_int8(to, prop->horizontal);
-	to = pack_float(to, prop->change_time);
-	to = pack_int8(to, prop->indicator_disabled);
-	to = pack_int32(to, prop->item_level);
-
-	return to;
+	write_int8(file, prop->autohide_disabled);
+	write_int8(file, prop->omit_enabled);
+	write_int32(file, prop->priority);
+	write_int8(file, prop->horizontal);
+	write_float(file, prop->change_time);
+	write_int8(file, prop->indicator_disabled);
+	write_int32(file, prop->item_level);
 }
 
-static char *_pack_label_prop(char *to, label_prop_t *prop)
+static void _pack_label_prop(FILE *file, label_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("label prop: wrap_width : %d, speed : %f, mode : %d\n",
 		      prop->wrap_width, prop->speed, prop->mode);
 
-	to = pack_int32(to, prop->wrap_width);
-	to = pack_float(to, prop->speed);
-	to = pack_int8(to, prop->mode);
-
-	return to;
+	write_int32(file, prop->wrap_width);
+	write_float(file, prop->speed);
+	write_int8(file, prop->mode);
 }
 
-static char *_pack_list_prop(char *to, list_prop_t *prop)
+static void _pack_list_prop(FILE *file, list_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("list prop: horizontal : %d, select_mode : %d, focus_on_selection : %d, multi_select : %d, "
 		      "multi_select_mode : %d, mode : %d\n",
 		      prop->horizontal, prop->select_mode, prop->focus_on_selection, prop->multi_select,
 		      prop->multi_select_mode, prop->mode);
 
-	to = pack_int8(to, prop->horizontal);
-	to = pack_int8(to, prop->select_mode);
-	to = pack_int8(to, prop->focus_on_selection);
-	to = pack_int8(to, prop->multi_select);
-	to = pack_int8(to, prop->multi_select_mode);
-	to = pack_int8(to, prop->mode);
-
-	return to;
+	write_int8(file, prop->horizontal);
+	write_int8(file, prop->select_mode);
+	write_int8(file, prop->focus_on_selection);
+	write_int8(file, prop->multi_select);
+	write_int8(file, prop->multi_select_mode);
+	write_int8(file, prop->mode);
 }
 
-static char *_pack_map_prop(char *to, map_prop_t *prop)
+static void _pack_map_prop(FILE *file, map_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("map prop: zoom : %d, paused : %d, wheel_disabled : %d, zoom_min : %d, "
 		      "rotate_degree : %f, rotate : [%d,%d],\n\tagent : %s, zoom_max : %d, "
@@ -1105,178 +1051,158 @@ static char *_pack_map_prop(char *to, map_prop_t *prop)
 		      prop->rotate_degree, prop->rotate[0], prop->rotate[1],
 		      prop->agent, prop->zoom_max, prop->zoom_mode, prop->region[0], prop->region[1]);
 
-	to = pack_int32(to, prop->zoom);
-	to = pack_int8(to, prop->paused);
-	to = pack_int8(to, prop->wheel_disabled);
-	to = pack_int32(to, prop->zoom_min);
-	to = pack_float(to, prop->rotate_degree);
-	to = pack_int32(to, prop->rotate[0]);
-	to = pack_int32(to, prop->rotate[1]);
-	to = pack_string(to, prop->agent);
-	to = pack_int32(to, prop->zoom_max);
-	to = pack_int8(to, prop->zoom_mode);
-	to = pack_float(to, prop->region[0]);
-	to = pack_float(to, prop->region[1]);
-
-	return to;
+	write_int32(file, prop->zoom);
+	write_int8(file, prop->paused);
+	write_int8(file, prop->wheel_disabled);
+	write_int32(file, prop->zoom_min);
+	write_float(file, prop->rotate_degree);
+	write_int32(file, prop->rotate[0]);
+	write_int32(file, prop->rotate[1]);
+	write_string(file, prop->agent);
+	write_int32(file, prop->zoom_max);
+	write_int8(file, prop->zoom_mode);
+	write_float(file, prop->region[0]);
+	write_float(file, prop->region[1]);
 }
 
-static char *_pack_notify_prop(char *to, notify_prop_t *prop)
+static void _pack_notify_prop(FILE *file, notify_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("notify prop: align : [%f,%f], allow_events: %d, "
 		      "timeout : %f\n",
 		      prop->align[0], prop->align[1], prop->allow_events,
 		      prop->timeout);
 
-	to = pack_float(to, prop->align[0]);
-	to = pack_float(to, prop->align[1]);
-	to = pack_int8(to, prop->allow_events);
-	to = pack_float(to, prop->timeout);
-
-	return to;
+	write_float(file, prop->align[0]);
+	write_float(file, prop->align[1]);
+	write_int8(file, prop->allow_events);
+	write_float(file, prop->timeout);
 }
 
-static char *_pack_panel_prop(char *to, panel_prop_t *prop)
+static void _pack_panel_prop(FILE *file, panel_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("panel prop: orient : %d, hidden : %d, scrollable : %d\n",
 		      prop->orient, prop->hidden, prop->scrollable);
 
-	to = pack_int8(to, prop->orient);
-	to = pack_int8(to, prop->hidden);
-	to = pack_int8(to, prop->scrollable);
-
-	return to;
+	write_int8(file, prop->orient);
+	write_int8(file, prop->hidden);
+	write_int8(file, prop->scrollable);
 }
 
-static char *_pack_photo_prop(char *to, photo_prop_t *prop)
+static void _pack_photo_prop(FILE *file, photo_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("photo prop: editable : %d, fill_inside : %d, aspect_fixed : %d, size : %d\n",
 		      prop->editable, prop->fill_inside, prop->aspect_fixed, prop->size);
 
-	to = pack_int8(to, prop->editable);
-	to = pack_int8(to, prop->fill_inside);
-	to = pack_int8(to, prop->aspect_fixed);
-	to = pack_int32(to, prop->size);
-
-	return to;
+	write_int8(file, prop->editable);
+	write_int8(file, prop->fill_inside);
+	write_int8(file, prop->aspect_fixed);
+	write_int32(file, prop->size);
 }
 
-static char *_pack_photocam_prop(char *to, photocam_prop_t *prop)
+static void _pack_photocam_prop(FILE *file, photocam_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("photocam prop: paused : %d, file : %f, gesture_enabled : %d, zoom : %f, "
 		      "zoom_mode : %d, image_size : [%d,%d]\n",
 		      prop->paused, prop->file, prop->gesture_enabled, prop->zoom,
 		      prop->zoom_mode, prop->image_size[0], prop->image_size[1]);
 
-	to = pack_int8(to, prop->paused);
-	to = pack_string(to, prop->file);
-	to = pack_int8(to, prop->gesture_enabled);
-	to = pack_float(to, prop->zoom);
-	to = pack_int8(to, prop->zoom_mode);
-	to = pack_int32(to, prop->image_size[0]);
-	to = pack_int32(to, prop->image_size[1]);
-
-	return to;
+	write_int8(file, prop->paused);
+	write_string(file, prop->file);
+	write_int8(file, prop->gesture_enabled);
+	write_float(file, prop->zoom);
+	write_int8(file, prop->zoom_mode);
+	write_int32(file, prop->image_size[0]);
+	write_int32(file, prop->image_size[1]);
 }
 
-static char *_pack_popup_prop(char *to, popup_prop_t *prop)
+static void _pack_popup_prop(FILE *file, popup_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("popup prop: align : [%f,%f], allow_events : %d, wrap_type : %d, orient : %d, "
 		      "timeout : %f\n",
 		      prop->align[0], prop->align[1], prop->allow_events, prop->wrap_type,
 		      prop->orient, prop->timeout);
 
-	to = pack_float(to, prop->align[0]);
-	to = pack_float(to, prop->align[1]);
-	to = pack_int8(to, prop->allow_events);
-	to = pack_int8(to, prop->wrap_type);
-	to = pack_int8(to, prop->orient);
-	to = pack_float(to, prop->timeout);
-
-	return to;
+	write_float(file, prop->align[0]);
+	write_float(file, prop->align[1]);
+	write_int8(file, prop->allow_events);
+	write_int8(file, prop->wrap_type);
+	write_int8(file, prop->orient);
+	write_float(file, prop->timeout);
 }
 
-static char *_pack_progressbar_prop(char *to, progressbar_prop_t *prop)
+static void _pack_progressbar_prop(FILE *file, progressbar_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("progressbar prop: span_size : %d, pulse : %d, value : %f, inverted : %d, "
 		      "horizontal : %d, unit_format : %s\n",
 		      prop->span_size, prop->pulse, prop->value, prop->inverted,
 		      prop->horizontal, prop->unit_format);
 
-	to = pack_int32(to, prop->span_size);
-	to = pack_int8(to, prop->pulse);
-	to = pack_float(to, prop->value);
-	to = pack_int8(to, prop->inverted);
-	to = pack_int8(to, prop->horizontal);
-	to = pack_string(to, prop->unit_format);
-
-	return to;
+	write_int32(file, prop->span_size);
+	write_int8(file, prop->pulse);
+	write_float(file, prop->value);
+	write_int8(file, prop->inverted);
+	write_int8(file, prop->horizontal);
+	write_string(file, prop->unit_format);
 }
 
-static char *_pack_radio_prop(char *to, radio_prop_t *prop)
+static void _pack_radio_prop(FILE *file, radio_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("radio prop: state_value : %d, value : %d\n",
 		      prop->state_value, prop->value);
 
-	to = pack_int32(to, prop->state_value);
-	to = pack_int32(to, prop->value);
-
-	return to;
+	write_int32(file, prop->state_value);
+	write_int32(file, prop->value);
 }
 
-static char *_pack_segmencontrol_prop(char *to, segmencontrol_prop_t *prop)
+static void _pack_segmencontrol_prop(FILE *file, segmencontrol_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("segmencontrol prop: item_count : %d\n",
 		      prop->item_count);
 
-	to = pack_int32(to, prop->item_count);
-
-	return to;
+	write_int32(file, prop->item_count);
 }
 
-static char *_pack_slider_prop(char *to, slider_prop_t *prop)
+static void _pack_slider_prop(FILE *file, slider_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("slider prop: horizontal : %d, value : %f, format : %s\n",
 		      prop->horizontal, prop->value, prop->format);
 
-	to = pack_int8(to, prop->horizontal);
-	to = pack_float(to, prop->value);
-	to = pack_string(to, prop->format);
-
-	return to;
+	write_int8(file, prop->horizontal);
+	write_float(file, prop->value);
+	write_string(file, prop->format);
 }
 
-static char *_pack_spinner_prop(char *to, spinner_prop_t *prop)
+static void _pack_spinner_prop(FILE *file, spinner_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("spinner prop: min : %f, max : %f, step : %f, wrap : %d, "
 		      "interval : %f, round : %d, editable : %d, "
@@ -1285,24 +1211,22 @@ static char *_pack_spinner_prop(char *to, spinner_prop_t *prop)
 		      prop->interval, prop->round, prop->editable, prop->base,
 		      prop->value, prop->format);
 
-	to = pack_float(to, prop->min_max[0]);
-	to = pack_float(to, prop->min_max[1]);
-	to = pack_float(to, prop->step);
-	to = pack_int8(to, prop->wrap);
-	to = pack_float(to, prop->interval);
-	to = pack_int32(to, prop->round);
-	to = pack_int8(to, prop->editable);
-	to = pack_float(to, prop->base);
-	to = pack_float(to, prop->value);
-	to = pack_string(to, prop->format);
-
-	return to;
+	write_float(file, prop->min_max[0]);
+	write_float(file, prop->min_max[1]);
+	write_float(file, prop->step);
+	write_int8(file, prop->wrap);
+	write_float(file, prop->interval);
+	write_int32(file, prop->round);
+	write_int8(file, prop->editable);
+	write_float(file, prop->base);
+	write_float(file, prop->value);
+	write_string(file, prop->format);
 }
 
-static char *_pack_toolbar_prop(char *to, toolbar_prop_t *prop)
+static void _pack_toolbar_prop(FILE *file, toolbar_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("toolbar prop: reorder_mode : %d, transverse_expanded : %d, homogeneous : %d, align : %f, "
 		      "select_mode : %d, icon_size : %d, horizontal : %d,\n\tstandard_priority : %d, "
@@ -1311,37 +1235,33 @@ static char *_pack_toolbar_prop(char *to, toolbar_prop_t *prop)
 		      prop->select_mode, prop->icon_size, prop->horizontal, prop->standard_priority,
 		      prop->items_count);
 
-	to = pack_int8(to, prop->reorder_mode);
-	to = pack_int8(to, prop->transverse_expanded);
-	to = pack_int8(to, prop->homogeneous);
-	to = pack_float(to, prop->align);
-	to = pack_int8(to, prop->select_mode);
-	to = pack_int32(to, prop->icon_size);
-	to = pack_int8(to, prop->horizontal);
-	to = pack_int32(to, prop->standard_priority);
-	to = pack_int32(to, prop->items_count);
-
-	return to;
+	write_int8(file, prop->reorder_mode);
+	write_int8(file, prop->transverse_expanded);
+	write_int8(file, prop->homogeneous);
+	write_float(file, prop->align);
+	write_int8(file, prop->select_mode);
+	write_int32(file, prop->icon_size);
+	write_int8(file, prop->horizontal);
+	write_int32(file, prop->standard_priority);
+	write_int32(file, prop->items_count);
 }
 
-static char *_pack_tooltip_prop(char *to, tooltip_prop_t *prop)
+static void _pack_tooltip_prop(FILE *file, tooltip_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("tooltip prop: style : %s, window_mode : %d\n",
 		      prop->style, prop->window_mode);
 
-	to = pack_string(to, prop->style);
-	to = pack_int8(to, prop->window_mode);
-
-	return to;
+	write_string(file, prop->style);
+	write_int8(file, prop->window_mode);
 }
 
-static char *_pack_win_prop(char *to, win_prop_t *prop)
+static void _pack_win_prop(FILE *file, win_prop_t *prop)
 {
 	if (!prop)
-		return to;
+		return;
 
 	ui_viewer_log("win prop: iconfield : %d, maximized : %d, modal : %d, icon_name : %s, "
 		      "withdrawn : %d, role : %s, size_step : [%d,%d], highlight_style : %s,\n\t"
@@ -1360,44 +1280,42 @@ static char *_pack_win_prop(char *to, win_prop_t *prop)
 		      prop->size_base[0], prop->size_base[1], prop->quickpanel, prop->rotation_supported, prop->screen_dpi[0],
 		      prop->screen_dpi[1], prop->win_type);
 
-	to = pack_int8(to, prop->iconfield);
-	to = pack_int8(to, prop->maximized);
-	to = pack_int8(to, prop->modal);
-	to = pack_string(to, prop->icon_name);
-	to = pack_int8(to, prop->withdrawn);
-	to = pack_string(to, prop->role);
-	to = pack_int32(to, prop->size_step[0]);
-	to = pack_int32(to, prop->size_step[1]);
-	to = pack_string(to, prop->highlight_style);
-	to = pack_int8(to, prop->borderless);
-	to = pack_int8(to, prop->highlight_enabled);
-	to = pack_string(to, prop->title);
-	to = pack_int8(to, prop->alpha);
-	to = pack_int8(to, prop->urgent);
-	to = pack_int32(to, prop->rotation);
-	to = pack_int8(to, prop->sticky);
-	to = pack_int8(to, prop->highlight_animate);
-	to = pack_float(to, prop->aspect);
-	to = pack_int8(to, prop->indicator_opacity);
-	to = pack_int8(to, prop->demand_attention);
-	to = pack_int32(to, prop->layer);
-	to = pack_string(to, prop->profile);
-	to = pack_int8(to, prop->shaped);
-	to = pack_int8(to, prop->fullscreen);
-	to = pack_int8(to, prop->indicator_mode);
-	to = pack_int8(to, prop->conformant);
-	to = pack_int32(to, prop->size_base[0]);
-	to = pack_int32(to, prop->size_base[1]);
-	to = pack_int8(to, prop->quickpanel);
-	to = pack_int8(to, prop->rotation_supported);
-	to = pack_int32(to, prop->screen_dpi[0]);
-	to = pack_int32(to, prop->screen_dpi[1]);
-	to = pack_int8(to, prop->win_type);
-
-	return to;
+	write_int8(file, prop->iconfield);
+	write_int8(file, prop->maximized);
+	write_int8(file, prop->modal);
+	write_string(file, prop->icon_name);
+	write_int8(file, prop->withdrawn);
+	write_string(file, prop->role);
+	write_int32(file, prop->size_step[0]);
+	write_int32(file, prop->size_step[1]);
+	write_string(file, prop->highlight_style);
+	write_int8(file, prop->borderless);
+	write_int8(file, prop->highlight_enabled);
+	write_string(file, prop->title);
+	write_int8(file, prop->alpha);
+	write_int8(file, prop->urgent);
+	write_int32(file, prop->rotation);
+	write_int8(file, prop->sticky);
+	write_int8(file, prop->highlight_animate);
+	write_float(file, prop->aspect);
+	write_int8(file, prop->indicator_opacity);
+	write_int8(file, prop->demand_attention);
+	write_int32(file, prop->layer);
+	write_string(file, prop->profile);
+	write_int8(file, prop->shaped);
+	write_int8(file, prop->fullscreen);
+	write_int8(file, prop->indicator_mode);
+	write_int8(file, prop->conformant);
+	write_int32(file, prop->size_base[0]);
+	write_int32(file, prop->size_base[1]);
+	write_int8(file, prop->quickpanel);
+	write_int8(file, prop->rotation_supported);
+	write_int32(file, prop->screen_dpi[0]);
+	write_int32(file, prop->screen_dpi[1]);
+	write_int8(file, prop->win_type);
 }
 
-static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
+static void pack_ui_obj_prop(FILE *file, Evas_Object *obj, const char *type_name)
 {
 	ui_obj_prop_t obj_prop;
 	enum ui_obj_category_t category;
@@ -1421,11 +1339,11 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 					  &obj_prop.size_padding[2], &obj_prop.size_padding[3]);
 	obj_prop.render_op = evas_object_render_op_get(obj);
 
-	to = _pack_ui_obj_evas_prop(to, &obj_prop);
+	_pack_ui_obj_evas_prop(file, &obj_prop);
 
 	category = _get_object_category(type_name);
 	if (category == UI_UNDEFINED) {
-		return to;
+		return;
 	} else if (category == UI_ELM) {
 		ui_obj_elm_prop_t elm_prop;
 
@@ -1440,7 +1358,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		}
 		_strncpy(elm_prop.type, elm_object_widget_type_get(obj), MAX_PATH_LENGTH);
 
-		to = _pack_ui_obj_elm_prop(to, &elm_prop);
+		_pack_ui_obj_elm_prop(file, &elm_prop);
 
 	} else if (category == UI_EDJE) {
 		ui_obj_edje_prop_t edje_prop;
@@ -1451,13 +1369,13 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		edje_object_size_min_get(obj, &edje_prop.size_min[0], &edje_prop.size_min[1]);
 		edje_object_size_max_get(obj, &edje_prop.size_max[0], &edje_prop.size_max[1]);
 
-		to = _pack_ui_obj_edje_prop(to, &edje_prop);
+		_pack_ui_obj_edje_prop(file, &edje_prop);
 	}
 
 	code = _get_object_type_code(type_name);
 
 	if (code == 0) {
-		return to;
+		return;
 	} else if (code == UI_EVAS_IMAGE) {
 		image_prop_t image_prop;
 
@@ -1487,7 +1405,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		image_prop.frame_count = 0;
 		image_prop.evas_image_stride = evas_object_image_stride_get(obj);
 
-		to = _pack_image_prop(to, &image_prop);
+		_pack_image_prop(file, &image_prop);
 	} else if (code == UI_EVAS_LINE) {
 		line_prop_t line_prop;
 
@@ -1496,7 +1414,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 				     &(line_prop.xy[2]),
 				     &(line_prop.xy[3]));
 
-		to = _pack_line_prop(to, &line_prop);
+		_pack_line_prop(file, &line_prop);
 	} else if (code == UI_EVAS_TEXT) {
 		text_prop_t text_prop;
 		const char *text_font;
@@ -1529,7 +1447,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 					    &(text_prop.style_pad[3]));
 		text_prop.direction = evas_object_text_direction_get(obj);
 
-		to = _pack_text_prop(to, &text_prop);
+		_pack_text_prop(file, &text_prop);
 	} else if (code == UI_EVAS_TEXTBLOCK) {
 		textblock_prop_t textblock_prop;
 
@@ -1539,7 +1457,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		textblock_prop.newline = evas_object_textblock_legacy_newline_get(obj);
 		_strncpy(textblock_prop.markup, evas_object_textblock_text_markup_get(obj), MAX_PATH_LENGTH);
 
-		to = _pack_textblock_prop(to, &textblock_prop);
+		_pack_textblock_prop(file, &textblock_prop);
 	} else if (code == UI_EVAS_TABLE) {
 		table_prop_t table_prop;
 
@@ -1552,20 +1470,20 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		evas_object_table_col_row_size_get(obj, &(table_prop.col_row_size[0]),
 						&(table_prop.col_row_size[1]));
 
-		to = _pack_table_prop(to, &table_prop);
+		_pack_table_prop(file, &table_prop);
 	} else if (code == UI_EVAS_BOX) {
 		box_prop_t box_prop;
 
 		evas_object_box_align_get(obj, &(box_prop.align[0]),
 				       &(box_prop.align[1]));
 
-		to = _pack_box_prop(to, &box_prop);
+		_pack_box_prop(file, &box_prop);
 	} else if (code == UI_EVAS_GRID) {
 		grid_prop_t grid_prop;
 
 		grid_prop.mirrored = evas_object_grid_mirrored_get(obj);
 
-		to = _pack_grid_prop(to, &grid_prop);
+		_pack_grid_prop(file, &grid_prop);
 	} else if (code == UI_EVAS_TEXTGRID) {
 		textgrid_prop_t textgrid_prop;
 
@@ -1574,7 +1492,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		evas_object_textgrid_cell_size_get(obj, &(textgrid_prop.cell_size[0]),
 						&(textgrid_prop.cell_size[1]));
 
-		to = _pack_textgrid_prop(to, &textgrid_prop);
+		_pack_textgrid_prop(file, &textgrid_prop);
 	} else if (code == UI_ELM_BACKGROUND) {
 		bg_prop_t bg_prop;
 
@@ -1583,7 +1501,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 				      &(bg_prop.color[2]));
 		bg_prop.option = elm_bg_option_get(obj);
 
-		to = _pack_bg_prop(to, &bg_prop);
+		_pack_bg_prop(file, &bg_prop);
 	} else if (code == UI_ELM_BUTTON) {
 		button_prop_t button_prop;
 
@@ -1591,13 +1509,13 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		button_prop.gap_timeout = elm_button_autorepeat_gap_timeout_get(obj);
 		button_prop.autorepeat = elm_button_autorepeat_get(obj);
 
-		to = _pack_button_prop(to, &button_prop);
+		_pack_button_prop(file, &button_prop);
 	} else if (code == UI_ELM_CHECK) {
 		check_prop_t check_prop;
 
 		check_prop.state = elm_check_state_get(obj);
 
-		to = _pack_check_prop(to, &check_prop);
+		_pack_check_prop(file, &check_prop);
 	} else if (code == UI_ELM_COLORSELECTOR) {
 		colorselector_prop_t colorselector_prop;
 
@@ -1608,13 +1526,13 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		_strncpy(colorselector_prop.palette_name, elm_colorselector_palette_name_get(obj), MAX_PATH_LENGTH);
 		colorselector_prop.mode = elm_colorselector_mode_get(obj);
 
-		to = _pack_colorselector_prop(to, &colorselector_prop);
+		_pack_colorselector_prop(file, &colorselector_prop);
 	} else if (code == UI_ELM_CTXPOPUP) {
 		ctxpopup_prop_t ctxpopup_prop;
 
 		ctxpopup_prop.horizontal = elm_ctxpopup_horizontal_get(obj);
 
-		to = _pack_ctxpopup_prop(to, &ctxpopup_prop);
+        _pack_ctxpopup_prop(file, &ctxpopup_prop);
 	} else if (code == UI_ELM_DATETIME) {
 		datetime_prop_t datetime_prop;
 		struct tm currtime;
@@ -1630,7 +1548,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		datetime_prop.value[6] = currtime.tm_wday;
 		datetime_prop.value[7] = currtime.tm_yday;
 
-		to = _pack_datetime_prop(to, &datetime_prop);
+		_pack_datetime_prop(file, &datetime_prop);
 	} else if (code == UI_ELM_ENTRY) {
 		entry_prop_t entry_prop;
 
@@ -1652,14 +1570,14 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		_strncpy(entry_prop.selection, elm_entry_selection_get(obj), MAX_PATH_LENGTH);
 		entry_prop.is_visible_format = elm_entry_cursor_is_visible_format_get(obj);
 
-		to = _pack_entry_prop(to, &entry_prop);
+		_pack_entry_prop(file, &entry_prop);
 	} else if (code == UI_ELM_FLIP) {
 		flip_prop_t flip_prop;
 
 		flip_prop.interaction = elm_flip_interaction_get(obj);
 		flip_prop.front_visible = elm_flip_front_visible_get(obj);
 
-		to = _pack_flip_prop(to, &flip_prop);
+		_pack_flip_prop(file, &flip_prop);
 	} else if (code == UI_ELM_GENGRID) {
 		gengrid_prop_t gengrid_prop;
 
@@ -1681,7 +1599,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		gengrid_prop.wheel_disabled = elm_gengrid_wheel_disabled_get(obj);
 		gengrid_prop.items_count = elm_gengrid_items_count(obj);
 
-		to = _pack_gengrid_prop(to, &gengrid_prop);
+        _pack_gengrid_prop(file, &gengrid_prop);
 	} else if (code == UI_ELM_GENLIST) {
 		genlist_prop_t genlist_prop;
 
@@ -1698,7 +1616,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		genlist_prop.highlight_mode = elm_genlist_highlight_mode_get(obj);
 		genlist_prop.realization_mode = elm_genlist_realization_mode_get(obj);
 
-		to = _pack_genlist_prop(to, &genlist_prop);
+		_pack_genlist_prop(file, &genlist_prop);
 	} else if (code == UI_ELM_GLVIEW) {
 		glview_prop_t glview_prop;
 
@@ -1706,14 +1624,14 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 				 &(glview_prop.size[1]));
 		glview_prop.rotation = elm_glview_rotation_get(obj);
 
-		to = _pack_glview_prop(to, &glview_prop);
+		_pack_glview_prop(file, &glview_prop);
 	} else if (code == UI_ELM_ICON) {
 		icon_prop_t icon_prop;
 
 		icon_prop.lookup = elm_icon_order_lookup_get(obj);
 		_strncpy(icon_prop.standard, elm_icon_standard_get(obj), MAX_PATH_LENGTH);
 
-		to = _pack_icon_prop(to, &icon_prop);
+		_pack_icon_prop(file, &icon_prop);
 	} else if (code == UI_ELM_IMAGE) {
 		elm_image_prop_t elm_image_prop;
 
@@ -1733,7 +1651,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		elm_image_object_size_get(obj, &(elm_image_prop.size[0]),
 				       &(elm_image_prop.size[1]));
 
-		to = _pack_elm_image_prop(to, &elm_image_prop);
+		_pack_elm_image_prop(file, &elm_image_prop);
 	} else if (code == UI_ELM_INDEX) {
 		index_prop_t index_prop;
 
@@ -1745,7 +1663,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		index_prop.indicator_disabled = elm_index_indicator_disabled_get(obj);
 		index_prop.item_level = elm_index_item_level_get(obj);
 
-		to = _pack_index_prop(to, &index_prop);
+		_pack_index_prop(file, &index_prop);
 	} else if (code == UI_ELM_LABEL) {
 		label_prop_t label_prop;
 
@@ -1753,7 +1671,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		label_prop.speed = elm_label_slide_speed_get(obj);
 		label_prop.mode = elm_label_slide_mode_get(obj);
 
-		to = _pack_label_prop(to, &label_prop);
+		_pack_label_prop(file, &label_prop);
 	} else if (code == UI_ELM_LIST) {
 		list_prop_t list_prop;
 
@@ -1764,7 +1682,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		list_prop.multi_select_mode = elm_list_multi_select_mode_get(obj);
 		list_prop.mode = elm_list_mode_get(obj);
 
-		to = _pack_list_prop(to, &list_prop);
+		_pack_list_prop(file, &list_prop);
 	} else if (code == UI_ELM_MAP) {
 		map_prop_t map_prop;
 
@@ -1781,7 +1699,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		elm_map_region_get(obj, &(map_prop.region[0]),
 				&(map_prop.region[1]));
 
-		to = _pack_map_prop(to, &map_prop);
+		_pack_map_prop(file, &map_prop);
 	} else if (code == UI_ELM_NOTIFY) {
 		notify_prop_t notify_prop;
 
@@ -1790,7 +1708,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		notify_prop.allow_events = elm_notify_allow_events_get(obj);
 		notify_prop.timeout = elm_notify_timeout_get(obj);
 
-		to = _pack_notify_prop(to, &notify_prop);
+		_pack_notify_prop(file, &notify_prop);
 	} else if (code == UI_ELM_PANEL) {
 		panel_prop_t panel_prop;
 
@@ -1798,7 +1716,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		panel_prop.hidden = elm_panel_hidden_get(obj);
 		panel_prop.scrollable = elm_panel_scrollable_get(obj);
 
-		to = _pack_panel_prop(to, &panel_prop);
+		_pack_panel_prop(file, &panel_prop);
 	} else if (code == UI_ELM_PHOTO) {
 		photo_prop_t photo_prop;
 
@@ -1807,7 +1725,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		photo_prop.aspect_fixed = elm_photo_aspect_fixed_get(obj);
 		photo_prop.size = elm_photo_size_get(obj);
 
-		to = _pack_photo_prop(to, &photo_prop);
+		_pack_photo_prop(file, &photo_prop);
 	} else if (code == UI_ELM_PHOTOCAM) {
 		photocam_prop_t photocam_prop;
 
@@ -1819,7 +1737,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		elm_photocam_image_size_get(obj, &(photocam_prop.image_size[0]),
 					 &(photocam_prop.image_size[1]));
 
-		to = _pack_photocam_prop(to, &photocam_prop);
+		_pack_photocam_prop(file, &photocam_prop);
 	} else if (code == UI_ELM_POPUP) {
 		popup_prop_t popup_prop;
 
@@ -1830,7 +1748,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		popup_prop.orient = elm_popup_orient_get(obj);
 		popup_prop.timeout = elm_popup_timeout_get(obj);
 
-		to = _pack_popup_prop(to, &popup_prop);
+		_pack_popup_prop(file, &popup_prop);
 	} else if (code == UI_ELM_PROGRESSBAR) {
 		progressbar_prop_t progressbar_prop;
 
@@ -1841,20 +1759,20 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		progressbar_prop.horizontal = elm_progressbar_horizontal_get(obj);
 		_strncpy(progressbar_prop.unit_format, elm_progressbar_unit_format_get(obj), MAX_PATH_LENGTH);
 
-		to = _pack_progressbar_prop(to, &progressbar_prop);
+		_pack_progressbar_prop(file, &progressbar_prop);
 	} else if (code == UI_ELM_RADIO) {
 		radio_prop_t radio_prop;
 
 		radio_prop.state_value = elm_radio_state_value_get(obj);
 		radio_prop.value = elm_radio_value_get(obj);
 
-		to = _pack_radio_prop(to, &radio_prop);
+		_pack_radio_prop(file, &radio_prop);
 	} else if (code == UI_ELM_SEGMENTCONTROL) {
 		segmencontrol_prop_t segmencontrol_prop;
 
 		segmencontrol_prop.item_count = elm_segment_control_item_count_get(obj);
 
-		to = _pack_segmencontrol_prop(to, &segmencontrol_prop);
+		_pack_segmencontrol_prop(file, &segmencontrol_prop);
 	} else if (code == UI_ELM_SLIDER) {
 		slider_prop_t slider_prop;
 
@@ -1862,7 +1780,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		slider_prop.value = elm_slider_value_get(obj);
 		_strncpy(slider_prop.format, elm_slider_indicator_format_get(obj), MAX_PATH_LENGTH);
 
-		to = _pack_slider_prop(to, &slider_prop);
+		_pack_slider_prop(file, &slider_prop);
 	} else if (code == UI_ELM_SPINNER) {
 		spinner_prop_t spinner_prop;
 
@@ -1877,7 +1795,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		spinner_prop.value = elm_spinner_value_get(obj);
 		_strncpy(spinner_prop.format, elm_spinner_label_format_get(obj), MAX_PATH_LENGTH);
 
-		to = _pack_spinner_prop(to, &spinner_prop);
+		_pack_spinner_prop(file, &spinner_prop);
 	} else if (code == UI_ELM_TOOLBAR) {
 		toolbar_prop_t toolbar_prop;
 
@@ -1891,14 +1809,14 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		toolbar_prop.standard_priority = elm_toolbar_standard_priority_get(obj);
 		toolbar_prop.items_count = elm_toolbar_items_count(obj);
 
-		to = _pack_toolbar_prop(to, &toolbar_prop);
+		_pack_toolbar_prop(file, &toolbar_prop);
 	} else if (code == UI_ELM_TOOLTIP) {
 		tooltip_prop_t tooltip_prop;
 
 		_strncpy(tooltip_prop.style, elm_object_tooltip_style_get(obj), MAX_PATH_LENGTH);
 		tooltip_prop.window_mode = elm_object_tooltip_window_mode_get(obj);
 
-		to = _pack_tooltip_prop(to, &tooltip_prop);
+		_pack_tooltip_prop(file, &tooltip_prop);
 	} else if (code == UI_ELM_WIN) {
 		win_prop_t win_prop;
 
@@ -1935,11 +1853,8 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		elm_win_screen_dpi_get(obj, &(win_prop.screen_dpi[0]),
 				    &(win_prop.screen_dpi[1]));
 		win_prop.win_type = elm_win_type_get(obj);
-		to = _pack_win_prop(to, &win_prop);
-
+		_pack_win_prop(file, &win_prop);
 	}
-
-	return to;
 }
 
 Eina_Bool _get_shot_in_bg(Evas_Object *obj)
