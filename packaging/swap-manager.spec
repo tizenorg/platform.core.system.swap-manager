@@ -13,6 +13,8 @@ BuildRequires:  vconf-devel
 BuildRequires:  capi-system-info-devel
 BuildRequires:  capi-system-runtime-info-devel
 BuildRequires:  pkgconfig(ecore)
+BuildRequires:  elementary-devel
+BuildRequires:  libXext-devel
 %if "%_project" != "Kirana_SWA_OPEN:Build" && "%_project" != "Kirana_SWA_OPEN:Daily"
 Requires:  swap-modules
 %endif
@@ -28,6 +30,9 @@ This binary will be installed in target.
 
 %build
 cd daemon
+make
+
+cd ../ui_viewer
 make
 
 %install
@@ -46,6 +51,15 @@ install -m 0644 swap.service %{buildroot}%{_libdir}/systemd/system/swap.service
 cd daemon
 %make_install
 
+cd ../ui_viewer
+%make_install
+
+
+%post
+chsmack -e "_" /usr/lib/da_ui_viewer.so
+chsmack -a "_" /usr/lib/da_ui_viewer.so
+
+
 %files
 %{_libdir}/systemd/system/swap.service
 
@@ -55,6 +69,8 @@ cd daemon
 %{_prefix}/bin/da_manager
 /opt/swap/sdk/start.sh
 /opt/swap/sdk/stop.sh
+
+%{_prefix}/lib/da_ui_viewer.so
 
 %changelog
 

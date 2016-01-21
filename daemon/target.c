@@ -249,6 +249,22 @@ void target_wait_all(void)
 	target_array_unlock();
 }
 
+void target_stop_all(void)
+{
+	int i;
+	struct target *t;
+
+	target_array_lock();
+	for (i = 0; i < MAX_TARGET_COUNT; ++i) {
+		if (target_use[i] == 0)
+			continue;
+		t = target_get(i);
+		ecore_main_fd_handler_del(t->handler);
+		target_cnt_sub_and_fetch();
+	}
+	target_array_unlock();
+}
+
 uint64_t target_get_total_alloc(pid_t pid)
 {
 	int i;

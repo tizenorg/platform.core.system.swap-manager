@@ -47,6 +47,9 @@ NMSG_SWAP_INST_ADD		=0x0008,
 NMSG_SWAP_INST_REMOVE		=0x0009,
 NMSG_GET_SCREENSHOT		=0x0010,
 NMSG_GET_PROCESS_ADD_INFO	=0x0011,
+NMSG_GET_UI_HIERARCHY		=0x0012,
+NMSG_GET_UI_SCREENSHOT		=0x0013,
+NMSG_GET_UI_HIERARCHY_CANCEL	=0x0014,
 
 NMSG_KEEP_ALIVE_ACK			=0x1001,
 NMSG_START_ACK				=0x1002,
@@ -58,6 +61,9 @@ NMSG_GET_TARGET_INFO_ACK	=0x1007,
 NMSG_SWAP_INST_ADD_ACK		=0x1008,
 NMSG_SWAP_INST_REMOVE_ACK	=0x1009,
 NMSG_GET_PROCESS_ADD_INFO_ACK	=0x1011,
+NMSG_GET_UI_HIERARCHY_ACK	=0x1012,
+NMSG_GET_UI_SCREENSHOT_ACK	=0x1013,
+NMSG_GET_UI_HIERARCHY_CANCEL_ACK=0x1014,
 
 NMSG_PROCESS_INFO			=0x0001,	//	target process info
 NMSG_TERMINATE				=0x0002,	//terminate
@@ -70,6 +76,7 @@ NMSG_FUNCTION_ENTRY			=0x0008,	//N	irregular	swap instrumentation, Instrumented 
 NMSG_FUNCTION_EXIT			=0x0009,	//N	irregular	swap instrumentation, Instrumented functions by AppInst and LibInst
 NMSG_CONTEXT_SWITCH_ENTRY	=0x0010,	//N	irregular	swap instrumentation for kernel
 NMSG_CONTEXT_SWITCH_EXIT	=0x0011,	//N	irregular	swap instrumentation for kernel
+NMSG_UI_HIERARCHY		=0x0021,
 };
 #define MSG_MAX_NUM NMSG_SWAP_INST_REMOVE
 
@@ -80,6 +87,7 @@ enum ErrorCode {
 	ERR_INITIALIZE_SYSTEM_INFO_FAILED	= -103,	/* initialize system info failed */
 	ERR_HOST_SERVER_SOCKET_CREATE_FAILED	= -104,	/* host server socket create failed */
 	ERR_TARGET_SERVER_SOCKET_CREATE_FAILED	= -105,	/* target server socket create failed */
+	ERR_UI_TARGET_SERVER_SOCKET_CREATE_FAILED = -107, /* ui target server socket create failed */
 
 	ERR_SIGNAL_MASK_SETTING_FAILED		= -106, /* TODO del (old parametr) */
 
@@ -87,6 +95,9 @@ enum ErrorCode {
 	ERR_WRONG_MESSAGE_TYPE			= -202,	/* wrong message type */
 	ERR_WRONG_MESSAGE_DATA			= -203,	/* wrong message data */
 	ERR_CANNOT_START_PROFILING		= -204,	/* cannot start profiling */
+	ERR_UI_OBJ_NOT_FOUND			= -207, /* requested ui object is not found */
+	ERR_UI_OBJ_SCREENSHOT_FAILED		= -208, /* taking ui screenshot failed because App is in background */
+	ERR_NOT_SUPPORTED			= -800, /* request not supported by security reason */
 	ERR_SERV_SOCK_CREATE			= -900,	/* server socket creation failed (written in /tmp/da.port file) */
 	ERR_SERV_SOCK_BIND			= -901,	/* server socket bind failed (written in /tmp/da.port file) */
 	ERR_SERV_SOCK_LISTEN			= -902,	/* server socket listen failed (written in /tmp/da.port file) */
@@ -138,9 +149,11 @@ enum feature_code{
 	FL_SYSTEM_DEVICE		= 0x080000000000ULL, //
 	FL_SYSTEM_ENERGY		= 0x100000000000ULL, //
 
-	FL_RESERVED4			= 0xe00000000000ULL, // reserved 1110
+	FL_UI_VIEWER_PROFILING          = 0x2000000000000ULL, // 0x2 * 0x10^12 load ui viewer library
 
-	FL_ALL_FEATURES			= 0x3FFFFFFFFFFFULL &
+	FL_RESERVED4			= 0xc000000000000ULL, // reserved 1100
+
+	FL_ALL_FEATURES			= 0x23FFFFFFFFFFFULL &
 					  (~FL_RESERVED1) &
 					  (~FL_RESERVED2) &
 					  (~FL_RESERVED3) &
