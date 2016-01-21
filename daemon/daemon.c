@@ -726,6 +726,7 @@ static int targetServerHandler(void)
 		     target, target_cnt_get() + 1);
 
 		target_cnt_set(target_cnt_get() + 1);
+		//target_send_dl_open(target, "/usr/lib/1.so");
 		return 0;
 	} else {
 		// accept error
@@ -741,6 +742,26 @@ static int targetServerHandler(void)
 		target_dtor(target);
 		return 1;
 	}
+}
+
+int target_send_dl_open(struct target *target, const char *lib_name)
+{
+	struct msg_target_t log;
+
+	if (lib_name == NULL)
+		return EINVAL;
+
+	log.type = MSG_DL_OPEN;
+	log.length = strnlen(lib_name, PATH_MAX) + 1;
+	snprintf(&log.data[0], log.length, lib_name);
+
+	if (target_send_msg(target, &log) != 0) {
+		LOGE("fail to send data to target %p\n", target);
+		return 1;
+	}
+
+	return 0;
+
 }
 
 static void recv_msg_tail(int fd, uint32_t len)
