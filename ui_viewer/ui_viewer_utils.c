@@ -43,6 +43,11 @@
 #include "ui_viewer_utils.h"
 #include "ui_viewer_data.h"
 
+struct temp_file_t {
+	FILE *file;
+	char *name;
+};
+
 static const ssize_t TMP_BUF_SIZE = 262144;
 static const char log_filename[] = "/tmp/uilib.log";
 static pthread_mutex_t log_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -177,20 +182,41 @@ bool print_log_fmt(int msgType, const char *func_name, int line, ...)
 	return (res == len);
 }
 
-static char *pack_string_to_file(char *to, char *st, ssize_t data_len)
+static int tmp_file_open(struct temp_file_t *tmp_file)
 {
 	char template_name[] = TMP_DIR"/swap_ui_viewer_XXXXXX";
 	FILE *file;
+
 	mktemp(template_name);
 	file = fopen(template_name, "w");
-	if (file != NULL) {
-		fwrite(st, data_len, 1, file);
-		fclose(file);
-	}
-	to = pack_string(to, template_name);
+	if (file == NULL)
+		return -1;
 
-	return to;
+	if (tmp_file->name != NULL)
+		free(tmp_file->name);
+
+	tmp_file->name = malloc(strlen(template_name) + 1);
+	if (tmp_file->name == NULL)
+		goto tmp_file_open_no_mem;
+
+	strcpy(tmp_file->name, template_name);
+
+	tmp_file->file = file;
+
+	return 0;
+
+tmp_file_open_no_mem:
+	fclose(file);
+
+	return -ENOMEM;
 }
+
+static void tmp_file_close(struct temp_file_t *tmp_file)
+{
+	free(tmp_file->name);
+	fclose(tmp_file->file);
+}
+
 
 bool print_log_ui_viewer_hierarchy_status(enum ErrorCode *err_code)
 {
@@ -249,7 +275,7 @@ void* print_log_ui_viewer_info_list(void *prendering)
 	log_t log;
 	ssize_t res, len;
 	char *log_ptr, *tmp_ptr;
-	char *tmp_buf;
+	struct temp_file_t tmp_f; 
 	struct timeval start_tv, finish_tv, tv;
 	Eina_Bool rendering, cancelled = EINA_FALSE;
 
@@ -263,14 +289,11 @@ void* print_log_ui_viewer_info_list(void *prendering)
 
 	rendering = *(Eina_Bool*)prendering;
 
-	tmp_buf = malloc(TMP_BUF_SIZE);
-	if (!tmp_buf) {
-		ui_viewer_log("Cannot alloc buffer: %d bytes\n", TMP_BUF_SIZE);
+	if (tmp_file_open(&tmp_f) != 0)
 		return NULL;
-	}
 
 	gettimeofday(&start_tv, NULL);
-	tmp_ptr = pack_ui_obj_info_list(tmp_buf, rendering, &cancelled);
+	pack_ui_obj_info_list(tmp_f.file, rendering, &cancelled);
 	gettimeofday(&finish_tv, NULL);
 	timersub(&finish_tv, &start_tv, &tv);
 	ui_viewer_log("getting hierarchy time : %d sec, %d usec\n",
@@ -278,7 +301,7 @@ void* print_log_ui_viewer_info_list(void *prendering)
 
 	if (!cancelled) {
 		log.type = APP_MSG_GET_UI_HIERARCHY_DATA;
-		log_ptr = pack_string_to_file(log.data, tmp_buf, tmp_ptr - tmp_buf);
+		log_ptr = pack_string(log.data, tmp_f.name);
 		log.length = log_ptr - log.data;
 		len = sizeof(log.type) + sizeof(log.length) + log.length;
 
@@ -286,14 +309,15 @@ void* print_log_ui_viewer_info_list(void *prendering)
 		res = send(gTraceInfo.socket.daemonSock, &log, len, 0);
 		pthread_mutex_unlock(&(gTraceInfo.socket.sockMutex));
 
-		ui_viewer_log("getting hierarchy filename: %s filesize: %d\n",
-			      log.data, tmp_ptr - tmp_buf);
+		ui_viewer_log("getting hierarchy filename: %s\n",
+			      log.data);
 
 		if (res != len)
 			ui_viewer_log("can't send hierarchy info\n");
 		set_hierarchy_status(HIERARCHY_NOT_RUNNING);
 	}
-	free(tmp_buf);
+
+	tmp_file_close(&tmp_f);
 
 	return NULL;
 }
