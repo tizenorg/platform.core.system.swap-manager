@@ -83,6 +83,7 @@ char *msg_ID_str(enum HostMessageT ID)
 	check_and_return(NMSG_GET_PROCESS_ADD_INFO);
 
 	check_and_return(NMSG_VERSION_ACK);
+	check_and_return(NMSG_KEEP_ALIVE_ACK);
 	check_and_return(NMSG_START_ACK);
 	check_and_return(NMSG_STOP_ACK);
 	check_and_return(NMSG_CONFIG_ACK);
@@ -1359,7 +1360,7 @@ int host_message_handler(struct msg_t *msg)
 
 	switch (msg->id) {
 	case NMSG_VERSION:
-		process_msg_version();
+		return process_msg_version();
 		break;
 	case NMSG_START:
 		return process_msg_start(&msg_control);

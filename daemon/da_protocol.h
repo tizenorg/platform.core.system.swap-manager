@@ -36,6 +36,8 @@
 #include <stddef.h>
 #include <linux/input.h>
 
+#define PROTOCOL_VERSION "3.0"
+
 enum HostMessageT {
 NMSG_VERSION			=0x0001,
 NMSG_START				=0x0002,
