@@ -43,8 +43,6 @@ extern "C" {
 #endif
 
 
-#define PROTOCOL_VERSION			"2.1"
-
 #define RUN_APP_LOADER
 
 #define MAX_TARGET_COUNT			8

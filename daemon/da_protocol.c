@@ -70,6 +70,7 @@ static void print_conf(struct conf_t *conf);
 
 char *msg_ID_str(enum HostMessageT ID)
 {
+	check_and_return(NMSG_VERSION);
 	check_and_return(NMSG_KEEP_ALIVE);
 	check_and_return(NMSG_START);
 	check_and_return(NMSG_STOP);
@@ -81,6 +82,7 @@ char *msg_ID_str(enum HostMessageT ID)
 	check_and_return(NMSG_GET_SCREENSHOT);
 	check_and_return(NMSG_GET_PROCESS_ADD_INFO);
 
+	check_and_return(NMSG_VERSION_ACK);
 	check_and_return(NMSG_KEEP_ALIVE_ACK);
 	check_and_return(NMSG_START_ACK);
 	check_and_return(NMSG_STOP_ACK);
@@ -603,6 +605,8 @@ static void write_msg_error(const char *err_str)
 static enum HostMessageT get_ack_msg_id(const enum HostMessageT id)
 {
 	switch (id) {
+	case NMSG_VERSION:
+		return NMSG_VERSION_ACK;
 	case NMSG_KEEP_ALIVE:
 		return NMSG_KEEP_ALIVE_ACK;
 	case NMSG_START:
@@ -972,6 +976,14 @@ exit_fail:
 	return -1;
 }
 
+static int process_msg_version()
+{
+	int res;
+	res = sendACKToHost(NMSG_VERSION, ERR_NO, PROTOCOL_VERSION,
+			    sizeof(PROTOCOL_VERSION));
+	return  -(res != 0);
+}
+
 static void get_serialized_time(uint32_t dst[2])
 {
 	struct timeval tv;
@@ -1238,6 +1250,9 @@ int host_message_handler(struct msg_t *msg)
 	init_parse_control(&msg_control, msg);
 
 	switch (msg->id) {
+	case NMSG_VERSION:
+		return process_msg_version();
+		break;
 	case NMSG_KEEP_ALIVE:
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
