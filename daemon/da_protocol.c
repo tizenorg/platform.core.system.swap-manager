@@ -972,6 +972,14 @@ exit_fail:
 	return -1;
 }
 
+static int process_msg_version()
+{
+	int res;
+	res = sendACKToHost(NMSG_VERSION, ERR_NO, PROTOCOL_VERSION,
+			    sizeof(PROTOCOL_VERSION));
+	return  -(res != 0);
+}
+
 static void get_serialized_time(uint32_t dst[2])
 {
 	struct timeval tv;
@@ -1238,6 +1246,9 @@ int host_message_handler(struct msg_t *msg)
 	init_parse_control(&msg_control, msg);
 
 	switch (msg->id) {
+	case NMSG_VERSION:
+		return process_msg_version();
+		break;
 	case NMSG_KEEP_ALIVE:
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		break;
