@@ -1359,7 +1359,7 @@ int host_message_handler(struct msg_t *msg)
 
 	switch (msg->id) {
 	case NMSG_VERSION:
-		process_msg_version();
+		return process_msg_version();
 		break;
 	case NMSG_START:
 		return process_msg_start(&msg_control);
