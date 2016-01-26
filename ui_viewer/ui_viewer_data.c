@@ -566,15 +566,15 @@ static char *_pack_image_prop(char *to, image_prop_t *prop)
 
 	ui_viewer_log("image prop: load_dpi : %f, source_clip : %d, filled : %d, content_hint : %d, "
 		      "alpha : %d, border : [%d,%d,%d,%d], border_scale : %f, pixels_dirty : %d,\n\t"
-		      "load_orientation : %d, border_center_fill : %d, size : [%d,%d], source_visible: %d, "
-		      "fill : [%d,%d,%d,%d], load_scale_down : %d,\n\tscale_hint : %d, source_events : %d, "
-		      "frame_count : %d, evas_image_stride : %d\n",
+		      "load_orientation : %d, border_center_fill : %d, size : [%d,%d], "
+		      "fill : [%d,%d,%d,%d], load_scale_down : %d,\n\tscale_hint : %d, "
+		      "evas_image_stride : %d\n",
 		      prop->load_dpi, prop->source_clip, prop->filled, prop->content_hint,
 		      prop->alpha, prop->border[0], prop->border[1], prop->border[2],
 		      prop->border[3], prop->border_scale, prop->pixels_dirty, prop->load_orientation,
-		      prop->border_center_fill, prop->size[0], prop->size[1], prop->source_visible,
+		      prop->border_center_fill, prop->size[0], prop->size[1],
 		      prop->fill[0], prop->fill[1], prop->fill[2], prop->fill[3], prop->load_scale_down,
-		      prop->scale_hint, prop->source_events, prop->frame_count, prop->evas_image_stride);
+		      prop->scale_hint, prop->evas_image_stride);
 
 	to = pack_float(to, prop->load_dpi);
 	to = pack_int8(to, prop->source_clip);
@@ -591,15 +591,15 @@ static char *_pack_image_prop(char *to, image_prop_t *prop)
 	to = pack_int8(to, prop->border_center_fill);
 	to = pack_int32(to, prop->size[0]);
 	to = pack_int32(to, prop->size[1]);
-	to = pack_int8(to, prop->source_visible);
+//	to = pack_int8(to, prop->source_visible);
 	to = pack_int32(to, prop->fill[0]);
 	to = pack_int32(to, prop->fill[1]);
 	to = pack_int32(to, prop->fill[2]);
 	to = pack_int32(to, prop->fill[3]);
 	to = pack_int32(to, prop->load_scale_down);
 	to = pack_int8(to, prop->scale_hint);
-	to = pack_int8(to, prop->source_events);
-	to = pack_int32(to, prop->frame_count);
+//	to = pack_int8(to, prop->source_events);
+//	to = pack_int32(to, prop->frame_count);
 	to = pack_int32(to, prop->evas_image_stride);
 
 	return to;
@@ -913,13 +913,12 @@ static char *_pack_gengrid_prop(char *to, gengrid_prop_t *prop)
 
 	ui_viewer_log("gengrid prop: align : [%f,%f], filled : %d, relative : [%f,%f], "
 		      "multi_select : %d, group_item_size : [%d,%d], select_mode : %d, render_mode : %d,\n\t"
-		      "highlight_mode : %d, item_size : [%d,%d], multi_select_mode: %d, "
-		      "horizontal : %d, wheel_disabled : %d, items_count : %d\n",
+		      "highlight_mode : %d, item_size : [%d,%d], "
+		      "horizontal : %d, items_count : %d\n",
 		      prop->align[0], prop->align[1], prop->filled, prop->relative[0],
 		      prop->relative[1], prop->multi_select, prop->group_item_size[0], prop->group_item_size[1],
 		      prop->select_mode, prop->render_mode, prop->highlight_mode, prop->item_size[0],
-		      prop->item_size[1], prop->multi_select_mode, prop->horizontal, prop->wheel_disabled,
-		      prop->items_count);
+		      prop->item_size[1], prop->horizontal, prop->items_count);
 
 	to = pack_float(to, prop->align[0]);
 	to = pack_float(to, prop->align[1]);
@@ -934,9 +933,8 @@ static char *_pack_gengrid_prop(char *to, gengrid_prop_t *prop)
 	to = pack_int8(to, prop->highlight_mode);
 	to = pack_int32(to, prop->item_size[0]);
 	to = pack_int32(to, prop->item_size[1]);
-	to = pack_int8(to, prop->multi_select_mode);
 	to = pack_int8(to, prop->horizontal);
-	to = pack_int8(to, prop->wheel_disabled);
+//	to = pack_int8(to, prop->wheel_disabled);
 	to = pack_int32(to, prop->items_count);
 
 	return to;
@@ -976,12 +974,12 @@ static char *_pack_glview_prop(char *to, glview_prop_t *prop)
 	if (!prop)
 		return to;
 
-	ui_viewer_log("glview prop: size : [%d,%d], rotation: %d\n",
-		      prop->size[0], prop->size[1], prop->rotation);
+	ui_viewer_log("glview prop: size : [%d,%d]\n",
+		      prop->size[0], prop->size[1]);
 
 	to = pack_int32(to, prop->size[0]);
 	to = pack_int32(to, prop->size[1]);
-	to = pack_int32(to, prop->rotation);
+//	to = pack_int32(to, prop->rotation);
 
 	return to;
 }
@@ -1057,11 +1055,11 @@ static char *_pack_label_prop(char *to, label_prop_t *prop)
 	if (!prop)
 		return to;
 
-	ui_viewer_log("label prop: wrap_width : %d, speed : %f, mode : %d\n",
-		      prop->wrap_width, prop->speed, prop->mode);
+	ui_viewer_log("label prop: wrap_width : %d, mode : %d\n",
+		      prop->wrap_width, prop->mode);
 
 	to = pack_int32(to, prop->wrap_width);
-	to = pack_float(to, prop->speed);
+//	to = pack_float(to, prop->speed);
 	to = pack_int8(to, prop->mode);
 
 	return to;
@@ -1072,16 +1070,15 @@ static char *_pack_list_prop(char *to, list_prop_t *prop)
 	if (!prop)
 		return to;
 
-	ui_viewer_log("list prop: horizontal : %d, select_mode : %d, focus_on_selection : %d, multi_select : %d, "
-		      "multi_select_mode : %d, mode : %d\n",
-		      prop->horizontal, prop->select_mode, prop->focus_on_selection, prop->multi_select,
-		      prop->multi_select_mode, prop->mode);
+	ui_viewer_log("list prop: horizontal : %d, select_mode : %d, multi_select : %d, "
+		      "mode : %d\n",
+		      prop->horizontal, prop->select_mode, prop->multi_select, prop->mode);
 
 	to = pack_int8(to, prop->horizontal);
 	to = pack_int8(to, prop->select_mode);
-	to = pack_int8(to, prop->focus_on_selection);
+//	to = pack_int8(to, prop->focus_on_selection);
 	to = pack_int8(to, prop->multi_select);
-	to = pack_int8(to, prop->multi_select_mode);
+//	to = pack_int8(to, prop->multi_select_mode);
 	to = pack_int8(to, prop->mode);
 
 	return to;
@@ -1153,13 +1150,12 @@ static char *_pack_photo_prop(char *to, photo_prop_t *prop)
 	if (!prop)
 		return to;
 
-	ui_viewer_log("photo prop: editable : %d, fill_inside : %d, aspect_fixed : %d, size : %d\n",
-		      prop->editable, prop->fill_inside, prop->aspect_fixed, prop->size);
+	ui_viewer_log("photo prop: aspect_fixed : %d\n", prop->aspect_fixed);
 
-	to = pack_int8(to, prop->editable);
-	to = pack_int8(to, prop->fill_inside);
+//	to = pack_int8(to, prop->editable);
+//	to = pack_int8(to, prop->fill_inside);
 	to = pack_int8(to, prop->aspect_fixed);
-	to = pack_int32(to, prop->size);
+//	to = pack_int32(to, prop->size);
 
 	return to;
 }
@@ -1340,7 +1336,7 @@ static char *_pack_win_prop(char *to, win_prop_t *prop)
 	ui_viewer_log("win prop: iconfield : %d, maximized : %d, modal : %d, icon_name : %s, "
 		      "withdrawn : %d, role : %s, size_step : [%d,%d], highlight_style : %s,\n\t"
 		      "borderless : %d, highlight_enabled : %d, title : %s, alpha: %d, "
-		      "urgent : %d, rotation : %d, sticky : %d, highlight_animate : %d,\n\t"
+		      "urgent : %d, rotation : %d, sticky : %d, \n\t"
 		      "aspect : %f, indicator_opacity : %d, demand_attention : %d, "
 		      "layer : %d, profile : %s, shaped : %d, indicator_mode : %d, conformant : %d,\n\t"
 		      "size_base : [%d,%d], quickpanel : %d, rotation_supported : %d, screen_dpi : [%d,%d], "
@@ -1349,7 +1345,7 @@ static char *_pack_win_prop(char *to, win_prop_t *prop)
 		      prop->withdrawn, prop->role, prop->size_step[0], prop->size_step[1],
 		      prop->highlight_style, prop->borderless, prop->highlight_enabled, prop->title,
 		      prop->alpha, prop->urgent, prop->rotation, prop->sticky,
-		      prop->highlight_animate, prop->aspect, prop->indicator_opacity, prop->demand_attention, prop->layer,
+		      prop->aspect, prop->indicator_opacity, prop->demand_attention, prop->layer,
 		      prop->profile, prop->shaped, prop->fullscreen, prop->indicator_mode, prop->conformant,
 		      prop->size_base[0], prop->size_base[1], prop->quickpanel, prop->rotation_supported, prop->screen_dpi[0],
 		      prop->screen_dpi[1], prop->win_type);
@@ -1370,7 +1366,7 @@ static char *_pack_win_prop(char *to, win_prop_t *prop)
 	to = pack_int8(to, prop->urgent);
 	to = pack_int32(to, prop->rotation);
 	to = pack_int8(to, prop->sticky);
-	to = pack_int8(to, prop->highlight_animate);
+//	to = pack_int8(to, prop->highlight_animate);
 	to = pack_float(to, prop->aspect);
 	to = pack_int8(to, prop->indicator_opacity);
 	to = pack_int8(to, prop->demand_attention);
@@ -1469,16 +1465,15 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		image_prop.load_orientation = evas_object_image_load_orientation_get(obj);
 		image_prop.border_center_fill = evas_object_image_border_center_fill_get(obj);
 		evas_object_image_size_get(obj, &(image_prop.size[0]), &(image_prop.size[1]));
-		image_prop.source_visible = evas_object_image_source_visible_get(obj);
+//		image_prop.source_visible = evas_object_image_source_visible_get(obj);
 		evas_object_image_fill_get(obj, &(image_prop.fill[0]),
 					&(image_prop.fill[1]),
 					&(image_prop.fill[2]),
 					&(image_prop.fill[3]));
 		image_prop.load_scale_down = evas_object_image_load_scale_down_get(obj);
 		image_prop.scale_hint = evas_object_image_scale_hint_get(obj);
-		image_prop.source_events = evas_object_image_source_events_get(obj);
-		//evas_object_image_animated_frame_count_get(obj); - unstable
-		image_prop.frame_count = 0;
+//		image_prop.source_events = evas_object_image_source_events_get(obj);
+//		image_prop.frame_count = evas_object_image_animated_frame_count_get(obj); - unstable
 		image_prop.evas_image_stride = evas_object_image_stride_get(obj);
 
 		to = _pack_image_prop(to, &image_prop);
@@ -1670,9 +1665,9 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		gengrid_prop.highlight_mode = elm_gengrid_highlight_mode_get(obj);
 		elm_gengrid_item_size_get(obj, &(gengrid_prop.item_size[0]),
 				       &(gengrid_prop.item_size[1]));
-		gengrid_prop.multi_select_mode = elm_gengrid_multi_select_mode_get(obj);
+//		gengrid_prop.multi_select_mode = elm_gengrid_multi_select_mode_get(obj);
 		gengrid_prop.horizontal = elm_gengrid_horizontal_get(obj);
-		gengrid_prop.wheel_disabled = elm_gengrid_wheel_disabled_get(obj);
+//		gengrid_prop.wheel_disabled = elm_gengrid_wheel_disabled_get(obj);
 		gengrid_prop.items_count = elm_gengrid_items_count(obj);
 
 		to = _pack_gengrid_prop(to, &gengrid_prop);
@@ -1698,7 +1693,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 
 		elm_glview_size_get(obj, &(glview_prop.size[0]),
 				 &(glview_prop.size[1]));
-		glview_prop.rotation = elm_glview_rotation_get(obj);
+//		glview_prop.rotation = elm_glview_rotation_get(obj);
 
 		to = _pack_glview_prop(to, &glview_prop);
 	} else if (code == UI_ELM_ICON) {
@@ -1744,7 +1739,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		label_prop_t label_prop;
 
 		label_prop.wrap_width = elm_label_wrap_width_get(obj);
-		label_prop.speed = elm_label_slide_speed_get(obj);
+//		label_prop.speed = elm_label_slide_speed_get(obj);
 		label_prop.mode = elm_label_slide_mode_get(obj);
 
 		to = _pack_label_prop(to, &label_prop);
@@ -1753,9 +1748,9 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 
 		list_prop.horizontal = elm_list_horizontal_get(obj);
 		list_prop.select_mode = elm_list_select_mode_get(obj);
-		list_prop.focus_on_selection = elm_list_focus_on_selection_get(obj);
+//		list_prop.focus_on_selection = elm_list_focus_on_selection_get(obj);
 		list_prop.multi_select = elm_list_multi_select_get(obj);
-		list_prop.multi_select_mode = elm_list_multi_select_mode_get(obj);
+//		list_prop.multi_select_mode = elm_list_multi_select_mode_get(obj);
 		list_prop.mode = elm_list_mode_get(obj);
 
 		to = _pack_list_prop(to, &list_prop);
@@ -1796,10 +1791,10 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 	} else if (code == UI_ELM_PHOTO) {
 		photo_prop_t photo_prop;
 
-		photo_prop.editable = elm_photo_editable_get(obj);
-		photo_prop.fill_inside = elm_photo_fill_inside_get(obj);
+//		photo_prop.editable = elm_photo_editable_get(obj);
+//		photo_prop.fill_inside = elm_photo_fill_inside_get(obj);
 		photo_prop.aspect_fixed = elm_photo_aspect_fixed_get(obj);
-		photo_prop.size = elm_photo_size_get(obj);
+//		photo_prop.size = elm_photo_size_get(obj);
 
 		to = _pack_photo_prop(to, &photo_prop);
 	} else if (code == UI_ELM_PHOTOCAM) {
@@ -1912,7 +1907,7 @@ static char *pack_ui_obj_prop(char *to, Evas_Object *obj, const char *type_name)
 		win_prop.urgent = elm_win_urgent_get(obj);
 		win_prop.rotation = elm_win_rotation_get(obj);
 		win_prop.sticky = elm_win_sticky_get(obj);
-		win_prop.highlight_animate = elm_win_focus_highlight_animate_get(obj);
+//		win_prop.highlight_animate = elm_win_focus_highlight_animate_get(obj);
 		win_prop.aspect = elm_win_aspect_get(obj);
 		win_prop.indicator_opacity = elm_win_indicator_opacity_get(obj);
 		win_prop.demand_attention = elm_win_demand_attention_get(obj);

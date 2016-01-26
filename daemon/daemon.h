@@ -44,7 +44,7 @@ extern "C" {
 #endif
 
 
-#define PROTOCOL_VERSION			"2.1"
+#define PROTOCOL_VERSION			"3.0"
 
 #define RUN_APP_LOADER
 

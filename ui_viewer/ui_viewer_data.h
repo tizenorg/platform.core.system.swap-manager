@@ -177,12 +177,12 @@ typedef struct _image_prop_t {
 	Eina_Bool load_orientation;
 	char border_center_fill;
 	int size[2];
-	Eina_Bool source_visible;
+//	Eina_Bool source_visible;
 	Evas_Coord fill[4];
 	int load_scale_down;
 	char scale_hint;
-	Eina_Bool source_events;
-	int frame_count;
+//	Eina_Bool source_events;
+//	int frame_count;
 	int evas_image_stride;
 } image_prop_t;
 
@@ -299,9 +299,9 @@ typedef struct _gengrid_prop_t {
 	Eina_Bool render_mode;
 	Eina_Bool highlight_mode;
 	Evas_Coord item_size[2];
-	char multi_select_mode;
+//	char multi_select_mode;
 	Eina_Bool horizontal;
-	Eina_Bool wheel_disabled;
+//	Eina_Bool wheel_disabled;
 	int items_count;
 } gengrid_prop_t;
 
@@ -322,7 +322,7 @@ typedef struct _genlist_prop_t {
 
 typedef struct _glview_prop_t {
 	int size[2];
-	int rotation;
+//	int rotation;
 } glview_prop_t;
 
 typedef struct _icon_prop_t {
@@ -356,16 +356,16 @@ typedef struct _index_prop_t {
 
 typedef struct _label_prop_t {
 	int wrap_width;
-	double speed;
+//	double speed;
 	char mode;
 } label_prop_t;
 
 typedef struct _list_prop_t {
 	Eina_Bool horizontal;
 	char select_mode;
-	Eina_Bool focus_on_selection;
+//	Eina_Bool focus_on_selection;
 	Eina_Bool multi_select;
-	char multi_select_mode;
+//	char multi_select_mode;
 	char mode;
 } list_prop_t;
 
@@ -395,10 +395,10 @@ typedef struct _panel_prop_t {
 } panel_prop_t;
 
 typedef struct _photo_prop_t {
-	Eina_Bool editable;
-	Eina_Bool fill_inside;
+//	Eina_Bool editable;
+//	Eina_Bool fill_inside;
 	Eina_Bool aspect_fixed;
-	int size;
+//	int size;
 } photo_prop_t;
 
 typedef struct _photocam_prop_t {
@@ -487,7 +487,7 @@ typedef struct _win_prop_t {
 	Eina_Bool urgent;
 	int rotation;
 	Eina_Bool sticky;
-	Eina_Bool highlight_animate;
+//	Eina_Bool highlight_animate;
 	double aspect;
 	char indicator_opacity;
 	Eina_Bool demand_attention;
