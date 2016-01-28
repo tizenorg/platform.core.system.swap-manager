@@ -711,10 +711,15 @@ static void _pack_grid_prop(FILE *file, grid_prop_t *prop)
 	if (!prop)
 		return ;
 
-	ui_viewer_log("grid prop: mirrored : %d\n",
-		      prop->mirrored);
+	ui_viewer_log("grid prop: mirrored : %d, x : %d, y : %d, "
+		      "w : %d, h : %d\n",
+		      prop->mirrored, prop->x, prop->y, prop->w, prop->h);
 
 	write_int8(file, prop->mirrored);
+	write_int32(file, prop->x);
+	write_int32(file, prop->y);
+	write_int32(file, prop->w);
+	write_int32(file, prop->h);
 }
 
 static void _pack_textgrid_prop(FILE *file, textgrid_prop_t *prop)
@@ -1476,6 +1481,8 @@ static void pack_ui_obj_prop(FILE *file, Evas_Object *obj, const char *type_name
 		grid_prop_t grid_prop;
 
 		grid_prop.mirrored = evas_object_grid_mirrored_get(obj);
+		evas_obj_grid_pack_get(obj, &(grid_prop.x), &(grid_prop.y),
+				       &(grid_prop.w), &(grid_prop.h));
 
 		_pack_grid_prop(file, &grid_prop);
 	} else if (code == UI_EVAS_TEXTGRID) {

@@ -227,6 +227,10 @@ typedef struct _box_prop_t {
 
 typedef struct _grid_prop_t {
 	Eina_Bool mirrored;
+	int x;
+	int y;
+	int w;
+	int h;
 } grid_prop_t;
 
 typedef struct _textgrid_prop_t {
