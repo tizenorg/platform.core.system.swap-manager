@@ -32,9 +32,17 @@
 #ifndef _SMACK_H_
 #define _SMACK_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void fd_setup_attributes(int fd);
 void set_label_for_all(const char *path);
 int apply_smack_rules(const char* subject, const char* object,
 		      const char* access_type);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _SMACK_H_ */

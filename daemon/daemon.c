@@ -556,7 +556,8 @@ static void reconfigure_recording(struct conf_t conf)
 	uint64_t fm_f0 = conf.use_features0
 		       & (
 			  FL_APP_STARTUP |
-			  FL_WEB_STARTUP_PROFILING
+			  FL_WEB_STARTUP_PROFILING |
+			  FL_UI_VIEWER_PROFILING
 			 );
 	uint64_t fm_f1 = conf.use_features1 & 0;
 
