@@ -32,8 +32,6 @@
 #include <inttypes.h>
 #include <pthread.h>
 
-#include <Ecore.h>
-
 #include "malloc_debug.h"
 #include "da_protocol.h"
 
@@ -54,7 +52,7 @@ struct target {
 	int event_fd;			/* for thread communication
 					 * (from recv thread to main thread) */
 	int initial_log;		/* written only by main thread */
-	Ecore_Fd_Handler *handler;	/* calculated when connecting */
+	void *handler;	/* calculated when connecting */
 	int event_fd_released;
 
 	struct thread *thread;
