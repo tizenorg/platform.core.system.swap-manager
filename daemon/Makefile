@@ -21,12 +21,8 @@ INCLUDE := \
 	-I/usr/include/capi-system-info \
 	-I/usr/include/capi-system-runtime-info \
 	-I/usr/include/vconf \
-	-I/usr/include/ecore-1 \
-	-I/usr/include/eina-1 \
-	-I/usr/include/eina-1/eina \
-	-I/usr/include/efl-1 \
-	-I/usr/include/json-c \
-	-I/usr/include/eo-1
+	-I/usr/include/json-c
+
 # CALL_MNGR
 ifeq ($(CALL_MNGR),y)
 INCLUDE += -I/usr/include/call-manager/
@@ -67,7 +63,6 @@ LDFLAGS := \
 	-lpthread \
 	-lvconf \
 	-lsmack \
-	-lecore \
 	-lcapi-system-info \
 	-lwebsockets \
 	-lparserelf
@@ -123,7 +118,10 @@ SRC_CPP := \
 	cpp/inst/Anr.cpp \
 \
 	cpp/elf/File.cpp \
-	cpp/elf/FileElf.cpp
+	cpp/elf/FileElf.cpp \
+\
+	cpp/Events/EventLoop.cpp \
+	cpp/Events/evloop_c.cpp
 
 TARGET = da_manager
 DASCRIPT = da_command

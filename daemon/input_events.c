@@ -31,8 +31,8 @@
 
 
 #include <dirent.h>
-#include <Ecore.h>
 
+#include "cpp/Events/evloop.h"
 #include "swap_debug.h"
 #include "da_data.h"
 #include "input_events.h"
@@ -60,8 +60,8 @@ typedef struct _input_dev
 static input_dev g_key_dev[MAX_DEVICE];
 static input_dev g_touch_dev[MAX_DEVICE];
 
-static Ecore_Fd_Handler *key_handlers[MAX_DEVICE];
-static Ecore_Fd_Handler *touch_handlers[MAX_DEVICE];
+static void *key_handlers[MAX_DEVICE];
+static void *touch_handlers[MAX_DEVICE];
 
 enum status_t { s_stopped, s_running };
 static enum status_t status = s_stopped;
@@ -226,7 +226,7 @@ static int deviceEventHandler(input_dev *dev, int input_type)
 	return ret;
 }
 
-static Eina_Bool touch_event_cb(void *data, Ecore_Fd_Handler *fd_handler)
+static bool touch_event_cb(int fd, void *data)
 {
 	input_dev *touch_dev = (input_dev *)data;
 
@@ -236,10 +236,10 @@ static Eina_Bool touch_event_cb(void *data, Ecore_Fd_Handler *fd_handler)
 		/* TODO: ??? */
 	}
 
-	return ECORE_CALLBACK_RENEW;
+	return true;
 }
 
-static Eina_Bool key_event_cb(void *data, Ecore_Fd_Handler *fd_handler)
+static bool key_event_cb(int fd, void *data)
 {
 	input_dev *key_dev = (input_dev *)data;
 
@@ -249,7 +249,7 @@ static Eina_Bool key_event_cb(void *data, Ecore_Fd_Handler *fd_handler)
 		/* TODO: ??? */
 	}
 
-	return ECORE_CALLBACK_RENEW;
+	return true;
 }
 
 void add_input_events(void)
@@ -261,12 +261,9 @@ void add_input_events(void)
 
 	for (i = 0; g_key_dev[i].fd != ARRAY_END; i++) {
 		if (g_key_dev[i].fd > 0) {
-			key_handlers[i] =
-				ecore_main_fd_handler_add(g_key_dev[i].fd,
-							  ECORE_FD_READ,
-							  key_event_cb,
-							  &g_key_dev[i],
-							  NULL, NULL);
+			key_handlers[i] = evloop_add_event(g_key_dev[i].fd,
+							&g_key_dev[i],
+							key_event_cb);
 			if (!key_handlers[i])
 				LOGE("keyboard device file handler add error\n");
 		}
@@ -274,12 +271,9 @@ void add_input_events(void)
 
 	for (i = 0; g_touch_dev[i].fd != ARRAY_END; i++) {
 		if (g_touch_dev[i].fd > 0) {
-			touch_handlers[i] =
-				ecore_main_fd_handler_add(g_touch_dev[i].fd,
-							  ECORE_FD_READ,
-							  touch_event_cb,
-							  &g_touch_dev[i],
-							  NULL, NULL);
+			touch_handlers[i] = evloop_add_event(g_touch_dev[i].fd,
+						       &g_touch_dev[i],
+						       touch_event_cb);
 			if (!touch_handlers[i])
 				LOGE("touch device file handler add error\n");
 		}
@@ -297,11 +291,11 @@ void del_input_events(void)
 
 	for (i = 0; g_key_dev[i].fd != ARRAY_END; i++)
 		if (g_key_dev[i].fd > 0)
-			ecore_main_fd_handler_del(key_handlers[i]);
+			evloop_del_event(key_handlers[i]);
 
 	for (i = 0; g_touch_dev[i].fd != ARRAY_END; i++)
 		if (g_touch_dev[i].fd > 0)
-			ecore_main_fd_handler_del(touch_handlers[i]);
+			evloop_del_event(touch_handlers[i]);
 
 	status = s_stopped;
 }
