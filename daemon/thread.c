@@ -26,6 +26,7 @@
 
 
 #include <pthread.h>
+#include <limits.h>
 #include <errno.h>
 
 
