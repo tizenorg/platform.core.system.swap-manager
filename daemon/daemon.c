@@ -43,16 +43,11 @@
 #include <sys/timerfd.h>	// for timerfd
 #include <unistd.h>		// for access, sleep
 #include <stdbool.h>
-
 #include <ctype.h>
-
 #include <fcntl.h>
-
 #include <assert.h>
-
-#include <Ecore.h>
-
 #include "daemon.h"
+#include "evloop.h"
 #include "sys_stat.h"
 #include "utils.h"
 #include "da_protocol.h"
@@ -75,8 +70,10 @@
 // start and terminate control functions
 // =============================================================================
 
-static Ecore_Fd_Handler *launch_timer_handler;
+static void* launch_timer_handler = NULL;
 static pthread_mutex_t launch_timer_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+int terminate_profiling_apps(void);
 
 static void launch_timer_lock()
 {
@@ -98,7 +95,8 @@ static int stop_app_launch_timer()
 	launch_timer_lock();
 
 	if (manager.app_launch_timerfd > 0) {
-		ecore_main_fd_handler_del(launch_timer_handler);
+		evloop_del_event(launch_timer_handler);
+		launch_timer_handler = NULL;
 		if (close(manager.app_launch_timerfd)) {
 			LOGE("close app_launch_timerfd failed\n");
 			res = 1;
@@ -112,72 +110,65 @@ static int stop_app_launch_timer()
 	return res;
 }
 
-static Eina_Bool launch_timer_cb(void *data, Ecore_Fd_Handler *fd_handler)
+static bool launch_timer_cb(int fd, void *data)
 {
 	LOGE("Failed to launch application\n");
 	if (stop_app_launch_timer())
 		LOGE("cannot stop app launch timer\n");
 
-	return ECORE_CALLBACK_CANCEL;
+	return true;
 }
 
 //start application launch timer function
 static int start_app_launch_timer(int apps_count)
 {
-	int res = 0;
+	int fd = -1;
+	void *ev = NULL;
 
 	assert(apps_count >= 0 && "negative apps count");
 
 	if (apps_count == 0)
-		return res;
+		return 0;
 
-	if (manager.app_launch_timerfd > 0) {
+	if (manager.app_launch_timerfd >= 0) {
 		LOGI("stop previous app launch timer\n");
 		stop_app_launch_timer();
 	}
 
-	launch_timer_lock();
-
-	manager.app_launch_timerfd =
-	    timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC);
-	if (manager.app_launch_timerfd > 0) {
-		struct itimerspec ctime;
-		ctime.it_value.tv_sec = MAX_APP_LAUNCH_TIME * apps_count;
-		ctime.it_value.tv_nsec = 0;
-		ctime.it_interval.tv_sec = 0;
-		ctime.it_interval.tv_nsec = 0;
-		if (timerfd_settime(manager.app_launch_timerfd, 0, &ctime, NULL) < 0) {
-			LOGE("fail to set app launch timer\n");
-			res = -1;
-			goto unlock_and_stop;
-		} else {
-			launch_timer_handler =
-				ecore_main_fd_handler_add(manager.app_launch_timerfd,
-							  ECORE_FD_READ,
-							  launch_timer_cb,
-							  NULL,
-							  NULL, NULL);
-			if (!launch_timer_handler) {
-				LOGE("fail to add app launch timer fd to \n");
-				res = -2;
-				goto unlock_and_stop;
-			} else {
-				LOGI("application launch time started\n");
-			}
-		}
-	} else {
+	fd = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC);
+	if (fd < 0) {
 		LOGE("cannot create launch timer\n");
-		res = -3;
+		return -3;
 	}
 
-	launch_timer_unlock();
-	return res;
+	struct itimerspec ctime;
+	ctime.it_value.tv_sec = MAX_APP_LAUNCH_TIME * apps_count;
+	ctime.it_value.tv_nsec = 0;
+	ctime.it_interval.tv_sec = 0;
+	ctime.it_interval.tv_nsec = 0;
 
-unlock_and_stop:
-	launch_timer_unlock();
+	if (timerfd_settime(fd, 0, &ctime, NULL) < 0) {
+		LOGE("fail to set app launch timer\n");
+		goto fail;
+	}
 
-	stop_app_launch_timer();
-	return res;
+	ev = evloop_add_event(fd, NULL, launch_timer_cb);
+	if (!ev) {
+		LOGE("failed to create app launch timer\n");
+		goto fail;
+	}
+
+	LOGI("application launch time started (%d)\n", fd);
+
+	launch_timer_lock();
+	manager.app_launch_timerfd = fd;
+	launch_timer_handler = ev;
+	launch_timer_unlock();
+	return 0;
+
+fail:
+	close(fd);
+	return -1;
 }
 
 static inline void inc_apps_to_run()
@@ -334,57 +325,59 @@ static void terminate_error(char *errstr, int send_to_host)
 	terminate_all();
 }
 
-static Ecore_Fd_Handler *connect_timer_handler;
+static void* connect_timer_handler = NULL;
 
-static Eina_Bool connect_timer_cb(void *data, Ecore_Fd_Handler *fd_handler)
+static bool connect_timer_cb(int fd, void *data)
 {
 	terminate_error("no incoming connections", 1);
+	evloop_del_event(fd);
 	close(manager.connect_timeout_timerfd);
 	manager.connect_timeout_timerfd = -1;
-	LOGE("No connection in %d sec. shutdown.\n",
-	     MAX_CONNECT_TIMEOUT_TIME);
-	ecore_main_loop_quit();
 
-	return ECORE_CALLBACK_CANCEL;
+	LOGE("No connection in %d sec. shutdown.\n", MAX_CONNECT_TIMEOUT_TIME);
+
+	evloop_stop();
+
+	return true;
 }
 
-static int launch_timer_start(void)
+static bool launch_timer_start(void)
 {
 	int res = 0;
+	int fd = -1;
+	struct itimerspec ctime;
 
-	manager.connect_timeout_timerfd =
-	    timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC);
-	if (manager.connect_timeout_timerfd > 0) {
-		struct itimerspec ctime;
-		ctime.it_value.tv_sec = MAX_CONNECT_TIMEOUT_TIME;
-		ctime.it_value.tv_nsec = 0;
-		ctime.it_interval.tv_sec = 0;
-		ctime.it_interval.tv_nsec = 0;
-		if (timerfd_settime(manager.connect_timeout_timerfd, 0, &ctime, NULL) < 0) {
-			LOGE("fail to set connect timeout timer\n");
-			close(manager.connect_timeout_timerfd);
-			manager.connect_timeout_timerfd = -1;
-		} else {
-			connect_timer_handler =
-				ecore_main_fd_handler_add(manager.connect_timeout_timerfd,
-							  ECORE_FD_READ,
-							  connect_timer_cb,
-							  NULL,
-							  NULL, NULL);
-			if (!connect_timer_handler) {
-				LOGE("fail to add app connection timeout timer fd\n");
-				close(manager.connect_timeout_timerfd);
-				manager.connect_timeout_timerfd = -1;
-			} else {
-				LOGI("connection timeout timer started\n");
-			}
-		}
-	} else {
+	fd = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC);
+	if (fd < 0) {
 		LOGE("cannot create connection timeout timer\n");
+		return -1;
 	}
 
-	LOGI("ret=%d\n", res);
-	return res;
+	ctime.it_value.tv_sec = MAX_CONNECT_TIMEOUT_TIME;
+	ctime.it_value.tv_nsec = 0;
+	ctime.it_interval.tv_sec = 0;
+	ctime.it_interval.tv_nsec = 0;
+
+	res = timerfd_settime(fd, 0, &ctime, NULL);
+	if (res < 0) {
+		LOGE("fail to set connect timeout timer\n");
+		goto fail;
+	}
+
+	connect_timer_handler = evloop_add_event(fd, NULL, connect_timer_cb);
+	if (!connect_timer_handler) {
+		LOGE("failed to add app connection timeout timer fd\n");
+		goto fail;
+	}
+
+	LOGI("connection timeout timer started (%d)\n", fd);
+	manager.connect_timeout_timerfd = fd;
+
+	return true;
+fail:
+	close(fd);
+	manager.connect_timeout_timerfd = -1;
+	return false;
 }
 
 /* terminate all profiling applications */
@@ -665,7 +658,7 @@ static int target_event_stop_handler(struct target *target)
 	LOGI("target[%p] close, pid(%d) : (remaining %d target) close ecore handler %p\n",
 	     target, target_get_pid(target), target_cnt_get() - 1, target->handler);
 
-	ecore_main_fd_handler_del(target->handler);
+	evloop_del_event(target->handler);
 
 	/* mark target uninitialised */
 	target->event_fd_released = 1;
@@ -704,7 +697,7 @@ static int target_event_handler(struct target *t, uint64_t msg)
 	return err;
 }
 
-static Eina_Bool target_event_cb(void *data, Ecore_Fd_Handler *fd_handler)
+static bool target_event_cb(int fd, void *data)
 {
 	uint64_t u;
 	ssize_t recvLen;
@@ -720,7 +713,7 @@ static Eina_Bool target_event_cb(void *data, Ecore_Fd_Handler *fd_handler)
 		}
 	}
 
-	return ECORE_CALLBACK_RENEW;
+	return true;
 }
 
 /**
@@ -760,23 +753,21 @@ static int targetServerHandler(void)
 			goto TARGET_CONNECT_FAIL;
 		}
 
-		target->handler =
-			ecore_main_fd_handler_add(target->event_fd,
-						  ECORE_FD_READ,
-						  target_event_cb,
-						  (void *)target,
-						  NULL, NULL);
+		target->handler = evloop_add_event(target->event_fd,
+						   (void *)target,
+						   target_event_cb);
 		if (!target->handler) {
 			LOGE("fail to add event fd for target[%p]\n", target);
 			goto TARGET_CONNECT_FAIL;
 		}
 
+		LOGI("target event handler started (%d)\n", target->event_fd);
 		// make recv thread for target
 		if (makeRecvThread(target) != 0) {
 			// fail to make recv thread
 			LOGE("fail to make recv thread for target[%p]\n",
 			     target);
-			ecore_main_fd_handler_del(target->handler);
+			evloop_del_event(target->handler);
 			goto TARGET_CONNECT_FAIL;
 		}
 
@@ -835,8 +826,8 @@ error_ret:
 	return;
 }
 
-static Ecore_Fd_Handler *host_ctrl_handler;
-static Ecore_Fd_Handler *host_data_handler;
+static void* host_ctrl_handler = NULL;
+static void* host_data_handler = NULL;
 
 static void *host_control_sock_thread(void *args)
 {
@@ -847,6 +838,9 @@ static void *host_control_sock_thread(void *args)
 	while (1) {
 		if (manager.connect_timeout_timerfd >= 0) {
 			LOGI("release connect timeout timer\n");
+			if (evloop_del_event(connect_timer_handler))
+				connect_timer_handler = NULL;
+
 			close(manager.connect_timeout_timerfd);
 			manager.connect_timeout_timerfd = -1;
 		}
@@ -909,20 +903,14 @@ static void *host_control_sock_thread(void *args)
 	/* splice will fail without next cmd */
 	manager.host.data_socket = -1;
 	stop_all();
-	ecore_main_loop_quit();
+	evloop_stop();
 
 	manager.host.control_socket = -1;
 	LOGI("Control socket thread finished\n");
 	return NULL;
 }
 
-/* This callback for flush ecore queue */
-static Eina_Bool host_ctrl_cb(void *data, Ecore_Fd_Handler *fd_handler)
-{
-	return ECORE_CALLBACK_RENEW;
-}
-
-static Eina_Bool host_data_cb(void *data, Ecore_Fd_Handler *fd_handler)
+static bool host_data_cb(int fd, void *data)
 {
 	ssize_t recvLen;
 	char recvBuf[32];
@@ -930,7 +918,7 @@ static Eina_Bool host_data_cb(void *data, Ecore_Fd_Handler *fd_handler)
 	recvLen = recv(manager.host.data_socket, recvBuf, 32, MSG_DONTWAIT);
 	if (recvLen == 0) {
 		// close data socket
-		ecore_main_fd_handler_del(host_data_handler);
+		evloop_del_event(host_data_handler);
 		close(manager.host.data_socket);
 		manager.host.data_socket = -1;
 		// TODO: finish transfer thread
@@ -938,7 +926,7 @@ static Eina_Bool host_data_cb(void *data, Ecore_Fd_Handler *fd_handler)
 
 	LOGI("host message from data socket %d\n", recvLen);
 
-	return ECORE_CALLBACK_RENEW;
+	return true;
 }
 
 // return 0 if normal case
@@ -947,37 +935,26 @@ static Eina_Bool host_data_cb(void *data, Ecore_Fd_Handler *fd_handler)
 static int hostServerHandler(void)
 {
 	static int hostserverorder = 0;
-	int csocket;
+	int sk;
 
 	if (hostserverorder > 1)	// control and data socket connected already
 		return 1;		// ignore
 
-	csocket = accept4(manager.host_server_socket, NULL, NULL, SOCK_CLOEXEC);
+	sk = accept4(manager.host_server_socket, NULL, NULL, SOCK_CLOEXEC);
 
-	if (csocket >= 0) {
+	if (sk >= 0) {
 		// accept succeed
 
 		if (hostserverorder == 0) {
-			manager.host.control_socket = csocket;
 			unlink_portfile();
-			LOGI("host control socket connected = %d\n", csocket);
-
-			host_ctrl_handler =
-				ecore_main_fd_handler_add(manager.host.control_socket,
-							  ECORE_FD_READ,
-							  host_ctrl_cb,
-							  NULL,
-							  NULL, NULL);
-			if (!host_ctrl_handler) {
-				LOGE("Failed to add host control socket fd\n");
-				close(csocket);
-			}
+			LOGI("host control socket connected = %d\n", sk);
 
 			if (manager.host_control_sock_thread != -1) {
 				LOGI("replay already started\n");
 				return -1;
 			}
 
+			manager.host.control_socket = sk;
 			if (pthread_create(&(manager.host_control_sock_thread),
 					   NULL,
 					   host_control_sock_thread,
@@ -988,20 +965,21 @@ static int hostServerHandler(void)
 			}
 
 		} else {
-			manager.host.data_socket = csocket;
-			LOGI("host data socket connected = %d\n", csocket);
+			void *ev;
+			LOGI("host data socket connected = %d\n", sk);
 
-			host_data_handler =
-				ecore_main_fd_handler_add(manager.host.data_socket,
-							  ECORE_FD_READ,
-							  host_data_cb,
-							  NULL,
-							  NULL, NULL);
-			if (!host_data_handler) {
-				LOGE("Failed to add host data socket fd\n");
-				close(csocket);
+			ev = evloop_add_event(sk,
+					      NULL,
+					      host_data_cb);
+			LOGI("host data handler started (%d)\n", sk);
+			if (!ev) {
+				LOGE("Failed to create  host data socket event\n");
+				close(sk);
 				return -1;
 			}
+
+			host_data_handler = ev;
+			manager.host.data_socket = sk;
 		}
 
 		hostserverorder++;
@@ -1013,10 +991,10 @@ static int hostServerHandler(void)
 	}
 }
 
-static Ecore_Fd_Handler *host_connect_handler;
-static Ecore_Fd_Handler *target_connect_handler;
+static void* host_connect_handler = NULL;
+static void* target_connect_handler = NULL;
 
-static Eina_Bool host_connect_cb(void *data, Ecore_Fd_Handler *fd_handler)
+static bool host_connect_cb(int fd, void *data)
 {
 	// connect request from host
 	int result = hostServerHandler();
@@ -1024,10 +1002,10 @@ static Eina_Bool host_connect_cb(void *data, Ecore_Fd_Handler *fd_handler)
 		LOGE("Internal DA framework error (hostServerHandler)\n");
 	}
 
-	return ECORE_CALLBACK_RENEW;
+	return true;
 }
 
-static Eina_Bool target_connect_cb(void *data, Ecore_Fd_Handler *fd_handler)
+static bool target_connect_cb(int fd, void *data)
 {
 	if (targetServerHandler() < 0) {
 		// critical error
@@ -1036,34 +1014,40 @@ static Eina_Bool target_connect_cb(void *data, Ecore_Fd_Handler *fd_handler)
 				"(targetServerHandler)\n", 1);
 	}
 
-	return ECORE_CALLBACK_RENEW;
+	return true;
 }
 
 static bool initialize_events(void)
 {
-	host_connect_handler =
-		ecore_main_fd_handler_add(manager.host_server_socket,
-					  ECORE_FD_READ,
-					  host_connect_cb,
-					  NULL,
-					  NULL, NULL);
+	host_connect_handler = evloop_add_event(manager.host_server_socket,
+					     NULL, host_connect_cb);
 	if (!host_connect_handler) {
-		LOGE("Host server socket add error\n");
+		LOGE("failed to add host server socket to event loop\n");
 		return false;
 	}
+	LOGI("host connect handler started (%d)\n", manager.host_server_socket);
 
-	target_connect_handler =
-		ecore_main_fd_handler_add(manager.target_server_socket,
-					  ECORE_FD_READ,
-					  target_connect_cb,
-					  NULL,
-					  NULL, NULL);
+	target_connect_handler = evloop_add_event(manager.target_server_socket,
+					       NULL, target_connect_cb);
 	if (!target_connect_handler) {
-		LOGE("Target server socket add error\n");
-		return false;
+		LOGE("failed to add target server socket to event loop\n");
+		goto fail;
 	}
+	LOGI("target connect handler started (%d)\n", manager.target_server_socket);
 
 	return true;
+fail:
+	evloop_del_event(host_connect_handler);
+	return false;
+}
+
+static void deinitialize_events(void)
+{
+	evloop_del_event(host_connect_handler);
+	host_connect_handler = NULL;
+
+	evloop_del_event(target_connect_handler);
+	target_connect_handler = NULL;
 }
 
 // return 0 for normal case
@@ -1071,7 +1055,7 @@ int daemonLoop(void)
 {
 	int return_value = 0;
 
-	ecore_init();
+	evloop_init();
 
 	if (init_input_events() == -1) {
 		LOGE("Init input event failed. "
@@ -1091,12 +1075,18 @@ int daemonLoop(void)
 
 	init_prof_session(&prof_session);
 
-	ecore_main_loop_begin();
-	ecore_shutdown();
+	evloop_run();
 
- END_EFD:
+	if (host_data_handler) {
+		evloop_del_event(host_data_handler);
+		host_data_handler = NULL;
+	}
+
+	deinitialize_events();
+
+END_EFD:
+	evloop_deinit();
 	LOGI("close efd\n");
-	close(manager.efd);
- END_EVENT:
+
 	return return_value;
 }

@@ -39,6 +39,7 @@
 #include <sys/time.h>		// for setitimer
 #include <signal.h>			// for sigemptyset, sigset_t, sigaddset, ...
 #include <unistd.h>			// for write
+#include <limits.h>
 #include <sys/wait.h>
 
 #include "daemon.h"

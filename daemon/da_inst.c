@@ -30,7 +30,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/types.h>
-#include <linux/limits.h>
+#include <limits.h>
+#include <errno.h>
 
 #include "da_inst.h"
 #include "da_protocol.h"
