@@ -25,12 +25,14 @@ BuildRequires: pkgconfig(json-c)
 BuildRequires: pkgconfig(ecore)
 BuildRequires: launchpad
 BuildRequires: app-core-efl
+BuildRequires: libwayland-egl
+BuildRequires: app-core-efl-debuginfo
 BuildRequires: swap-probe-devel
 BuildRequires: swap-probe-elf
 
 
+%define NSP_SUPPORT 1
 # FIXME: add WSP_SUPPORT wrt webkit2-efl and webkit2-efl-debuginfo
-# FIXME: add NSP_SUPPORT app-core-efl-debuginfo
 # FIXME: add WSI_SUPPORT libwebsockets-devel
 
 Requires: swap-modules

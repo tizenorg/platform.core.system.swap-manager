@@ -41,7 +41,7 @@ check_null_or_exit path_app_core_efl
 if [ "$__tizen_product_tv__" == "1" ]; then
 	dpath_app_core_efl=$path_app_core_efl
 else
-	dpath_app_core_efl=$(rpm -ql app-core-debuginfo | grep "libappcore-efl\.so\.debug$" | head -1)
+	dpath_app_core_efl=$(rpm -ql app-core-efl-debuginfo | grep "libappcore-efl\.so.*\.debug$" | head -1)
 fi
 check_null_or_exit dpath_app_core_efl
 
