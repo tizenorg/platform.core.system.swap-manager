@@ -41,6 +41,7 @@ if [ ! -e /sys/kernel/debug/swap/enable ]; then
     /usr/sbin/insmod /opt/swap/sdk/swap_retprobe.ko         || exit 113  # retprobe is loaded
     /usr/sbin/insmod /opt/swap/sdk/swap_fbiprobe.ko         || exit 114  # fbi is loaded
     /usr/sbin/insmod /opt/swap/sdk/swap_webprobe.ko         || exit 115  # webprobe is loaded
+    /usr/sbin/insmod /opt/swap/sdk/swap_loader.ko           || exit 116  # loader is loaded
     /usr/sbin/insmod /opt/swap/sdk/swap_preload.ko          || exit 117
     /usr/sbin/insmod /opt/swap/sdk/swap_wsp.ko              || exit 118
     /usr/sbin/insmod /opt/swap/sdk/swap_nsp.ko              || exit 119
@@ -108,6 +109,12 @@ then
 	# lcd min (white min - black min) / 2: 179 / 1
 	/bin/echo 179 > `ls /sys/kernel/debug/swap/energy/lcd/*/min_num` &&
 	/bin/echo 1000000 > `ls /sys/kernel/debug/swap/energy/lcd/*/min_denom`
+fi
+
+#Loader
+if [ -d /sys/kernel/debug/swap/loader/ ]
+then
+	/usr/bin/swap_init_loader.sh
 fi
 
 #Preload

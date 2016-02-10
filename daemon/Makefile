@@ -129,12 +129,15 @@ TARGET = da_manager
 DASCRIPT = da_command
 START_SH = ../scripts/swap_start.sh
 STOP_SH = ../scripts/swap_stop.sh
+INIT_LOADER_SH = ../scripts/swap_init_loader.sh
 INIT_PRELOAD_SH = ../scripts/swap_init_preload.sh
 INIT_WSP_SH = ../scripts/swap_init_wsp.sh
+LOADER_SCRIPT = ../scripts/gen_loader_header.sh
 PRELOAD_SCRIPT = ../scripts/gen_preload_header.sh
 SCRIPTS := \
 	$(START_SH) \
 	$(STOP_SH) \
+	$(INIT_LOADER_SH) \
 	$(INIT_PRELOAD_SH) \
 	$(INIT_WSP_SH)
 
@@ -150,6 +153,9 @@ GENERATED_HEADERS := \
 $(GENERATED_WSI_PROF_H): ../scripts/gen_wsi_prof.sh
 	sh $< > $@
 
+#Loader
+$(INIT_LOADER_SH): $(LOADER_SCRIPT)
+	bash $< $@
 
 #Preload
 $(INIT_PRELOAD_SH): $(PRELOAD_SCRIPT)

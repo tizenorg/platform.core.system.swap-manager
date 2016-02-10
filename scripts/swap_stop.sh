@@ -6,6 +6,7 @@
 /usr/sbin/rmmod swap_nsp
 /usr/sbin/rmmod swap_wsp
 /usr/sbin/rmmod swap_preload
+/usr/sbin/rmmod swap_loader
 /usr/sbin/rmmod swap_webprobe
 /usr/sbin/rmmod swap_fbiprobe
 /usr/sbin/rmmod swap_retprobe
