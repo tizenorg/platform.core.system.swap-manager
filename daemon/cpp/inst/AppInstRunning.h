@@ -41,8 +41,12 @@ public:
 private:
     int doInit()
     {
-        if (!str2pid(info().id().c_str(), _pid)) {
-            LOGE("[%s] error convert 'app ID to pid'\n", type2str(AT_RUNNING));
+        const char *pid_st = info().id().c_str();
+        if (pid_st[0] == '\0') {
+                /* if pid is empty string we should instrument all applications */
+                _pid = 0; /* posible it is not good idea set 0 */
+        } else if (!str2pid(pid_st, _pid)) {
+            LOGE("[%s] error convert 'app ID to pid' <pid=%s>\n", type2str(AT_RUNNING), pid_st);
             return -EINVAL;
         }
 

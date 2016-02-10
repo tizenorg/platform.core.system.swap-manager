@@ -112,10 +112,10 @@ SRC_CPP := \
 
 TARGET = da_manager
 DASCRIPT = da_command
-START_SH = ../scripts/start.sh
-STOP_SH = ../scripts/stop.sh
-INIT_PRELOAD_SH = ../scripts/init_preload.sh
-INIT_WSP_SH = ../scripts/init_wsp.sh
+START_SH = ../scripts/swap_start.sh
+STOP_SH = ../scripts/swap_stop.sh
+INIT_PRELOAD_SH = ../scripts/swap_init_preload.sh
+INIT_WSP_SH = ../scripts/swap_init_wsp.sh
 PRELOAD_SCRIPT = ../scripts/gen_preload_header.sh
 SCRIPTS := \
 	$(START_SH) \
@@ -203,12 +203,10 @@ debug: rmheaders headers $(SCRIPTS) $(OBJS)
 
 
 install: BINDIR = $(DESTDIR)/usr/bin
-install: OPTDIR = $(DESTDIR)/opt/swap/sdk
 install: $(TARGET) $(SCRIPTS)
 	mkdir -p $(BINDIR)
-	mkdir -p $(OPTDIR)
 	install $(TARGET) -t $(BINDIR)
-	install -m 755 $(SCRIPTS) -t $(OPTDIR)
+	install -m 755 $(SCRIPTS) -t $(BINDIR)
 
 clean:
 	rm -f $(TARGET) $(OBJS)

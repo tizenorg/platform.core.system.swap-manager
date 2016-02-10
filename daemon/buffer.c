@@ -105,18 +105,18 @@ static int insert_buf_modules(void)
 	FILE *f = NULL;
 	char cmd[PATH_MAX];
 
-	res = system("cd /opt/swap/sdk && ./start.sh");
+	res = system("cd /usr/bin && ./swap_start.sh");
 	if (res != 0) {
 		LOGE("Cannot insert swap modules. code <%d>\n", res);
 		/* decode error code */
-		snprintf(cmd, sizeof(cmd), "/opt/swap/sdk/start.sh %d", res);
+		snprintf(cmd, sizeof(cmd), "/usr/bin/swap_start.sh %d", res);
 		f = popen(cmd, "r");
 		if (f) {
 			while (NULL != fgets(cmd, sizeof(cmd), f))
-				LOGE("start.sh >%s\n", cmd);
+				LOGE("swap_start.sh >%s\n", cmd);
 			pclose(f);
 		} else {
-			LOGE("Cannot open start.sh\n");
+			LOGE("Cannot open swap_start.sh\n");
 		}
 		return -1;
 	}
