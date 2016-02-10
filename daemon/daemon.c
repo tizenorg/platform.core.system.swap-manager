@@ -304,21 +304,10 @@ static int exec_app(const struct app_info_t *app_info)
 	return res;
 }
 
-// just send stop message to all target process
-static void terminate_all_target()
-{
-	struct msg_target_t msg = {
-		.type = APP_MSG_STOP,
-		.length = 0
-	};
-
-	target_send_msg_to_all(&msg);
-}
-
 // terminate all target and wait for threads
 void terminate_all()
 {
-	terminate_all_target();
+	target_send_terminate_to_all();
 
 	// wait for all other thread exit
 	target_wait_all();
@@ -625,7 +614,7 @@ static pid_t get_current_pid(void)
 	return pid;
 }
 
-static void target_set_type(struct target *t)
+static void target_set_type(struct target *t, struct app_info_t *info)
 {
 	pid_t ppid = target_get_ppid(t);
 	enum app_type_t app_type = APP_TYPE_UNKNOWN;
@@ -634,6 +623,8 @@ static void target_set_type(struct target *t)
 		app_type = APP_TYPE_COMMON;
 	} else if (get_lpad_pid(ppid) == ppid) {
 		app_type = APP_TYPE_TIZEN;
+	} else if (info && info->app_type == APP_TYPE_RUNNING) {
+		app_type = APP_TYPE_RUNNING;
 	}
 
 	t->app_type = app_type;
@@ -644,22 +635,18 @@ static int target_event_pid_handler(struct target *target)
 {
 	struct app_list_t *app = NULL;
 	struct app_info_t *app_info = NULL;
-
-	target_set_type(target);
+	pid_t pid = target_get_pid(target);
 
 	/* posible need some process check right there before start_replay >> */
-	app_info = app_info_get_first(&app);
-	if (app_info == NULL) {
-		LOGE("No app info found\n");
-		return -1;
+	for (app_info = app_info_get_first(&app);
+	     app_info != NULL;
+	     app_info = app_info_get_next(&app))
+	{
+		if (is_same_app_process(app_info->exe_path, pid))
+			break;
 	}
 
-	while (app_info != NULL) {
-		if (is_same_app_process(app_info->exe_path,
-					target_get_pid(target)))
-			break;
-		app_info = app_info_get_next(&app);
-	}
+	target_set_type(target, app_info);
 
 	if (app_info == NULL) {
 		LOGE("pid %d not found in app list\n",

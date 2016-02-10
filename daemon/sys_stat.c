@@ -1788,15 +1788,16 @@ static uint64_t get_system_lcd_energy()
 	globfree(&glob_buf);
 	return sum_energy;
 }
+
 /*
  * Calculates difference between current and previous sample (system).
  * Stores mutable state in static variables.
  */
 static uint32_t pop_sys_energy_per_device(enum supported_device dev)
 {
-	static uint64_t cpu_old, flash_old, lcd_old;
-	uint64_t cpu_new, flash_new, lcd_new;
-	uint64_t cpu_diff, flash_diff, lcd_diff;
+	static uint64_t cpu_old, flash_old, lcd_old, wifi_old, bt_old;
+	uint64_t cpu_new, flash_new, lcd_new, wifi_new, bt_new;
+	uint64_t cpu_diff, flash_diff, lcd_diff, wifi_diff, bt_diff;
 
 	switch (dev) {
 	case DEVICE_CPU:
@@ -1817,6 +1818,22 @@ static uint32_t pop_sys_energy_per_device(enum supported_device dev)
 		lcd_diff = val_diff(lcd_new, lcd_old);
 		lcd_old = lcd_new;
 		return (uint32_t)lcd_diff;
+	case DEVICE_WIFI:
+		wifi_new = swap_read_int64(wf_send/system) +
+			swap_read_int64(wf_recv/system);
+		wifi_diff = val_diff(wifi_new, wifi_old);
+		wifi_old = wifi_new;
+		return (uint32_t)wifi_diff;
+	case DEVICE_BT:
+		bt_new = swap_read_int64(hci_send_sco/system) +
+			swap_read_int64(hci_send_acl/system) +
+			swap_read_int64(sco_recv_scodata/system) +
+			swap_read_int64(l2cap_recv_acldata/system);
+		bt_diff = val_diff(bt_new, bt_old);
+		bt_old = bt_new;
+		return (uint32_t)bt_diff;
+
+
 	default:
 		assert(0 && "Unknown device. This should not happen");
 		return -41;
@@ -1827,9 +1844,9 @@ static uint32_t pop_sys_energy_per_device(enum supported_device dev)
 // Stores mutable state in static variables.
 static uint32_t pop_app_energy_per_device(enum supported_device dev)
 {
-	static uint64_t cpu_old, flash_old;
-	uint64_t cpu_new, flash_new;
-	uint64_t cpu_diff, flash_diff;
+	static uint64_t cpu_old, flash_old, wifi_old, bt_old;
+	uint64_t cpu_new, flash_new, wifi_new, bt_new;
+	uint64_t cpu_diff, flash_diff, wifi_diff, bt_diff;
 
 	switch (dev) {
 	case DEVICE_CPU:
@@ -1849,6 +1866,22 @@ static uint32_t pop_app_energy_per_device(enum supported_device dev)
 		 * is not supported for LCD.
 		 */
 		return 0;
+	case DEVICE_WIFI:
+		wifi_new = swap_read_int64(wf_send/apps) +
+			swap_read_int64(wf_recv/apps);
+		wifi_diff = val_diff(wifi_new, wifi_old);
+		wifi_old = wifi_new;
+		return (uint32_t)wifi_diff;
+	case DEVICE_BT:
+		bt_new = swap_read_int64(hci_send_sco/apps) +
+			swap_read_int64(hci_send_acl/apps) +
+			swap_read_int64(sco_recv_scodata/apps) +
+			swap_read_int64(l2cap_recv_acldata/apps);
+		bt_diff = val_diff(bt_new, bt_old);
+		bt_old = bt_new;
+		return (uint32_t)bt_diff;
+
+
 	default:
 		assert(0 && "Unknown device. This should not happen");
 		return -41;

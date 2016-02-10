@@ -63,7 +63,7 @@ struct target *target_ctor(void)
 	return t;
 }
 
-void target_dtor(struct target *t)
+void target_clean(struct target *t)
 {
 	t->allocmem = 0;
 	t->event_fd_released = 0;
@@ -76,7 +76,11 @@ void target_dtor(struct target *t)
 	if (t->socket != UNKNOWN_FD)
 		close(t->socket);
 	t->socket = -1;
+}
 
+void target_dtor(struct target *t)
+{
+	target_clean(t);
 	thread_dtor(t->thread);
 	target_free(t);
 }
@@ -169,11 +173,17 @@ static struct target *target_malloc(void)
 		 * and can be released. target_use and event_fd_released are set
 		 * in different threads asynchronously
 		 */
-		if (target_use[i] == 1 && target_array[i].event_fd_released == 1) {
-			target_dtor(&target_array[i]);
+		if (target_use[i] == 1 &&
+		    target_array[i].event_fd_released == 1) {
+			target_clean(&target_array[i]);
+			thread_dtor(target_array[i].thread);
+			if (target_use[i] == 0)
+				LOGE("double free t=%p\n", &target_array[i]);
 			target_use[i] = 0;
 		}
+	}
 
+	for (i = 0; i < MAX_TARGET_COUNT; i++) {
 		if (target_use[i] == 0) {
 			target_use[i] = 1;
 			t = &target_array[i];
@@ -238,6 +248,34 @@ int target_send_msg_to_all(struct msg_target_t *msg)
 		t = target_get(i);
 		if (target_send_msg(t, msg))
 			ret = 1;
+	}
+	target_array_unlock();
+
+	return ret;
+}
+
+int target_send_terminate_to_all(void)
+{
+	int i, ret = 0;
+
+	target_array_lock();
+	for (i = 0; i < MAX_TARGET_COUNT; i++) {
+		struct target *t;
+		struct msg_target_t msg;
+
+		if (target_use[i] == 0)
+			continue;
+
+		t = target_get(i);
+		if (t->app_type == APP_TYPE_RUNNING) {
+			msg.type = APP_MSG_STOP_WITHOUT_KILL;
+			msg.length = 0;
+		} else {
+			msg.type = APP_MSG_STOP;
+			msg.length = 0;
+		}
+		if (target_send_msg(t, &msg))
+				ret = 1;
 	}
 	target_array_unlock();
 
