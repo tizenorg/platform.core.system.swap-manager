@@ -26,7 +26,8 @@ INCLUDE := \
 	-I/usr/include/eina-1/eina \
 	-I/usr/include/efl-1 \
 	-I/usr/include/json-c \
-	-I/usr/include/eo-1
+	-I/usr/include/eo-1 \
+	-I/usr/include/evas-1
 # CALL_MNGR
 ifeq ($(CALL_MNGR),y)
 INCLUDE += -I/usr/include/call-manager/
@@ -110,13 +111,15 @@ SRC_C := \
 	malloc_debug.c \
 	target.c \
 	thread.c \
-	wsi.c
+	wsi.c \
+	ui_viewer.c
 
 SRC_CPP := \
 	cpp/features/feature.cpp \
 	cpp/features/feature_manager.cpp \
 	cpp/features/feature_manager_c.cpp \
 	cpp/features/feature_nsp.cpp \
+	cpp/features/feature_uihv.cpp \
 \
 	cpp/inst/AppInst.cpp \
 	cpp/inst/AppInstCont.cpp \

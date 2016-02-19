@@ -1,14 +1,11 @@
 /*
  *  DA manager
  *
- * Copyright (c) 2000 - 2013 Samsung Electronics Co., Ltd. All rights reserved.
+ * Copyright (c) 2015 Samsung Electronics Co., Ltd. All rights reserved.
  *
  * Contact:
  *
- * Jaewon Lim		<jaewon81.lim@samsung.com>
- * Woojin Jung		<woojin2.jung@samsung.com>
- * Juyoung Kim		<j0.kim@samsung.com>
- * Nikita Kalyazin	<n.kalyazin@samsung.com>
+ * Anastasia Lyupa <a.lyupa@samsung.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,26 +20,17 @@
  * limitations under the License.
  *
  * Contributors:
- * - S-Core Co., Ltd
  * - Samsung RnD Institute Russia
  *
  */
 
 
-#ifndef _SMACK_H_
-#define _SMACK_H_
+#ifndef UI_VIEWER_H_
+#define UI_VIEWER_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "da_inst.h"
 
-void fd_setup_attributes(int fd);
-void set_label_for_all(const char *path);
-int apply_smack_rules(const char* subject, const char* object,
-		      const char* access_type);
+int ui_viewer_set_smack_rules(const struct app_info_t *app_info);
+int ui_viewer_set_app_info(const struct app_info_t *app_info);
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* _SMACK_H_ */
+#endif /* UI_VIEWER_H_ */

@@ -1,14 +1,11 @@
 /*
  *  DA manager
  *
- * Copyright (c) 2000 - 2013 Samsung Electronics Co., Ltd. All rights reserved.
+ * Copyright (c) 2015 Samsung Electronics Co., Ltd. All rights reserved.
  *
  * Contact:
  *
- * Jaewon Lim		<jaewon81.lim@samsung.com>
- * Woojin Jung		<woojin2.jung@samsung.com>
- * Juyoung Kim		<j0.kim@samsung.com>
- * Nikita Kalyazin	<n.kalyazin@samsung.com>
+ * Lyupa Anastasia <a.lyupa@samsung.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,26 +20,27 @@
  * limitations under the License.
  *
  * Contributors:
- * - S-Core Co., Ltd
  * - Samsung RnD Institute Russia
  *
  */
 
+#ifndef _UI_VIEWER_LIB_
+#define _UI_VIEWER_LIB_
 
-#ifndef _SMACK_H_
-#define _SMACK_H_
+#include <stdlib.h>
+#include <pthread.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+typedef struct
+{
+	int daemonSock;
+	pthread_mutex_t sockMutex;
+} __socketInfo;
 
-void fd_setup_attributes(int fd);
-void set_label_for_all(const char *path);
-int apply_smack_rules(const char* subject, const char* object,
-		      const char* access_type);
+typedef struct
+{
+	__socketInfo		socket;
+	uint64_t		optionflag;
+} __traceInfo;
 
-#ifdef __cplusplus
-}
-#endif
 
-#endif /* _SMACK_H_ */
+#endif /* _UI_VIEWER_LIB_ */

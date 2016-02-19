@@ -499,28 +499,36 @@ static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
 static int feature_add_inst_lib(struct ld_lib_list_el_t ld_lib,
 				struct lib_list_t **dest)
 {
-	*dest = new_lib();
-	if (*dest == NULL) {
-		LOGE("lib alloc error\n");
-		return 0;
-	};
+	struct lib_list_t *new;
 
 	if (!check_exec_path(ld_lib.lib_name)) {
 		LOGE("bin path parsing error\n");
 		return 0;
 	}
 
-	(*dest)->lib->bin_path = strdup(ld_lib.lib_name);
-
-	if (!feature_add_func_inst_list(ld_lib, (struct data_list_t *)*dest)) {
-		LOGE("funcs parsing error\n");
+	new = new_lib();
+	if (new == NULL) {
+		LOGE("lib alloc error\n");
 		return 0;
+	};
+
+	new->lib->bin_path = strdup(ld_lib.lib_name);
+
+	if (!feature_add_func_inst_list(ld_lib, (struct data_list_t *)new)) {
+		LOGE("funcs parsing error\n");
+		goto fail;
 	}
 
-	(*dest)->size += strlen((*dest)->lib->bin_path) + 1 + sizeof((*dest)->func_num);
-	(*dest)->hash = calc_lib_hash((*dest)->lib);
+	new->size += strlen(new->lib->bin_path) + 1 + sizeof(new->func_num);
+	new->hash = calc_lib_hash(new->lib);
+
+	*dest = new;
 	return 1;
 
+fail:
+	free(new->lib->bin_path);
+	free_lib(new);
+	return 0;
 }
 
 int feature_add_lib_inst_list(struct ld_feature_list_el_t *ld_lib_list,
