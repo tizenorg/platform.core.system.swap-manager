@@ -113,7 +113,9 @@ touch /opt/usr/etc/resourced_proc_exclude.ini
 %{_prefix}/bin/da_manager
 /usr/bin/swap_start.sh
 /usr/bin/swap_stop.sh
+/usr/bin/swap_init_loader.sh
 /usr/bin/swap_init_preload.sh
+/usr/bin/swap_init_uihv.sh
 /usr/bin/swap_init_wsp.sh
 
 %{_prefix}/lib/da_ui_viewer.so

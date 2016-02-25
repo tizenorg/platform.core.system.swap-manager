@@ -49,7 +49,7 @@ int ui_viewer_set_smack_rules(const struct app_info_t *app_info)
 int ui_viewer_set_app_info(const struct app_info_t *app_info)
 {
 	const char APP_INFO_FILE[] =
-		"/sys/kernel/debug/swap/preload/ui_viewer_app_info";
+		"/sys/kernel/debug/swap/uihv/app_info";
 	FILE *fp;
 	int ret = 0, c = 0;
 	uint64_t main_offset;

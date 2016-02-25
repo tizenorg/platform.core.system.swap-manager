@@ -41,9 +41,11 @@ if [ ! -e /sys/kernel/debug/swap/enable ]; then
     /usr/sbin/insmod /opt/swap/sdk/swap_retprobe.ko         || exit 113  # retprobe is loaded
     /usr/sbin/insmod /opt/swap/sdk/swap_fbiprobe.ko         || exit 114  # fbi is loaded
     /usr/sbin/insmod /opt/swap/sdk/swap_webprobe.ko         || exit 115  # webprobe is loaded
+    /usr/sbin/insmod /opt/swap/sdk/swap_loader.ko           || exit 116
     /usr/sbin/insmod /opt/swap/sdk/swap_preload.ko          || exit 117
     /usr/sbin/insmod /opt/swap/sdk/swap_wsp.ko              || exit 118
     /usr/sbin/insmod /opt/swap/sdk/swap_nsp.ko              || exit 119
+    /usr/sbin/insmod /opt/swap/sdk/swap_uihv.ko          || exit 120
 
 fi
 
@@ -127,10 +129,22 @@ then
 	/bin/echo 1000000 > `ls /sys/kernel/debug/swap/energy/lcd/*/min_denom`
 fi
 
+#Loader
+if [ -d /sys/kernel/debug/swap/loader/ ]
+then
+	/usr/bin/swap_init_loader.sh
+fi
+
 #Preload
 if [ -d /sys/kernel/debug/swap/preload/ ]
 then
 	/usr/bin/swap_init_preload.sh
+fi
+
+#UIHV
+if [ -d /sys/kernel/debug/swap/uihv/ ]
+then
+	/usr/bin/swap_init_uihv.sh
 fi
 
 #WSP
