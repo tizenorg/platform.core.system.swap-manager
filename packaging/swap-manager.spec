@@ -33,7 +33,8 @@ BuildRequires: swap-probe-elf
 
 %define NSP_SUPPORT 1
 # FIXME: add WSP_SUPPORT wrt webkit2-efl and webkit2-efl-debuginfo
-# FIXME: add WSI_SUPPORT libwebsockets-devel
+%define WSI_SUPPORT 1
+BuildRequires: libwebsockets-devel
 
 Requires: swap-modules
 Requires: swap-probe

@@ -243,7 +243,7 @@ static void send_request(const char *method)
 
 	strncpy(buf, payload, MAX_REQUEST_LENGTH - 1);
 
-	if (libwebsocket_write(wsi, (unsigned char *)buf, payload_len,
+	if (lws_write(wsi, (unsigned char *)buf, payload_len,
 			       LWS_WRITE_TEXT) < 0) {
 		LOGE("cannot write to web socket (method: %s)\n", method);
 		return;
@@ -254,7 +254,7 @@ static void send_request(const char *method)
 
 static int profiling_callback(struct libwebsocket_context *context,
 			      struct libwebsocket *wsi,
-			      enum libwebsocket_callback_reasons reason,
+			      enum lws_callback_reasons reason,
 			      void *user, void *in, size_t len)
 {
 	json_object *jobj, *jobjr;
@@ -279,14 +279,14 @@ static int profiling_callback(struct libwebsocket_context *context,
 		break;
 
 	case LWS_CALLBACK_CLIENT_RECEIVE:
-		if (libwebsockets_remaining_packet_payload(wsi))
+		if (lws_remaining_packet_payload(wsi))
 			LOGE("json message too long\n");
 
 		((char *)in)[len] = '\0';
 		LOGI("json message recv; len: %d; msg: %s\n", (int)len,
 		     (char *)in);
 
-		if (!libwebsocket_is_final_fragment(wsi))
+		if (!lws_is_final_fragment(wsi))
 			break;
 
 		jobjr = json_tokener_parse((char *)in);
@@ -351,7 +351,7 @@ static int profiling_callback(struct libwebsocket_context *context,
 	return 0;
 }
 
-static struct libwebsocket_protocols protocols[] = {
+static struct lws_protocols protocols[] = {
 	{ "profiling-protocol", profiling_callback, 0, MAX_MSG_LENGTH },
 	{ NULL, NULL, 0, 0 }
 };
@@ -359,7 +359,7 @@ static struct libwebsocket_protocols protocols[] = {
 static void destroy_wsi_conn(struct libwebsocket_context *context)
 {
 	/* */
-	libwebsocket_context_destroy(context);
+	lws_context_destroy(context);
 }
 
 static int init_wsi_conn(struct libwebsocket_context **context,
@@ -384,16 +384,16 @@ static int init_wsi_conn(struct libwebsocket_context **context,
 	info.uid = -1;
 	info.ssl_cert_filepath = NULL;
 	info.ssl_private_key_filepath = NULL;
-	info.extensions = libwebsocket_get_internal_extensions();
+	info.extensions = lws_get_internal_extensions();
 	info.options = 0;
 
-	*context = libwebsocket_create_context(&info);
+	*context = lws_create_context(&info);
 	if (*context == NULL) {
 		LOGE("libwebsocket context creation failed\n");
 		return 1;
 	}
 
-	*wsi = libwebsocket_client_connect(*context, address, port, 0, page,
+	*wsi = lws_client_connect(*context, address, port, 0, page,
 					   host, origin,
 					   protocols[PROTOCOL_PROFILING].name,
 					   ietf_version);
@@ -415,7 +415,7 @@ static void *handle_ws_responses(void *arg)
 	       !CHKSTAT(pstate, PSTATE_DISCONNECT) ||
 	       !CHKSTAT(pstate, PSTATE_DISCONNECT) &&
 	       CHKSTAT(pstate, PSTATE_INIT_DONE | PSTATE_INIT_START)) {
-		libwebsocket_service(context, 1000);
+		lws_service(context, 1000);
 	}
 
 	LOGI("handle response thread finished\n");
