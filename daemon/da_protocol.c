@@ -160,22 +160,74 @@ static char *msgErrStr(enum ErrorCode err)
 	}
 }
 
+#define print_feature_0(f) do{ \
+	size = print_feature_0_details(feature0, f, dstr(f), to, buflen);\
+	buflen -= size;\
+	to += size;\
+} while(0)
 
-#define print_feature(f,in,to,delim)					\
-	if (f & in) {							\
-		if (strlen(dstr(f) delim) + 1 < buflen ) {		\
-			lenin = snprintf(to, buflen, dstr(f) delim );	\
-			to += lenin;					\
-			buflen -= lenin;				\
-		} else { 						\
-			goto err_exit;					\
-		}							\
+static int get_bit_val(uint64_t val)
+{
+	int i = 0;
+	uint64_t mask = (1 << i);
+	if (val == 0)
+		return -1;
+
+	while ((val & mask) == 0) {
+		i++;
+		mask <<= 1;
 	}
-#define print_feature_0(f) print_feature(f, feature0, to, ", \n\t")
+	return i;
+}
+
+static uint32_t print_feature_0_details(uint64_t feature0,
+					uint64_t feature_to_print,
+					char *feature_name, char *to,
+					uint32_t size)
+{
+	uint32_t start_size = size;
+	int lenin;
+	uint32_t need_len = strlen(feature_name) + 1 + /* feature name len */
+			    2 + 1 + /* feature bit number */
+			    (sizeof(feature0) * 2) + 2 + 1 /* feature value */;
+
+	if ((feature0 & feature_to_print) == 0)
+		return 0;
+
+	/* print feature number */
+
+	if (need_len > size) {
+		LOGW("low buffer\n\r");
+		return 0;
+	}
+
+	/* print feature bit */
+	lenin = snprintf(to, size, "%02d ", get_bit_val(feature_to_print));
+	to += lenin;
+	size -= lenin;
+
+	/* print feature val */
+	lenin = snprintf(to, size, "0x%016LX ", feature_to_print);
+	to += lenin;
+	size -= lenin;
+
+	/* print feature name */
+	lenin = snprintf(to, size, feature_name);
+	to += lenin;
+	size -= lenin;
+
+	/* print feature name */
+	lenin = snprintf(to, size, ",\n\t");
+	to += lenin;
+	size -= lenin;
+
+	return start_size - size;
+}
+
 void feature_code_str(uint64_t feature0, uint64_t feature1, char *to,
 		      uint32_t buflen)
 {
-	int lenin = 0;
+	int size = 0;
 	print_feature_0(FL_FUNCTION_PROFILING);
 	print_feature_0(FL_MEMORY_ALLOC_PROBING);
 	print_feature_0(FL_FILE_API_PROBING);
