@@ -99,7 +99,7 @@ extern "C" int fm_stop(void)
 static uint64_t checkSupportFeatures(uint64_t f, uint64_t fs, size_t offset)
 {
     if (f != fs) {
-        uint64_t diff = f ^ fs;
+        uint64_t diff = f & (~fs);
 
         for (int i = 0; diff; diff >>= 1, ++i) {
             if (diff & 1)
