@@ -96,18 +96,17 @@ extern "C" int fm_stop(void)
     return 0;
 }
 
-static uint64_t checkSupportFeatures(uint64_t f, uint64_t fs, size_t offset)
+static uint64_t checkSupportFeatures(uint64_t enableFeatures,
+                                     uint64_t supportedFeatures, size_t offset)
 {
-    if (f != fs) {
-        uint64_t diff = f ^ fs;
+    uint64_t unsupportedFeatures = enableFeatures & (~supportedFeatures);
 
-        for (int i = 0; diff; diff >>= 1, ++i) {
-            if (diff & 1)
-                LOGW("feature[%d] is not support\n", i + offset);
-        }
+    for (int i = 0; unsupportedFeatures; unsupportedFeatures >>= 1, ++i) {
+        if (unsupportedFeatures & 1)
+            LOGW("feature[%d] is not support\n", i + offset);
     }
 
-    return f & fs;
+    return enableFeatures & supportedFeatures;
 }
 
 extern "C" int fm_set(uint64_t f0, uint64_t f1)
