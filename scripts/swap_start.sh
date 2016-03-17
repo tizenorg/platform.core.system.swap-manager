@@ -1,16 +1,31 @@
 #!/bin/sh
 
+terminate_with_error()
+{
+    echo "$1. error $2"
+    exit $2
+}
+
+load_module()
+{
+    module_name="$1"
+    if [ ! -f "${module_name}" ];then
+        terminate_with_error "file not found <${module_name}>" 123
+    fi
+
+    /usr/sbin/insmod ${module_name}
+    err=$?
+    if [ ! $err -eq 0 ];then
+        terminate_with_error "cannot load module <${module_name}>" ${err}
+    fi
+}
+
 #ERROR CODES
 ERR_CONTAINER_NOT_SUPPORTED=1
 ERR_NO=0
 
 ERR_CONTAINER_NOT_SUPPORTED_ST="SWAP is not supported devices with container feature"
 ERR_NO_ST="No errors"
-
-if [ "$1" != "" ];then
-    /bin/echo "Error code <$1>. TODO decode it."
-    exit $1
-fi
 
 PATH=$PATH:/usr/sbin/
 
@@ -25,25 +40,25 @@ fi
 
 if [ ! -e /sys/kernel/debug/swap/enable ]; then
 
-    /usr/sbin/insmod /opt/swap/sdk/swap_master.ko           || exit 101
-    /usr/sbin/insmod /opt/swap/sdk/swap_buffer.ko           || exit 102  # buffer is loaded
-    /usr/sbin/insmod /opt/swap/sdk/swap_ksyms.ko            || exit 103
-    /usr/sbin/insmod /opt/swap/sdk/swap_driver.ko           || exit 104  # driver is loaded
-    /usr/sbin/insmod /opt/swap/sdk/swap_writer.ko           || exit 105
-    /usr/sbin/insmod /opt/swap/sdk/swap_kprobe.ko           || exit 106  # kprobe is loaded
-    /usr/sbin/insmod /opt/swap/sdk/swap_uprobe.ko           || exit 107  # uprobe is loaded
-    /usr/sbin/insmod /opt/swap/sdk/swap_taskctx.ko          || exit 200
-    /usr/sbin/insmod /opt/swap/sdk/swap_us_manager.ko       || exit 108  # us_manager is loaded
-    /usr/sbin/insmod /opt/swap/sdk/swap_ks_features.ko      || exit 109  # ks_features is loaded
-    /usr/sbin/insmod /opt/swap/sdk/swap_sampler.ko          || exit 110
-    /usr/sbin/insmod /opt/swap/sdk/swap_energy.ko           || exit 111
-    /usr/sbin/insmod /opt/swap/sdk/swap_message_parser.ko   || exit 112  # parser is loaded
-    /usr/sbin/insmod /opt/swap/sdk/swap_retprobe.ko         || exit 113  # retprobe is loaded
-    /usr/sbin/insmod /opt/swap/sdk/swap_fbiprobe.ko         || exit 114  # fbi is loaded
-    /usr/sbin/insmod /opt/swap/sdk/swap_webprobe.ko         || exit 115  # webprobe is loaded
-    /usr/sbin/insmod /opt/swap/sdk/swap_preload.ko          || exit 117
-    /usr/sbin/insmod /opt/swap/sdk/swap_wsp.ko              || exit 118
-    /usr/sbin/insmod /opt/swap/sdk/swap_nsp.ko              || exit 119
+    load_module /opt/swap/sdk/swap_master.ko
+    load_module /opt/swap/sdk/swap_buffer.ko
+    load_module /opt/swap/sdk/swap_ksyms.ko
+    load_module /opt/swap/sdk/swap_driver.ko
+    load_module /opt/swap/sdk/swap_writer.ko
+    load_module /opt/swap/sdk/swap_kprobe.ko
+    load_module /opt/swap/sdk/swap_uprobe.ko
+    load_module /opt/swap/sdk/swap_taskctx.ko
+    load_module /opt/swap/sdk/swap_us_manager.ko
+    load_module /opt/swap/sdk/swap_ks_features.ko
+    load_module /opt/swap/sdk/swap_sampler.ko
+    load_module /opt/swap/sdk/swap_energy.ko
+    load_module /opt/swap/sdk/swap_message_parser.ko
+    load_module /opt/swap/sdk/swap_retprobe.ko
+    load_module /opt/swap/sdk/swap_fbiprobe.ko
+    load_module /opt/swap/sdk/swap_webprobe.ko
+    load_module /opt/swap/sdk/swap_preload.ko
+    load_module /opt/swap/sdk/swap_wsp.ko
+    load_module /opt/swap/sdk/swap_nsp.ko
 
 fi
 

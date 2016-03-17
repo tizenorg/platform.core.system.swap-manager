@@ -99,29 +99,36 @@ static void close_buf_ctl(void)
 	close(manager.user_ev_fd);
 }
 
+#define swap_start_result_file "/tmp/swap_start_result"
 static int insert_buf_modules(void)
 {
 	int res;
 	FILE *f = NULL;
 	char cmd[PATH_MAX];
 
-	res = system("cd /usr/bin && ./swap_start.sh");
-	if (res != 0) {
-		LOGE("Cannot insert swap modules. code <%d>\n", res);
-		/* decode error code */
-		snprintf(cmd, sizeof(cmd), "/usr/bin/swap_start.sh %d", res);
-		f = popen(cmd, "r");
-		if (f) {
-			while (NULL != fgets(cmd, sizeof(cmd), f))
-				LOGE("swap_start.sh >%s\n", cmd);
-			pclose(f);
-		} else {
-			LOGE("Cannot open swap_start.sh\n");
-		}
-		return -1;
-	}
+	snprintf(cmd, sizeof(cmd), "rm %s; cd /usr/bin && ./swap_start.sh > %s",
+		 swap_start_result_file, swap_start_result_file);
+	res = system(cmd);
 
-	return 0;
+	if (res == 0)
+		goto exit;
+
+	/* system returns error */
+
+	LOGE("Cannot insert swap modules. code <%d>\n", res);
+
+	f = fopen(swap_start_result_file, "r");
+	if (f != NULL) {
+		while (NULL != fgets(cmd, sizeof(cmd), f))
+			LOGE("%s\n", cmd);
+		pclose(f);
+	} else {
+		LOGE("Cannot open file <%s>\n", swap_start_result_file);
+	}
+	res = -1;
+
+exit:
+	return res;
 }
 
 int init_buf(void)
