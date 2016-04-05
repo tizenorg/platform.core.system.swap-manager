@@ -144,7 +144,6 @@ static void* recvThread(void* data)
 				event = EVENT_PID;
 				write(target->event_fd, &event, sizeof(uint64_t));
 			}
-			send_maps_inst_msg_to(target);
 			continue;		// don't send to host
 		} else if (log.type == APP_MSG_TERMINATE) {
 			LOGI("APP_MSG_TERMINATE arrived: pid[%d]\n",
