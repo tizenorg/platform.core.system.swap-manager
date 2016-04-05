@@ -47,8 +47,6 @@ char *packed_app_list = NULL;
 char *packed_lib_list = NULL;
 char *packed_ld_lib_list = NULL;
 
-static struct _msg_target_t *lib_maps_message = NULL;
-static pthread_mutex_t lib_inst_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t lib_maps_message_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 uint32_t libs_count;
@@ -678,16 +676,6 @@ exit_free:
 	return res;
 }
 
-static void lock_lib_maps_message()
-{
-	pthread_mutex_lock(&lib_inst_list_mutex);
-}
-
-static void unlock_lib_maps_message()
-{
-	pthread_mutex_unlock(&lib_inst_list_mutex);
-}
-
 static void lock_lib_list()
 {
 	pthread_mutex_lock(&lib_maps_message_mutex);
@@ -696,71 +684,6 @@ static void lock_lib_list()
 static void unlock_lib_list()
 {
 	pthread_mutex_unlock(&lib_maps_message_mutex);
-}
-
-static void generate_maps_inst_msg(struct user_space_inst_t *us_inst)
-{
-	lock_lib_maps_message();
-
-	struct lib_list_t *lib = us_inst->lib_inst_list;
-	struct app_list_t *app = us_inst->app_inst_list;
-	char *p, *resolved;
-	uint32_t total_maps_count = 0;
-	uint32_t total_len = sizeof(total_maps_count) + sizeof(*lib_maps_message);
-	char real_path_buf[PATH_MAX];
-
-	/* total message len calculate */
-	while (lib != NULL) {
-		p = lib->lib->bin_path;
-		total_len += strlen(p) + 1;
-		total_maps_count++;
-		LOGI("lib #%u <%s>\n", total_maps_count, p);
-		lib = (struct lib_list_t *)lib->next;
-	}
-
-	while (app != NULL) {
-		p = app->app->exe_path;
-		resolved = realpath((const char *)p, real_path_buf);
-		if (resolved != NULL) {
-			total_len += strlen(real_path_buf) + 1;
-			total_maps_count++;
-			LOGI("app #%u <%s>\n", total_maps_count, resolved);
-		} else {
-			LOGE("cannot resolve bin path <%s>\n", p);
-		}
-
-		app = (struct app_list_t *)app->next;
-	}
-
-	if (lib_maps_message != NULL)
-		free(lib_maps_message);
-
-	lib_maps_message = malloc(total_len);
-	lib_maps_message->type = APP_MSG_MAPS_INST_LIST;
-	lib_maps_message->length = total_len;
-
-	/* pack data */
-	p = lib_maps_message->data;
-	pack_int32(p, total_maps_count);
-
-	lib = us_inst->lib_inst_list;
-	while (lib != NULL) {
-		pack_str(p, lib->lib->bin_path);
-		lib = (struct lib_list_t *)lib->next;
-	}
-
-	app = us_inst->app_inst_list;
-	while (app != NULL) {
-		resolved = realpath(app->app->exe_path, real_path_buf);
-		if (resolved != NULL)
-			pack_str(p, real_path_buf);
-		app = (struct app_list_t *)app->next;
-	}
-
-	LOGI("total_len = %u\n", total_len);
-	print_buf((char *)lib_maps_message, total_len, "lib_maps_message");
-
-	unlock_lib_maps_message();
 }
 
 static inline bool is_always_probing_feature(enum feature_code fv)
@@ -853,20 +776,6 @@ static int write_bins_to_preload(struct user_space_inst_t *us_inst)
 	return ret;
 }
 
-void send_maps_inst_msg_to(struct target *t)
-{
-	lock_lib_maps_message();
-	target_send_msg(t, (struct msg_target_t *)lib_maps_message);
-	unlock_lib_maps_message();
-}
-
-static void send_maps_inst_msg_to_all_targets()
-{
-	lock_lib_maps_message();
-	target_send_msg_to_all(lib_maps_message);
-	unlock_lib_maps_message();
-}
-
 //-----------------------------------------------------------------------------
 struct app_info_t *app_info_get_first(struct app_list_t **app_list)
 {
@@ -927,7 +836,6 @@ int msg_start(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 
 	if (write_bins_to_preload(us_inst))
 		LOGE("Error adding binaries\n");
-	generate_maps_inst_msg(us_inst);
 
 msg_start_exit:
 	/* unlock list access */
@@ -985,8 +893,6 @@ int msg_swap_inst_add(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 
 	if (write_bins_to_preload(us_inst))
 		LOGE("Error adding binaries\n");
-	generate_maps_inst_msg(us_inst);
-	send_maps_inst_msg_to_all_targets();
 
 msg_swap_inst_add_exit:
 	/* unlock list access */
@@ -1035,8 +941,6 @@ int msg_swap_inst_remove(struct msg_buf_t *data, struct user_space_inst_t *us_in
 
 	if (write_bins_to_preload(us_inst))
 		LOGE("Error adding binaries\n");
-	generate_maps_inst_msg(us_inst);
-	send_maps_inst_msg_to_all_targets();
 
 msg_swap_inst_remove_exit:
 	/* unlock list access */
@@ -1170,8 +1074,6 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 
     if (write_bins_to_preload(us_inst))
         LOGE("Error adding binaries\n");
-	generate_maps_inst_msg(us_inst);
-	send_maps_inst_msg_to_all_targets();
 
 msg_swap_inst_add_exit:
 	/* unlock list access */

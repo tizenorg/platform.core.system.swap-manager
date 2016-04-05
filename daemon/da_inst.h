@@ -95,6 +95,5 @@ struct app_info_t *app_info_get_first(struct app_list_t **app_list);
 struct app_info_t *app_info_get_next(struct app_list_t **app_list);
 
 struct target; // move
-void send_maps_inst_msg_to(struct target *t);
 
 #endif /* __DA_INST_H__*/
