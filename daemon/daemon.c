@@ -356,7 +356,7 @@ void restart_all(void)
 
 	LOGI("Restart all profiled apps\n");
 
-	terminate_all_target();
+	terminate_all();
 	target_stop_all();
 	target_wait_all();
 	terminate_profiling_apps();
