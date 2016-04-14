@@ -355,6 +355,7 @@ struct system_info_t {
 
 	// system_memory
 	uint64_t system_memory_used;
+	uint64_t system_total_gem_memory;
 
 	// system_processes
 	uint32_t count_of_inst_processes;

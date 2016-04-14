@@ -88,6 +88,7 @@ __da_manager manager =
 		.brightness = -1,
 		.voltage = -1,
 		.procmeminfo = -1,
+		.gem_memory = NULL,
 		.video = NULL,
 		.procstat = NULL,
 		.networkstat = NULL,
@@ -450,7 +451,7 @@ int main()
 		return 1;
 
 	//init all file descriptors
-	init_system_file_descriptors();
+	init_sys_stat();
 	//daemon work
 	//FIX ME remove samplingThread it is only for debug
 	//samplingThread(NULL);
@@ -459,7 +460,7 @@ int main()
 	stop_all();
 	finalizeManager();
 
-	close_system_file_descriptors();
+	uninit_sys_stat();
 
 	//DO NOT USE THIS FUNCTION FOR RELEASE IT IS TOO SLOW
 #ifdef MALLOC_DEBUG_LEVEL
