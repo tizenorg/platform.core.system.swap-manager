@@ -110,6 +110,7 @@ typedef struct
 	int brightness;
 	int voltage;
 	int procmeminfo;
+	FILE *gem_memory;
 	FILE *video;
 	FILE *procstat;
 	FILE *networkstat;
