@@ -79,7 +79,12 @@
 
 #define CPUMHZ		"cpu MHz"
 #define DA_PROBE_TIZEN_SONAME		"da_probe_tizen.so"
-#define DA_PROBE_OSP_SONAME			"da_probe_osp.so"
+#define DA_PROBE_OSP_SONAME		"da_probe_osp.so"
+
+#define STR_SGX_PATH			"/dev/pvrsrvkm"
+
+#define STR_3D_PATH1			"/dev/mali"
+#define STR_3D_PATH2			"/dev/kgsl-3d0"
 
 // define for correct difference of system feature vars
 #define val_diff(v_new, v_old) ((v_new < v_old) ? v_new : v_new - v_old)
@@ -377,8 +382,12 @@ typedef struct {
 	int numofthread;
 	long dummy;
 	unsigned long long start_time;
+	unsigned long size;
 	unsigned long vir_mem;
-	unsigned long sh_mem;
+	unsigned long sh_mem_clean;
+	unsigned long sh_mem_dirty;
+	unsigned long gem_pss;
+	unsigned long graphic_3d;
 	long res_memblock;
 	unsigned long pss;
 	float cpu_load;
@@ -584,20 +593,303 @@ static int parse_proc_stat_file_bypid(char *path, proc_t* P, int is_inst_process
 	return 0;
 }
 
+struct geminfo {
+	struct geminfo *next;
+	pid_t tgid;
+	unsigned rss_size;
+	unsigned pss_size;
+	unsigned hcount;
+};
+
+static void init_gem_memory()
+{
+	manager.fd.gem_memory = fopen(GEM_FILE, "r");
+}
+
+#define NUM_GEM_FIELD 6
+
+static struct geminfo *find_geminfo(pid_t tgid, struct geminfo *gilist)
+{
+	struct geminfo *gi;
+	for (gi = gilist; gi; gi = gi->next) {
+		if (gi->tgid == tgid)
+			return gi;
+
+	}
+	return NULL;
+}
+
+static void free_geminfo(struct geminfo *gilist)
+{
+	struct geminfo *g;
+	while (gilist) {
+		g = gilist->next;
+		free(gilist);
+		gilist = g;
+	}
+}
+
+static struct geminfo *read_geminfo(FILE *fp)
+{
+	struct geminfo *tgeminfo = NULL;
+	char line[BUFFER_MAX];
+	unsigned int pid, tgid, handle, refcount, hcount;
+	unsigned gem_size;
+
+	if (fgets(line, BUFFER_MAX, fp) == NULL)
+		goto exit;
+
+	if (sscanf(line, "%d %d %d %d %d 0x%x",
+		&pid, &tgid, &handle, &refcount,
+		&hcount, &gem_size) != NUM_GEM_FIELD)
+		goto exit;
+
+	if (hcount == 0)
+		goto exit;
+
+	tgeminfo = malloc(sizeof(struct geminfo));
+	if (tgeminfo == NULL) {
+		LOGE("allocation error\n");
+		goto exit;
+	}
+
+	tgeminfo->tgid = tgid;
+	tgeminfo->hcount = hcount;
+	tgeminfo->rss_size = gem_size;
+	tgeminfo->pss_size = gem_size/hcount;
+
+exit:
+	return tgeminfo;
+}
+
+static struct geminfo *load_geminfo(void)
+{
+	struct geminfo *ginfo;
+	struct geminfo *gilist = NULL;
+	struct geminfo *exist_ginfo = NULL;
+
+	FILE *gem_fp;
+	char line[BUFFER_MAX];
+
+	gem_fp = manager.fd.gem_memory;
+
+	if(gem_fp == NULL)
+		goto exit;
+
+	rewind(gem_fp);
+	fflush(gem_fp);
+
+	/* skeep first line */
+	if (fgets(line, BUFFER_MAX, gem_fp) == NULL)
+		goto exit;
+
+	while ((ginfo = read_geminfo(gem_fp)) != NULL) {
+		if (gilist && ginfo->tgid == gilist->tgid) {
+			gilist->pss_size += ginfo->pss_size;
+			gilist->rss_size += ginfo->rss_size;
+			free(ginfo);
+			continue;
+		} else if(gilist && ((exist_ginfo = find_geminfo(ginfo->tgid, gilist)) != NULL)) {
+			exist_ginfo->pss_size += ginfo->pss_size;
+			exist_ginfo->rss_size += ginfo->rss_size;
+			free(ginfo);
+			continue;
+		}
+		ginfo->next = gilist;
+		gilist = ginfo;
+	}
+
+exit:
+	return gilist;
+}
+
+static uint64_t total_gem_memory(void)
+{
+	FILE *gem_fp = manager.fd.gem_memory;
+	unsigned total_gem_mem = 0;
+	unsigned name, size, handles, refcount;
+	char line[MIDDLE_BUFFER];
+
+	if(gem_fp == NULL)
+		return 0;
+
+	rewind(gem_fp);
+	fflush(gem_fp);
+
+	if (manager.fd.gem_memory == NULL)
+		return 0;
+
+	if(gem_fp == NULL) {
+		LOG_ONCE_W("cannot open gem file <%s>\n", GEM_FILE);
+		return 0;
+	}
+
+	/* skeep head line */
+	if (fgets(line, sizeof(line), gem_fp) == NULL)
+		return 0;
+
+	/* get data */
+	while (fgets(line, sizeof(line), gem_fp) != NULL)
+		if (sscanf(line, "%d %d %d %d\n",
+		    &name, &size, &handles, &refcount) == 4)
+			total_gem_mem += size;
+
+	return total_gem_mem;
+}
+
+#include <sys/utsname.h>
+static int ignore_smaps_field = 0;
+
+void init_read_mapinfo(void)
+{
+	struct utsname buf;
+	int ret;
+
+	ret = uname(&buf);
+
+	if (!ret) {
+		if (buf.release[0] == '3') {
+			char *pch;
+			char str[3];
+			int sub_version;
+			pch = strstr(buf.release, ".");
+			strncpy(str, pch+1, 2);
+			sub_version = atoi(str);
+
+			if (sub_version >= 10)
+				ignore_smaps_field = 8; /* Referenced, Anonymous, AnonHugePages,
+						   Swap, KernelPageSize, MMUPageSize,
+						   Locked, VmFlags */
+
+			else
+				ignore_smaps_field = 7; /* Referenced, Anonymous, AnonHugePages,
+						   Swap, KernelPageSize, MMUPageSize,
+						   Locked */
+		} else {
+			ignore_smaps_field = 4; /* Referenced, Swap, KernelPageSize,
+						   MMUPageSize */
+		}
+	}
+}
+/* 6f000000-6f01e000 rwxp 00000000 00:0c 16389419   /android/lib/libcomposer.so
+ * 012345678901234567890123456789012345678901234567890123456789
+ * 0         1         2         3         4         5
+ */
+int read_mapinfo_section(FILE* fp, proc_t *proc)
+{
+	char* line;
+	int len;
+	int tmp;
+	int rest_line;
+	char buf[LARGE_BUFFER];
+
+	if ((line = fgets(buf, sizeof(buf), fp)) == 0) {
+		return -EOF;
+	}
+
+	len = strlen(buf);
+	if (len < 1) {
+		return 0;
+	}
+
+	if (len < 50)
+		strncpy(proc->command, "[anon]", strlen("[anon]")+1);
+	else {
+		len = strnlen(buf + 49, sizeof(buf) - 49);
+		strncpy(proc->command, buf + 49, len + 1);
+	}
+
+	if ((line = fgets(buf, sizeof(buf), fp)) == 0) {
+		LOGE("Get section error\n");
+		goto oops;
+	}
+	if (sscanf(buf, "Size: %d kB", &proc->size) != 1) {
+		LOGE("Get section error\n");
+		goto oops;
+	}
+	if ((line = fgets(buf, sizeof(buf), fp)) == 0) {
+		LOGE("Get section error\n");
+		goto oops;
+	}
+	if (sscanf(buf, "Rss: %d kB", &tmp) != 1) {
+		LOGE("Get section error\n");
+		goto oops;
+	}
+	if ((line = fgets(buf, sizeof(buf), fp)) == 0) {
+		LOGE("Get section error\n");
+		goto oops;
+	}
+	if (sscanf(buf, "Pss: %d kB", &proc->pss) == 1)
+		if ((line = fgets(buf, sizeof(buf), fp)) == 0) {
+			LOGE("Get section error\n");
+			goto oops;
+	}
+	if (sscanf(buf, "Shared_Clean: %d kB", &proc->sh_mem_clean) != 1) {
+		LOGE("Get section error\n");
+		goto oops;
+	}
+	if ((line = fgets(buf, sizeof(buf), fp)) == 0) {
+		LOGE("Get section error\n");
+		goto oops;
+	}
+	if (sscanf(buf, "Shared_Dirty: %d kB", &proc->sh_mem_dirty) != 1) {
+		LOGE("Get section error\n");
+		goto oops;
+	}
+	if ((line = fgets(buf, sizeof(buf), fp)) == 0) {
+		LOGE("Get section error\n");
+		goto oops;
+	}
+	if (sscanf(buf, "Private_Clean: %d kB", &tmp) != 1) {
+		LOGE("Get section error\n");
+		goto oops;
+	}
+	if ((line = fgets(buf, sizeof(buf), fp)) == 0) {
+		LOGE("Get section error\n");
+		goto oops;
+	}
+	if (sscanf(buf, "Private_Dirty: %d kB", &tmp) != 1) {
+		LOGE("Get section error\n");
+		goto oops;
+	}
+
+	rest_line = ignore_smaps_field;
+	//LOGW("rest = <%d>\n", rest_line);
+	while (rest_line-- && (line = fgets(buf, sizeof(buf), fp))) {
+		if (sscanf(buf, "Swap: %d kB", &tmp) == 1) {
+			//proc.swap = tmp;
+			//rest_line++;
+		}
+		if (sscanf(buf, "PSwap: %d kB", &tmp) == 1)
+			rest_line++;
+	}
+
+	return 0;
+oops:
+	LOGE("Get section error\n");
+	return -1;
+}
+
+
 // return 0 for normal case
 // return negative value for error case
-static int parse_proc_smaps_file_bypid(char *path, proc_t* P)
+static int parse_proc_smaps_file_bypid(char *path, proc_t *P)
 {
 #define MIN_SMAP_BLOCKLINE	50
 
 	char filename[PROCPATH_MAX];
 	char buf[MIDDLE_BUFFER];
 	char numbuf[SMALL_BUFFER];
+	proc_t proc_tmp;
+	int len;
 	FILE* fp;
 
 	// reset pss size of proc_t
 	P->pss = 0;
-	P->sh_mem = 0;
+	P->sh_mem_clean = 0;
+	P->sh_mem_dirty = 0;
+	P->graphic_3d = 0;
+	P->gem_pss = 0;
 
 	// read from smaps file
 	snprintf(filename, sizeof(filename), "%s/smaps", path);
@@ -607,70 +899,23 @@ static int parse_proc_smaps_file_bypid(char *path, proc_t* P)
 		return -1;
 	}
 
-	if(unlikely(probe_so_size == 0))	// probe so size is not abtained
-	{
-		int is_probe_so = 0;
-		while(fgets(buf, MIDDLE_BUFFER, fp) != NULL)
-		{
-			if(strncmp(buf, "Pss:", 4) == 0)	// line is started with "Pss:"
-			{
-				sscanf(buf, "Pss:%s kB", numbuf);
-				P->pss += atoi(numbuf);
-				if(is_probe_so == 1)
-				{
-					probe_so_size += atoi(numbuf);
-					is_probe_so = 0;	// reset search flag
-				}
-			}
-			else if(strncmp(buf, "Shared", 6) == 0)	// line is started with "Shared"
-			{
-				char *p = strstr(buf, ":");
-				if (p != 0) {
-					sscanf(p, ":%s kB", numbuf);
-					P->sh_mem += atoi(numbuf);
-				}
+//	if(unlikely(probe_so_size == 0)) // probe so size is not abtained
 
-			}
-			else	// not Pss line
-			{
-				if (is_probe_so == 0 && strlen(buf) > MIN_SMAP_BLOCKLINE)
-				{
-					// first we find probe so section
-					if(strstr(buf, DA_PROBE_TIZEN_SONAME) != NULL ||
-							strstr(buf, DA_PROBE_OSP_SONAME) != NULL)
-					{
-						// found probe.so
-						is_probe_so = 1;
-					}
-					else
-					{
-						// do nothing
-					}
-				}
-				else
-				{
-					// do nothing
-				}
-			}
-		}
-	}
-	else	// we know about probe.so size already
-	{
-		while(fgets(buf, MIDDLE_BUFFER, fp) != NULL)
-		{
-			if(strncmp(buf, "Pss:", 4) == 0)
-			{
-				sscanf(buf, "Pss:%s kB", numbuf);
-				P->pss += atoi(numbuf);
-			}
-			else if(strncmp(buf, "Shared", 6) == 0)	// line is started with "Shared"
-			{
-				char *p = strstr(buf, ":");
-				if (p != 0) {
-					sscanf(p, ":%s kB", numbuf);
-					P->sh_mem += atoi(numbuf);
-				}
-			}
+	int is_probe_so = 0;
+	while (read_mapinfo_section(fp, &proc_tmp) == 0) {
+		if (strstr(proc_tmp.command, DA_PROBE_TIZEN_SONAME)) {
+			/* We should skeep this section */
+			continue;
+		} else if (strstr(proc_tmp.command, STR_SGX_PATH)) {
+			P->graphic_3d += proc_tmp.pss;
+		} else if (strstr(proc_tmp.command, STR_3D_PATH1) ||
+			strstr(proc_tmp.command, STR_3D_PATH2)) {
+			P->graphic_3d += proc_tmp.size;
+		} else {
+			//P->rss += proc_tmp.rss;
+			P->pss += proc_tmp.pss;
+			P->sh_mem_clean += proc_tmp.sh_mem_clean;
+			P->sh_mem_dirty += proc_tmp.sh_mem_dirty;
 		}
 	}
 	// TODO that probe_so_size calculation maybe wrong. check it. fix it
@@ -678,7 +923,8 @@ static int parse_proc_smaps_file_bypid(char *path, proc_t* P)
 
 	// convert to bytes
 	P->pss *= 1024;
-	P->sh_mem *= 1024;
+	P->sh_mem_clean *= 1024;
+	P->sh_mem_dirty *= 1024;
 
 	fclose(fp);
 
@@ -694,6 +940,10 @@ static int update_process_data(procNode **prochead, pid_t* pidarray, int pidcoun
 	int i, ret = 0, is_new_node = 0;
 	char buf[PROCPATH_MAX];
 	procNode* procnode;
+	struct geminfo *gilist;
+
+
+	gilist = load_geminfo();
 
 	for(i = 0; i < pidcount; i++)
 	{
@@ -752,11 +1002,21 @@ static int update_process_data(procNode **prochead, pid_t* pidarray, int pidcoun
 			// impossible
 		}
 
+		/* add gem info */
+		if (gilist != NULL) {
+			struct geminfo *gi = find_geminfo(pidarray[i], gilist);
+			if (gi != NULL) {
+				//procnode->proc_data.gem_rss = gi->rss_size;
+				procnode->proc_data.gem_pss = gi->pss_size;
+			}
+		}
+
 	}
 	del_notfound_node(prochead);
 	reset_found_node(*prochead);
 
 exit:
+	free_geminfo(gilist);
 	return ret;
 }
 
@@ -772,8 +1032,7 @@ static int update_system_cpu_frequency(int cur_index)
 	{
 		FILE* fp;
 		num_of_freq = 0;
-		if((fp = fopen(CPUNUM_OF_FREQ, "r")) != NULL)
-		{
+		if((fp = fopen(CPUNUM_OF_FREQ, "r")) != NULL) {
 			while(fgets(buf, SMALL_BUFFER, fp) != NULL)
 			{
 				num_of_freq++;
@@ -2069,8 +2328,10 @@ int get_system_info(struct system_info_t *sys_info)
 		}
 	}
 
-	if (IS_OPT_SET(FL_SYSTEM_MEMORY))
+	if (IS_OPT_SET(FL_SYSTEM_MEMORY)) {
 		sys_info->system_memory_used = sysmemused;
+		sys_info->system_total_gem_memory = total_gem_memory();
+	}
 
 	LOGI_th_samp("Fill result structure\n");
 
@@ -2196,8 +2457,10 @@ static void ftest_and_close(FILE **fd)
 
 #define dtest_and_close(fd) do {LOGI("CLOSE " STR_VALUE(fd) "\n");test_and_close(fd);} while(0)
 #define dftest_and_close(fd) do {LOGI("CLOSE " STR_VALUE(fd) "\n");ftest_and_close(fd);} while(0)
-void close_system_file_descriptors(void)
+void uninit_sys_stat(void)
 {
+	dftest_and_close(&manager.fd.gem_memory);
+
 	dtest_and_close(&manager.fd.brightness);
 	dtest_and_close(&manager.fd.voltage);
 	dtest_and_close(&manager.fd.procmeminfo);
@@ -2208,9 +2471,11 @@ void close_system_file_descriptors(void)
 	dftest_and_close(&manager.fd.diskstats);
 }
 
-int init_system_file_descriptors(void)
+int init_sys_stat(void)
 {
 	//inits
+	init_gem_memory();
+
 	init_brightness_status();
 	init_voltage_status();
 	init_update_system_memory_data();
@@ -2220,6 +2485,8 @@ int init_system_file_descriptors(void)
 	init_network_stat();
 	init_disk_stat();
 
+	if (manager.fd.gem_memory < 0)
+		LOGW("gem file not found\n");
 	if (manager.fd.brightness < 0)
 		LOGW("brightness file not found\n");
 	if (manager.fd.voltage < 0)
@@ -2235,6 +2502,9 @@ int init_system_file_descriptors(void)
 		LOGW("networkstat file not found\n");
 	if (manager.fd.diskstats == NULL)
 		LOGW("diskstat file not found\n");
+
+	init_read_mapinfo();
+
 	return 0;
 }
 
@@ -2377,6 +2647,7 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 
 	/* memory */
 	pack_int64(p, sys_info->system_memory_used);
+//	pack_int64(p, sys_info->system_total_gem_memory);
 
 	/* inst process / target process */
 	if (IS_OPT_SET(FL_SYSTEM_PROCESS)) {
@@ -2387,8 +2658,11 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 			pack_float(p, proc->proc_data.cpu_load);
 			pack_int64(p, (uint64_t)proc->proc_data.vir_mem);
 			pack_int64(p, (uint64_t)proc->proc_data.res_memblock);
-			pack_int64(p, (uint64_t)proc->proc_data.sh_mem);
+			pack_int64(p, (uint64_t)(proc->proc_data.sh_mem_dirty +
+						 proc->proc_data.sh_mem_clean));
 			pack_int64(p, (uint64_t)proc->proc_data.pss);
+			pack_int64(p, (uint64_t)proc->proc_data.gem_pss);
+			pack_int64(p, (uint64_t)proc->proc_data.graphic_3d);
 
 			/* TODO total alloc for not ld preloaded processes */
 			pack_int64(p, target_get_total_alloc(proc->proc_data.pid));
