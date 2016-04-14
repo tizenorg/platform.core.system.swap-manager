@@ -52,6 +52,12 @@ extern "C" {
 #define CPUFREQ_FILE				"cpufreq/stats/time_in_state"
 #define CPUNUM_OF_FREQ				CPUDIR"/cpu0/"CPUFREQ_FILE
 
+#ifdef DEVICE_ONLY
+#define GEM_FILE				"/proc/dri/0/gem_names"
+#else
+#define GEM_FILE				"/sys/kernel/debug/dri/0/gem_names"
+#endif
+
 
 #define UMSFD						"/mnt/ums"
 #define MMCBLKFD					"/dev/mmcblk1"
@@ -90,8 +96,8 @@ int finalize_system_info(void);
 
 int fill_target_info(struct target_info_t *target_info);
 
-int init_system_file_descriptors(void);
-void close_system_file_descriptors(void);
+int init_sys_stat(void);
+void uninit_sys_stat(void);
 int sys_stat_prepare(void);
 #ifdef __cplusplus
 }
