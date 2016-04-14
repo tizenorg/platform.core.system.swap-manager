@@ -37,7 +37,7 @@
 #include <linux/input.h>
 #include <assert.h>
 
-#define PROTOCOL_VERSION "4.0"
+#define PROTOCOL_VERSION "4.2"
 
 
 #include "da_msg_ids.h"
@@ -355,6 +355,7 @@ struct system_info_t {
 
 	// system_memory
 	uint64_t system_memory_used;
+	uint64_t system_total_gem_memory;
 
 	// system_processes
 	uint32_t count_of_inst_processes;
