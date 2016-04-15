@@ -49,6 +49,7 @@
 #include "md5.h"
 #include "da_data.h"
 #include "wsi.h"
+#include "cpp/features/feature_manager_c.h"
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -899,24 +900,31 @@ exit_fail:
 static int process_msg_binary_info(struct msg_buf_t *msg)
 {
 	int err;
-	uint32_t i, j, bincount;
+	uint32_t allocated_acks, i, bincount;
 	enum ErrorCode error_code = ERR_NO;
 
 	printBuf(msg->cur_pos, msg->len);
 
 	if (!parse_int32(msg, &bincount)) {
 		LOGE("MSG_BINARY_INFO error: No binaries count\n");
-		return -1;
+		goto exit_fail;
 	}
 
-	struct binary_ack *acks[bincount];
+	struct binary_ack **acks = NULL;
 	struct binary_ack *new;
 	size_t total_size = 0;
-	for (i = 0; i != bincount; ++i) {
+
+	acks = (struct binary_ack **)malloc(bincount * sizeof(acks[0]));
+	if (acks == NULL) {
+		LOGE("cannon allocate acks\n");
+		goto exit_fail;
+	}
+
+	for (allocated_acks = 0; allocated_acks != bincount; ++allocated_acks) {
 		const char *str = parse_string_inplace(msg);
 		if (!str) {
 			LOGE("MSG_BINARY_INFO error: No enough binaries\n");
-			return -1;
+			goto exit_fail_free_ack;
 		}
 		new = binary_ack_alloc(str);
 		/* check for errors */
@@ -933,7 +941,7 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 
 		if (new->local_bin_path[0] == '\0')
 			LOGW("section '.debug_str' not found in <%s>\n", str);
-		acks[i] = new;
+		acks[allocated_acks] = new;
 		total_size += binary_ack_size(new);
 	}
 	typedef uint32_t return_id;
@@ -946,7 +954,7 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 					 + total_size);
 	if (msg_reply == NULL) {
 		LOGE("Cannot allocates memory for msg_reply\n");
-		return 1;
+		goto exit_fail_free_ack;
 	}
 	p = msg_reply->payload;
 	msg_reply->id = NMSG_BINARY_INFO_ACK;
@@ -961,15 +969,16 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 		binary_ack_free(acks[i]);
 	}
 
-	printBuf(msg_reply, msg_reply->len + sizeof(*msg_reply));
+	printBuf((char *)msg_reply, msg_reply->len + sizeof(*msg_reply));
 	err = send_reply(msg_reply);
 	free(msg_reply);
 
 	return err;
 
 exit_fail_free_ack:
-	for (j = 0; j < i; j++)
-		binary_ack_free(acks[j]);
+	for (i = 0; i < allocated_acks; i++)
+		binary_ack_free(acks[i]);
+	free(acks);
 exit_fail:
 	return -1;
 }
@@ -1129,14 +1138,12 @@ int recv_msg_from_sock(int sock, struct msg_target_t *msg)
 
 static int process_msg_get_screenshot(struct msg_buf_t *msg_control)
 {
-	uint32_t log_len;
 	struct msg_target_t sendlog;
 	enum ErrorCode err_code = ERR_UNKNOWN;
 
 	// send config message to target process
 	sendlog.type = APP_MSG_CAPTURE_SCREEN;
 	sendlog.length = 0;
-	log_len = sizeof(sendlog.type) + sizeof(sendlog.length) + sendlog.length;
 
 	if (target_send_msg_to_all(&sendlog) == 0)
 		err_code = ERR_NO;
@@ -1177,7 +1184,6 @@ static int process_msg_get_process_add_info(struct msg_buf_t *msg)
 	char **cmd_line_arr = NULL;
 	char *payload = NULL;
 	char *p;
-	struct msg_target_t sendlog;
 	enum ErrorCode err_code = ERR_UNKNOWN;
 
 	/* get pid count */
@@ -1258,7 +1264,7 @@ send_ack:
 
 int process_msg_get_real_path(struct msg_buf_t *msg)
 {
-	char *file_path = NULL;
+	const char *file_path = NULL;
 	char *resolved_path= NULL;
 	enum ErrorCode err_code = ERR_UNKNOWN;
 	uint32_t response_len = 0;
@@ -1282,7 +1288,7 @@ int process_msg_get_real_path(struct msg_buf_t *msg)
 	}
 
 	response_len = strnlen(resolved_path, PATH_MAX) + 1;
-	if (resolved_path == (PATH_MAX + 1)) {
+	if (response_len == (PATH_MAX + 1)) {
 		LOGE("NMSG_GET_REAL_PATH error: cannot resolve path <%s>"
 		     "too long path\n", file_path);
 		err_code = ERR_WRONG_MESSAGE_DATA;
@@ -1450,7 +1456,6 @@ int host_message_handler(struct msg_t *msg)
 	struct conf_t conf;
 	enum ErrorCode error_code = ERR_NO;
 
-	int target_index;
 	struct msg_target_t sendlog;
 
 	LOGI("MY HANDLE %s (%X)\n", msg_ID_str(msg->id), msg->id);

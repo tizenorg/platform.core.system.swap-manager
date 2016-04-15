@@ -29,6 +29,8 @@
  *
  */
 #define __STDC_FORMAT_MACROS
+#define _GNU_SOURCE /* for accept4 */
+
 #include <stdio.h>
 #include <stdlib.h>		// for realpath
 #include <string.h>		// for strtok, strcpy, strncpy
@@ -59,10 +61,13 @@
 #include "da_inst.h"
 #include "da_data.h"
 #include "input_events.h"
+#include "threads.h"
 #include "smack.h"
 #include "swap_debug.h"
 #include "wsi.h"
 #include "ui_viewer.h"
+
+#include "cpp/features/feature_manager_c.h"
 
 #define DA_WORK_DIR			"/home/developer/sdk_tools/da/"
 #define DA_READELF_PATH			"/home/developer/sdk_tools/da/readelf"
@@ -70,7 +75,6 @@
 
 #define MAX_APP_LAUNCH_TIME		60
 #define MAX_CONNECT_TIMEOUT_TIME	5*60
-
 
 // =============================================================================
 // start and terminate control functions
@@ -315,6 +319,31 @@ static int exec_app(const struct app_info_t *app_info)
 	return res;
 }
 
+/* terminate all profiling applications */
+int terminate_profiling_apps(void)
+{
+	int res = 0;
+	struct app_list_t *app = NULL;
+	const struct app_info_t *app_info = NULL;
+
+	app_info = app_info_get_first(&app);
+	if (app_info == NULL) {
+		LOGE("No app info found\n");
+		return -1;
+	}
+
+	/* all apps */
+	while (app_info != NULL) {
+		if (kill_app_by_info(app_info) != 0) {
+			LOGE("kill app failed\n");
+			res = -1;
+		}
+		app_info = app_info_get_next(&app);
+	}
+
+	return res;
+}
+
 // terminate all target and wait for threads
 void terminate_all()
 {
@@ -425,31 +454,6 @@ static int launch_timer_start(void)
 	}
 
 	LOGI("ret=%d\n", res);
-	return res;
-}
-
-/* terminate all profiling applications */
-int terminate_profiling_apps(void)
-{
-	int res = 0;
-	struct app_list_t *app = NULL;
-	const struct app_info_t *app_info = NULL;
-
-	app_info = app_info_get_first(&app);
-	if (app_info == NULL) {
-		LOGE("No app info found\n");
-		return -1;
-	}
-
-	/* all apps */
-	while (app_info != NULL) {
-		if (kill_app_by_info(app_info) != 0) {
-			LOGE("kill app failed\n");
-			res = -1;
-		}
-		app_info = app_info_get_next(&app);
-	}
-
 	return res;
 }
 
@@ -592,7 +596,7 @@ int reconfigure(struct conf_t conf, struct msg_t **msg_reply, struct msg_t **msg
 	return 0;
 }
 
-int is_feature_enabled(enum feature_code fcode)
+int is_feature_enabled(enum feature_code_0 fcode)
 {
 	/* TODO: add check use_features1 */
 	return (fcode & prof_session.conf.use_features0) ? 1 : 0;
@@ -721,6 +725,8 @@ static int target_event_stop_handler(struct target *target)
 			if (stop_all() != ERR_NO)
 				LOGE("Stop failed\n");
 			return -11;
+		default:
+			break;
 		}
 	}
 
@@ -1152,9 +1158,9 @@ int daemonLoop(void)
 	ecore_main_loop_begin();
 	ecore_shutdown();
 
- END_EFD:
+END_EFD:
 	LOGI("close efd\n");
 	close(manager.efd);
- END_EVENT:
+
 	return return_value;
 }

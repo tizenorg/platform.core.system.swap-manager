@@ -137,7 +137,7 @@ struct lib_list_t *new_lib(void)
 	return lib;
 
 exit_fail_free_lib:
-	free_data(lib);
+	free_data((struct data_list_t *)lib);
 exit_fail:
 	return NULL;
 }
@@ -169,6 +169,12 @@ exit_fail:
 	return NULL;
 }
 
+void free_us_lib_inst(struct us_lib_inst_t *us_lib_inst)
+{
+	free(us_lib_inst->bin_path);
+	free(us_lib_inst);
+}
+
 void free_lib(struct lib_list_t *lib)
 {
 	free_us_lib_inst(lib->lib);
@@ -176,10 +182,11 @@ void free_lib(struct lib_list_t *lib)
 	free_data((struct data_list_t *)lib);
 }
 
-void free_us_lib_inst(struct us_lib_inst_t *us_lib_inst)
+void free_app_info(struct app_info_t *app_info)
 {
-	free(us_lib_inst->bin_path);
-	free(us_lib_inst);
+	free(app_info->app_id);
+	free(app_info->exe_path);
+	free(app_info);
 }
 
 void free_app(struct app_list_t *app)
@@ -187,13 +194,6 @@ void free_app(struct app_list_t *app)
 	free_app_info(app->app);
 	app->app = NULL;
 	free_data((struct data_list_t *)app);
-}
-
-void free_app_info(struct app_info_t *app_info)
-{
-	free(app_info->app_id);
-	free(app_info->exe_path);
-	free(app_info);
 }
 
 struct probe_list_t *new_probe(void)
@@ -519,7 +519,7 @@ void app_list_rm_probes_by_addr(struct app_list_t *app_list, uint64_t addr)
 
 	while (pr) {
 		pr = pr->func->func_addr == addr ?
-			probe_list_rm_element(app_list, pr) :
+			probe_list_rm_element((struct data_list_t *)app_list, pr) :
 			pr->next;
 	}
 }
@@ -686,7 +686,7 @@ static void unlock_lib_list()
 	pthread_mutex_unlock(&lib_maps_message_mutex);
 }
 
-static inline bool is_always_probing_feature(enum feature_code fv)
+static inline bool is_always_probing_feature(enum feature_code_0 fv)
 {
 	if ((fv & FL_FILE_API_ALWAYS_PROBING) ||
 	    (fv & FL_MEMORY_ALLOC_ALWAYS_PROBING) ||
@@ -954,7 +954,7 @@ void msg_swap_free_all_data(struct user_space_inst_t *us_inst)
 	LOGI("new_lib_inst_list %p\n", new_lib_inst_list);
 	if (new_lib_inst_list != NULL) {
 		LOGI("free new_lib_inst_list start\n");
-		free_data_list(&new_lib_inst_list);
+		free_data_list((struct data_list_t **)&new_lib_inst_list);
 		new_lib_inst_list = NULL;
 		LOGI("free new_lib_inst_list finish\n");
 	}
@@ -962,7 +962,7 @@ void msg_swap_free_all_data(struct user_space_inst_t *us_inst)
 	LOGI("us_inst->lib_inst_list %p\n", us_inst->lib_inst_list);
 	if (us_inst->lib_inst_list != NULL) {
 		LOGI("free us_inst->lib_inst_list start\n");
-		free_data_list(&us_inst->lib_inst_list);
+		free_data_list((struct data_list_t **)&us_inst->lib_inst_list);
 		us_inst->lib_inst_list = NULL;
 		LOGI("free us_isnt->lib_inst_list finish\n");
 	}
@@ -970,7 +970,7 @@ void msg_swap_free_all_data(struct user_space_inst_t *us_inst)
 	LOGI("us_inst->app_inst_list %p\n", us_inst->app_inst_list);
 	if (us_inst->app_inst_list != NULL) {
 		LOGI("free us_inst->app_inst_list start\n");
-		free_data_list(&us_inst->app_inst_list);
+		free_data_list((struct data_list_t **)&us_inst->app_inst_list);
 		LOGI("free us_inst->app_isnt_list finish\n");
 	}
 }
@@ -996,29 +996,32 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 
 	for (i = 0; i != feature_to_data_count; i++) {
 		f = feature_to_data[i];
-		LOGI("check feature %016X\n", f.feature_value);
-		if ((f.feature_value & to_enable_features_0) ||
-		    (f.feature_value & to_enable_features_1 << 64)) {
+		LOGI("check feature %016X:%016X\n", f.feature_value_1,
+		     f.feature_value_0);
+		if ((f.feature_value_0 & to_enable_features_0) ||
+		    (f.feature_value_1 & to_enable_features_1)) {
 			buf[0] = '\0';
 
-			feature_code_str(f.feature_value, f.feature_value, &buf[0],
+			feature_code_str(f.feature_value_0, f.feature_value_1, &buf[0],
 					 sizeof(buf));
-			LOGI("Set LD probes for %016LX <%s>\n", f.feature_value, &buf[0]);
+			LOGI("Set LD probes for %016LX:%016LX <%s>\n",
+			     f.feature_value_1, f.feature_value_0, &buf[0]);
 
 			feature_add_lib_inst_list(f.feature_ld, &ld_lib_inst_list_new_add);
-		} else if (((f.feature_value & to_disable_features_0) &&
-			    !(f.feature_value & ~to_disable_features_0) ||
-			   ((f.feature_value & to_disable_features_1 << 64) &&
-			    !(f.feature_value & ~(to_disable_features_1 << 64))))) {
+		} else if ((((f.feature_value_0 & to_disable_features_0) &&
+			    !(f.feature_value_0 & ~to_disable_features_0)) ||
+			   (((f.feature_value_1 & to_disable_features_1) &&
+			    !(f.feature_value_1 & ~(to_disable_features_1)))))) {
 			/* If
 			 *   (feature_value & to_disable) == (feature_value & ~to_disable)
 			 * then this is NOFEATURE probe, so, do not remove */
 
 			buf[0] = '\0';
 
-			feature_code_str(f.feature_value, f.feature_value, &buf[0],
+			feature_code_str(f.feature_value_0, f.feature_value_1, &buf[0],
 					 sizeof(buf));
-			LOGI("Remove LD probes for %016LX <%s>\n", f.feature_value, &buf[0]);
+			LOGI("Remove LD probes for %016LX:%016LX <%s>\n",
+			     f.feature_value_1, f.feature_value_0, &buf[0]);
 
 			feature_add_lib_inst_list(f.feature_ld, &ld_lib_inst_list_new_remove);
 		}
