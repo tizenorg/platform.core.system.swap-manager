@@ -108,7 +108,7 @@ static int check_input(char *inputname, int input_id)
 	FILE *cmd_fp = NULL;
 	char buffer[BUF_SIZE];
 	char command[MAX_FILENAME];
-	char **name_arr;
+	const char **name_arr;
 	size_t bytes_count;
 
 	if (snprintf(command, sizeof(command), "/sys/class/input/%s/device/name",

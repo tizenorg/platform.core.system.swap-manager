@@ -41,6 +41,7 @@
 
 #include "wsi.h"
 #include "swap_debug.h"
+#include "daemon.h"
 #include "da_protocol.h"
 #include "ioctl_commands.h"
 #include "smack.h"
@@ -90,7 +91,7 @@ int request_id = 1;
 pthread_t wsi_start_thread = -1;
 pthread_t wsi_handle_thread = -1;
 
-static void wsi_destroy(void);
+/* static void wsi_destroy(void); */
 
 static int set_profile_info(const char *path, const char *info)
 {
@@ -299,8 +300,8 @@ static int profiling_callback(struct libwebsocket_context *context,
 		jobjr = json_tokener_parse((char *)in);
 
 		/* {"result":{},"id":?} */
-		jobj = json_object_object_get(jobjr, "id");
-		if (json_object_object_get(jobjr, "result") && jobj) {
+		json_object_object_get_ex(jobjr, "id", &jobj);
+		if (json_object_object_get_ex(jobjr, "result", NULL) && jobj) {
 			res_id = json_object_get_int(jobj);
 			if (res_id == request_id - 1) {
 				CLRSTAT(pstate, PSTATE_WAIT_ACK);
@@ -319,16 +320,16 @@ static int profiling_callback(struct libwebsocket_context *context,
 		while (1) {
 			const char *s1, s2[] = "Profiler.setRecordingProfile";
 
-			jobj = json_object_object_get(jobjr, "method");
+			json_object_object_get_ex(jobjr, "method", &jobj);
 			if (!jobj)
 				break;
 			s1 = json_object_get_string(jobj);
 			if (s1 && strncmp(s1, s2, sizeof(s2)))
 				break;
-			jobj = json_object_object_get(jobjr, "params");
+			json_object_object_get_ex(jobjr, "params", &jobj);
 			if (!jobj)
 				break;
-			jobj = json_object_object_get(jobj, "isProfiling");
+			json_object_object_get_ex(jobj, "isProfiling", &jobj);
 			if (!jobj)
 				break;
 			if (json_object_get_boolean(jobj)) {
@@ -418,10 +419,10 @@ static int init_wsi_conn(struct libwebsocket_context **context,
 
 static void *handle_ws_responses(void *arg)
 {
-	while (CHKSTAT(pstate, PSTATE_START | PSTATE_PROFILING | PSTATE_WAIT_ACK) &&
-	       !CHKSTAT(pstate, PSTATE_DISCONNECT) ||
-	       !CHKSTAT(pstate, PSTATE_DISCONNECT) &&
-	       CHKSTAT(pstate, PSTATE_INIT_DONE | PSTATE_INIT_START)) {
+	while ((CHKSTAT(pstate, PSTATE_START | PSTATE_PROFILING | PSTATE_WAIT_ACK) &&
+		!CHKSTAT(pstate, PSTATE_DISCONNECT)) ||
+	       (!CHKSTAT(pstate, PSTATE_DISCONNECT) &&
+		CHKSTAT(pstate, PSTATE_INIT_DONE | PSTATE_INIT_START))) {
 		libwebsocket_service(context, 1000);
 	}
 
@@ -468,19 +469,19 @@ exit:
 	return res;
 }
 
-static void wsi_destroy(void)
-{
-	if (CHKSTAT(pstate, PSTATE_CONNECTED)) {
-		if (CHKSTAT(pstate, PSTATE_WAIT_ACK)) {
-			SETSTAT(pstate, PSTATE_DISCONNECT);
-		} else {
-			LOGI("destroy context\n");
-			destroy_wsi_conn(context);
-		}
-	} else {
-		LOGW("Try disconnect when web socket not connected\n");
-	}
-}
+/* static void wsi_destroy(void) */
+/* { */
+/* 	if (CHKSTAT(pstate, PSTATE_CONNECTED)) { */
+/* 		if (CHKSTAT(pstate, PSTATE_WAIT_ACK)) { */
+/* 			SETSTAT(pstate, PSTATE_DISCONNECT); */
+/* 		} else { */
+/* 			LOGI("destroy context\n"); */
+/* 			destroy_wsi_conn(context); */
+/* 		} */
+/* 	} else { */
+/* 		LOGW("Try disconnect when web socket not connected\n"); */
+/* 	} */
+/* } */
 
 static int wsi_start_profiling(void)
 {

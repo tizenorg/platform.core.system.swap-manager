@@ -52,7 +52,7 @@
 #include "buffer.h"
 #include "input_events.h"
 
-static chsmack(const char *filename)
+static int chsmack(const char *filename)
 {
 	int res = 1;
 	pid_t pid;
@@ -213,10 +213,8 @@ static void* recvThread(void* data)
 			continue;
 		} else if (log.type == APP_MSG_GET_UI_HIERARCHY_DATA) {
 			char *file_name = log.data;
-			FILE * fp;
 			struct msg_data_t *msg_data;
 			const int len = log.length;
-			char *p = NULL;
 
 			if (len == sizeof(uint32_t)) {
 				enum ErrorCode err_code = *(uint32_t*)log.data;
