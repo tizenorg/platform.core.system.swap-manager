@@ -215,11 +215,12 @@ static int get_max_brightness()
 {
 	int maxbrightnessfd = -1;
 	static int max_brightness = -1;
-	static char dirent_buffer[ sizeof(struct dirent) + PATH_MAX + 1 ] = {0,};
-	static struct dirent *dirent_r = (struct dirent *)dirent_buffer;
 
 	if (__builtin_expect(max_brightness < 0, 0)) {
 #ifdef DEVICE_ONLY
+		static char dirent_buffer[ sizeof(struct dirent) +
+					   PATH_MAX + 1 ] = {0,};
+		static struct dirent *dirent_r = (struct dirent *)dirent_buffer;
 		DIR* dir_info;
 		struct dirent* dir_entry;
 		char fullpath[PATH_MAX];
@@ -1898,7 +1899,7 @@ static int get_inst_pid_array(pid_t *arr, const int n)
 	rewind(manager.fd.inst_tasks);
 	fflush(manager.fd.inst_tasks);
 
-	while (fscanf(manager.fd.inst_tasks, "%lu", arr) == 1) {
+	while (fscanf(manager.fd.inst_tasks, "%lu", (long unsigned int *)arr) == 1) {
 		LOGI_th_samp("PID scaned %d\n", *arr);
 		arr++;
 		pid_count++;
