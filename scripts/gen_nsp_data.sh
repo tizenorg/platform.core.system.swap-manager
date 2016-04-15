@@ -37,12 +37,7 @@ source $script_dir/dyn_vars
 path_app_core_efl=$(rpm -ql app-core-efl | grep libappcore-efl | head -1)
 check_null_or_exit path_app_core_efl
 
-# get libappcore-efl.so debug_path
-if [ "$__tizen_product_tv__" == "1" ]; then
-	dpath_app_core_efl=$path_app_core_efl
-else
-	dpath_app_core_efl=$(rpm -ql app-core-efl-debuginfo | grep "libappcore-efl\.so.*\.debug$" | head -1)
-fi
+dpath_app_core_efl=$(rpm -ql app-core-efl-debuginfo | grep "libappcore-efl\.so.*\.debug$" | head -1)
 check_null_or_exit dpath_app_core_efl
 
 # get launchpad path
