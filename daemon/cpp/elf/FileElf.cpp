@@ -225,7 +225,7 @@ int FileElf::makeRelocMap(const uint8_t jump_slot)
     strEnd = strBegin + dataStr->size;
 
 
-    for (int i = 0; i < relCnt; ++i) {
+    for (size_t i = 0; i < relCnt; ++i) {
         if (ELF32_R_TYPE(rel[i].r_info) == jump_slot) {
             uint32_t offset = rel[i].r_offset;
             uint32_t symId = ELF32_R_SYM(rel[i].r_info);
@@ -276,7 +276,7 @@ int FileElf::doGetAddrPltARM(const char *names[], uint32_t addrs[], size_t cnt)
     uint32_t addr, n0, n1, n2, offset, rorN;
 
 
-    for (int i = 0, step = 0; i < instCnt; ++i) {
+    for (size_t i = 0, step = 0; i < instCnt; ++i) {
         uint32_t p = inst[i] & 0xfffff000;
 
         switch (step) {
@@ -319,7 +319,7 @@ int FileElf::doGetAddrPltARM(const char *names[], uint32_t addrs[], size_t cnt)
     }
 
     // populate addrs
-    for (int i = 0; i < cnt; ++i) {
+    for (size_t i = 0; i < cnt; ++i) {
         FuncMap::const_iterator it = funcMap.find(names[i]);
         addrs[i] = it == funcMap.end() ? 0 : it->second;
     }
