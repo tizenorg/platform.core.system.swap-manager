@@ -60,7 +60,6 @@ static int is_pid_string_valid(const char *pid_str)
 int check_app_id(uint32_t app_type, char *app_id)
 {
 	int res = 0;
-	char *p;
 	switch (app_type){
 		case APP_TYPE_TIZEN:
 			res = 1;
