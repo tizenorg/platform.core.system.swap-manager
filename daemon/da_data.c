@@ -35,8 +35,8 @@
 
 int print_sys_info(struct system_info_t * sys_info)
 {
-	int i = 0;
 	/* //FOR DEBUG
+	int i = 0;
 	sys_info->energy=0x1;
 	sys_info->wifi_status=0x2;
 	sys_info->bt_status=0x3;

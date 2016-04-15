@@ -1,7 +1,7 @@
 CC := gcc
 CPP := g++
 
-COMM_FLAGS := -Wall -g -O0
+COMM_FLAGS := -Wall -g -O0 -Werror
 
 DEBUG_FLAGS = \
 	-DDEBUG \
@@ -16,6 +16,9 @@ DEBUG_FLAGS = \
 
 INCLUDE := \
 	-Iinclude/generated \
+	-Icpp/features \
+	-Icpp \
+	-I. \
 	-I/usr/include \
 	-I/usr/include/system \
 	-I/usr/include/capi-system-info \
@@ -55,7 +58,7 @@ endif
 
 # compiler flags
 CFLAGS := $(FLAGS)
-CPPFLAGS := $(FLAGS) -std=c++0x -I. -Icpp
+CPPFLAGS := $(FLAGS) -std=c++0x
 
 # linker flags
 LDFLAGS := \

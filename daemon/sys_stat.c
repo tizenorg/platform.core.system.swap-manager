@@ -1898,7 +1898,7 @@ static int get_inst_pid_array(pid_t *arr, const int n)
 	rewind(manager.fd.inst_tasks);
 	fflush(manager.fd.inst_tasks);
 
-	while (fscanf(manager.fd.inst_tasks, "%lu", arr) == 1) {
+	while (fscanf(manager.fd.inst_tasks, "%lu",(long unsigned int *)arr) == 1) {
 		LOGI_th_samp("PID scaned %d\n", *arr);
 		arr++;
 		pid_count++;

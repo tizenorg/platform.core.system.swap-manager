@@ -107,4 +107,6 @@ static inline std::string featureName(const Feature *const feature)
 }
 
 
+int fm_app_add(uint32_t app_type, const char *id, const char *path,
+               const void *data, size_t size);
 #endif // FEATURE_MANAGER_H
