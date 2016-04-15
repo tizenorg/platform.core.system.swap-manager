@@ -157,8 +157,7 @@ int prepare_profiling(void);
 int start_profiling(void);
 void stop_profiling(void);
 int reconfigure(struct conf_t conf, struct msg_t **msg_reply, struct msg_t **msg_reply_additional);
-int is_feature_enabled(enum feature_code fcode);
-int sendACKCodeToHost(enum HostMessageType resp, int msgcode);
+int is_feature_enabled(enum feature_code_0 fcode);
 void terminate_all(void);
 
 #ifdef __cplusplus

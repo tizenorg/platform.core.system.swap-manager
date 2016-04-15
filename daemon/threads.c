@@ -52,7 +52,7 @@
 #include "buffer.h"
 #include "input_events.h"
 
-static chsmack(const char *filename)
+static int chsmack(const char *filename)
 {
 	int res = 1;
 	pid_t pid;

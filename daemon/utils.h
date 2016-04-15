@@ -67,6 +67,8 @@ int exec_app_common(const char* exec_path);
 int exec_app_web(const char *app_id);
 void kill_app_web(const char *app_id);
 float get_uptime(void);
+
+void swap_usleep(useconds_t usec);
 #ifdef __cplusplus
 }
 #endif
