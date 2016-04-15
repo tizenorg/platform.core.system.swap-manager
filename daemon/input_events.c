@@ -129,9 +129,9 @@ static int check_input(char *inputname, int input_id)
 	}
 
 	if (input_id == INPUT_ID_KEY)
-		name_arr = input_key_devices;
+		name_arr = (char **)input_key_devices;
 	else if (input_id == INPUT_ID_TOUCH)
-		name_arr = input_touch_devices;
+		name_arr = (char **)input_touch_devices;
 	else
 		goto exit;
 

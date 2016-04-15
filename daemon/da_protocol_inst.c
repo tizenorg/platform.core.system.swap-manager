@@ -132,7 +132,7 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 
 	uint32_t size = 0, tmp_size = 0;
 	struct us_func_inst_plane_t *func = NULL;
-	char type;
+	uint8_t type;
 	uint64_t addr;
 
 	size = sizeof(*func);
@@ -432,14 +432,13 @@ exit_fail_release_app:
 	free_app(app);
 exit_fail_clean_list:
 	/* TODO free app list */
-	free_data_list(app_list);
+	free_data_list((struct data_list_t **)app_list);
 exit_fail:
 	*num = 0;
 	app_list = NULL;
 	return 0;
 }
 /* ld probes */
-#define NOFEATURE 0x123456
 #include "ld_preload_types.h"
 struct ld_preload_probe_t {
 	uint64_t orig_addr;
@@ -579,7 +578,6 @@ int add_preload_probes(struct lib_list_t **lib_list)
 	    *get_call_type_probe,
 	    *write_msg_probe;
 	int ret = 0;
-	struct us_func_inst_plane_t *func = NULL;
 
 	preload_lib = new_lib();
 	if (preload_lib == NULL) {
@@ -597,7 +595,8 @@ int add_preload_probes(struct lib_list_t **lib_list)
 		goto free_caller_probe;
 	}
 
-	preload_lib->lib->bin_path = probe_lib;
+	/* probe_lib generates by swap-probe in swap-probe-devel */
+	preload_lib->lib->bin_path = (char *)probe_lib;
 	preload_lib->func_num = 3;
 
 	/* Add get_caller probe */
@@ -605,21 +604,21 @@ int add_preload_probes(struct lib_list_t **lib_list)
 	if (ret != 0)
 		goto free_caller_probe;
 
-	probe_list_append(preload_lib, get_caller_probe);
+	probe_list_append((struct data_list_t *)preload_lib, get_caller_probe);
 
 	/* Add get_call_type probe */
 	ret = create_preload_probe_func(&get_call_type_probe, get_call_type_addr, 5);
 	if (ret != 0)
 		goto free_call_type_probe;
 
-	probe_list_append(preload_lib, get_call_type_probe);
+	probe_list_append((struct data_list_t *)preload_lib, get_call_type_probe);
 
 	/* Add write_msg probe */
 	ret = create_preload_probe_func(&write_msg_probe, write_msg_addr, 6);
 	if (ret != 0)
 		goto free_write_msg_probe;
 
-	probe_list_append(preload_lib, write_msg_probe);
+	probe_list_append((struct data_list_t *)preload_lib, write_msg_probe);
 
 	preload_lib->func_num = 3;
 	preload_lib->size += strlen(preload_lib->lib->bin_path) + 1 + sizeof(preload_lib->func_num);

@@ -91,7 +91,7 @@ enum ErrorCode {
 
 #define FL_SYSTEM_ENERGY_OLD (1<<26)
 
-enum feature_code{
+enum feature_code_0 {
 	FL_RESERVED1			= 0x0000000000003ULL, // reserved 0011
 
 	FL_FUNCTION_PROFILING		= 0x0000000000004ULL, // 0x4 * 0x10^00 On/Off the UserSpaceInst
@@ -141,6 +141,7 @@ enum feature_code{
 	FL_SYSTEM_FILE_ACTIVITY		= 0x1000000000000ULL, // 0x1 * 0x10^12 function entry/exit for probe type 04 (File syscall)
 
 	FL_RESERVED4			= 0xe000000000000ULL, // reserved 1110
+	FL_RESERVED5			= 0x10000000000000ULL, // reserved 1
 
 	FL_ALL_FEATURES			= 0x7FFFFFFFFFFFFULL &
 					  (~FL_RESERVED1) &
@@ -148,6 +149,10 @@ enum feature_code{
 					  (~FL_RESERVED3) &
 					  (~FL_RESERVED4)
 
+};
+
+enum feature_code_1 {
+	FL_ALL_FEATURES_1		= 0x0000000000000ULL, /* all */
 };
 
 enum probe_type {
@@ -427,13 +432,13 @@ struct recorded_event_t {
 #define pack_str(to, n)				\
 	do {					\
 		memcpy(to, n, strlen(n) + 1);	\
-		to += strlen(n) + 1;		\
+		to = (char *)to + strlen(n) + 1;	\
 	} while (0)
 
 static inline void* pack_str_array(void *buffer, const char **strings,
 				   size_t count)
 {
-	int index;
+	size_t index;
 	for (index = 0; index != count; ++index)
 		pack_str(buffer, strings[index]);
 	return buffer;

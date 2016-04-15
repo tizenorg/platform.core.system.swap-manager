@@ -36,7 +36,7 @@ static std::string u64toString(uint64_t val)
 {
     std::string str;
 
-    for (int i = 0; i < sizeof(uint64_t) * 8; ++i) {
+    for (unsigned int i = 0; i < sizeof(uint64_t) * 8; ++i) {
         str += (val & 0x8000000000000000LLU) ? '1' : '0';
         val <<= 1;
     }
