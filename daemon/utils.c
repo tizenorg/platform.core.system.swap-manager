@@ -343,16 +343,15 @@ static int find_alternative_bin_path(const char *binary_path, char *alter_bin_pa
 {
 	// alternative path may be /opt/apps/... or /opt/usr/apps/...)
 	char *add_fname;
-	char *p;
 	if (strncmp(binary_path, APPDIR1, strlen(APPDIR1)) == 0) {
 		strncpy(alter_bin_path, APPDIR2, buflen);
 		buflen -= strlen(alter_bin_path);
-		add_fname = binary_path + strlen(APPDIR1);
+		add_fname = (char *)binary_path + strlen(APPDIR1);
 		strncat(alter_bin_path, add_fname, buflen);
 	} else if (strncmp(binary_path, APPDIR2, strlen(APPDIR2)) == 0) {
 		strncpy(alter_bin_path, APPDIR1, buflen);
 		buflen -= strlen(alter_bin_path);
-		add_fname = binary_path + strlen(APPDIR2);
+		add_fname = (char *)binary_path + strlen(APPDIR2);
 		strncat(alter_bin_path, add_fname, buflen);
 	} else {
 		return 1;
