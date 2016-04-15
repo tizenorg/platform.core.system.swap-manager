@@ -30,16 +30,15 @@
  */
 
 
-#ifndef _UTILS_H_
-#define _UTILS_H_
+#ifndef _THREADS_H_
+#define _THREADS_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-struct target;
-
+#include "target.h"
 
 int makeRecvThread(struct target *target);
 
@@ -48,4 +47,4 @@ int makeRecvThread(struct target *target);
 }
 #endif
 
-#endif
+#endif /* _THREADS_H_ */

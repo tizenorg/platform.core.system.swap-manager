@@ -35,6 +35,7 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <linux/input.h>
+#include <assert.h>
 
 #define PROTOCOL_VERSION "4.0"
 
@@ -91,7 +92,7 @@ enum ErrorCode {
 
 #define FL_SYSTEM_ENERGY_OLD (1<<26)
 
-enum feature_code{
+enum feature_code_0 {
 	FL_RESERVED1			= 0x0000000000003ULL, // reserved 0011
 
 	FL_FUNCTION_PROFILING		= 0x0000000000004ULL, // 0x4 * 0x10^00 On/Off the UserSpaceInst
@@ -148,6 +149,10 @@ enum feature_code{
 					  (~FL_RESERVED3) &
 					  (~FL_RESERVED4)
 
+};
+
+enum feature_code_1 {
+	FL_ALL_FEATURES_1		= 0x0000000000000ULL, /* all */
 };
 
 enum probe_type {
@@ -397,8 +402,11 @@ struct recorded_event_t {
 	uint32_t code;
 	uint32_t value;
 };
+
+#ifndef static_assert
 #define static_assert(cond) \
 	char __attribute__((unused)) __static_assert[(cond) ? 1 : -1];
+#endif
 
 #define pack_int64(to, n) do {						\
 		static_assert(sizeof(n) == 8);				\
@@ -427,13 +435,13 @@ struct recorded_event_t {
 #define pack_str(to, n)				\
 	do {					\
 		memcpy(to, n, strlen(n) + 1);	\
-		to += strlen(n) + 1;		\
+		to = (char *)to + strlen(n) + 1;	\
 	} while (0)
 
 static inline void* pack_str_array(void *buffer, const char **strings,
 				   size_t count)
 {
-	int index;
+	size_t index;
 	for (index = 0; index != count; ++index)
 		pack_str(buffer, strings[index]);
 	return buffer;

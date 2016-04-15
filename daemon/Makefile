@@ -1,7 +1,7 @@
 CC := gcc
 CPP := g++
 
-COMM_FLAGS := -Wall -g -O0
+COMM_FLAGS := -Wall -g -O0 -Werror
 
 DEBUG_FLAGS = \
 	-DDEBUG \
@@ -16,6 +16,7 @@ DEBUG_FLAGS = \
 
 INCLUDE := \
 	-Iinclude/generated \
+	-I. \
 	-I/usr/include \
 	-I/usr/include/system \
 	-I/usr/include/capi-system-info \
@@ -27,6 +28,11 @@ INCLUDE := \
 	-I/usr/include/efl-1 \
 	-I/usr/include/json-c \
 	-I/usr/include/eo-1
+
+INCLUDE_CPP := \
+	-I. \
+	-Icpp
+
 # CALL_MNGR
 ifeq ($(CALL_MNGR),y)
 INCLUDE += -I/usr/include/call-manager/
@@ -55,7 +61,7 @@ endif
 
 # compiler flags
 CFLAGS := $(FLAGS)
-CPPFLAGS := $(FLAGS) -std=c++0x -I. -Icpp
+CPPFLAGS := $(FLAGS) $(INCLUDE_CPP) -std=c++0x
 
 # linker flags
 LDFLAGS := \
