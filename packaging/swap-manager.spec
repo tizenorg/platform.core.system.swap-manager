@@ -77,8 +77,8 @@ cd daemon
 %make_install
 
 %post
-mkdir -p /opt/usr/etc
-touch /opt/usr/etc/resourced_proc_exclude.ini
+mkdir -p %{TZ_SYS_ETC}
+touch %{TZ_SYS_ETC}/resourced_proc_exclude.ini
 
 %files
 /usr/share/license/%{name}
