@@ -29,6 +29,7 @@ BuildRequires: libwayland-egl
 BuildRequires: app-core-efl-debuginfo
 BuildRequires: swap-probe-devel
 BuildRequires: swap-probe-elf
+BuildRequires: pkgconfig(libtzplatform-config)
 
 
 %define NSP_SUPPORT 1
@@ -77,8 +78,8 @@ cd daemon
 %make_install
 
 %post
-mkdir -p /opt/usr/etc
-touch /opt/usr/etc/resourced_proc_exclude.ini
+mkdir -p %{TZ_SYS_ETC}
+touch %{TZ_SYS_ETC}/resourced_proc_exclude.ini
 
 %files
 /usr/share/license/%{name}
