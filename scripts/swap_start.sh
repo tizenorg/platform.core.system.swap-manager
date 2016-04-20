@@ -46,6 +46,7 @@ if [ ! -e /sys/kernel/debug/swap/enable ]; then
     /usr/sbin/insmod /opt/swap/sdk/swap_wsp.ko              || exit 118
     /usr/sbin/insmod /opt/swap/sdk/swap_nsp.ko              || exit 119
     /usr/sbin/insmod /opt/swap/sdk/swap_uihv.ko             || exit 120
+    /usr/sbin/insmod /opt/swap/sdk/swap_gtp.ko              || exit 121
 
 fi
 
@@ -134,6 +135,12 @@ fi
 if [ -d /sys/kernel/debug/swap/wsp/ ]
 then
 	/usr/bin/swap_init_wsp.sh
+fi
+
+#GOT patcher
+if [ -d /sys/kernel/debug/swap/got_patcher/ ]
+then
+	/usr/bin/swap_init_got_patcher.sh
 fi
 
 exit $ERR_NO

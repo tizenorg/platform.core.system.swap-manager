@@ -983,8 +983,10 @@ int msg_swap_inst_add(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 	new_lib_inst_list = NULL;
 	*err = ERR_NO;
 
+    /* TODO make preload type dependent */
 	if (write_bins_to_preload(us_inst))
 		LOGE("Error adding binaries\n");
+    /* TODO replace with TYPE_AND_INFO */
 	generate_maps_inst_msg(us_inst);
 	send_maps_inst_msg_to_all_targets();
 
@@ -1033,8 +1035,10 @@ int msg_swap_inst_remove(struct msg_buf_t *data, struct user_space_inst_t *us_in
 	new_lib_inst_list = NULL;
 	*err = ERR_NO;
 
+    /* TODO make preload type dependent */
 	if (write_bins_to_preload(us_inst))
 		LOGE("Error adding binaries\n");
+    /* TODO replace with TYPE_AND_INFO */
 	generate_maps_inst_msg(us_inst);
 	send_maps_inst_msg_to_all_targets();
 
