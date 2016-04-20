@@ -580,7 +580,9 @@ static void reconfigure_ld_probes(struct conf_t conf, struct msg_t **msg_reply, 
 int reconfigure(struct conf_t conf, struct msg_t **msg_reply, struct msg_t **msg_reply_additional)
 {
 	reconfigure_recording(conf);
-	reconfigure_ld_probes(conf, msg_reply, msg_reply_additional);
+    /* TODO Do not add ld probes */
+    if (0)
+        reconfigure_ld_probes(conf, msg_reply, msg_reply_additional);
 
 	samplingStop();
 	memcpy(&prof_session.conf, &conf, sizeof(conf));
@@ -795,7 +797,7 @@ static int targetServerHandler(bool is_probe_sock)
 			LOGE("fail to send data to target %p\n", target);
 
 		/* send current instrument maps */
-		send_maps_inst_msg_to(target);
+		send_type_and_info_to(target);
 
 		// make event fd
 		target->event_fd = eventfd(EFD_CLOEXEC, EFD_NONBLOCK);

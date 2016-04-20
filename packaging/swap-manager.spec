@@ -26,6 +26,7 @@ BuildRequires:  libcall-manager-devel
 %endif
 BuildRequires:  swap-probe-devel
 BuildRequires:  swap-probe-elf
+BuildRequires:  swap-probe
 %if "%{?tizen_profile_name}" == "tv"
 BuildRequires:  webkit2-efl-tv
 %if "%{TIZEN_PRODUCT_TV}" != "1"
@@ -117,6 +118,7 @@ touch /opt/usr/etc/resourced_proc_exclude.ini
 /usr/bin/swap_init_preload.sh
 /usr/bin/swap_init_uihv.sh
 /usr/bin/swap_init_wsp.sh
+/usr/bin/swap_init_gtp.sh
 
 %{_prefix}/lib/da_ui_viewer.so
 

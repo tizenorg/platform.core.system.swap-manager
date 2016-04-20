@@ -417,6 +417,12 @@ struct recorded_event_t {
 		to += sizeof(uint32_t);					\
 	} while (0)
 
+#define pack_int8(to, n) do {						\
+		static_assert(sizeof(n) == 1);				\
+		*(uint8_t *)to = (n);					\
+		to += sizeof(uint8_t);					\
+	} while (0)
+
 #define pack_time(to, n)						\
 	do {								\
 		pack_int32(to, n.tv_sec);				\
@@ -433,6 +439,15 @@ struct recorded_event_t {
 	do {					\
 		memcpy(to, n, strlen(n) + 1);	\
 		to += strlen(n) + 1;		\
+	} while (0)
+
+#define pack_str_with_len(to, n)				\
+	do {					\
+		size_t len;					\
+		len = strlen(n) + 1;		\
+		pack_int32(to, len);		\
+		memcpy(to, n, len);	\
+		to += len;		\
 	} while (0)
 
 static inline void* pack_str_array(void *buffer, const char **strings,
