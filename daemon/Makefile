@@ -127,16 +127,19 @@ INIT_LOADER_SH = ../scripts/swap_init_loader.sh
 INIT_PRELOAD_SH = ../scripts/swap_init_preload.sh
 INIT_UIHV_SH = ../scripts/swap_init_uihv.sh
 INIT_WSP_SH = ../scripts/swap_init_wsp.sh
+INIT_GTP_SH = ../scripts/swap_init_gtp.sh
 LOADER_SCRIPT = ../scripts/gen_loader_header.sh
 PRELOAD_SCRIPT = ../scripts/gen_preload_header.sh
 UIHV_SCRIPT = ../scripts/gen_uihv_header.sh
+GTP_SCRIPT = ../scripts/gen_gtp_data.sh
 SCRIPTS := \
 	$(START_SH) \
 	$(STOP_SH) \
 	$(INIT_LOADER_SH) \
 	$(INIT_PRELOAD_SH) \
 	$(INIT_UIHV_SH) \
-	$(INIT_WSP_SH)
+	$(INIT_WSP_SH) \
+	$(INIT_GTP_SH)
 
 all: debug
 
@@ -153,6 +156,10 @@ $(INIT_PRELOAD_SH): $(PRELOAD_SCRIPT)
 
 #UIHV
 $(INIT_UIHV_SH): $(UIHV_SCRIPT)
+	bash $< $@
+
+#GOT patcher
+$(INIT_GTP_SH): $(GTP_SCRIPT)
 	bash $< $@
 
 # WSP

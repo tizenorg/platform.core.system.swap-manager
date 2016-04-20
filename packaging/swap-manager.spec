@@ -6,7 +6,6 @@ Group:      System/Libraries
 License:    Apache-2.0
 Source:    %{name}_%{version}.tar.gz
 
-
 # setup config
 %define NSP_SUPPORT 0
 %define WSP_SUPPORT 0
@@ -37,6 +36,7 @@ BuildRequires: app-core-efl-debuginfo
 %endif
 BuildRequires: swap-probe-devel
 BuildRequires: swap-probe-elf
+BuildRequires: swap-probe
 BuildRequires: pkgconfig(libtzplatform-config)
 
 # graphic support
@@ -116,6 +116,7 @@ touch %{TZ_SYS_ETC}/resourced_proc_exclude.ini
 /usr/bin/swap_init_preload.sh
 /usr/bin/swap_init_uihv.sh
 /usr/bin/swap_init_wsp.sh
+/usr/bin/swap_init_gtp.sh
 
 %{_prefix}/lib/da_ui_viewer.so
 
