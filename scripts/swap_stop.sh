@@ -5,6 +5,7 @@ PATH=/bin:/usr/bin:/sbin:/usr/sbin
 # swap disabling
 /bin/echo 0 > /sys/kernel/debug/swap/enable
 
+/usr/sbin/rmmod swap_gtp
 /usr/sbin/rmmod swap_uihv
 /usr/sbin/rmmod swap_nsp
 /usr/sbin/rmmod swap_wsp
