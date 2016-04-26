@@ -35,7 +35,7 @@ function print_dl_fixup_off()
 {
     filename=$1
 
-    addr=$(cat $linker_info_header | grep -o \"0x[0-9a-f]\{8\}\")
+    addr=$(cat $linker_info_header | grep -o "0x[0-9a-f]\{8\}")
     echo -e "/bin/echo \"$addr\" > /sys/kernel/debug/swap/got_patcher/linker/dl_fixup_addr" >> $filename
 }
 

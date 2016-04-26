@@ -140,7 +140,7 @@ fi
 #GOT patcher
 if [ -d /sys/kernel/debug/swap/got_patcher/ ]
 then
-	/usr/bin/swap_init_got_patcher.sh
+	/usr/bin/swap_init_gtp.sh
 fi
 
 exit $ERR_NO

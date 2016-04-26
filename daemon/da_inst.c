@@ -700,6 +700,71 @@ static void unlock_lib_list()
 
 static void generate_maps_inst_msg(struct user_space_inst_t *us_inst)
 {
+//	lock_lib_maps_message();
+//
+//	struct lib_list_t *lib = us_inst->lib_inst_list;
+//	struct app_list_t *app = us_inst->app_inst_list;
+//	char *p, *resolved;
+//	uint32_t total_maps_count = 0;
+//	uint32_t total_len = sizeof(total_maps_count) + sizeof(*lib_maps_message);
+//	char real_path_buf[PATH_MAX];
+//
+//	/* total message len calculate */
+//	while (lib != NULL) {
+//		p = lib->lib->bin_path;
+//		total_len += strlen(p) + 1;
+//		total_maps_count++;
+//		LOGI("lib #%u <%s>\n", total_maps_count, p);
+//		lib = (struct lib_list_t *)lib->next;
+//	}
+//
+//	while (app != NULL) {
+//		p = app->app->exe_path;
+//		resolved = realpath((const char *)p, real_path_buf);
+//		if (resolved != NULL) {
+//			total_len += strlen(real_path_buf) + 1;
+//			total_maps_count++;
+//			LOGI("app #%u <%s>\n", total_maps_count, resolved);
+//		} else {
+//			LOGE("cannot resolve bin path <%s>\n", p);
+//		}
+//
+//		app = (struct app_list_t *)app->next;
+//	}
+//
+//	if (lib_maps_message != NULL)
+//		free(lib_maps_message);
+//
+//	lib_maps_message = malloc(total_len);
+//	lib_maps_message->type = APP_MSG_MAPS_INST_LIST;
+//	lib_maps_message->length = total_len;
+//
+//	/* pack data */
+//	p = lib_maps_message->data;
+//	pack_int32(p, total_maps_count);
+//
+//	lib = us_inst->lib_inst_list;
+//	while (lib != NULL) {
+//		pack_str(p, lib->lib->bin_path);
+//		lib = (struct lib_list_t *)lib->next;
+//	}
+//
+//	app = us_inst->app_inst_list;
+//	while (app != NULL) {
+//		resolved = realpath(app->app->exe_path, real_path_buf);
+//		if (resolved != NULL)
+//			pack_str(p, real_path_buf);
+//		app = (struct app_list_t *)app->next;
+//	}
+//
+//	LOGI("total_len = %u\n", total_len);
+//	print_buf((char *)lib_maps_message, total_len, "lib_maps_message");
+//
+//	unlock_lib_maps_message();
+}
+
+static void generate_type_and_info(struct user_space_inst_t *us_inst)
+{
 	lock_lib_maps_message();
 
 	struct lib_list_t *lib = us_inst->lib_inst_list;
@@ -709,10 +774,14 @@ static void generate_maps_inst_msg(struct user_space_inst_t *us_inst)
 	uint32_t total_len = sizeof(total_maps_count) + sizeof(*lib_maps_message);
 	char real_path_buf[PATH_MAX];
 
+    /* Add preload type size */
+    total_len += sizeof(uint8_t);
+
 	/* total message len calculate */
 	while (lib != NULL) {
 		p = lib->lib->bin_path;
-		total_len += strlen(p) + 1;
+        /* Add to total_len entry size: path length, path itself with \0 */
+		total_len += sizeof(uint32_t) + strlen(p) + 1;
 		total_maps_count++;
 		LOGI("lib #%u <%s>\n", total_maps_count, p);
 		lib = (struct lib_list_t *)lib->next;
@@ -722,7 +791,8 @@ static void generate_maps_inst_msg(struct user_space_inst_t *us_inst)
 		p = app->app->exe_path;
 		resolved = realpath((const char *)p, real_path_buf);
 		if (resolved != NULL) {
-			total_len += strlen(real_path_buf) + 1;
+            /* Add to total_len entry size: path length, path itself with \0 */
+			total_len += sizeof(uint32_t) + strlen(real_path_buf) + 1;
 			total_maps_count++;
 			LOGI("app #%u <%s>\n", total_maps_count, resolved);
 		} else {
@@ -736,16 +806,18 @@ static void generate_maps_inst_msg(struct user_space_inst_t *us_inst)
 		free(lib_maps_message);
 
 	lib_maps_message = malloc(total_len);
-	lib_maps_message->type = APP_MSG_MAPS_INST_LIST;
+	lib_maps_message->type = APP_MSG_TYPE_AND_INFO;
 	lib_maps_message->length = total_len;
 
 	/* pack data */
 	p = lib_maps_message->data;
+    /* Pack preload type TODO replace magic num with enum :) Share from probe */
+    pack_int8(p, (uint8_t)0x1);
 	pack_int32(p, total_maps_count);
 
 	lib = us_inst->lib_inst_list;
 	while (lib != NULL) {
-		pack_str(p, lib->lib->bin_path);
+		pack_str_with_len(p, lib->lib->bin_path);
 		lib = (struct lib_list_t *)lib->next;
 	}
 
@@ -753,7 +825,7 @@ static void generate_maps_inst_msg(struct user_space_inst_t *us_inst)
 	while (app != NULL) {
 		resolved = realpath(app->app->exe_path, real_path_buf);
 		if (resolved != NULL)
-			pack_str(p, real_path_buf);
+			pack_str_with_len(p, real_path_buf);
 		app = (struct app_list_t *)app->next;
 	}
 
@@ -762,6 +834,7 @@ static void generate_maps_inst_msg(struct user_space_inst_t *us_inst)
 
 	unlock_lib_maps_message();
 }
+
 
 static inline bool is_always_probing_feature(enum feature_code fv)
 {
@@ -867,6 +940,12 @@ static void send_maps_inst_msg_to_all_targets()
 	unlock_lib_maps_message();
 }
 
+static void send_type_and_info_to_all_targets(void)
+	__attribute__((alias ("send_maps_inst_msg_to_all_targets")));
+
+void send_type_and_info_to(struct target *t)
+	__attribute__((alias ("send_maps_inst_msg_to")));
+
 //-----------------------------------------------------------------------------
 struct app_info_t *app_info_get_first(struct app_list_t **app_list)
 {
@@ -925,6 +1004,7 @@ int msg_start(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 		goto msg_start_exit;
 	}
 
+    /* TODO send type */
 	if (write_bins_to_preload(us_inst))
 		LOGE("Error adding binaries\n");
 	generate_maps_inst_msg(us_inst);
@@ -984,11 +1064,15 @@ int msg_swap_inst_add(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 	*err = ERR_NO;
 
     /* TODO make preload type dependent */
-	if (write_bins_to_preload(us_inst))
-		LOGE("Error adding binaries\n");
-    /* TODO replace with TYPE_AND_INFO */
-	generate_maps_inst_msg(us_inst);
-	send_maps_inst_msg_to_all_targets();
+    if (0) {
+        if (write_bins_to_preload(us_inst))
+        LOGE("Error adding binaries\n");
+        generate_maps_inst_msg(us_inst);
+        send_maps_inst_msg_to_all_targets();
+    }
+
+    generate_type_and_info(us_inst);
+    send_type_and_info_to_all_targets();
 
 msg_swap_inst_add_exit:
 	/* unlock list access */
@@ -1036,11 +1120,16 @@ int msg_swap_inst_remove(struct msg_buf_t *data, struct user_space_inst_t *us_in
 	*err = ERR_NO;
 
     /* TODO make preload type dependent */
-	if (write_bins_to_preload(us_inst))
-		LOGE("Error adding binaries\n");
-    /* TODO replace with TYPE_AND_INFO */
-	generate_maps_inst_msg(us_inst);
-	send_maps_inst_msg_to_all_targets();
+    if (0) {
+        if (write_bins_to_preload(us_inst))
+            LOGE("Error adding binaries\n");
+        generate_maps_inst_msg(us_inst);
+        send_maps_inst_msg_to_all_targets();
+    }
+
+    generate_type_and_info(us_inst);
+    send_type_and_info_to_all_targets();
+
 
 msg_swap_inst_remove_exit:
 	/* unlock list access */
