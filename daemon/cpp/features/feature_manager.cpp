@@ -170,8 +170,6 @@ FeatureManager::ErrCode FeatureManager::doSetFeatures(const feature_bs &f)
 
 void FeatureManager::shutdownFeatures()
 {
-    _bs_new.reset();
-
     for (size_t i = 0; i < FEATURES_MAX; ++i) {
         if (_bs_init.test(i) == false)
             continue;
