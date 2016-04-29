@@ -797,10 +797,7 @@ static int targetServerHandler(bool is_probe_sock)
 			LOGE("fail to send data to target %p\n", target);
 
 		/* send current instrument maps */
-        if (0)
-            send_maps_inst_msg_to(target);
-
-        send_type_and_info_to(target);
+		send_type_and_info_to(target);
 
 		// make event fd
 		target->event_fd = eventfd(EFD_CLOEXEC, EFD_NONBLOCK);

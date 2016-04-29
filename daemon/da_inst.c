@@ -926,6 +926,86 @@ static int write_bins_to_preload(struct user_space_inst_t *us_inst)
 	return ret;
 }
 
+
+
+#define GTP_ADD_BIN "/sys/kernel/debug/swap/got_patcher/by_path/add"
+
+static int add_bins_to_gtp(struct user_space_inst_t *us_inst)
+{
+	struct lib_list_t *lib = us_inst->lib_inst_list;
+	struct app_list_t *app = us_inst->app_inst_list;
+	uint32_t total_maps_count = 0;
+	char real_path_buf[PATH_MAX];
+	char *resolved, *p;
+	FILE *gtp_p;
+
+	gtp_p = fopen(GTP_ADD_BIN, "w");
+	if (gtp_p == NULL)
+		return -EINVAL;
+
+	while (lib != NULL) {
+		total_maps_count++;
+
+		p = lib->lib->bin_path;
+		fwrite(p, strlen(p) + 1, 1, gtp_p);
+		fflush(gtp_p);
+
+		LOGI("lib #%u <%s>\n", total_maps_count, lib->lib->bin_path);
+		lib = (struct lib_list_t *)lib->next;
+	}
+
+	while (app != NULL) {
+		resolved = realpath((const char *)app->app->exe_path, real_path_buf);
+		if (resolved != NULL) {
+			total_maps_count++;
+			fwrite(resolved, strlen(resolved) + 1, 1, gtp_p);
+			fflush(gtp_p);
+
+			LOGI("app #%u <%s>\n", total_maps_count, resolved);
+		}
+
+		app = (struct app_list_t *)app->next;
+	}
+
+	fclose(gtp_p);
+
+	return 0;
+}
+
+#undef GTP_ADD_BIN
+
+#define GTP_CLEAN "/sys/kernel/debug/swap/got_patcher/del_all"
+
+static int clean_bins_gtp(void)
+{
+	FILE *gtp_p;
+
+	gtp_p = fopen(GTP_CLEAN, "w");
+	if (gtp_p == NULL)
+		return -EINVAL;
+
+	fwrite("c", strlen("c") + 1, 1, gtp_p);
+
+	fclose(gtp_p);
+
+	return 0;
+}
+
+#undef GTP_CLEAN
+
+static int write_bins_to_gtp(struct user_space_inst_t *us_inst)
+{
+    int ret;
+
+    ret = clean_bins_gtp();
+    if (ret != 0)
+        return ret;
+
+    ret = add_bins_to_gtp(us_inst);
+
+    return ret;
+}
+
 void send_maps_inst_msg_to(struct target *t)
 {
 	lock_lib_maps_message();
@@ -986,10 +1066,13 @@ int msg_start(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 		goto msg_start_exit;
 	}
 
-	if (!add_preload_probes(&us_inst->lib_inst_list)) {
-		LOGE("cannot add preload probe\n");
-		res = 1;
-		goto msg_start_exit;
+	/* TODO Support old preload */
+	if (0) {
+		if (!add_preload_probes(&us_inst->lib_inst_list)) {
+			LOGE("cannot add preload probe\n");
+			res = 1;
+			goto msg_start_exit;
+		}
 	}
 
 	generate_msg(msg, us_inst->lib_inst_list, us_inst->ld_lib_inst_list,
@@ -1004,10 +1087,18 @@ int msg_start(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 		goto msg_start_exit;
 	}
 
-    /* TODO send type */
-	if (write_bins_to_preload(us_inst))
+	/* TODO send type */
+	if (0) {
+		if (write_bins_to_preload(us_inst))
+			LOGE("Error adding binaries\n");
+
+		generate_maps_inst_msg(us_inst);
+	}
+
+	if (write_bins_to_gtp(us_inst))
 		LOGE("Error adding binaries\n");
-	generate_maps_inst_msg(us_inst);
+
+	generate_type_and_info(us_inst);
 
 msg_start_exit:
 	/* unlock list access */
@@ -1063,16 +1154,19 @@ int msg_swap_inst_add(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 	new_lib_inst_list = NULL;
 	*err = ERR_NO;
 
-    /* TODO make preload type dependent */
-    if (0) {
-        if (write_bins_to_preload(us_inst))
-        LOGE("Error adding binaries\n");
-        generate_maps_inst_msg(us_inst);
-        send_maps_inst_msg_to_all_targets();
-    }
+	/* TODO make preload type dependent */
+	if (0) {
+		if (write_bins_to_preload(us_inst))
+			LOGE("Error adding binaries\n");
+		generate_maps_inst_msg(us_inst);
+		send_maps_inst_msg_to_all_targets();
+	}
 
-    generate_type_and_info(us_inst);
-    send_type_and_info_to_all_targets();
+	if (write_bins_to_gtp(us_inst))
+		LOGE("Error adding binaries\n");
+
+	generate_type_and_info(us_inst);
+	send_type_and_info_to_all_targets();
 
 msg_swap_inst_add_exit:
 	/* unlock list access */
@@ -1119,16 +1213,18 @@ int msg_swap_inst_remove(struct msg_buf_t *data, struct user_space_inst_t *us_in
 	new_lib_inst_list = NULL;
 	*err = ERR_NO;
 
-    /* TODO make preload type dependent */
-    if (0) {
-        if (write_bins_to_preload(us_inst))
-            LOGE("Error adding binaries\n");
-        generate_maps_inst_msg(us_inst);
-        send_maps_inst_msg_to_all_targets();
-    }
+	/* TODO make preload type dependent */
+	if (0) {
+		if (write_bins_to_preload(us_inst))
+			LOGE("Error adding binaries\n");
+		generate_maps_inst_msg(us_inst);
+		send_maps_inst_msg_to_all_targets();
+	}
 
-    generate_type_and_info(us_inst);
-    send_type_and_info_to_all_targets();
+	if (write_bins_to_gtp(us_inst))
+		LOGE("Error adding binaries\n");
+	generate_type_and_info(us_inst);
+	send_type_and_info_to_all_targets();
 
 
 msg_swap_inst_remove_exit:

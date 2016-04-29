@@ -54,8 +54,16 @@ function print_dl_fixup_handler_off()
     echo -e "/bin/echo \"$addr\" > /sys/kernel/debug/swap/got_patcher/handler/fixup_handler_off" >> $filename
 }
 
+function print_enable()
+{
+    filename=$1
+
+    echo -e "/bin/echo \"1\" > /sys/kernel/debug/swap/got_patcher/enable" >> $filename
+}
+
 print_header $output
 print_linker $output
 print_dl_fixup_off $output
 print_probe_lib $output
 print_dl_fixup_handler_off $output
+print_enable $output

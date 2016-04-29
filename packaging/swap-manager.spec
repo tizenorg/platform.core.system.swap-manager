@@ -26,6 +26,7 @@ BuildRequires:  libcall-manager-devel
 %endif
 BuildRequires:  swap-probe-devel
 BuildRequires:  swap-probe-elf
+BuildRequires:  swap-probe
 %if "%{?tizen_profile_name}" == "tv"
 BuildRequires:  webkit2-efl-tv
 %if "%{TIZEN_PRODUCT_TV}" != "1"
