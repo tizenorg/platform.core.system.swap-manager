@@ -1,6 +1,6 @@
 CC := gcc
 
-COMM_FLAGS := -Wall -g -O0
+COMM_FLAGS := -Wall -g -O0 -fPIC
 
 DEBUG_FLAGS = \
 	-DDEBUG \
