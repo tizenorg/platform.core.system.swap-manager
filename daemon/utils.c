@@ -38,6 +38,7 @@
 #include <pthread.h>
 #include <unistd.h>		// for unlink
 #include <dirent.h>		// for opendir, readdir
+#include <pwd.h>		/* getpwnam */
 #include <sys/types.h>	// for open
 #include <sys/stat.h>	// for open
 #include <fcntl.h>		// for open
@@ -58,6 +59,8 @@
 
 #define APPDIR1				"/opt/apps/"
 #define APPDIR2				"/opt/usr/apps/"
+#define EXEC_USER		"owner"
+
 
 uint64_t str_to_uint64(char* str)
 {
@@ -135,6 +138,53 @@ int remove_indir(const char *dirname)
 	return 0;
 }
 
+int change_user(const char *username)
+{
+	struct passwd *pw;
+	int uid, gid;
+
+
+	pw = getpwnam(username);
+	if (!pw) {
+		LOGE("user %s is unknown\n", username);
+		return -1;
+	}
+
+	uid = pw->pw_uid;
+	gid = pw->pw_gid;
+
+	if (setgid(gid) || setuid(uid)) {
+		LOGE("permission denied\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+int exec_with_user(const char *username, const char *path,
+		   char *const app_argv[])
+{
+	int ret;
+
+	if (username) {
+		int myuid = getuid();
+
+		if (myuid != 0) {
+			LOGE("uid %d is not root\n", myuid);
+		} else {
+			ret = change_user(username);
+			if (ret)
+				LOGE("failed to set user \"%s\"\n", username);
+		}
+	}
+
+	ret = execv(path, app_argv);
+	if (ret < 0)
+		LOGE("failed to exec \"%s\"(%d)\n", path, ret);
+
+	_Exit(EXIT_FAILURE);
+}
+
 /* execute applcation with executable binary path */
 int exec_app_tizen(const char *app_id, const char *exec_path)
 {
@@ -160,25 +210,27 @@ int exec_app_tizen(const char *app_id, const char *exec_path)
 		while (ret == -1 && errno == EINTR);
 		return 0;
 	} else { /* child */
-		execl(LAUNCH_APP_PATH, LAUNCH_APP_NAME, app_id, NULL);
-		/* FIXME: If code flows here, it deserves greater attention */
-		_Exit(EXIT_FAILURE);
+		char *app_argv[] = {
+			LAUNCH_APP_NAME,
+			(char *)app_id,
+			NULL
+		};
+
+		exec_with_user(EXEC_USER, LAUNCH_APP_PATH, app_argv);
 	}
+
+	return 0;
 }
 
 int exec_app_common(const char* exec_path)
 {
 	pid_t pid;
-	char command[PATH_MAX];
 
 	LOGI("exec %s\n", exec_path);
 	if (exec_path == NULL || !strlen(exec_path)) {
 		LOGE("Executable path is not correct\n");
 		return -1;
 	}
-
-	snprintf(command, sizeof(command), "%s", exec_path);
-	LOGI("cmd: <%s>\n", command);
 
 	pid = fork();
 	if (pid == -1)
@@ -187,10 +239,20 @@ int exec_app_common(const char* exec_path)
 	if (pid > 0) { /* parent */
 		return 0;
 	} else { /* child */
-		execl(SHELL_CMD, SHELL_CMD, "-c", command, NULL);
-		/* FIXME: Again, such case deserve much more attention */
-		_Exit(EXIT_FAILURE);
+		char command[PATH_MAX];
+		char *app_argv[] = {
+			SHELL_CMD,
+			"-c",
+			command,
+			NULL
+		};
+
+		snprintf(command, sizeof(command), "%s", exec_path);
+		LOGI("cmd: <%s>\n", command);
+		exec_with_user(EXEC_USER, SHELL_CMD, app_argv);
 	}
+
+	return 0;
 }
 
 int exec_app_web(const char *app_id)
@@ -212,16 +274,28 @@ int exec_app_web(const char *app_id)
 		while (ret == -1 && errno == EINTR);
 		return 0;
 	} else { /* child */
-		execl(WRT_LAUNCHER_PATH,
-		      WRT_LAUNCHER_NAME,
-		      (is_feature_enabled(FL_WEB_PROFILING) ?
-		       WRT_LAUNCHER_START_DEBUG : WRT_LAUNCHER_START),
-		      app_id,
-		      NULL);
-		/* FIXME: If code flows here, it deserves greater attention */
-		LOGE("Cannot run exec!\n");
-		_Exit(EXIT_FAILURE);
+		char *web_argv_with_profile[] = {
+			WRT_LAUNCHER_NAME,
+			"-s",
+			"-k",
+			(char *)app_id,
+			NULL
+		};
+		char *web_argv[] = {
+			WRT_LAUNCHER_NAME,
+			"-s",
+			(char *)app_id,
+			NULL
+		};
+
+		if (is_feature_enabled(FL_WEB_PROFILING))
+			exec_with_user(EXEC_USER, WRT_LAUNCHER_PATH,
+				       web_argv_with_profile);
+		else
+			exec_with_user(EXEC_USER, WRT_LAUNCHER_PATH, web_argv);
 	}
+
+	return 0;
 }
 
 void kill_app_web(const char *app_id)
