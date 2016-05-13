@@ -113,7 +113,6 @@ void application_exit()
 
 // create socket to daemon and connect
 #define MSG_CONFIG_RECV 0x01
-#define MSG_MAPS_INST_LIST_RECV 0x02
 static int createSocket(void)
 {
 	char strerr_buf[MAX_PATH_LENGTH];
@@ -139,8 +138,7 @@ static int createSocket(void)
 			snprintf(buf, sizeof(buf), "%d %d", getpid(), getppid());
 			print_log_str(APP_MSG_PID, buf);
 
-			while (((recved & MSG_CONFIG_RECV) == 0) ||
-			       ((recved & MSG_MAPS_INST_LIST_RECV) == 0))
+			while ((recved & MSG_CONFIG_RECV) == 0)
 			{
 				PRINTMSG("wait incoming message %d\n",
 					 gTraceInfo.socket.daemonSock);
@@ -171,10 +169,6 @@ static int createSocket(void)
 						PRINTMSG("APP_MSG_CONFIG");
 						_configure(data_buf);
 						recved |= MSG_CONFIG_RECV;
-					} else if(log.type ==  APP_MSG_MAPS_INST_LIST) {
-						PRINTMSG("APP_MSG_MAPS_INST_LIST <%u>", *((uint32_t *)data_buf));
-						// do nothing
-						recved |= MSG_MAPS_INST_LIST_RECV;
 					} else {
 						// unexpected case
 						PRINTERR("unknown message! %d", log.type);
@@ -307,14 +301,6 @@ static void *recvThread(void __unused *data)
 					}
 					application_exit();
 					break;
-				} else if(log.type == APP_MSG_MAPS_INST_LIST) {
-					if(log.length > 0) {
-						tmp = *((uint32_t *)data_buf);
-						PRINTMSG("APP_MSG_MAPS_INST_LIST <%u>", tmp);
-						continue;
-					} else {
-						PRINTERR("WRONG APP_MSG_MAPS_INST_LIST");
-					}
 				} else if(log.type == APP_MSG_GET_UI_HIERARCHY) {
 					enum ErrorCode err_code = ERR_UNKNOWN;
 
