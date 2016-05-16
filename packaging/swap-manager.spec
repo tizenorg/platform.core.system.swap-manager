@@ -26,7 +26,9 @@ BuildRequires: pkgconfig(ecore)
 BuildRequires: launchpad
 BuildRequires: app-core-efl
 BuildRequires: libwayland-egl
+%if "%{TIZEN_PRODUCT_TV}" != "1"
 BuildRequires: app-core-efl-debuginfo
+%endif
 BuildRequires: swap-probe-devel
 BuildRequires: swap-probe-elf
 BuildRequires: pkgconfig(libtzplatform-config)
