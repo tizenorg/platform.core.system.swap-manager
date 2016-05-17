@@ -71,7 +71,8 @@ LDFLAGS := \
 	-lsmack \
 	-lecore \
 	-lcapi-system-info \
-	-lparserelf
+	-lparserelf \
+	-ldl
 
 # CALL_MNGR
 ifeq ($(CALL_MNGR),y)
