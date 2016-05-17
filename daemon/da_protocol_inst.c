@@ -24,6 +24,9 @@
  *
  */
 
+#define _GNU_SOURCE
+#include <link.h>
+#include <dlfcn.h>
 #include "swap_debug.h"
 #include "da_protocol.h"
 #include "da_protocol_inst.h"
@@ -447,6 +450,41 @@ struct ld_preload_probe_t {
 	uint8_t preload_type;
 } __attribute__ ((packed));
 
+static unsigned long dl_get_addr(const char *lib_name, const char *func_name)
+{
+	void *handle;
+	struct link_map *map;
+	unsigned long addr = 0;
+	char *err;
+
+	handle = dlopen(lib_name, RTLD_LAZY);
+	if (handle == NULL) {
+		LOGE("handle not found (%s), error: %s\n", lib_name, dlerror());
+		return 0;
+	}
+
+	if (dlinfo(handle, RTLD_DI_LINKMAP, &map) == -1) {
+		LOGE("RTLD_DI_LINKMAP failed: %s\n", dlerror());
+		goto close_handle;
+	}
+
+	dlerror();	/* Clear any existing error */
+	addr = (unsigned long)dlsym(handle, func_name);
+
+	err = dlerror();
+	if (err) {
+		LOGE("dlerror(): %s\n", err);
+		addr = 0;
+		goto close_handle;
+	}
+
+	addr -= map->l_addr;
+
+close_handle:
+	dlclose(handle);
+	return addr;
+}
+
 static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
 				      struct data_list_t *dest)
 {
@@ -464,7 +502,22 @@ static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
 
 	LOGI("app_int_num = %d\n", num);
 	for (i = 0; i < num; i++) {
+		unsigned long orig_addr = ld_lib.probes[i].orig_addr;
+
 		parse_deb("app_int #%d\n", i);
+
+		/* check IFUNC */
+		if (orig_addr == 0xffffffff) {
+			const char *lib_name = ld_lib.lib_name;
+			const char *func_name = ld_lib.probes[i].name;
+
+			orig_addr = dl_get_addr(lib_name, func_name);
+
+			LOGI("IFUNC: [%08lx %s] %s\n", orig_addr, func_name, lib_name);
+			if (orig_addr == 0)
+				continue;
+		}
+
 		probe_el = new_probe();
 
 		if (probe_el == NULL) {
@@ -480,7 +533,7 @@ static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
 			return 0;
 		}
 
-		func->orig_addr = ld_lib.probes[i].orig_addr;
+		func->orig_addr = orig_addr;
 		func->probe_type = SWAP_LD_PROBE;
 		func->handler_addr = ld_lib.probes[i].handler_addr;
 		func->preload_type = ld_lib.probes[i].probe_type;
