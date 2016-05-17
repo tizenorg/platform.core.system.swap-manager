@@ -26,6 +26,9 @@ BuildRequires: pkgconfig(ecore)
 BuildRequires: launchpad
 BuildRequires: app-core-efl
 BuildRequires: libwayland-egl
+BuildRequires:  evas-devel
+BuildRequires:  elementary-devel
+BuildRequires:  libXext-devel
 %if "%{TIZEN_PRODUCT_TV}" != "1"
 BuildRequires: app-core-efl-debuginfo
 %endif
@@ -72,11 +75,17 @@ cd daemon
 
 make
 
+cd ../ui_viewer
+$SWAP_BUILD_CONF make
+
 %install
 rm -rf ${RPM_BUILD_ROOT}
 mkdir -p %{buildroot}/usr/share/license
 cp LICENSE %{buildroot}/usr/share/license/%{name}
 cd daemon
+%make_install
+
+cd ../ui_viewer
 %make_install
 
 %post
@@ -90,8 +99,11 @@ touch %{TZ_SYS_ETC}/resourced_proc_exclude.ini
 %{_prefix}/bin/da_manager
 /usr/bin/swap_start.sh
 /usr/bin/swap_stop.sh
+/usr/bin/swap_init_loader.sh
 /usr/bin/swap_init_preload.sh
+/usr/bin/swap_init_uihv.sh
 /usr/bin/swap_init_wsp.sh
 
-%changelog
+%{_prefix}/lib/da_ui_viewer.so
 
+%changelog

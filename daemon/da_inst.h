@@ -95,7 +95,14 @@ struct app_info_t *app_info_get_first(struct app_list_t **app_list);
 struct app_info_t *app_info_get_next(struct app_list_t **app_list);
 
 struct target; // move
-void send_maps_inst_msg_to(struct target *t);
+
+int ld_add_probes_by_feature(uint64_t to_enable_features_0,
+			     uint64_t to_enable_features_1,
+			     uint64_t to_disable_features_0,
+			     uint64_t to_disable_features_1,
+			     struct user_space_inst_t *us_inst,
+			     struct msg_t **msg_reply_add,
+			     struct msg_t **msg_reply_remove);
 
 int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 			     uint64_t to_enable_features_1,

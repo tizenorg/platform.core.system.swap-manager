@@ -215,13 +215,12 @@ static int get_max_brightness()
 {
 	int maxbrightnessfd = -1;
 	static int max_brightness = -1;
-#ifdef DEVICE_ONLY
-	static char dirent_buffer[ sizeof(struct dirent) + PATH_MAX + 1 ] = {0,};
-	static struct dirent *dirent_r = (struct dirent *)dirent_buffer;
-#endif
 
 	if (__builtin_expect(max_brightness < 0, 0)) {
 #ifdef DEVICE_ONLY
+		static char dirent_buffer[ sizeof(struct dirent) +
+					   PATH_MAX + 1 ] = {0,};
+		static struct dirent *dirent_r = (struct dirent *)dirent_buffer;
 		DIR* dir_info;
 		struct dirent* dir_entry;
 		char fullpath[PATH_MAX];

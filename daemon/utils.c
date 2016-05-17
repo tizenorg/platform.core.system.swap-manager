@@ -199,6 +199,7 @@ int exec_app_tizen(const char *app_id, const char *exec_path)
 	LOGI("launch app path is %s, executable path is %s\n"
 	     "launch app name (%s), app_id (%s)\n",
 	     LAUNCH_APP_PATH, exec_path, LAUNCH_APP_NAME, app_id);
+
 	pid = fork();
 	if (pid == -1)
 		return -1;

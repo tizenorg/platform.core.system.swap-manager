@@ -3,9 +3,11 @@
 # swap disabling
 /bin/echo 0 > /sys/kernel/debug/swap/enable
 
+/usr/sbin/rmmod swap_uihv
 /usr/sbin/rmmod swap_nsp
 /usr/sbin/rmmod swap_wsp
 /usr/sbin/rmmod swap_preload
+/usr/sbin/rmmod swap_loader
 /usr/sbin/rmmod swap_webprobe
 /usr/sbin/rmmod swap_fbiprobe
 /usr/sbin/rmmod swap_retprobe
