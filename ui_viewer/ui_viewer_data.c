@@ -1899,9 +1899,9 @@ char *pack_ui_obj_screenshot(char *to, Evas_Object *obj)
 		win_id = _get_win_id(evas);
 		win_focus = elm_win_focus_get(win_id);
 
-		if (win_focus || _get_shot_in_bg(obj))
-			ui_viewer_capture_screen(screenshot, obj);
-		else
+		/* if (win_focus || _get_shot_in_bg(obj)) */
+		/* 	ui_viewer_capture_screen(screenshot, obj); */
+		/* else */
 			err_code = ERR_UI_OBJ_SCREENSHOT_FAILED;
 		evas_event_thaw(evas);
 		evas_object_unref(obj);

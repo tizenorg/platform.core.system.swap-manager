@@ -104,7 +104,6 @@ SRC_C := \
 	malloc_debug.c \
 	target.c \
 	thread.c \
-	wsi.c \
 	ui_viewer.c
 
 SRC_CPP := \

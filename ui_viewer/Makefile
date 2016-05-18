@@ -21,6 +21,7 @@ INCLUDE := \
 	-I/usr/include/eina-1/eina \
 	-I/usr/include/eet-1 \
 	-I/usr/include/evas-1 \
+	-I/usr/include/emile-1 \
 	-I/usr/include/eo-1 \
 	-I/usr/include/ecore-1 \
 	-I/usr/include/ecore-evas-1 \
@@ -79,7 +80,7 @@ SRC_C := \
 	ui_viewer_lib.c \
 	ui_viewer_utils.c \
 	ui_viewer_data.c \
-	ui_viewer_screenshot.c
+#	ui_viewer_screenshot.c
 
 TARGET = da_ui_viewer.so
 

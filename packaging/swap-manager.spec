@@ -28,7 +28,6 @@ BuildRequires: app-core-efl
 BuildRequires: libwayland-egl
 BuildRequires:  evas-devel
 BuildRequires:  elementary-devel
-BuildRequires:  libXext-devel
 %if "%{TIZEN_PRODUCT_TV}" != "1"
 BuildRequires: app-core-efl-debuginfo
 %endif
