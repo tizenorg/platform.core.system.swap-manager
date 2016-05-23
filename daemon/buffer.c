@@ -46,12 +46,12 @@ static int open_tasks_dev(void)
 		manager.fd.inst_tasks = fopen(INST_PID_FILENAME, "re");
 		if (manager.fd.inst_tasks == NULL) {
 			GETSTRERROR(errno, buf);
-			LOGE("Cannot open tasks dev: %s\n", buf);
+			SWAP_LOGE("Cannot open tasks dev: %s\n", buf);
 			return 1;
 		}
-		LOGI("tasks dev opened: %s, %d\n", BUF_FILENAME, manager.buf_fd);
+		SWAP_LOGI("tasks dev opened: %s, %d\n", BUF_FILENAME, manager.buf_fd);
 	} else {
-		LOGW("tasks dev double open try: <%s>\n", INST_PID_FILENAME);
+		SWAP_LOGW("tasks dev double open try: <%s>\n", INST_PID_FILENAME);
 	}
 
 	return 0;
@@ -59,12 +59,12 @@ static int open_tasks_dev(void)
 
 static void close_tasks_dev(void)
 {
-	LOGI("close tasks dev (%d)\n", manager.fd.inst_tasks);
+	SWAP_LOGI("close tasks dev (%d)\n", manager.fd.inst_tasks);
 	if (manager.fd.inst_tasks != NULL) {
 		fclose(manager.fd.inst_tasks);
 		manager.fd.inst_tasks = NULL;
 	} else {
-		LOGW("manager.fd.inst_tasks alredy closed or not opened\n");
+		SWAP_LOGW("manager.fd.inst_tasks alredy closed or not opened\n");
 	}
 }
 
@@ -73,18 +73,18 @@ static int open_buf_ctl(void)
 	manager.buf_fd = open(BUF_FILENAME, O_RDONLY | O_CLOEXEC);
 	if (manager.buf_fd == -1) {
 		GETSTRERROR(errno, buf);
-		LOGE("Cannot open buffer: %s\n", buf);
+		SWAP_LOGE("Cannot open buffer: %s\n", buf);
 		return 1;
 	}
-	LOGI("buffer opened: %s, %d\n", BUF_FILENAME, manager.buf_fd);
+	SWAP_LOGI("buffer opened: %s, %d\n", BUF_FILENAME, manager.buf_fd);
 
 	manager.user_ev_fd = open(USER_EVENT_FILENAME, O_WRONLY | O_CLOEXEC);
 	if (manager.user_ev_fd == -1) {
 		GETSTRERROR(errno, buf);
-		LOGE("Cannot open user event sysfs file: %s\n", buf);
+		SWAP_LOGE("Cannot open user event sysfs file: %s\n", buf);
 		return 1;
 	}
-	LOGI("user event sysfs file opened: %s, %d\n", USER_EVENT_FILENAME,
+	SWAP_LOGI("user event sysfs file opened: %s, %d\n", USER_EVENT_FILENAME,
 	     manager.user_ev_fd);
 
 	return 0;
@@ -92,10 +92,10 @@ static int open_buf_ctl(void)
 
 static void close_buf_ctl(void)
 {
-	LOGI("close buffer (%d)\n", manager.buf_fd);
+	SWAP_LOGI("close buffer (%d)\n", manager.buf_fd);
 	close(manager.buf_fd);
 
-	LOGI("close user event sysfs file (%d)\n", manager.user_ev_fd);
+	SWAP_LOGI("close user event sysfs file (%d)\n", manager.user_ev_fd);
 	close(manager.user_ev_fd);
 }
 
@@ -107,16 +107,16 @@ static int insert_buf_modules(void)
 
 	res = system("cd /usr/bin && ./swap_start.sh");
 	if (res != 0) {
-		LOGE("Cannot insert swap modules. code <%d>\n", res);
+		SWAP_LOGE("Cannot insert swap modules. code <%d>\n", res);
 		/* decode error code */
 		snprintf(cmd, sizeof(cmd), "/usr/bin/swap_start.sh %d", res);
 		f = popen(cmd, "r");
 		if (f) {
 			while (NULL != fgets(cmd, sizeof(cmd), f))
-				LOGE("swap_start.sh >%s\n", cmd);
+				SWAP_LOGE("swap_start.sh >%s\n", cmd);
 			pclose(f);
 		} else {
-			LOGE("Cannot open swap_start.sh\n");
+			SWAP_LOGE("Cannot open swap_start.sh\n");
 		}
 		return -1;
 	}
@@ -132,24 +132,24 @@ int init_buf(void)
 	};
 
 	if (insert_buf_modules() != 0) {
-		LOGE("Cannot insert buffer modules\n");
+		SWAP_LOGE("Cannot insert buffer modules\n");
 		return 1;
 	}
 
 	if (open_buf_ctl() != 0) {
-		LOGE("Cannot open buffer\n");
+		SWAP_LOGE("Cannot open buffer\n");
 		return 1;
 	}
 
 	if (ioctl(manager.buf_fd, SWAP_DRIVER_BUFFER_INITIALIZE, &init) == -1) {
 		GETSTRERROR(errno, buf);
-		LOGE("Cannot init buffer: %s\n", buf);
+		SWAP_LOGE("Cannot init buffer: %s\n", buf);
 		return 1;
 	}
 
 	if (open_tasks_dev() != 0) {
 		GETSTRERROR(errno, buf);
-		LOGE("Cannot open tasks: %s\n", buf);
+		SWAP_LOGE("Cannot open tasks: %s\n", buf);
 		return 1;
 	}
 
@@ -158,10 +158,10 @@ int init_buf(void)
 
 void exit_buf(void)
 {
-	LOGI("Uninit driver (%d)\n", manager.buf_fd);
+	SWAP_LOGI("Uninit driver (%d)\n", manager.buf_fd);
 	if (ioctl(manager.buf_fd, SWAP_DRIVER_BUFFER_UNINITIALIZE) == -1) {
 		GETSTRERROR(errno, buf);
-		LOGW("Cannot uninit driver: %s\n", buf);
+		SWAP_LOGW("Cannot uninit driver: %s\n", buf);
 	}
 
 	close_buf_ctl();
@@ -172,7 +172,7 @@ void flush_buf(void)
 {
 	if (ioctl(manager.buf_fd, SWAP_DRIVER_FLUSH_BUFFER) == -1) {
 		GETSTRERROR(errno, buf);
-		LOGW("Cannot send flush to driver: %s\n", buf);
+		SWAP_LOGW("Cannot send flush to driver: %s\n", buf);
 	}
 }
 
@@ -180,7 +180,7 @@ void wake_up_buf(void)
 {
 	if (ioctl(manager.buf_fd, SWAP_DRIVER_WAKE_UP) == -1) {
 		GETSTRERROR(errno, buf);
-		LOGW("Cannot send wake up to driver: %s\n", buf);
+		SWAP_LOGW("Cannot send wake up to driver: %s\n", buf);
 	}
 }
 
@@ -190,7 +190,7 @@ int write_to_buf(struct msg_data_t *msg)
 
 	if (write(manager.user_ev_fd, msg, total_len) == -1) {
 		GETSTRERROR(errno, buf);
-		LOGE("write to buf (user_ev_fd=%d, msg=%p, len=%d) %s\n",
+		SWAP_LOGE("write to buf (user_ev_fd=%d, msg=%p, len=%d) %s\n",
 		     manager.user_ev_fd, msg, total_len, buf);
 		return 1;
 	}

@@ -64,7 +64,7 @@
 #define CHKSTAT(S, F)				(((S) & (F)) ? 1: 0)
 
 
-#define LOG_STATUS LOGW(">>>>> state %x: %s %s %s %s %s %s %s %s %s\n",\
+#define LOG_STATUS SWAP_LOGW(">>>>> state %x: %s %s %s %s %s %s %s %s %s\n",\
 	pstate,\
 	CHKSTAT(pstate, PSTATE_DEFAULT)?"PSTATE_DEFAULT":"",\
 	CHKSTAT(pstate, PSTATE_CONNECTED)?"PSTATE_CONNECTED":"",\
@@ -102,12 +102,12 @@ static int set_profile_info(const char *path, const char *info)
 	if (fp != NULL) {
 		c = fprintf(fp, "%s", info);
 		if (c < 0) {
-			LOGE("Can't write to file: %s\n", path);
+			SWAP_LOGE("Can't write to file: %s\n", path);
 			ret = -EIO;
 		}
 		fclose(fp);
 	} else {
-		LOGE("Can't open file: %s\n", path);
+		SWAP_LOGE("Can't open file: %s\n", path);
 		ret = -ENOENT;
 	}
 
@@ -131,7 +131,7 @@ int wsi_set_profile(const struct app_info_t *app_info)
 		 app_info->app_id);
 
 	if (ret < 0 || ret >= sizeof(info_tmp)) {
-		LOGE("Can't save app_info, ret = %d\n", ret);
+		SWAP_LOGE("Can't save app_info, ret = %d\n", ret);
 		goto fail;
 	}
 
@@ -172,7 +172,7 @@ int wsi_set_smack_rules(const struct app_info_t *app_info)
 
 	app_id = strndup(app_info->app_id, id_maxlen);
 	if (app_id == NULL) {
-		LOGE("cannot allocate memory\n");
+		SWAP_LOGE("cannot allocate memory\n");
 		ret = -ENOMEM;
 		goto exit;
 	}
@@ -183,7 +183,7 @@ int wsi_set_smack_rules(const struct app_info_t *app_info)
 	if (package_id != NULL) {
 		ret = apply_smack_rules(SUBJECT, package_id, ACCESS_TYPE);
 	} else {
-		LOGE("Can't determine package id\n");
+		SWAP_LOGE("Can't determine package id\n");
 		ret = -EINVAL;
 	}
 
@@ -201,16 +201,16 @@ int wsi_enable_profiling(enum web_prof_state_t mode)
 	case PROF_ON:
 		ret = set_profile_info(ENABLED_FILE, "1");
 		if (ret)
-			LOGE("Can't enable profiling\n");
+			SWAP_LOGE("Can't enable profiling\n");
 		break;
 	case PROF_OFF:
 		ret = set_profile_info(ENABLED_FILE, "0");
 		if (ret)
-			LOGE("Can't disable profiling\n");
+			SWAP_LOGE("Can't disable profiling\n");
 		break;
 	default:
 		ret = -EINVAL;
-		LOGE("Can't enable or disable profiling\n");
+		SWAP_LOGE("Can't enable or disable profiling\n");
 	}
 
 	return ret;
@@ -228,7 +228,7 @@ static void send_request(const char *method)
 
 	jobj = json_object_new_object();
 	if (jobj == NULL) {
-		LOGE("cannot create json object\n");
+		SWAP_LOGE("cannot create json object\n");
 		return;
 	}
 
@@ -239,21 +239,21 @@ static void send_request(const char *method)
 
 	payload = json_object_to_json_string(jobj);
 	if (payload == NULL) {
-		LOGE("cannot parse json object (method: %s)\n", method);
+		SWAP_LOGE("cannot parse json object (method: %s)\n", method);
 		return;
 	}
 
 	payload_len = strnlen(payload, MAX_REQUEST_LENGTH);
 	if (payload_len != MAX_REQUEST_LENGTH)
-		LOGI("json generated len: %d; msg: %s\n", payload_len, payload);
+		SWAP_LOGI("json generated len: %d; msg: %s\n", payload_len, payload);
 	else
-		LOGE("bad payload!!!\n");
+		SWAP_LOGE("bad payload!!!\n");
 
 	strncpy(buf, payload, MAX_REQUEST_LENGTH - 1);
 
 	if (libwebsocket_write(wsi, (unsigned char *)buf, payload_len,
 			       LWS_WRITE_TEXT) < 0) {
-		LOGE("cannot write to web socket (method: %s)\n", method);
+		SWAP_LOGE("cannot write to web socket (method: %s)\n", method);
 		return;
 	}
 
@@ -270,7 +270,7 @@ static int profiling_callback(struct libwebsocket_context *context,
 
 	switch (reason) {
 	case LWS_CALLBACK_CLIENT_ESTABLISHED:
-		LOGI("Connected to server\n");
+		SWAP_LOGI("Connected to server\n");
 		SETSTAT(pstate, PSTATE_CONNECTED);
 
 		send_request("Profiler.enable");
@@ -278,20 +278,20 @@ static int profiling_callback(struct libwebsocket_context *context,
 		break;
 
 	case LWS_CALLBACK_DEL_POLL_FD:
-		LOGE("LWS_CALLBACK_DEL_POLL_FD\n");
+		SWAP_LOGE("LWS_CALLBACK_DEL_POLL_FD\n");
 		/* Call through. Connection closed. */
 	case LWS_CALLBACK_CLOSED:
-		LOGI("Connection closed\n");
+		SWAP_LOGI("Connection closed\n");
 		CLRSTAT(pstate, PSTATE_CONNECTED);
 		SETSTAT(pstate, PSTATE_DISCONNECT);
 		break;
 
 	case LWS_CALLBACK_CLIENT_RECEIVE:
 		if (libwebsockets_remaining_packet_payload(wsi))
-			LOGE("json message too long\n");
+			SWAP_LOGE("json message too long\n");
 
 		((char *)in)[len] = '\0';
-		LOGI("json message recv; len: %d; msg: %s\n", (int)len,
+		SWAP_LOGI("json message recv; len: %d; msg: %s\n", (int)len,
 		     (char *)in);
 
 		if (!libwebsocket_is_final_fragment(wsi))
@@ -344,7 +344,7 @@ static int profiling_callback(struct libwebsocket_context *context,
 		break;
 
 	case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
-		LOGE("Web socket connection error. Falling down\n");
+		SWAP_LOGE("Web socket connection error. Falling down\n");
 		/*
 		 * TODO: need report to host about error. May be should stop
 		 * web profiling and/or launching web application
@@ -352,7 +352,7 @@ static int profiling_callback(struct libwebsocket_context *context,
 		break;
 
 	default:
-		LOGW("Message unknown. Reason: %d\n", reason);
+		SWAP_LOGW("Message unknown. Reason: %d\n", reason);
 		break;
 	}
 
@@ -382,7 +382,7 @@ static int init_wsi_conn(struct libwebsocket_context **context,
 
 	snprintf(host, sizeof(host), "%s:%d", address, port);
 	snprintf(origin, sizeof(origin), "http://%s:%d", address, port);
-	LOGI(" host =<%s> origin = <%s>\n", host, origin);
+	SWAP_LOGI(" host =<%s> origin = <%s>\n", host, origin);
 
 	memset(&info, 0, sizeof(info));
 
@@ -397,7 +397,7 @@ static int init_wsi_conn(struct libwebsocket_context **context,
 
 	*context = libwebsocket_create_context(&info);
 	if (*context == NULL) {
-		LOGE("libwebsocket context creation failed\n");
+		SWAP_LOGE("libwebsocket context creation failed\n");
 		return 1;
 	}
 
@@ -407,12 +407,12 @@ static int init_wsi_conn(struct libwebsocket_context **context,
 					   ietf_version);
 
 	if (*wsi == NULL) {
-		LOGE("libwebsocket connect failed\n");
+		SWAP_LOGE("libwebsocket connect failed\n");
 		destroy_wsi_conn(*context);
 		return 1;
 	}
 
-	LOGI("Websocket connection opened\n");
+	SWAP_LOGI("Websocket connection opened\n");
 
 	return 0;
 }
@@ -426,7 +426,7 @@ static void *handle_ws_responses(void *arg)
 		libwebsocket_service(context, 1000);
 	}
 
-	LOGI("handle response thread finished\n");
+	SWAP_LOGI("handle response thread finished\n");
 	return NULL;
 }
 
@@ -442,7 +442,7 @@ static int wsi_init(const char *address, int port)
 		msg->len = sizeof(uint32_t);
 
 		for (i = 0; i < 10; i++) {
-			LOGI("Try %d\n", i);
+			SWAP_LOGI("Try %d\n", i);
 
 			if (!ioctl_send_msg(msg)) {
 				port = *(int *)&msg->payload;
@@ -452,15 +452,15 @@ static int wsi_init(const char *address, int port)
 	}
 
 	if (port) {
-		LOGI("wrt-launcher debug port: %d\n", port);
+		SWAP_LOGI("wrt-launcher debug port: %d\n", port);
 	} else {
-		LOGE("wrt-launcher debug port not exist\n");
+		SWAP_LOGE("wrt-launcher debug port not exist\n");
 		res = 1;
 		goto exit;
 	}
 
 	if (init_wsi_conn(&context, &wsi, address, port) != 0) {
-		LOGE("cannot init wsi connection\n");
+		SWAP_LOGE("cannot init wsi connection\n");
 		res = 1;
 		goto exit;
 	}
@@ -475,18 +475,18 @@ exit:
 /* 		if (CHKSTAT(pstate, PSTATE_WAIT_ACK)) { */
 /* 			SETSTAT(pstate, PSTATE_DISCONNECT); */
 /* 		} else { */
-/* 			LOGI("destroy context\n"); */
+/* 			SWAP_LOGI("destroy context\n"); */
 /* 			destroy_wsi_conn(context); */
 /* 		} */
 /* 	} else { */
-/* 		LOGW("Try disconnect when web socket not connected\n"); */
+/* 		SWAP_LOGW("Try disconnect when web socket not connected\n"); */
 /* 	} */
 /* } */
 
 static int wsi_start_profiling(void)
 {
 	if (pthread_create(&wsi_handle_thread, NULL, &handle_ws_responses, NULL)) {
-		LOGE("Can't create handle_ws_ threads\n");
+		SWAP_LOGE("Can't create handle_ws_ threads\n");
 		destroy_wsi_conn(context);
 		return 1;
 	}
@@ -504,16 +504,16 @@ static void wsi_stop_profiling(void)
 
 static void *do_start(void *arg)
 {
-	LOGI("wsi thread started\n");
+	SWAP_LOGI("wsi thread started\n");
 
 	if (wsi_init(WSI_HOST, 0)) {
-		LOGE("Cannot init web application profiling\n");
+		SWAP_LOGE("Cannot init web application profiling\n");
 		pstate = PSTATE_DEFAULT;
 		goto out;
 	}
 
 	if (wsi_start_profiling()) {
-		LOGE("Cannot start web application profiling\n");
+		SWAP_LOGE("Cannot start web application profiling\n");
 		pstate = PSTATE_DEFAULT;
 		goto out;
 	}
@@ -522,7 +522,7 @@ static void *do_start(void *arg)
 	SETSTAT(pstate, PSTATE_INIT_DONE);
 
 out:
-	LOGI("wsi thread finished\n");
+	SWAP_LOGI("wsi thread finished\n");
 	return NULL;
 }
 
@@ -533,7 +533,7 @@ int wsi_start(void)
 
 	ret = pthread_create(&wsi_start_thread, NULL, &do_start, NULL);
 	if (ret) {
-		LOGE("Can't create do_start thread\n");
+		SWAP_LOGE("Can't create do_start thread\n");
 		wsi_start_thread = -1;
 		pstate = PSTATE_DEFAULT;
 	}
@@ -548,17 +548,17 @@ void wsi_stop(void)
 	if (CHKSTAT(pstate, PSTATE_INIT_START)) {
 		/* init was start */
 		while (!CHKSTAT(pstate, PSTATE_INIT_DONE | PSTATE_DEFAULT)) {
-			LOGW("stop request while init not finished. wait.\n");
+			SWAP_LOGW("stop request while init not finished. wait.\n");
 			sleep(1);
 		}
 
 		if (CHKSTAT(pstate, PSTATE_DEFAULT)) {
-			LOGE("wsi init fail.\n");
+			SWAP_LOGE("wsi init fail.\n");
 			return;
 		}
 	} else {
 		/* init has not be started */
-		LOGW("Try stop wsi without swi_start call. Ignored.\n");
+		SWAP_LOGW("Try stop wsi without swi_start call. Ignored.\n");
 		return;
 	}
 
@@ -566,7 +566,7 @@ void wsi_stop(void)
 
 	if (is_feature_enabled(FL_WEB_PROFILING)) {
 		if (wsi_enable_profiling(PROF_OFF))
-			LOGE("Cannot disable web application profiling\n");
+			SWAP_LOGE("Cannot disable web application profiling\n");
 	}
 
 	SETSTAT(pstate, PSTATE_DISCONNECT);
@@ -577,7 +577,7 @@ void wsi_stop(void)
 
 
 	if (wsi_handle_thread != -1) {
-		LOGI("wait handle thread");
+		SWAP_LOGI("wait handle thread");
 		pthread_join(wsi_handle_thread, &thread_ret);
 	}
 	wsi_handle_thread = -1;

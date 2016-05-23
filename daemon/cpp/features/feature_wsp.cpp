@@ -68,7 +68,7 @@ class FeatureWSP : public Feature
 
                 ret = elf.open(ewebkit_path);
                 if (ret) {
-                    LOGE("cannot open ELF file '%s'\n", ewebkit_path);
+                    SWAP_LOGE("cannot open ELF file '%s'\n", ewebkit_path);
                     return ret;
                 }
 
@@ -80,7 +80,7 @@ class FeatureWSP : public Feature
                 elf.close();
 
                 if (ret) {
-                    LOGE("get plt addr for '%s'\n", s);
+                    SWAP_LOGE("get plt addr for '%s'\n", s);
                     return ret;
                 }
 
@@ -88,7 +88,7 @@ class FeatureWSP : public Feature
             }
 
             if (addr == 0) {
-                LOGE("address for '%s' is not found\n", name.c_str());
+                SWAP_LOGE("address for '%s' is not found\n", name.c_str());
                 return -EINVAL;
             }
 
@@ -96,7 +96,7 @@ class FeatureWSP : public Feature
 
             ret = write_to_file(path_cmd, cmd);
             if (ret < 0) {
-                LOGE("write(err=%d) '%s' to %s\n", ret, cmd.c_str(), path_cmd);
+                SWAP_LOGE("write(err=%d) '%s' to %s\n", ret, cmd.c_str(), path_cmd);
                 return ret;
             }
         }

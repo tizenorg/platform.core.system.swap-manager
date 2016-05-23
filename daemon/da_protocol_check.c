@@ -37,7 +37,7 @@ int check_app_type(uint32_t app_type)
 		(app_type <= APP_INFO_TYPE_MAX)) {
 		return 1;
 	} else {
-		LOGE("wrong value\n");
+		SWAP_LOGE("wrong value\n");
 		return 0;
 	}
 }
@@ -66,20 +66,20 @@ int check_app_id(uint32_t app_type, char *app_id)
 			break;
 		case APP_TYPE_RUNNING:
 			if (!is_pid_string_valid(app_id))
-				LOGE("wrong app id for APP_RUNNING\n");
+				SWAP_LOGE("wrong app id for APP_RUNNING\n");
 			else
 				res = 1;
 			break;
 		case APP_TYPE_COMMON:
 			res = (strlen(app_id) == 0);
 			if (!res)
-				LOGE("wrong app id for APP_COMMON\n");
+				SWAP_LOGE("wrong app id for APP_COMMON\n");
 			break;
 		case APP_TYPE_WEB:
 			res = 1;
 			break;
 		default :
-			LOGE("wrong app type\n");
+			SWAP_LOGE("wrong app type\n");
 			return 0;
 			break;
 	}
@@ -92,7 +92,7 @@ int check_exec_path(char *path)
 	struct stat buffer;
 
 	if (!(res = (stat (path, &buffer) == 0)))
-		LOGE("wrong exec path <%s>\n", path);
+		SWAP_LOGE("wrong exec path <%s>\n", path);
 
 	return res;
 }
@@ -105,14 +105,14 @@ int check_conf_features(uint64_t feature0, uint64_t feature1)
 	feature0 &= ~(uint64_t)FL_ALL_FEATURES;
 
 	if (feature0 != 0) {
-		LOGE("wrong features0 0x%016llX mask %016llX\n", feature0, (uint64_t)FL_ALL_FEATURES);
+		SWAP_LOGE("wrong features0 0x%016llX mask %016llX\n", feature0, (uint64_t)FL_ALL_FEATURES);
 		res = 0;
 	}
 
 	feature1 &= ~(uint64_t)0;
 
 	if (feature1 != 0) {
-		LOGE("wrong features1 0x%016llX mask %016llX\n", feature1, (uint64_t)0);
+		SWAP_LOGE("wrong features1 0x%016llX mask %016llX\n", feature1, (uint64_t)0);
 		res = 0;
 	}
 
@@ -126,7 +126,7 @@ int check_conf_systrace_period(uint32_t system_trace_period)
 	if ((system_trace_period < CONF_SYSTRACE_PERIOD_MIN) ||
 		(system_trace_period > CONF_SYSTRACE_PERIOD_MAX))
 	{
-		LOGE("wrong system trace period value %u (0x%08X)\n",
+		SWAP_LOGE("wrong system trace period value %u (0x%08X)\n",
 		     (unsigned int) system_trace_period, system_trace_period);
 		res = 0;
 	}
@@ -140,7 +140,7 @@ int check_conf_datamsg_period(uint32_t data_message_period)
 	if ((data_message_period < CONF_DATA_MSG_PERIOD_MIN) ||
 		(data_message_period > CONF_DATA_MSG_PERIOD_MAX))
 	{
-		LOGE("wrong data message period value %u (0x%08X)\n",
+		SWAP_LOGE("wrong data message period value %u (0x%08X)\n",
 		     (unsigned int) data_message_period, data_message_period);
 		res = 0;
 	}
@@ -153,7 +153,7 @@ int check_us_app_count(uint32_t app_count)
 {
 	int res = 1;
 	if (app_count > US_APP_COUNT_MAX) {
-		LOGE("wrong user space app count %u (0x%08X)\n",
+		SWAP_LOGE("wrong user space app count %u (0x%08X)\n",
 		     (unsigned int)app_count, app_count);
 		res = 0;
 	}
@@ -165,7 +165,7 @@ int check_us_app_inst_func_count(uint32_t func_count)
 {
 	int res = 1;
 	if (func_count > US_APP_INST_FUNC_MAX) {
-		LOGE("wrong US app inst func count %u (0x%08X)\n",
+		SWAP_LOGE("wrong US app inst func count %u (0x%08X)\n",
 		     (unsigned int)func_count, func_count);
 		res = 0;
 	}
@@ -179,7 +179,7 @@ int check_us_inst_func_args(char *args)
 	char *p;
 	for (p = args; *p != 0; p++)
 		if (strchr(args_avail, (int)*p) == NULL){
-			LOGE("wrong args <%s> char <%c> <0x%02X>\n", args, (int)*p, (char)*p);
+			SWAP_LOGE("wrong args <%s> char <%c> <0x%02X>\n", args, (int)*p, (char)*p);
 			return 0;
 		}
 	return 1;
@@ -189,7 +189,7 @@ static char *rets_avail = US_FUNC_RETURN;
 int check_us_inst_func_ret_type(char ret_type)
 {
 	if (strchr(rets_avail, (int)ret_type) == NULL){
-		LOGE("wrong ret type <%c> <0x%02X>\n", (int)ret_type, (char)ret_type);
+		SWAP_LOGE("wrong ret type <%c> <0x%02X>\n", (int)ret_type, (char)ret_type);
 		return 0;
 	}
 	return 1;
@@ -199,7 +199,7 @@ int check_lib_inst_count(uint32_t lib_count)
 {
 	int res = 1;
 	if (lib_count > US_APP_INST_LIB_MAX) {
-		LOGE("wrong US app inst lib count %u (0x%08X)\n",
+		SWAP_LOGE("wrong US app inst lib count %u (0x%08X)\n",
 		     (unsigned int)lib_count, lib_count);
 		res = 0;
 	}
@@ -211,17 +211,17 @@ int check_conf(struct conf_t *conf)
 {
 	//Check features value
 	if (!check_conf_features(conf->use_features0, conf->use_features1)) {
-		LOGE("check features fail\n");
+		SWAP_LOGE("check features fail\n");
 		return 0;
 	}
 
 	if (!check_conf_systrace_period(conf->system_trace_period)) {
-		LOGE("system trace period error\n");
+		SWAP_LOGE("system trace period error\n");
 		return 0;
 	}
 
 	if (!check_conf_datamsg_period(conf->data_message_period)) {
-		LOGE("data message period error\n");
+		SWAP_LOGE("data message period error\n");
 		return 0;
 	}
 

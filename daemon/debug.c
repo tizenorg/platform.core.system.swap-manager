@@ -38,7 +38,7 @@ void print_buf(char * buf, int len, const char *info)
 	char local_buf[3*17 + 2*16 + 1 + 8];
 	char * p1, * p2;
 
-	LOGI("BUFFER [%d] <%s>:\n", len, info);
+	SWAP_LOGI("BUFFER [%d] <%s>:\n", len, info);
 	for ( i = 0; i < len/16 + 1; i++)
 	{
 		memset(local_buf, ' ', 5*16 + 8);
@@ -61,7 +61,7 @@ void print_buf(char * buf, int len, const char *info)
 			}
 		*p1 = ' ';
 		*p2 = '\0';
-		LOGI("%s\n",local_buf);
+		SWAP_LOGI("%s\n",local_buf);
 	}
 }
 #else

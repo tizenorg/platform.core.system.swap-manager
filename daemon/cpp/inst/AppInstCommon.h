@@ -37,7 +37,7 @@ class AppInstCommon : public AppInst
     int doInit()
     {
         if (info().id().size()) {
-            LOGE("[%s] error 'app ID' is not empty '%s'\n",
+            SWAP_LOGE("[%s] error 'app ID' is not empty '%s'\n",
                  type2str(AT_COMMON), info().id().c_str());
             return -EINVAL;
         }

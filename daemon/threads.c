@@ -63,7 +63,7 @@ static int chsmack(const char *filename)
 	switch (pid) {
 	case -1:
 		/* fail to fork */
-		LOGE("cannot fork");
+		SWAP_LOGE("cannot fork");
 		break;
 	case 0:
 		/* child */
@@ -71,7 +71,7 @@ static int chsmack(const char *filename)
 		execl(SHELL_CMD, SHELL_CMD, "-c", cmd, NULL);
 
 		/* exec fail */
-		LOGE("exec fail! <%s>\n", cmd);
+		SWAP_LOGE("exec fail! <%s>\n", cmd);
 		break;
 	default:
 		/* parent */
@@ -105,7 +105,7 @@ static void* recvThread(void* data)
 			struct msg_data_t *msg_data = (struct msg_data_t *)&log;
 
 			if (write_to_buf(msg_data) != 0)
-				LOGE("write to buf fail\n");
+				SWAP_LOGE("write to buf fail\n");
 
 			continue;
 		}
@@ -115,7 +115,7 @@ static void* recvThread(void* data)
 			target->allocmem = str_to_int64(log.data);
 			continue;		// don't send to host
 		} else if (log.type == APP_MSG_PID) {
-			LOGI("APP_MSG_PID arrived (pid ppid): %s\n", log.data);
+			SWAP_LOGI("APP_MSG_PID arrived (pid ppid): %s\n", log.data);
 
 			/* only when first APP_MSG_PID is arrived */
 			if (target_get_pid(target) == UNKNOWN_PID) {
@@ -146,7 +146,7 @@ static void* recvThread(void* data)
 			}
 			continue;		// don't send to host
 		} else if (log.type == APP_MSG_TERMINATE) {
-			LOGI("APP_MSG_TERMINATE arrived: pid[%d]\n",
+			SWAP_LOGI("APP_MSG_TERMINATE arrived: pid[%d]\n",
 			     target_get_pid(target));
 
 			// send stop message to main thread
@@ -157,15 +157,15 @@ static void* recvThread(void* data)
 			break;
 		} else if (log.type == APP_MSG_MSG) {
 			// don't send to host
-			LOGI("EXTRA '%s'\n", log.data);
+			SWAP_LOGI("EXTRA '%s'\n", log.data);
 			continue;
 		} else if (log.type == APP_MSG_ERROR) {
 			// don't send to host
-			LOGE("EXTRA '%s'\n", log.data);
+			SWAP_LOGE("EXTRA '%s'\n", log.data);
 			continue;
 		} else if (log.type == APP_MSG_WARNING) {
 			// don't send to host
-			LOGW("EXTRA '%s'\n", log.data);
+			SWAP_LOGW("EXTRA '%s'\n", log.data);
 			continue;
 		} else if (log.type == APP_MSG_IMAGE) {
 			/* need chsmak */
@@ -173,9 +173,9 @@ static void* recvThread(void* data)
 			char *file_name = p;
 
 			if (access(file_name, F_OK) != -1) {
-				LOGI("APP_MSG_IMAGE> <%s>\n", file_name);
+				SWAP_LOGI("APP_MSG_IMAGE> <%s>\n", file_name);
 			} else {
-				LOGE("APP_MSG_IMAGE> File not found <%s>\n",
+				SWAP_LOGE("APP_MSG_IMAGE> File not found <%s>\n",
 				     file_name);
 				continue;
 			}
@@ -188,14 +188,14 @@ static void* recvThread(void* data)
 				/* check packed size */
 				if (log.length != strnlen(file_name, PATH_MAX) + 1 +
 					sizeof(*msg_data) + msg_data->len) {
-					LOGE("Bad packed message\n");
+					SWAP_LOGE("Bad packed message\n");
 					continue;
 				}
 
 				if (write_to_buf(msg_data) != 0)
-					LOGE("write to buf fail\n");
+					SWAP_LOGE("write to buf fail\n");
 			} else {
-				LOGE("chsmack fail\n");
+				SWAP_LOGE("chsmack fail\n");
 			}
 
 
@@ -218,7 +218,7 @@ static void* recvThread(void* data)
 			if (len == sizeof(uint32_t)) {
 				enum ErrorCode err_code = *(uint32_t*)log.data;
 
-				LOGE("APP_MSG_GET_UI_HIERARCHY_DATA error <%d>\n", err_code);
+				SWAP_LOGE("APP_MSG_GET_UI_HIERARCHY_DATA error <%d>\n", err_code);
 				// TODO: system error
 				if (err_code == ERR_UNKNOWN) {
 					restart_all();
@@ -229,26 +229,26 @@ static void* recvThread(void* data)
 
 			msg_data = malloc(MSG_DATA_HDR_LEN + len);
 			if (!msg_data) {
-				LOGE("Cannot alloc message: %d bytes\n", MSG_DATA_HDR_LEN + len);
+				SWAP_LOGE("Cannot alloc message: %d bytes\n", MSG_DATA_HDR_LEN + len);
 				return NULL;
 			}
 			fill_data_msg_head(msg_data, NMSG_UI_HIERARCHY, 0, len);
 			memcpy(msg_data->payload, log.data, log.length);
 
 			if (access(file_name, F_OK) != -1) {
-				LOGI("APP_MSG_GET_UI_HIERARCHY_DATA> File: <%s>\n",
+				SWAP_LOGI("APP_MSG_GET_UI_HIERARCHY_DATA> File: <%s>\n",
 				     file_name);
 
 				if (chsmack(file_name) != 0) {
-					LOGE("chsmack failed\n");
+					SWAP_LOGE("chsmack failed\n");
 				}
 			} else {
-				LOGE("APP_MSG_GET_UI_HIERARCHY> File not found <%s>\n",
+				SWAP_LOGE("APP_MSG_GET_UI_HIERARCHY> File not found <%s>\n",
 				     file_name);
 			}
 
 			if (write_to_buf(msg_data) != 0)
-				LOGE("write to buf fail\n");
+				SWAP_LOGE("write to buf fail\n");
 
 			continue;
 		} else if (log.type == APP_MSG_GET_UI_SCREENSHOT) {
@@ -256,7 +256,7 @@ static void* recvThread(void* data)
 			char *payload = log.data;
 			int payload_size = log.length;
 
-			LOGI("APP_MSG_GET_UI_SCREENSHOT> log length = %d\n", log.length);
+			SWAP_LOGI("APP_MSG_GET_UI_SCREENSHOT> log length = %d\n", log.length);
 
 			if (payload_size >= sizeof(uint32_t)) {
 				char *file_name;
@@ -267,7 +267,7 @@ static void* recvThread(void* data)
 
 				file_name = payload;
 				if (chsmack(file_name) != 0) {
-					LOGE("chsmack failed\n");
+					SWAP_LOGE("chsmack failed\n");
 				}
 			}
 
@@ -284,14 +284,14 @@ static void* recvThread(void* data)
 				case '6':	// UI lifecycle log
 				case '7':	// screenshot log
 				case '8':	// scene transition log
-					LOGI("%dclass|%s\n", log.data[0] - '0', log.data);
+					SWAP_LOGI("%dclass|%s\n", log.data[0] - '0', log.data);
 					break;
 				default:
 					break;
 			}
 		} else {
 			/* not APP_MSG_LOG and not APP_MSG_IMAGE */
-			LOGI("Extra MSG TYPE (%d|%d|%s)\n", log.type, log.length, log.data);
+			SWAP_LOGI("Extra MSG TYPE (%d|%d|%s)\n", log.type, log.length, log.data);
 		}
 #endif
 
@@ -306,14 +306,14 @@ static void* recvThread(void* data)
 		pass = 1;
 	}
 
-	LOGI("thread finished %u:%u\n", target->pid, target->ppid);
+	SWAP_LOGI("thread finished %u:%u\n", target->pid, target->ppid);
 	return NULL;
 }
 
 int makeRecvThread(struct target *target)
 {
 	if (target_start(target, recvThread) < 0) {
-		LOGE("Failed to create recv thread\n");
+		SWAP_LOGE("Failed to create recv thread\n");
 		return -1;
 	}
 
@@ -325,7 +325,7 @@ static void *samplingThread(void *data)
 	int err, signo;
 	sigset_t waitsigmask;
 
-	LOGI("sampling thread started\n");
+	SWAP_LOGI("sampling thread started\n");
 
 	sigemptyset(&waitsigmask);
 	sigaddset(&waitsigmask, SIGALRM);
@@ -334,7 +334,7 @@ static void *samplingThread(void *data)
 	while (1) {
 		err = sigwait(&waitsigmask, &signo);
 		if (err != 0) {
-			LOGE("Failed to sigwait() in sampling thread\n");
+			SWAP_LOGE("Failed to sigwait() in sampling thread\n");
 			continue;
 		}
 
@@ -343,7 +343,7 @@ static void *samplingThread(void *data)
 			struct msg_data_t *msg;
 
 			if (get_system_info(&sys_info) == -1) {
-				LOGE("Cannot get system info\n");
+				SWAP_LOGE("Cannot get system info\n");
 				//do not send sys_info because
 				//it is corrupted
 				continue;
@@ -351,13 +351,13 @@ static void *samplingThread(void *data)
 
 			msg = pack_system_info(&sys_info);
 			if (!msg) {
-				LOGE("Cannot pack system info\n");
+				SWAP_LOGE("Cannot pack system info\n");
 				reset_system_info(&sys_info);
 				continue;
 			}
 
 			if (write_to_buf(msg) != 0)
-				LOGE("write to buf fail\n");
+				SWAP_LOGE("write to buf fail\n");
 
 #ifdef THREAD_SAMPLING_DEBUG
 			printBuf((char *)msg, MSG_DATA_HDR_LEN + msg->len);
@@ -369,18 +369,18 @@ static void *samplingThread(void *data)
 		}
 		else if(signo == SIGUSR1)
 		{
-			LOGI("SIGUSR1 catched\n");
+			SWAP_LOGI("SIGUSR1 catched\n");
 			// end this thread
 			break;
 		}
 		else
 		{
 			// never happen
-			LOGE("This should never happen in sampling thread\n");
+			SWAP_LOGE("This should never happen in sampling thread\n");
 		}
 	}
 
-	LOGI("sampling thread ended\n");
+	SWAP_LOGI("sampling thread ended\n");
 	return NULL;
 }
 
@@ -398,13 +398,13 @@ int samplingStart(void)
 		return 1;
 
 	if (check_running_status(&prof_session) == 0) {
-		LOGI("try to start sampling when running_status is 0\n");
+		SWAP_LOGI("try to start sampling when running_status is 0\n");
 		return 1;
 	}
 
 	if(pthread_create(&(manager.sampling_thread), NULL, samplingThread, NULL) < 0)
 	{
-		LOGE("Failed to create sampling thread\n");
+		SWAP_LOGE("Failed to create sampling thread\n");
 		return -1;
 	}
 
@@ -431,9 +431,9 @@ int samplingStop(void)
 		setitimer(ITIMER_REAL, &stopval, NULL);
 
 		pthread_kill(manager.sampling_thread, SIGUSR1);
-		LOGI("join sampling thread started\n");
+		SWAP_LOGI("join sampling thread started\n");
 		pthread_join(manager.sampling_thread, NULL);
-		LOGI("join sampling thread done\n");
+		SWAP_LOGI("join sampling thread done\n");
 
 		manager.sampling_thread = -1;
 	}
@@ -466,7 +466,7 @@ static void *replay_thread(void *arg)
 
 	struct replay_event_t * pevent = NULL;
 
-	LOGI("replay events thread started. event num = %d\n", event_seq->event_num);
+	SWAP_LOGI("replay events thread started. event num = %d\n", event_seq->event_num);
 	if (event_seq->event_num != 0)
 	{
 		pevent = event_seq->events;
@@ -482,7 +482,7 @@ static void *replay_thread(void *arg)
 #ifdef THREAD_REPLAY_DEBUG
 		print_replay_event(pevent, i + 1, "\t");
 #endif
-		LOGI_th_rep("%d) sleep %d\n", i, ms);
+		SWAP_LOGI_th_rep("%d) sleep %d\n", i, ms);
 		swap_usleep(ms);
 
 		write_input_event(pevent->id, &pevent->ev);
@@ -492,7 +492,7 @@ static void *replay_thread(void *arg)
 		pevent++;
 	}
 
-	LOGI("replay events thread finished\n");
+	SWAP_LOGI("replay events thread finished\n");
 
 	exit_replay_thread();
 
@@ -506,7 +506,7 @@ int start_replay()
 	pthread_mutex_lock(&replay_thread_mutex);
 
 	if (manager.replay_thread != -1) {
-		LOGI("replay already started\n");
+		SWAP_LOGI("replay already started\n");
 		res = 1;
 		goto exit;
 	}
@@ -516,7 +516,7 @@ int start_replay()
 			   replay_thread,
 			   &prof_session.replay_event_seq) < 0)
 	{
-		LOGE("Failed to create replay thread\n");
+		SWAP_LOGE("Failed to create replay thread\n");
 		res = 1;
 		goto exit;
 	}
@@ -532,14 +532,14 @@ void stop_replay()
 	pthread_mutex_lock(&replay_thread_mutex);
 
 	if (manager.replay_thread == -1) {
-		LOGI("replay thread not running\n");
+		SWAP_LOGI("replay thread not running\n");
 		goto exit;
 	}
-	LOGI("stopping replay thread\n");
+	SWAP_LOGI("stopping replay thread\n");
 	pthread_cancel(manager.replay_thread);
 	pthread_join(manager.replay_thread, NULL);
 	manager.replay_thread = -1;
-	LOGI("replay thread joined\n");
+	SWAP_LOGI("replay thread joined\n");
 
 	reset_replay_event_seq(&prof_session.replay_event_seq);
 

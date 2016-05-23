@@ -55,7 +55,7 @@ struct thread *thread_ctor(void)
 void thread_dtor(struct thread *t)
 {
 	if (t->run_flag == 1)
-		LOGE("hanging thread: t=%p\n", t);
+		SWAP_LOGE("hanging thread: t=%p\n", t);
 
 	free(t);
 }

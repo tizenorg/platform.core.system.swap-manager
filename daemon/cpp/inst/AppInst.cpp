@@ -59,14 +59,14 @@ AppInst *AppInst::create(const AppInstInfo &info)
         app = new AppInstWeb();
         break;
     default:
-        LOGE("'app type' incorrect, type=%d\n", type);
+        SWAP_LOGE("'app type' incorrect, type=%d\n", type);
         return 0;
     }
 
     if (app) {
         int ret = app->init(info);
         if (ret) {
-            LOGE("[%s] initialization error, ret=%d\n", type2str(type), ret);
+            SWAP_LOGE("[%s] initialization error, ret=%d\n", type2str(type), ret);
             delete app;
             app = 0;
         }
@@ -75,7 +75,7 @@ AppInst *AppInst::create(const AppInstInfo &info)
     if (app) {
         int ret = Anr::add(getAnrName(info));
         if (ret)
-            LOGE("failed Anr::add: ret=%d\n", ret);
+            SWAP_LOGE("failed Anr::add: ret=%d\n", ret);
     }
 
     return app;
@@ -85,7 +85,7 @@ void AppInst::destroy(AppInst *app)
 {
     int ret = Anr::del(getAnrName(app->info()));
     if (ret)
-        LOGE("failed Anr::del: ret=%d\n", ret);
+        SWAP_LOGE("failed Anr::del: ret=%d\n", ret);
 
     app->uninit();
     delete app;

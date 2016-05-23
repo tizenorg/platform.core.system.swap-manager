@@ -140,13 +140,13 @@ int exec_app_tizen(const char *app_id, const char *exec_path)
 {
 	pid_t pid;
 
-	LOGI("exec %s\n", exec_path);
+	SWAP_LOGI("exec %s\n", exec_path);
 
 	if (exec_path == NULL || !strlen(exec_path)) {
-		LOGE("Executable path is not correct\n");
+		SWAP_LOGE("Executable path is not correct\n");
 		return -1;
 	}
-	LOGI("launch app path is %s, executable path is %s\n"
+	SWAP_LOGI("launch app path is %s, executable path is %s\n"
 	     "launch app name (%s), app_id (%s)\n",
 	     LAUNCH_APP_PATH, exec_path, LAUNCH_APP_NAME, app_id);
 
@@ -172,14 +172,14 @@ int exec_app_common(const char* exec_path)
 	pid_t pid;
 	char command[PATH_MAX];
 
-	LOGI("exec %s\n", exec_path);
+	SWAP_LOGI("exec %s\n", exec_path);
 	if (exec_path == NULL || !strlen(exec_path)) {
-		LOGE("Executable path is not correct\n");
+		SWAP_LOGE("Executable path is not correct\n");
 		return -1;
 	}
 
 	snprintf(command, sizeof(command), "%s", exec_path);
-	LOGI("cmd: <%s>\n", command);
+	SWAP_LOGI("cmd: <%s>\n", command);
 
 	pid = fork();
 	if (pid == -1)
@@ -198,7 +198,7 @@ int exec_app_web(const char *app_id)
 {
 	pid_t pid;
 
-	LOGI("wrt-launcher path is %s,\n"
+	SWAP_LOGI("wrt-launcher path is %s,\n"
 	     "wrt-launcher name (%s), app_id (%s)\n",
 	     WRT_LAUNCHER_PATH, WRT_LAUNCHER_NAME, app_id);
 
@@ -220,7 +220,7 @@ int exec_app_web(const char *app_id)
 		      app_id,
 		      NULL);
 		/* FIXME: If code flows here, it deserves greater attention */
-		LOGE("Cannot run exec!\n");
+		SWAP_LOGE("Cannot run exec!\n");
 		_Exit(EXIT_FAILURE);
 	}
 }
@@ -229,7 +229,7 @@ void kill_app_web(const char *app_id)
 {
 	pid_t pid;
 
-	LOGI("wrt-launcher path is %s,\n"
+	SWAP_LOGI("wrt-launcher path is %s,\n"
 	     "wrt-launcher name (%s), app_id (%s)\n",
 	     WRT_LAUNCHER_PATH, WRT_LAUNCHER_NAME, app_id);
 
@@ -250,7 +250,7 @@ void kill_app_web(const char *app_id)
 		      app_id,
 		      NULL);
 		/* FIXME: If code flows here, it deserves greater attention */
-		LOGE("Cannot run exec!\n");
+		SWAP_LOGE("Cannot run exec!\n");
 		_Exit(EXIT_FAILURE);
 	}
 }
@@ -269,11 +269,11 @@ static pid_t find_pid_from_path(const char *path)
 	int found, len = strlen(path);
 	pid_t pid = 0;
 
-	LOGI("look for <%s>\n", path);
+	SWAP_LOGI("look for <%s>\n", path);
 
 	proc = opendir(PROC_FS);
 	if (!proc) {
-		LOGE("cannot open proc fs <%s>\n", PROC_FS);
+		SWAP_LOGE("cannot open proc fs <%s>\n", PROC_FS);
 		goto out;
 	}
 
@@ -319,7 +319,7 @@ static pid_t get_pid_by_path(const char *binary_path)
 		len = strlen(binary_path);
 		real_path = malloc(len + sizeof(exe_line));
 		if (real_path == NULL) {
-			LOGE("cannot alloc memory\n");
+			SWAP_LOGE("cannot alloc memory\n");
 			return -1;
 		}
 		memcpy(real_path, binary_path, len + 1);
@@ -372,7 +372,7 @@ int kill_app(const char *binary_path)
 	pid_t pkg_pid;
 	char alter_bin_path[PATH_MAX];
 
-	LOGI("kill %s (%d)\n", binary_path, FINISH_SIG);
+	SWAP_LOGI("kill %s (%d)\n", binary_path, FINISH_SIG);
 
 	pkg_pid = get_pid_by_path(binary_path);
 
@@ -384,7 +384,7 @@ int kill_app(const char *binary_path)
 	if (pkg_pid != 0) {
 		if (kill(pkg_pid, FINISH_SIG) == -1) {
 			GETSTRERROR(errno, err_buf);
-			LOGE("cannot kill %d -%d errno<%s>\n", pkg_pid, FINISH_SIG,
+			SWAP_LOGE("cannot kill %d -%d errno<%s>\n", pkg_pid, FINISH_SIG,
 			     err_buf);
 			return -1;
 		} else {
@@ -392,12 +392,12 @@ int kill_app(const char *binary_path)
 			// returns control immediately after send signal
 			// without it app_launch returns err on start app
 			sleep(1);
-			LOGI("killed %d -%d\n", pkg_pid, FINISH_SIG);
+			SWAP_LOGI("killed %d -%d\n", pkg_pid, FINISH_SIG);
 		}
 	} else
-		LOGI("cannot kill <%s>; process not found\n", binary_path);
+		SWAP_LOGI("cannot kill <%s>; process not found\n", binary_path);
 
-	LOGI("kill< %s (%d)\n", binary_path, FINISH_SIG);
+	SWAP_LOGI("kill< %s (%d)\n", binary_path, FINISH_SIG);
 	return 0;
 }
 
@@ -489,6 +489,6 @@ void swap_usleep(useconds_t usec)
 	req.tv_sec = usec / 1000000;
 	req.tv_nsec = (usec % 1000000) * 1000;
 	if (nanosleep(&req, &rem) == -1) {
-		LOGW("sleep was terminated by signal\n");
+		SWAP_LOGW("sleep was terminated by signal\n");
 	}
 }

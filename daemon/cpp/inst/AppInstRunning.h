@@ -46,7 +46,7 @@ private:
                 /* if pid is empty string we should instrument all applications */
                 _pid = 0; /* posible it is not good idea set 0 */
         } else if (!str2pid(pid_st, _pid)) {
-            LOGE("[%s] error convert 'app ID to pid' <pid=%s>\n", type2str(AT_RUNNING), pid_st);
+            SWAP_LOGE("[%s] error convert 'app ID to pid' <pid=%s>\n", type2str(AT_RUNNING), pid_st);
             return -EINVAL;
         }
 

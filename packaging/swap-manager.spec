@@ -14,6 +14,8 @@ BuildRequires:  capi-system-info-devel
 BuildRequires:  capi-system-runtime-info-devel
 BuildRequires:  libwebsockets-devel
 BuildRequires:  wrt
+BuildRequires:  pkgconfig(dlog)
+BuildRequires:  libdlog
 %if "%{sec_product_feature_profile_wearable}" == "1"
 BuildRequires:  libjson-devel
 %else

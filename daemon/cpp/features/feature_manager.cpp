@@ -55,7 +55,7 @@ FeatureManager::ErrCode FeatureManager::init()
 
         ret = feature->init();
         if (ret) {
-            LOGE("Error init feature num=%d\n", i);
+            SWAP_LOGE("Error init feature num=%d\n", i);
             uninit();
             return Err;
         }
@@ -90,7 +90,7 @@ FeatureManager::ErrCode FeatureManager::start()
     lock_guard_mutex lock(_mutex);
 
     if (_st == On) {
-        LOGE("allredy start\n");
+        SWAP_LOGE("allredy start\n");
         return Err;
     }
 
@@ -109,7 +109,7 @@ FeatureManager::ErrCode FeatureManager::stop()
     lock_guard_mutex lock(_mutex);
 
     if (_st == Off) {
-        LOGE("allredy stop");
+        SWAP_LOGE("allredy stop");
         return Err;
     }
 
@@ -138,26 +138,26 @@ FeatureManager::ErrCode FeatureManager::doSetFeatures(const feature_bs &f)
             continue;
 
         if (_bs_init.test(i) == false) {
-            LOGE("features num=%d is not init\n", i);
+            SWAP_LOGE("features num=%d is not init\n", i);
             return Err;
         }
 
         Feature *feature = getFeature(i);
         if (feature == 0) {
-            LOGE("no features num=%d\n", i);
+            SWAP_LOGE("no features num=%d\n", i);
             return Err;
         }
 
         if (_bs_cur.test(i) == false) {
             int ret = feature->enable();
             if (ret) {
-                LOGE("features num=%d is not enable\n", i);
+                SWAP_LOGE("features num=%d is not enable\n", i);
                 return Err;
             }
         } else {
             int ret = feature->disable();
             if (ret) {
-                LOGE("features num=%d is not enable\n", i);
+                SWAP_LOGE("features num=%d is not enable\n", i);
                 return Err;
             }
         }
@@ -176,14 +176,14 @@ void FeatureManager::shutdownFeatures()
 
         Feature *feature = getFeature(i);
         if (feature == 0) {
-            LOGE("no features num=%d\n", i);
+            SWAP_LOGE("no features num=%d\n", i);
             continue;
         }
 
         if (_bs_cur.test(i)) {
             int ret = feature->disable();
             if (ret) {
-                LOGE("features num=%d is not enable\n", i);
+                SWAP_LOGE("features num=%d is not enable\n", i);
                 continue;
             }
         }
@@ -194,7 +194,7 @@ void FeatureManager::shutdownFeatures()
 
 FeatureManager::ErrCode FeatureManager::setFeatures(const feature_bs &f)
 {
-    LOGI("%s\n", f.to_string().c_str());
+    SWAP_LOGI("%s\n", f.to_string().c_str());
 
     lock_guard_mutex lock(_mutex);
 
@@ -221,12 +221,12 @@ uint64_t FeatureRegister::_f1 = 0;
 FeatureRegister::FeatureRegister(Feature *feature, size_t num, const char *name)
 {
     if (num >= FEATURES_MAX) {
-        LOGI("invalid feature num=%u\n", num);
+        SWAP_LOGI("invalid feature num=%u\n", num);
         return;
     }
 
     if (_features[num] != 0) {
-        LOGI("feature[%u] is use (%s)u\n", num, featureName(num).c_str());
+        SWAP_LOGI("feature[%u] is use (%s)u\n", num, featureName(num).c_str());
         return;
     }
 

@@ -56,7 +56,7 @@ static size_t fsize(int fd)
 {
 	struct stat buf;
 	if (fstat(fd, &buf) != 0) {
-		LOGE("cannot get file size\n");
+		SWAP_LOGE("cannot get file size\n");
 		return 0;
 	}
 	return buf.st_size;
@@ -144,7 +144,7 @@ static void suffix_filename(char buf[PATH_MAX], const char *filename)
 	size_t len = strlen(use_filename) + 1;
 	strncpy(buf, use_filename, len);
 	if (len > strlen(buf) + 1)
-		LOGE("too small buf <%s>\n", buf);
+		SWAP_LOGE("too small buf <%s>\n", buf);
 }
 
 void get_build_dir(char builddir[PATH_MAX], const char *filename)
@@ -175,11 +175,11 @@ void get_build_dir(char builddir[PATH_MAX], const char *filename)
 				p = 1 + memchr(p, '\0', debug_section_end - p);
 			}
 		} else {
-			LOGW("cannot debug_header <%s>\n", adj_filename);
+			SWAP_LOGW("cannot debug_header <%s>\n", adj_filename);
 		}
 		munmap(filemem, len);
 	} else {
-		LOGW("cannot mmap file <%s>\n", adj_filename);
+		SWAP_LOGW("cannot mmap file <%s>\n", adj_filename);
 	}
 	*builddir = '\0';
 }

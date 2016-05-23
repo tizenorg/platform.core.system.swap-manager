@@ -61,7 +61,7 @@ static void *transfer_thread(void *arg)
 	//init pipe
 	if (pipe(fd_pipe) != 0) {
 		/* TODO posible need total instrumentation stop up there */
-		LOGE("can not pipe!\n");
+		SWAP_LOGE("can not pipe!\n");
 		return NULL;
 	}
 
@@ -70,7 +70,7 @@ static void *transfer_thread(void *arg)
 
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 
-	LOGI("transfer thread started\n");
+	SWAP_LOGI("transfer thread started\n");
 
 	while (1) {
 		nrd = splice(manager.buf_fd, NULL,
@@ -79,11 +79,11 @@ static void *transfer_thread(void *arg)
 		if (nrd == -1) {
 			int errsv = errno;
 			if (errsv == EAGAIN) {
-				LOGI("No more data to read\n");
+				SWAP_LOGI("No more data to read\n");
 				break;
 			}
 			GETSTRERROR(errsv, err_buf);
-			LOGE("Cannot splice read: %s\n", err_buf);
+			SWAP_LOGE("Cannot splice read: %s\n", err_buf);
 			goto thread_exit;
 		}
 
@@ -93,18 +93,18 @@ static void *transfer_thread(void *arg)
 
 		if (nwr == -1) {
 			GETSTRERROR(errno, buf);
-			LOGE("Cannot splice write: %s\n", buf);
+			SWAP_LOGE("Cannot splice write: %s\n", buf);
 			goto thread_exit;
 		}
 		if (nwr != nrd) {
-			LOGW("nrd - nwr = %d\n", nrd - nwr);
+			SWAP_LOGW("nrd - nwr = %d\n", nrd - nwr);
 		}
 	}
 
 	thread_exit:
 	pthread_cleanup_pop(1);
 
-	LOGI("transfer thread finished. return\n");
+	SWAP_LOGI("transfer thread finished. return\n");
 
 	return NULL;
 }
@@ -114,18 +114,18 @@ int start_transfer(void)
 	int saved_flags;
 
 	if (manager.host.data_socket == -1) {
-		LOGW("won't start transfer thread: data socket isn't open\n");
+		SWAP_LOGW("won't start transfer thread: data socket isn't open\n");
 		return 0;
 	}
 
 	if (manager.transfer_thread != -1) { // already started
-		LOGW("transfer already running\n");
+		SWAP_LOGW("transfer already running\n");
 		stop_transfer();
 	}
 
 	saved_flags = fcntl(manager.buf_fd, F_GETFL);
 	if (fcntl(manager.buf_fd, F_SETFL, saved_flags & ~O_NONBLOCK) == -1) {
-		LOGE("can not set buf_fd flags\n");
+		SWAP_LOGE("can not set buf_fd flags\n");
 		return -1;
 	}
 
@@ -134,7 +134,7 @@ int start_transfer(void)
 			  transfer_thread,
 			  NULL) < 0)
 	{
-		LOGE("Failed to create transfer thread\n");
+		SWAP_LOGE("Failed to create transfer thread\n");
 		return -1;
 	}
 
@@ -147,25 +147,25 @@ void stop_transfer(void)
 	int ret = 0;
 
 	if (manager.transfer_thread == -1) {
-		LOGI("transfer thread not running\n");
+		SWAP_LOGI("transfer thread not running\n");
 		return;
 	}
-	LOGI("stopping transfer\n");
+	SWAP_LOGI("stopping transfer\n");
 
 	flush_buf();
 	saved_flags = fcntl(manager.buf_fd, F_GETFL);
 	if (fcntl(manager.buf_fd, F_SETFL, saved_flags | O_NONBLOCK) == -1) {
 		/* TODO do something on error */
-		LOGE("can not set buf_fd flags\n");
+		SWAP_LOGE("can not set buf_fd flags\n");
 	}
 	wake_up_buf();
 
-	LOGI("joining thread...\n");
+	SWAP_LOGI("joining thread...\n");
 	ret = pthread_join(manager.transfer_thread, NULL);
 	if (ret != 0)
-		LOGW("pthread_join: unknown error %d\n", ret);
+		SWAP_LOGW("pthread_join: unknown error %d\n", ret);
 
 	manager.transfer_thread = -1;
 
-	LOGI("transfer thread stoped\n");
+	SWAP_LOGI("transfer thread stoped\n");
 }

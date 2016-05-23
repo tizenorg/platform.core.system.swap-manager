@@ -49,18 +49,18 @@ static inline int close_on_exec_dup(int old, int new)
 	if (dup2(old, new) != -1) {
 		unsigned long flags = fcntl(new, F_GETFD);
 		if (flags == -1) {
-			LOGE("can not get flags fd #%d errno <%d>\n", new,
+			SWAP_LOGE("can not get flags fd #%d errno <%d>\n", new,
 			     errno);
 			goto err_ret;
 		}
 
 		if (fcntl(new, F_SETFD, flags | FD_CLOEXEC) == -1) {
-			LOGE("can not get flags fd #%d errno <%d>\n", new,
+			SWAP_LOGE("can not get flags fd #%d errno <%d>\n", new,
 			     errno);
 			goto err_ret;
 		}
 	} else {
-		LOGE("dup2 fail\n");
+		SWAP_LOGE("dup2 fail\n");
 		goto err_ret;
 	}
 
@@ -87,7 +87,7 @@ int initialize_log(void)
 	int fd_null = -1;
 
 	if (remove(DEBUG_LOGFILE))
-		LOGE("remove(%s), return error, errno=%d\n",
+		SWAP_LOGE("remove(%s), return error, errno=%d\n",
 		     DEBUG_LOGFILE, errno);
 
 	fd = open(DEBUG_LOGFILE, O_WRONLY | O_CREAT | O_TRUNC, 0777);
@@ -96,7 +96,7 @@ int initialize_log(void)
 	if (fd != -1 && fd_null != -1) {
 		if (close_on_exec_dup(fd_null, 1) != 0 ||
 		    close_on_exec_dup(fd, 2) != 0) {
-			LOGE("duplicate fd fail\n");
+			SWAP_LOGE("duplicate fd fail\n");
 			ret = -1;
 		}
 	} else {

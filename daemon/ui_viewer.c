@@ -55,7 +55,7 @@ int ui_viewer_set_app_info(const struct app_info_t *app_info)
 	uint64_t main_offset;
 
 	if (app_info->setup_data.data == NULL) {
-		LOGE("Setup data path is not correct\n");
+		SWAP_LOGE("Setup data path is not correct\n");
 		ret = -EINVAL;
 		goto fail;
 	}
@@ -63,7 +63,7 @@ int ui_viewer_set_app_info(const struct app_info_t *app_info)
 	main_offset = *(uint64_t*)app_info->setup_data.data;
 
 	if (app_info->exe_path == NULL || !strlen(app_info->exe_path)) {
-		LOGE("Executable path is not correct\n");
+		SWAP_LOGE("Executable path is not correct\n");
 		ret = -EINVAL;
 		goto fail;
 	}
@@ -73,12 +73,12 @@ int ui_viewer_set_app_info(const struct app_info_t *app_info)
 		c = fprintf(fp, "0x%lx:%s\n", (unsigned long)main_offset,
 			    app_info->exe_path);
 		if (c < 0) {
-			LOGE("Can't write to file: %s\n", APP_INFO_FILE);
+			SWAP_LOGE("Can't write to file: %s\n", APP_INFO_FILE);
 			ret = -EIO;
 		}
 		fclose(fp);
 	} else {
-		LOGE("Can't open file: %s\n", APP_INFO_FILE);
+		SWAP_LOGE("Can't open file: %s\n", APP_INFO_FILE);
 		ret = -ENOENT;
 	}
 fail:
