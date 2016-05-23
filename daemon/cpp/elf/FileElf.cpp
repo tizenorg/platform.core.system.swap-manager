@@ -12,28 +12,28 @@ static int checkFhdr(const Elf32_Ehdr *fhdr)
         (fhdr->e_ident[EI_MAG1] != ELFMAG1) ||
         (fhdr->e_ident[EI_MAG2] != ELFMAG2) ||
         (fhdr->e_ident[EI_MAG3] != ELFMAG3)) {
-         LOGE("Unsupported file format! e_ident: %02x %c %c %c.\n",
+         SWAP_LOGE("Unsupported file format! e_ident: %02x %c %c %c.\n",
                 fhdr->e_ident[0], fhdr->e_ident[1], fhdr->e_ident[2], fhdr->e_ident[3]);
          return -EINVAL;
     }
 
     if (fhdr->e_ident[EI_CLASS] != ELFCLASS32) {
-         LOGE("Unsupported ELF file class: %u!\n", fhdr->e_ident[EI_CLASS]);
+         SWAP_LOGE("Unsupported ELF file class: %u!\n", fhdr->e_ident[EI_CLASS]);
          return -EINVAL;
     }
 
     if (fhdr->e_ident[EI_VERSION] != EV_CURRENT) {
-         LOGE("Unsupported ELF header version: %u!\n", fhdr->e_ident[EI_VERSION]);
+         SWAP_LOGE("Unsupported ELF header version: %u!\n", fhdr->e_ident[EI_VERSION]);
          return -EINVAL;
     }
 
     if (fhdr->e_ehsize < sizeof(Elf32_Ehdr)) {
-         LOGE("Invalid ELF header length: %hu\n!", fhdr->e_ehsize);
+         SWAP_LOGE("Invalid ELF header length: %hu\n!", fhdr->e_ehsize);
          return -EINVAL;
     }
 
     if (fhdr->e_version != EV_CURRENT) {
-         LOGE("Unsupported ELF version: %02x!\n", fhdr->e_version);
+         SWAP_LOGE("Unsupported ELF version: %02x!\n", fhdr->e_version);
          return -EINVAL;
     }
 
@@ -73,7 +73,7 @@ FileElf::Data *FileElf::getSection(const Elf32_Shdr *shdr)
     // read section
     int ret = read(shdr->sh_offset, data->data, data->size);
     if (ret) {
-        LOGE("Failed to read section. Error %d!\n", ret);
+        SWAP_LOGE("Failed to read section. Error %d!\n", ret);
         putSection(data);
         return 0;
     }
@@ -86,7 +86,7 @@ FileElf::Data *FileElf::getSection(const std::string &name)
 {
     const Elf32_Shdr *shdr = getShdr(name);
     if (shdr == 0) {
-        LOGE("'%s' section is not found\n", name.c_str());
+        SWAP_LOGE("'%s' section is not found\n", name.c_str());
         return 0;
     }
 
@@ -109,19 +109,19 @@ int FileElf::readSectionsInfo()
     // read shstrtab section header
     int ret = read(offsetStr, &shdrStr, sizeof(shdrStr));
     if (ret) {
-        LOGE("Failed to read section header 'shstrtab'. Error %d!\n", ret);
+        SWAP_LOGE("Failed to read section header 'shstrtab'. Error %d!\n", ret);
         return ret;
     }
 
     // check shstrtab section
     if (shdrStr.sh_type != SHT_STRTAB) {
-         LOGE("Failed to find section header table entry for shstrtab with section names!\n");
+         SWAP_LOGE("Failed to find section header table entry for shstrtab with section names!\n");
          return -EINVAL;
     }
 
     Data *data = getSection(&shdrStr);
     if (data == 0) {
-        LOGE("get data 'shstrtab'' section %d\n");
+        SWAP_LOGE("get data 'shstrtab'' section %d\n");
         return -ENOMEM;
     }
 
@@ -139,14 +139,14 @@ int FileElf::readSectionsInfo()
         // read section header
         int ret = read(offset, &shdr, sizeof(shdr));
         if (ret) {
-            LOGE("Failed to read section header %d. Error %d!\n", i, ret);
+            SWAP_LOGE("Failed to read section header %d. Error %d!\n", i, ret);
             goto putSect;
         }
 
         // read section name
         const char *name = strData + shdr.sh_name;
         if (checkStr(name, strDataEnd) == false) {
-            LOGE("Failed to get section name %d.!\n", i);
+            SWAP_LOGE("Failed to get section name %d.!\n", i);
             ret = -EINVAL;
             goto putSect;
         }
@@ -193,7 +193,7 @@ int FileElf::makeRelocMap(const uint8_t jump_slot)
         return -ENOMEM;
 
     if (dataRel->size % sizeof(Elf32_Rel)) {
-        LOGE("'%s' section incorrect\n", nameRel);
+        SWAP_LOGE("'%s' section incorrect\n", nameRel);
         ret = -EINVAL;
         goto putSectRel;
     }
@@ -209,7 +209,7 @@ int FileElf::makeRelocMap(const uint8_t jump_slot)
 
     // section '.dynstr'
     if (dataSym->size % sizeof(Elf32_Sym)) {
-        LOGE("'%s' section incorrect\n", nameSym);
+        SWAP_LOGE("'%s' section incorrect\n", nameSym);
         ret = -EINVAL;
         goto putSectSym;
     }
@@ -231,7 +231,7 @@ int FileElf::makeRelocMap(const uint8_t jump_slot)
             uint32_t symId = ELF32_R_SYM(rel[i].r_info);
 
             if (symId >= symCnt) {
-                LOGE("symID is very big, symId=%lx\n", symId);
+                SWAP_LOGE("symID is very big, symId=%lx\n", symId);
                 continue;
             }
 
@@ -240,7 +240,7 @@ int FileElf::makeRelocMap(const uint8_t jump_slot)
             // read symbol name
             const char *name = strBegin + strOff;
             if (checkStr(name, strEnd) == false) {
-                LOGE("Failed to get symbol name %d.!\n", strOff);
+                SWAP_LOGE("Failed to get symbol name %d.!\n", strOff);
                 continue;
             }
 
@@ -337,7 +337,7 @@ int FileElf::doGetAddrPlt386(const char *names[], uint32_t addrs[], size_t cnt)
 
     ret = get_plt_addrs(filename.c_str(), names, cnt, &elf_addrs);
     if (ret != 0) {
-        LOGE("Error getting .plt: %s\n", get_str_error(ret));
+        SWAP_LOGE("Error getting .plt: %s\n", get_str_error(ret));
         free(elf_addrs);
         return -EINVAL;
     }
@@ -359,7 +359,7 @@ int FileElf::getAddrPlt(const char *names[], uint32_t addrs[], size_t cnt)
     case EM_386:
         return doGetAddrPlt386(names, addrs, cnt);
     default:
-        LOGE("mach[%lu] is not support\n", _fhdr.e_machine);
+        SWAP_LOGE("mach[%lu] is not support\n", _fhdr.e_machine);
     }
 
     return -EINVAL;
@@ -373,7 +373,7 @@ int FileElf::doOpen()
 {
     int ret = read(0, &_fhdr, sizeof(_fhdr));
     if (ret) {
-        LOGE("Failed to read file's header. Error %d!\n", ret);
+        SWAP_LOGE("Failed to read file's header. Error %d!\n", ret);
         return -errno;
     }
 

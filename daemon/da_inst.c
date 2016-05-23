@@ -109,7 +109,7 @@ static struct data_list_t *new_data(void)
 		lib->size = 0;
 		lib->list = NULL;
 	} else {
-		LOGE("Cannot allocate memory for struct data_list_t\n");
+		SWAP_LOGE("Cannot allocate memory for struct data_list_t\n");
 	}
 
 	return lib;
@@ -121,13 +121,13 @@ struct lib_list_t *new_lib(void)
 
 	lib = (struct lib_list_t *)new_data();
 	if (lib == NULL) {
-		LOGE("cannot create lib\n");
+		SWAP_LOGE("cannot create lib\n");
 		goto exit_fail;
 	}
 
 	lib->lib = malloc(sizeof(*lib->lib));
 	if (lib->lib == NULL) {
-		LOGE("can not malloc buffer for probe_list_t lib\n");
+		SWAP_LOGE("can not malloc buffer for probe_list_t lib\n");
 		goto exit_fail_free_lib;
 	}
 
@@ -148,13 +148,13 @@ struct app_list_t *new_app(void)
 
 	app = (struct app_list_t *)new_data();
 	if (app == NULL) {
-		LOGE("cannot create app\n");
+		SWAP_LOGE("cannot create app\n");
 		goto exit_fail;
 	}
 
 	app->app = malloc(sizeof(*app->app));
 	if (app->app == NULL) {
-		LOGE("can not malloc buffer for app_info_t app\n");
+		SWAP_LOGE("can not malloc buffer for app_info_t app\n");
 		goto exit_fail_free_app;
 	}
 
@@ -578,7 +578,7 @@ static char *pack_data_list_to_array(struct data_list_t *list, uint32_t *len, ui
 			for (p = list; p != NULL; p = p->next)
 				to = pack_data_to_array(p, to, pack);
 		} else {
-			LOGE("can not malloc buffer for data list packing\n");
+			SWAP_LOGE("can not malloc buffer for data list packing\n");
 		}
 	}
 	return res;
@@ -627,13 +627,13 @@ static int generate_msg(struct msg_t **msg, struct lib_list_t *lib_list,
 	       /* applications size */
 	       apps_size + sizeof(((struct user_space_inst_t *)0)->app_num);
 
-	LOGI("size = %d, apps= %d, libs = %d, ld_libs = %d\n", size, apps_count,
+	SWAP_LOGI("size = %d, apps= %d, libs = %d, ld_libs = %d\n", size, apps_count,
 	     libs_count, ld_libs_count);
 
 	// add header size
 	*msg = malloc(size + sizeof(**msg));
 	if (*msg == NULL) {
-		LOGE("Cannot allocate memory for struct msg_t \n");
+		SWAP_LOGE("Cannot allocate memory for struct msg_t \n");
 		res = 0;
 		goto exit_free;
 	}
@@ -720,7 +720,7 @@ static int add_bins_to_preload(struct user_space_inst_t *us_inst)
 		fwrite(p, strlen(p) + 1, 1, preload_p);
 		fflush(preload_p);
 
-		LOGI("lib #%u <%s>\n", total_maps_count, lib->lib->bin_path);
+		SWAP_LOGI("lib #%u <%s>\n", total_maps_count, lib->lib->bin_path);
 		lib = (struct lib_list_t *)lib->next;
 	}
 
@@ -731,7 +731,7 @@ static int add_bins_to_preload(struct user_space_inst_t *us_inst)
 			fwrite(resolved, strlen(resolved) + 1, 1, preload_p);
 			fflush(preload_p);
 
-			LOGI("app #%u <%s>\n", total_maps_count, resolved);
+			SWAP_LOGI("app #%u <%s>\n", total_maps_count, resolved);
 		}
 
 		app = (struct app_list_t *)app->next;
@@ -811,13 +811,13 @@ int msg_start(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 
 	if (!parse_app_inst_list(data, &us_inst->app_num, &us_inst->app_inst_list)) {
 		*err = ERR_WRONG_MESSAGE_FORMAT;
-		LOGE("parse app inst\n");
+		SWAP_LOGE("parse app inst\n");
 		res = 1;
 		goto msg_start_exit;
 	}
 
 	if (!add_preload_probes(&us_inst->lib_inst_list)) {
-		LOGE("cannot add preload probe\n");
+		SWAP_LOGE("cannot add preload probe\n");
 		res = 1;
 		goto msg_start_exit;
 	}
@@ -835,7 +835,7 @@ int msg_start(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 	}
 
 	if (write_bins_to_preload(us_inst))
-		LOGE("Error adding binaries\n");
+		SWAP_LOGE("Error adding binaries\n");
 
 msg_start_exit:
 	/* unlock list access */
@@ -858,13 +858,13 @@ int msg_swap_inst_add(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 
 	if (!parse_lib_inst_list(data, &lib_num, &us_inst->lib_inst_list)) {
 		*err = ERR_WRONG_MESSAGE_FORMAT;
-		LOGE("parse lib inst list fail\n");
+		SWAP_LOGE("parse lib inst list fail\n");
 		res = 1;
 		goto msg_swap_inst_add_exit;
 	}
 	// rm probes from new if its presents in cur
 	if (!resolve_collisions_for_add_msg(&us_inst->lib_inst_list, &new_lib_inst_list)) {
-		LOGE("resolve collision\n");
+		SWAP_LOGE("resolve collision\n");
 		res = 1;
 		goto msg_swap_inst_add_exit;
 	};
@@ -881,7 +881,7 @@ int msg_swap_inst_add(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 		(struct data_list_t **)&new_lib_inst_list,
 		cmp_libs))
 	{
-		LOGE("data move\n");
+		SWAP_LOGE("data move\n");
 		res = 1;
 		goto msg_swap_inst_add_exit;
 	};
@@ -892,7 +892,7 @@ int msg_swap_inst_add(struct msg_buf_t *data, struct user_space_inst_t *us_inst,
 	*err = ERR_NO;
 
 	if (write_bins_to_preload(us_inst))
-		LOGE("Error adding binaries\n");
+		SWAP_LOGE("Error adding binaries\n");
 
 msg_swap_inst_add_exit:
 	/* unlock list access */
@@ -914,20 +914,20 @@ int msg_swap_inst_remove(struct msg_buf_t *data, struct user_space_inst_t *us_in
 
 	if (!parse_lib_inst_list(data, &lib_num, &new_lib_inst_list)) {
 		*err = ERR_WRONG_MESSAGE_FORMAT;
-		LOGE("parse lib inst\n");
+		SWAP_LOGE("parse lib inst\n");
 		res = 1;
 		goto msg_swap_inst_remove_exit;
 	}
 
 	if (!resolve_collisions_for_rm_msg(&us_inst->lib_inst_list, &new_lib_inst_list)) {
-		LOGE("resolve collisions\n");
+		SWAP_LOGE("resolve collisions\n");
 		res = 1;
 		goto msg_swap_inst_remove_exit;
 	}
 
 	if (us_inst->app_inst_list != NULL) {
 		if (!generate_msg(msg, new_lib_inst_list, NULL, us_inst->app_inst_list)) {
-			LOGE("generate msg\n");
+			SWAP_LOGE("generate msg\n");
 			res = 1;
 			goto msg_swap_inst_remove_exit;
 		}
@@ -940,7 +940,7 @@ int msg_swap_inst_remove(struct msg_buf_t *data, struct user_space_inst_t *us_in
 	*err = ERR_NO;
 
 	if (write_bins_to_preload(us_inst))
-		LOGE("Error adding binaries\n");
+		SWAP_LOGE("Error adding binaries\n");
 
 msg_swap_inst_remove_exit:
 	/* unlock list access */
@@ -951,27 +951,27 @@ msg_swap_inst_remove_exit:
 
 void msg_swap_free_all_data(struct user_space_inst_t *us_inst)
 {
-	LOGI("new_lib_inst_list %p\n", new_lib_inst_list);
+	SWAP_LOGI("new_lib_inst_list %p\n", new_lib_inst_list);
 	if (new_lib_inst_list != NULL) {
-		LOGI("free new_lib_inst_list start\n");
+		SWAP_LOGI("free new_lib_inst_list start\n");
 		free_data_list((struct data_list_t **)&new_lib_inst_list);
 		new_lib_inst_list = NULL;
-		LOGI("free new_lib_inst_list finish\n");
+		SWAP_LOGI("free new_lib_inst_list finish\n");
 	}
 
-	LOGI("us_inst->lib_inst_list %p\n", us_inst->lib_inst_list);
+	SWAP_LOGI("us_inst->lib_inst_list %p\n", us_inst->lib_inst_list);
 	if (us_inst->lib_inst_list != NULL) {
-		LOGI("free us_inst->lib_inst_list start\n");
+		SWAP_LOGI("free us_inst->lib_inst_list start\n");
 		free_data_list((struct data_list_t **)&us_inst->lib_inst_list);
 		us_inst->lib_inst_list = NULL;
-		LOGI("free us_isnt->lib_inst_list finish\n");
+		SWAP_LOGI("free us_isnt->lib_inst_list finish\n");
 	}
 
-	LOGI("us_inst->app_inst_list %p\n", us_inst->app_inst_list);
+	SWAP_LOGI("us_inst->app_inst_list %p\n", us_inst->app_inst_list);
 	if (us_inst->app_inst_list != NULL) {
-		LOGI("free us_inst->app_inst_list start\n");
+		SWAP_LOGI("free us_inst->app_inst_list start\n");
 		free_data_list((struct data_list_t **)&us_inst->app_inst_list);
-		LOGI("free us_inst->app_isnt_list finish\n");
+		SWAP_LOGI("free us_inst->app_isnt_list finish\n");
 	}
 }
 
@@ -996,7 +996,7 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 
 	for (i = 0; i != feature_to_data_count; i++) {
 		f = feature_to_data[i];
-		LOGI("check feature %016X:%016X\n", f.feature_value_1,
+		SWAP_LOGI("check feature %016X:%016X\n", f.feature_value_1,
 		     f.feature_value_0);
 		if ((f.feature_value_0 & to_enable_features_0) ||
 		    (f.feature_value_1 & to_enable_features_1)) {
@@ -1004,7 +1004,7 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 
 			feature_code_str(f.feature_value_0, f.feature_value_1, &buf[0],
 					 sizeof(buf));
-			LOGI("Set LD probes for %016LX:%016LX <%s>\n",
+			SWAP_LOGI("Set LD probes for %016LX:%016LX <%s>\n",
 			     f.feature_value_1, f.feature_value_0, &buf[0]);
 
 			feature_add_lib_inst_list(f.feature_ld, &ld_lib_inst_list_new_add);
@@ -1020,7 +1020,7 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 
 			feature_code_str(f.feature_value_0, f.feature_value_1, &buf[0],
 					 sizeof(buf));
-			LOGI("Remove LD probes for %016LX:%016LX <%s>\n",
+			SWAP_LOGI("Remove LD probes for %016LX:%016LX <%s>\n",
 			     f.feature_value_1, f.feature_value_0, &buf[0]);
 
 			feature_add_lib_inst_list(f.feature_ld, &ld_lib_inst_list_new_remove);
@@ -1030,7 +1030,7 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 	/* === ld preload add probes === */
 	// rm probes from new if its presents in cur
 	if (!resolve_collisions_for_add_msg(&us_inst->ld_lib_inst_list, &ld_lib_inst_list_new_add)) {
-		LOGE("resolve collision\n");
+		SWAP_LOGE("resolve collision\n");
 		res = 1;
 		goto msg_swap_inst_add_exit;
 	};
@@ -1047,7 +1047,7 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 		(struct data_list_t **)&ld_lib_inst_list_new_add,
 		cmp_libs))
 	{
-		LOGE("data move\n");
+		SWAP_LOGE("data move\n");
 		res = 1;
 		goto msg_swap_inst_add_exit;
 	};
@@ -1055,7 +1055,7 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 	/* === ld preload remove probes === */
 	/* rm probes from new if its presents in cur */
 	if (!resolve_collisions_for_rm_msg(&us_inst->ld_lib_inst_list, &ld_lib_inst_list_new_remove)) {
-		LOGE("resolve collision\n");
+		SWAP_LOGE("resolve collision\n");
 		res = 1;
 		goto msg_swap_inst_add_exit;
 	};
@@ -1076,7 +1076,7 @@ int ld_add_probes_by_feature(uint64_t to_enable_features_0,
 
 
     if (write_bins_to_preload(us_inst))
-        LOGE("Error adding binaries\n");
+        SWAP_LOGE("Error adding binaries\n");
 
 msg_swap_inst_add_exit:
 	/* unlock list access */

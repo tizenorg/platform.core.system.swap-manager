@@ -177,7 +177,7 @@ static struct target *target_malloc(void)
 			target_clean(&target_array[i]);
 			thread_dtor(target_array[i].thread);
 			if (target_use[i] == 0)
-				LOGE("double free t=%p\n", &target_array[i]);
+				SWAP_LOGE("double free t=%p\n", &target_array[i]);
 			target_use[i] = 0;
 		}
 	}
@@ -200,7 +200,7 @@ static void target_free(struct target *t)
 
 	target_array_lock();
 	if (target_use[id] == 0)
-		LOGE("double free t=%p\n", t);
+		SWAP_LOGE("double free t=%p\n", t);
 	target_use[id] = 0;
 	target_array_unlock();
 }
@@ -288,18 +288,18 @@ void target_wait_all(void)
 
 	target_array_lock();
 	for (i = 0; i < MAX_TARGET_COUNT; ++i) {
-		LOGI("target_use [%d] = %d\n", i, target_use[i]);
+		SWAP_LOGI("target_use [%d] = %d\n", i, target_use[i]);
 		if (target_use[i] == 0)
 			continue;
 
 		t = target_get(i);
 		if (close(t->socket) != 0) {
-			LOGW("target socket already closed %u:%u\n", (unsigned int)t->pid, (unsigned int)t->ppid);
+			SWAP_LOGW("target socket already closed %u:%u\n", (unsigned int)t->pid, (unsigned int)t->ppid);
 		}
 
-		LOGI("join recv thread [%d] %u:%u is started\n", i, (unsigned int)t->pid, (unsigned int)t->ppid);
+		SWAP_LOGI("join recv thread [%d] %u:%u is started\n", i, (unsigned int)t->pid, (unsigned int)t->ppid);
 		target_wait(t);
-		LOGI("join recv thread [%d] %u:%u done\n", i, (unsigned int)t->pid, (unsigned int)t->ppid);
+		SWAP_LOGI("join recv thread [%d] %u:%u done\n", i, (unsigned int)t->pid, (unsigned int)t->ppid);
 	}
 
 	target_array_unlock();
@@ -309,12 +309,12 @@ void target_wait_all(void)
 			continue;
 		t = target_get(i);
 		while (t->event_fd_released != 1) {
-			LOGI("wait uninit [%d] %u:%u\n", i, t->pid, t->ppid);
+			SWAP_LOGI("wait uninit [%d] %u:%u\n", i, t->pid, t->ppid);
 			sleep(1);
 		}
-		LOGI("target destroy [%d] start\n", i);
+		SWAP_LOGI("target destroy [%d] start\n", i);
 		target_dtor(t);
-		LOGI("target destroy [%d] done\n", i);
+		SWAP_LOGI("target destroy [%d] done\n", i);
 		target_use[i] = 0;
 	}
 }

@@ -50,7 +50,7 @@ static int addApp(const AppInstTizen &app)
 
     int ret = write_to_file(path_cmd, cmd);
     if (ret < 0) {
-        LOGE("write to file '%s', cmd='%s'\n", path_cmd, cmd.c_str());
+        SWAP_LOGE("write to file '%s', cmd='%s'\n", path_cmd, cmd.c_str());
         return ret;
     }
 
@@ -80,7 +80,7 @@ static int instApps()
     if (ret) {
         int err = rmAppAll();
         if (err)
-            LOGE("cannot all apps remove, err=%d\n", err);
+            SWAP_LOGE("cannot all apps remove, err=%d\n", err);
     }
 
     return ret;
@@ -90,7 +90,7 @@ static int nspEnable()
 {
     int ret = write_to_file(path_enabled, "1");
     if (ret < 0) {
-        LOGE("cannot NSP enable\n");
+        SWAP_LOGE("cannot NSP enable\n");
         return ret;
     }
 
@@ -101,7 +101,7 @@ static int nspDisable()
 {
     int ret = write_to_file(path_enabled, "0");
     if (ret < 0) {
-        LOGE("cannot NSP enable\n");
+        SWAP_LOGE("cannot NSP enable\n");
         return ret;
     }
 
@@ -113,7 +113,7 @@ static uint32_t getAddrPlt(const char *path, const char *name)
     FileElf elf;
 
     if (elf.open(path)) {
-        LOGE("cannot open ELF file '%s'\n", path);
+        SWAP_LOGE("cannot open ELF file '%s'\n", path);
         return 0;
     }
 
@@ -131,7 +131,7 @@ static int initLibAppCore()
                                 getAddrPlt(PATH_LIBAPPCORE_EFL, "appcore_init");
 
     if (appcoreInitAddr == 0) {
-        LOGE("not found 'appcore_init@plt' addr in '%s'\n", PATH_LIBAPPCORE_EFL);
+        SWAP_LOGE("not found 'appcore_init@plt' addr in '%s'\n", PATH_LIBAPPCORE_EFL);
         return -EINVAL;
     }
 
@@ -140,7 +140,7 @@ static int initLibAppCore()
                             getAddrPlt(PATH_LIBAPPCORE_EFL, "elm_run");
 
     if (elmRunAddr == 0) {
-        LOGE("not found 'elm_run@plt' addr in '%s'\n", PATH_LIBAPPCORE_EFL);
+        SWAP_LOGE("not found 'elm_run@plt' addr in '%s'\n", PATH_LIBAPPCORE_EFL);
         return -EINVAL;
     }
 
@@ -155,7 +155,7 @@ static int initLibAppCore()
 
     int ret = write_to_file(path_cmd, cmd);
     if (ret < 0) {
-        LOGE("write to file '%s', cmd='%s'\n", path_cmd, cmd.c_str());
+        SWAP_LOGE("write to file '%s', cmd='%s'\n", path_cmd, cmd.c_str());
         return ret;
     }
 
@@ -169,7 +169,7 @@ static int initLpad()
                             getAddrPlt(PATH_LAUNCHPAD, "dlopen");
 
     if (dlopenAddr == 0) {
-        LOGE("not found 'dlopen@plt' addr in '%s'\n", PATH_LAUNCHPAD);
+        SWAP_LOGE("not found 'dlopen@plt' addr in '%s'\n", PATH_LAUNCHPAD);
         return -EINVAL;
     }
 
@@ -178,7 +178,7 @@ static int initLpad()
                             getAddrPlt(PATH_LAUNCHPAD, "dlsym");
 
     if (dlopenAddr == 0) {
-        LOGE("not found 'dlsym@plt' addr in '%s'\n", PATH_LAUNCHPAD);
+        SWAP_LOGE("not found 'dlsym@plt' addr in '%s'\n", PATH_LAUNCHPAD);
         return -EINVAL;
     }
 
@@ -190,7 +190,7 @@ static int initLpad()
 
     int ret = write_to_file(path_cmd, cmd);
     if (ret < 0) {
-        LOGE("write to file '%s', cmd='%s'\n", path_cmd, cmd.c_str());
+        SWAP_LOGE("write to file '%s', cmd='%s'\n", path_cmd, cmd.c_str());
         return ret;
     }
 
@@ -216,7 +216,7 @@ class FeatureNSP : public Feature
     {
         int ret = instApps();
         if (ret)
-            LOGE("cannot all apps install\n");
+            SWAP_LOGE("cannot all apps install\n");
 
         ret = nspEnable();
 
@@ -229,7 +229,7 @@ class FeatureNSP : public Feature
 
         int ret = rmAppAll();
         if (ret)
-            LOGE("cannot all apps remove, ret=%d\n", ret);
+            SWAP_LOGE("cannot all apps remove, ret=%d\n", ret);
 
         return ret;
     }

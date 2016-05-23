@@ -44,7 +44,7 @@ private:
         const ByteArray &data = info().data();
 
         if (!buf2uint64(data.data(), data.size(), _mainOffset)) {
-            LOGE("[%s] error convert 'setup data'\n", type2str(AT_TIZEN));
+            SWAP_LOGE("[%s] error convert 'setup data'\n", type2str(AT_TIZEN));
             return -EINVAL;
         }
 

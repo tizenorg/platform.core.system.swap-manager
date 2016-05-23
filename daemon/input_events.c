@@ -113,7 +113,7 @@ static int check_input(char *inputname, int input_id)
 
 	if (snprintf(command, sizeof(command), "/sys/class/input/%s/device/name",
 		     inputname) >= sizeof(command))
-		LOGE("too small buffer\n");
+		SWAP_LOGE("too small buffer\n");
 	// run command
 	cmd_fp = fopen(command, "r");
 	if (cmd_fp == NULL)
@@ -122,7 +122,7 @@ static int check_input(char *inputname, int input_id)
 	buffer[0] = '\0';
 	bytes_count = fread(buffer, 1, BUF_SIZE, cmd_fp);
 	if (bytes_count <= 1) {
-		LOGE("Failed to read input_id\n");
+		SWAP_LOGE("Failed to read input_id\n");
 		goto exit;
 	} else {
 		buffer[bytes_count - 1] = '\0';
@@ -175,7 +175,7 @@ static void _get_fds(input_dev *dev, int input_id)
 						     O_RDWR | O_NONBLOCK);
 				count++;
 				if (count >= MAX_DEVICE - 1) {
-					LOGE("too match device found!");
+					SWAP_LOGE("too match device found!");
 					break;
 				}
 			}
@@ -205,22 +205,22 @@ static int deviceEventHandler(input_dev *dev, int input_type)
 		} while (count < MAX_EVENTS_NUM && size > 0);
 
 		if (count) {
-			LOGI("read %d %s events\n",
+			SWAP_LOGI("read %d %s events\n",
 			     count,
 			     input_type == INPUT_ID_KEY ? STR_KEY : STR_TOUCH);
 			log = gen_message_event(in_ev, count, input_type);
 			if (log != NULL) {
 				printBuf((char *)log, MSG_DATA_HDR_LEN + log->len);
 				if (write_to_buf(log) != 0)
-					LOGE("write to buf fail\n");
+					SWAP_LOGE("write to buf fail\n");
 				free_msg_data(log);
 			} else {
-				LOGE("cannot generate message event."
+				SWAP_LOGE("cannot generate message event."
 				     "message missed\n");
 			}
 		}
 	} else {
-		LOGW("unknown input_type\n");
+		SWAP_LOGW("unknown input_type\n");
 		ret = 1;	// it is not error
 	}
 	return ret;
@@ -231,7 +231,7 @@ static Eina_Bool touch_event_cb(void *data, Ecore_Fd_Handler *fd_handler)
 	input_dev *touch_dev = (input_dev *)data;
 
 	if (deviceEventHandler(touch_dev, INPUT_ID_TOUCH) < 0) {
-		LOGE("Internal DA framework error, "
+		SWAP_LOGE("Internal DA framework error, "
 		     "Please re-run the profiling (touch dev)\n");
 		/* TODO: ??? */
 	}
@@ -244,7 +244,7 @@ static Eina_Bool key_event_cb(void *data, Ecore_Fd_Handler *fd_handler)
 	input_dev *key_dev = (input_dev *)data;
 
 	if (deviceEventHandler(key_dev, INPUT_ID_KEY) < 0) {
-		LOGE("Internal DA framework error, "
+		SWAP_LOGE("Internal DA framework error, "
 		     "Please re-run the profiling (key dev)\n");
 		/* TODO: ??? */
 	}
@@ -268,7 +268,7 @@ void add_input_events(void)
 							  &g_key_dev[i],
 							  NULL, NULL);
 			if (!key_handlers[i])
-				LOGE("keyboard device file handler add error\n");
+				SWAP_LOGE("keyboard device file handler add error\n");
 		}
 	}
 
@@ -281,7 +281,7 @@ void add_input_events(void)
 							  &g_touch_dev[i],
 							  NULL, NULL);
 			if (!touch_handlers[i])
-				LOGE("touch device file handler add error\n");
+				SWAP_LOGE("touch device file handler add error\n");
 		}
 	}
 
@@ -312,7 +312,7 @@ static void _device_write(input_dev dev[], struct input_event *in_ev)
 	for (i = 0; dev[i].fd != ARRAY_END; i++) {
 		if (dev[i].fd >= 0) {
 			write(dev[i].fd, in_ev, sizeof(struct input_event));
-			LOGI("write(%d, %d, %d)\n",
+			SWAP_LOGI("write(%d, %d, %d)\n",
 			     dev[i].fd, (int)in_ev, sizeof(struct input_event));
 		}
 	}
@@ -328,7 +328,7 @@ void write_input_event(int id, struct input_event *ev)
 		_device_write(g_key_dev, ev);
 		break;
 	default:
-		LOGE("unknown input id (%d)\n", id);
+		SWAP_LOGE("unknown input id (%d)\n", id);
 	}
 }
 
@@ -339,7 +339,7 @@ int init_input_events(void)
 	_get_fds(g_key_dev, INPUT_ID_KEY);
 	_get_fds(g_touch_dev, INPUT_ID_TOUCH);
 	if (g_key_dev[0].fd == ARRAY_END) {
-		LOGE("No key devices found.\n");
+		SWAP_LOGE("No key devices found.\n");
 		res = -1;
 	}
 	/*
@@ -347,7 +347,7 @@ int init_input_events(void)
 	 * So we should print error but do not return error code.
 	 */
 	if (g_touch_dev[0].fd == ARRAY_END) {
-		LOGE("No touch devices found.\n");
+		SWAP_LOGE("No touch devices found.\n");
 	}
 
 	return res;

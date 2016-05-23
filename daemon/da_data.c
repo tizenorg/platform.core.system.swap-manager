@@ -80,7 +80,7 @@ int print_sys_info(struct system_info_t * sys_info)
 
 	// TODO do it
 	/*
-	LOGI("sysinfo:\n\
+	SWAP_LOGI("sysinfo:\n\
 \
 	energy = 0x%X\n\
 	wifi_status = 0x%X\n\
@@ -166,17 +166,17 @@ int print_sys_info(struct system_info_t * sys_info)
 	sys_info->network_send_size,
 	sys_info->network_receive_size
 	);
-	LOGI_("->\n");
+	SWAP_LOGI_("->\n");
 	for ( i=0; i<sys_info->count_of_processes; i++)
 	{
-		LOGI_("\tpr %016X : %f\n",
+		SWAP_LOGI_("\tpr %016X : %f\n",
 		sys_info->process_load[i].id,
 		sys_info->process_load[i].load
 		);
 	}
 	for ( i=0; i<sys_info->count_of_threads; i++)
 	{
-		LOGI_("\tth %016X : %f\n",
+		SWAP_LOGI_("\tth %016X : %f\n",
 		sys_info->thread_load[i].pid,
 		sys_info->thread_load[i].load
 		);
@@ -185,7 +185,7 @@ int print_sys_info(struct system_info_t * sys_info)
 	// FIXME CPU core num hardcoded
 	for ( i=0; i<4; i++)
 	{
-		LOGI_("\tCPU load #%d : %f\n",
+		SWAP_LOGI_("\tCPU load #%d : %f\n",
 		i,
 		sys_info->cpu_load[i]
 		);
@@ -193,7 +193,7 @@ int print_sys_info(struct system_info_t * sys_info)
 	// FIXME CPU core num hardcoded
 	for ( i=0; i<4; i++)
 	{
-		LOGI_("\tCPU freq #%d : %f\n",
+		SWAP_LOGI_("\tCPU freq #%d : %f\n",
 		i,
 		sys_info->cpu_frequency[i]
 		);
@@ -232,7 +232,7 @@ struct msg_data_t *gen_message_terminate(uint32_t id)
 		p = data->payload;
 		pack_int32(p, id);
 	} else {
-		LOGE("Cannot allocate memory for struct msg_data_t\n");
+		SWAP_LOGE("Cannot allocate memory for struct msg_data_t\n");
 	}
 	return data;
 }
@@ -250,7 +250,7 @@ struct msg_data_t *gen_message_error(const char * err_msg)
 		p = data->payload;
 		pack_str(p,err_msg);
 	} else {
-		LOGE("Cannot allocate memory for struct msg_data_t\n");
+		SWAP_LOGE("Cannot allocate memory for struct msg_data_t\n");
 	}
 
 	return data;
@@ -283,7 +283,7 @@ struct msg_data_t *gen_message_event(
 			pack_int32(p,events[i].value);
 		}
 	} else {
-		LOGE("Cannot allocate memory for struct msg_data_t\n");
+		SWAP_LOGE("Cannot allocate memory for struct msg_data_t\n");
 	}
 	return data;
 }

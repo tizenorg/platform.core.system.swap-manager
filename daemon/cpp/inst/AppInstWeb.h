@@ -37,7 +37,7 @@ class AppInstWeb : public AppInst
     int doInit()
     {
         if (info().id().empty()) {
-            LOGE("[%s] error 'app ID' is empty\n", type2str(AT_WEB));
+            SWAP_LOGE("[%s] error 'app ID' is empty\n", type2str(AT_WEB));
             return -EINVAL;
         }
 

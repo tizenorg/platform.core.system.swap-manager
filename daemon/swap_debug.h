@@ -46,21 +46,21 @@ extern "C" {
 void print_buf(char *buf, int len, const char *info);
 
 #ifdef PARSE_DEBUG_ON
-	#define parse_deb LOGI
+	#define parse_deb SWAP_LOGI
 #else
 	#define parse_deb(...)
 #endif
 
 #ifdef THREAD_SAMPLING_DEBUG
-	#define LOGI_th_samp LOGI
+	#define SWAP_LOGI_th_samp LOGI
 #else
-	#define LOGI_th_samp(...)
+	#define SWAP_LOGI_th_samp(...)
 #endif
 
 #ifdef THREAD_REPLAY_DEBUG
-	#define LOGI_th_rep LOGI
+	#define SWAP_LOGI_th_rep LOGI
 #else
-	#define LOGI_th_rep(...)
+	#define SWAP_LOGI_th_rep(...)
 #endif
 
 #ifdef DEBUG
@@ -68,8 +68,8 @@ void print_buf(char *buf, int len, const char *info);
 	char buf[256];						\
 	strerror_r(err_code, buf, sizeof(buf))
 
-#define LOGE(...) do_log("ERR", __func__, __LINE__, __VA_ARGS__)
-#define LOGW(...) do_log("WRN", __func__, __LINE__, __VA_ARGS__)
+#define SWAP_LOGE(...) do_log("ERR", __func__, __LINE__, __VA_ARGS__)
+#define SWAP_LOGW(...) do_log("WRN", __func__, __LINE__, __VA_ARGS__)
 
 #ifdef USE_LOG_ONCE
 	#define TOKENPASTE(x, y) x ## y
@@ -81,7 +81,7 @@ void print_buf(char *buf, int len, const char *info);
 		do {							\
 			INIT_LOG_ONCE;					\
 			if (LOG_ONCE_VAR == 0) {			\
-				TOKENPASTE2(LOG, W_E)(__VA_ARGS__);	\
+				TOKENPASTE2(SWAP_LOG, W_E)(__VA_ARGS__);	\
 				LOG_ONCE_VAR = 1;			\
 			}						\
 		} while (0)
@@ -108,12 +108,12 @@ static inline void do_log(const char *prefix, const char *funcname, int line, ..
 	va_end(ap);
 }
 
-	#ifdef NOLOGI
-		#define LOGI(...)
-		#define LOGI_(...)
+	#ifdef NOSWAP_LOGI
+		#define SWAP_LOGI(...)
+		#define SWAP_LOGI_(...)
 	#else
-		#define LOGI(...) do_log("INF", __func__, __LINE__, __VA_ARGS__)
-		#define LOGI_(...)	do {		\
+		#define SWAP_LOGI(...) do_log("INF", __func__, __LINE__, __VA_ARGS__)
+		#define SWAP_LOGI_(...)	do {		\
 			fprintf(stderr, __VA_ARGS__);	\
 			fflush(stderr);			\
 		} while (0)
@@ -121,10 +121,10 @@ static inline void do_log(const char *prefix, const char *funcname, int line, ..
 	#endif
 #else
 	#define GETSTRERROR(...)
-	#define LOGI(...)
-	#define LOGI_(...)
-	#define LOGE(...)
-	#define LOGW(...)
+	#define SWAP_LOGI(...)
+	#define SWAP_LOGI_(...)
+	#define SWAP_LOGE(...)
+	#define SWAP_LOGW(...)
 	#define LOG_ONCE_W(...)
 	#define LOG_ONCE_E(...)
 
