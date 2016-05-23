@@ -323,7 +323,7 @@ static void get_cpu_frequency(float *freqs)
 
 		f = fopen(filename, "r");
 		if (!f){
-			LOGI_th_samp("file not found <%s\n>", filename);
+			SWAP_LOGI_th_samp("file not found <%s\n>", filename);
 			break;
 		}
 		fclose(f);
@@ -335,17 +335,17 @@ static void get_cpu_frequency(float *freqs)
 		if (!f)
 		{
 			/* core is disabled */
-			LOGI_th_samp("core #%d diasabled\n", cpu_n);
+			SWAP_LOGI_th_samp("core #%d diasabled\n", cpu_n);
 			freqs[cpu_n] = 0.0;
 		} else {
 			/* core enabled, get frequency */
 			if (fscanf(f, "%" STR_VALUE(SMALL_BUFFER) "s", freq_str) != 1) {
 				/* TODO return error code */
 				freqs[cpu_n] = 0.0f;
-				LOGE("scan cpu #%d freq fail\n", cpu_n);
+				SWAP_LOGE("scan cpu #%d freq fail\n", cpu_n);
 			} else {
 				freqs[cpu_n] = atof(freq_str);
-				LOGI_th_samp("core #%d freq = %.0f\n", cpu_n,
+				SWAP_LOGI_th_samp("core #%d freq = %.0f\n", cpu_n,
 					     freqs[cpu_n]);
 			}
 			fclose(f);
@@ -427,7 +427,7 @@ static procNode* add_node(procNode **head, pid_t pid)
 
 	n = (procNode *) malloc(sizeof(procNode));
 	if (n == NULL) {
-		LOGE("Not enough memory, add cpu info node failied");
+		SWAP_LOGE("Not enough memory, add cpu info node failied");
 		return NULL;
 	}
 
@@ -447,7 +447,7 @@ static int del_node(procNode **head, pid_t pid)
 
 	t = *head;
 	prev = NULL;
-/* 	LOGI("dell t=%d\n",t); */
+/* 	SWAP_LOGI("dell t=%d\n",t); */
 	while (t != NULL) {
 		if (t->proc_data.pid == pid) {
 			if (prev != NULL)
@@ -461,7 +461,7 @@ static int del_node(procNode **head, pid_t pid)
 		t = t->next;
 	}
 
-/* 	LOGI("ret 0\n"); */
+/* 	SWAP_LOGI("ret 0\n"); */
 	return 0;
 }
 
@@ -526,7 +526,7 @@ static int parse_proc_stat_file_bypid(char *path, proc_t* P, int is_inst_process
 	close(fd);
 
 	if(unlikely(num <= 0)){
-		LOGE("nothing read from '%s'\n", filename);
+		SWAP_LOGE("nothing read from '%s'\n", filename);
 		return -1;
 	} else if(num == BUFFER_MAX)
 		num -= 1;
@@ -650,7 +650,7 @@ static struct geminfo *read_geminfo(FILE *fp)
 
 	tgeminfo = malloc(sizeof(struct geminfo));
 	if (tgeminfo == NULL) {
-		LOGE("allocation error\n");
+		SWAP_LOGE("allocation error\n");
 		goto exit;
 	}
 
@@ -801,61 +801,61 @@ int read_mapinfo_section(FILE* fp, proc_t *proc)
 	}
 
 	if ((line = fgets(buf, sizeof(buf), fp)) == 0) {
-		LOGE("Get section error\n");
+		SWAP_LOGE("Get section error\n");
 		goto oops;
 	}
 	if (sscanf(buf, "Size: %lu kB", &proc->size) != 1) {
-		LOGE("Get section error\n");
+		SWAP_LOGE("Get section error\n");
 		goto oops;
 	}
 	if ((line = fgets(buf, sizeof(buf), fp)) == 0) {
-		LOGE("Get section error\n");
+		SWAP_LOGE("Get section error\n");
 		goto oops;
 	}
 	if (sscanf(buf, "Rss: %d kB", &tmp) != 1) {
-		LOGE("Get section error\n");
+		SWAP_LOGE("Get section error\n");
 		goto oops;
 	}
 	if ((line = fgets(buf, sizeof(buf), fp)) == 0) {
-		LOGE("Get section error\n");
+		SWAP_LOGE("Get section error\n");
 		goto oops;
 	}
 	if (sscanf(buf, "Pss: %lu kB", &proc->pss) == 1)
 		if ((line = fgets(buf, sizeof(buf), fp)) == 0) {
-			LOGE("Get section error\n");
+			SWAP_LOGE("Get section error\n");
 			goto oops;
 	}
 	if (sscanf(buf, "Shared_Clean: %lu kB", &proc->sh_mem_clean) != 1) {
-		LOGE("Get section error\n");
+		SWAP_LOGE("Get section error\n");
 		goto oops;
 	}
 	if ((line = fgets(buf, sizeof(buf), fp)) == 0) {
-		LOGE("Get section error\n");
+		SWAP_LOGE("Get section error\n");
 		goto oops;
 	}
 	if (sscanf(buf, "Shared_Dirty: %lu kB", &proc->sh_mem_dirty) != 1) {
-		LOGE("Get section error\n");
+		SWAP_LOGE("Get section error\n");
 		goto oops;
 	}
 	if ((line = fgets(buf, sizeof(buf), fp)) == 0) {
-		LOGE("Get section error\n");
+		SWAP_LOGE("Get section error\n");
 		goto oops;
 	}
 	if (sscanf(buf, "Private_Clean: %d kB", &tmp) != 1) {
-		LOGE("Get section error\n");
+		SWAP_LOGE("Get section error\n");
 		goto oops;
 	}
 	if ((line = fgets(buf, sizeof(buf), fp)) == 0) {
-		LOGE("Get section error\n");
+		SWAP_LOGE("Get section error\n");
 		goto oops;
 	}
 	if (sscanf(buf, "Private_Dirty: %d kB", &tmp) != 1) {
-		LOGE("Get section error\n");
+		SWAP_LOGE("Get section error\n");
 		goto oops;
 	}
 
 	rest_line = ignore_smaps_field;
-	//LOGW("rest = <%d>\n", rest_line);
+	//SWAP_LOGW("rest = <%d>\n", rest_line);
 	while (rest_line-- && (line = fgets(buf, sizeof(buf), fp))) {
 		if (sscanf(buf, "Swap: %d kB", &tmp) == 1) {
 			//proc.swap = tmp;
@@ -867,7 +867,7 @@ int read_mapinfo_section(FILE* fp, proc_t *proc)
 
 	return 0;
 oops:
-	LOGE("Get section error\n");
+	SWAP_LOGE("Get section error\n");
 	return -1;
 }
 
@@ -960,7 +960,7 @@ static int update_process_data(procNode **prochead, pid_t* pidarray, int pidcoun
 			// new process
 			procnode = add_node(prochead, pidarray[i]);
 			if (procnode == NULL) {
-				LOGE("Failed to add node\n");
+				SWAP_LOGE("Failed to add node\n");
 				ret = 1;
 				continue;
 			}
@@ -968,7 +968,7 @@ static int update_process_data(procNode **prochead, pid_t* pidarray, int pidcoun
 		}
 
 		if (procnode == NULL) {
-			LOGE("failed to create new procnode\n");
+			SWAP_LOGE("failed to create new procnode\n");
 			ret = errno;
 			goto exit;
 		}
@@ -979,7 +979,7 @@ static int update_process_data(procNode **prochead, pid_t* pidarray, int pidcoun
 							 is_inst_process);
 			if (unlikely(ret < 0)) {
 				//parse fail. log it
-				LOGE("Failed to get proc stat file by pid(%d)\n", pidarray[i]);
+				SWAP_LOGE("Failed to get proc stat file by pid(%d)\n", pidarray[i]);
 			} else if (is_new_node == 1) {
 				//update data for new node
 				procnode->saved_utime = procnode->proc_data.utime;
@@ -991,7 +991,7 @@ static int update_process_data(procNode **prochead, pid_t* pidarray, int pidcoun
 							  &(procnode->proc_data));
 
 			if (unlikely( ret < 0))
-				LOGE("Failed to get proc smaps file by pid(%d)\n", pidarray[i]);
+				SWAP_LOGE("Failed to get proc smaps file by pid(%d)\n", pidarray[i]);
 
 		} else {
 			// impossible
@@ -1087,7 +1087,7 @@ static void init_system_cpu_data()
 
 static int update_system_cpu_data(int cur_index)
 {
-/* 	LOGI(">\n"); */
+/* 	SWAP_LOGI(">\n"); */
 
 	FILE* fp = manager.fd.procstat;
 	int num;
@@ -1101,11 +1101,11 @@ static int update_system_cpu_data(int cur_index)
 
 	if(fgets(buf, sizeof(buf), fp) == NULL)
 	{
-		LOGE("Failed to read first line of " PROCSTAT "\n");
+		SWAP_LOGE("Failed to read first line of " PROCSTAT "\n");
 		return -1;
 	}
 
-/* LOGI("scan; cpus = %d\n", cpus); */
+/* SWAP_LOGI("scan; cpus = %d\n", cpus); */
 
 	cpus[num_of_cpu].x = 0;
 	cpus[num_of_cpu].y = 0;
@@ -1123,13 +1123,13 @@ static int update_system_cpu_data(int cur_index)
 	cpus[num_of_cpu].cur_load_index = cur_index;
 	if(num < 4)
 	{
-		LOGE("Failed to read from " PROCSTAT "\n");
+		SWAP_LOGE("Failed to read from " PROCSTAT "\n");
 		return -1;
 	}
 
 #ifdef FOR_EACH_CPU
 
-/* 	LOGI("cpu num = %d\n", num_of_cpu); */
+/* 	SWAP_LOGI("cpu num = %d\n", num_of_cpu); */
 	// and just in case we're 2.2.xx compiled without SMP support...
 	if(num_of_cpu == 1)
 	{
@@ -1154,7 +1154,7 @@ static int update_system_cpu_data(int cur_index)
 						&cpus[i].w, &cpus[i].x, &cpus[i].y, &cpus[i].z);
 				if(num > 4)
 				{
-					LOGI_th_samp("Readed %d stats of %dth cpu\n", num, i);
+					SWAP_LOGI_th_samp("Readed %d stats of %dth cpu\n", num, i);
 					cpus[i].cur_load_index = cur_index;
 				}
 				else	// buf is not cpu core tick information
@@ -1207,7 +1207,7 @@ static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 	lseek(meminfo_fd, 0L, SEEK_SET);
 	if((num = read(meminfo_fd, buf, BUFFER_MAX)) < 0)
 	{
-		LOGE("Failed to read from " PROCMEMINFO "\n");
+		SWAP_LOGE("Failed to read from " PROCMEMINFO "\n");
 		return -1;
 	}
 
@@ -1215,7 +1215,7 @@ static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 		num -= 1;
 
 	buf[num] = '\0';
-//	LOGI("buffer=<%s>\n", buf);
+//	SWAP_LOGI("buffer=<%s>\n", buf);
 
 	num = 0;	// number of found element
 	head = buf;
@@ -1244,10 +1244,10 @@ static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 			break;
 		head = tail + 1;
 	}
-/* 		LOGI("Buffers = %016LX\n", mem_slot_array[MEM_SLOT_BUFFER]); */
-/* 		LOGI("Cached  = %016LX\n", mem_slot_array[MEM_SLOT_CACHED]); */
-/* 		LOGI("MemFree = %016LX\n", mem_slot_array[MEM_SLOT_FREE]); */
-/* 		LOGI("MemTotal= %016LX\n", mem_slot_array[MEM_SLOT_TOTAL]); */
+/* 		SWAP_LOGI("Buffers = %016LX\n", mem_slot_array[MEM_SLOT_BUFFER]); */
+/* 		SWAP_LOGI("Cached  = %016LX\n", mem_slot_array[MEM_SLOT_CACHED]); */
+/* 		SWAP_LOGI("MemFree = %016LX\n", mem_slot_array[MEM_SLOT_FREE]); */
+/* 		SWAP_LOGI("MemTotal= %016LX\n", mem_slot_array[MEM_SLOT_TOTAL]); */
 	if(num == mem_table_size)	// find all element
 	{
 		*memtotal = mem_slot_array[MEM_SLOT_TOTAL];
@@ -1261,7 +1261,7 @@ static int update_system_memory_data(uint64_t *memtotal, uint64_t *memused)
 	}
 	else
 	{
-		LOGE("Cannot find all neccessary element in meminfo\n");
+		SWAP_LOGE("Cannot find all neccessary element in meminfo\n");
 		return -1;
 	}
 }
@@ -1286,7 +1286,7 @@ static unsigned long get_system_total_memory(void)
 
 	if((num = read(meminfo_fd, buf, BUFFER_MAX)) < 0)
 	{
-		LOGE("Failed to read from " PROCMEMINFO "\n");
+		SWAP_LOGE("Failed to read from " PROCMEMINFO "\n");
 		return 0;
 	}
 
@@ -1335,7 +1335,7 @@ static int get_fsinfo(const char* path, int type)
 	total = (int)((long long)(buf.f_bsize / 1024LL * buf.f_blocks) / 1024LL);
 	free = (int)((long long)(buf.f_bsize / 1024LL * buf.f_bavail) / 1024LL);
 
-/* 	LOGI("File storage total(%d), free(%d)\n", total, free); */
+/* 	SWAP_LOGI("File storage total(%d), free(%d)\n", total, free); */
 	if (type == FSINFO_TYPE_TOTAL)
 	{
 		return total;
@@ -1389,14 +1389,14 @@ static int get_total_used_drive()
 
 	if (storage < 0 && card < 0)
 	{
-		LOGI_th_samp("total_used_drive = -1\n");
+		SWAP_LOGI_th_samp("total_used_drive = -1\n");
 		return -1;
 	}
 
 	free = storage + card;
 	total = get_total_drive() - free;
 
-	LOGI_th_samp("total_used_drive = %d\n", total);
+	SWAP_LOGI_th_samp("total_used_drive = %d\n", total);
 
 	return total;
 }
@@ -1420,14 +1420,14 @@ static int update_thread_data(int pid)
 
 	if(!(taskdir = opendir(path)))
 	{
-		LOGE("task not found '%s'\n", path);
+		SWAP_LOGE("task not found '%s'\n", path);
 		ret = -1;
 		goto exit;
 	}
 
 	node = find_node(inst_prochead, pid);
 	if (node == NULL) {
-		LOGE("inst node task not found '%s' pid = %d\n", path, pid);
+		SWAP_LOGE("inst node task not found '%s' pid = %d\n", path, pid);
 		ret = -1;
 		goto exit_close_dir;
 	}
@@ -1450,27 +1450,27 @@ static int update_thread_data(int pid)
 			{
 				procnode = add_node(thread_prochead, tid);
 				if (procnode == NULL) {
-					LOGE("Fail in update_thread_data: add_node return NULL\n");
+					SWAP_LOGE("Fail in update_thread_data: add_node return NULL\n");
 					ret = errno;
 					goto exit_close_dir;
 				}
 				if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data), 0)) < 0))
 				{
-					LOGE("Failed to get proc stat file by tid(%d). add node\n", tid);
+					SWAP_LOGE("Failed to get proc stat file by tid(%d). add node\n", tid);
 				}
 				else
 				{
 					procnode->saved_utime = procnode->proc_data.utime;
 					procnode->saved_stime = procnode->proc_data.stime;
-					LOGI_th_samp("data created %s\n", buf);
+					SWAP_LOGI_th_samp("data created %s\n", buf);
 				}
 			}
 			else
 			{
 				if (unlikely((ret = parse_proc_stat_file_bypid(buf, &(procnode->proc_data), 0)) < 0))
-					LOGE("Failed to get proc stat file by tid(%d). node exist\n", tid);
+					SWAP_LOGE("Failed to get proc stat file by tid(%d). node exist\n", tid);
 				else
-					LOGI_th_samp("data updated %s\n", buf);
+					SWAP_LOGI_th_samp("data updated %s\n", buf);
 			}
 		}
 	}
@@ -1494,13 +1494,13 @@ static char *print_to_buf(char *buf, size_t *buflen, char *str)
 	int lenin = 0;
 
 	if (strlen(str) > *buflen) {
-		LOGE("can not pack <%s>\n", str);
+		SWAP_LOGE("can not pack <%s>\n", str);
 		goto exit;
 	}
 
 	lenin = snprintf(buf + len, *buflen, str);
 	if (lenin <= 0) {
-		LOGE("can not pack <%s>\n", str);
+		SWAP_LOGE("can not pack <%s>\n", str);
 		goto exit;
 	}
 
@@ -1564,7 +1564,7 @@ static int update_cpus_info(int event_num, float elapsed)
 	for(i = num_of_cpu; i <= num_of_cpu; i++)
 #endif
 	{
-	LOGI_th_samp("CPU #%d\n", i);
+	SWAP_LOGI_th_samp("CPU #%d\n", i);
 		cpuptr = &(cpus[i]);
 
 		if(cpuptr->cur_load_index == event_num)
@@ -1594,7 +1594,7 @@ static int update_cpus_info(int event_num, float elapsed)
 								(float)cpuptr->total_ticks)) * 100.0f;
 				}
 
-				LOGI_th_samp("System cpu usage log : %d, %Ld, %Ld\n",
+				SWAP_LOGI_th_samp("System cpu usage log : %d, %Ld, %Ld\n",
 						i, cpuptr->idle_ticks, cpuptr->total_ticks);
 				if(unlikely(cpuptr->cpu_usage < 0))
 				{
@@ -1651,10 +1651,10 @@ static int fill_system_processes_info(procNode *prochead, float factor,
 	float thread_load;
 	uint32_t app_count = 0;
 
-	LOGI_th_samp("prochead = %X\n", (unsigned int)prochead);
+	SWAP_LOGI_th_samp("prochead = %X\n", (unsigned int)prochead);
 
 	for(proc = prochead; proc != NULL; proc = proc->next) {
-		LOGI_th_samp("proc#%d (%d %d),(%d %d) (%d) %f\n",
+		SWAP_LOGI_th_samp("proc#%d (%d %d),(%d %d) (%d) %f\n",
 				app_count,
 				(unsigned int)proc->proc_data.utime, (unsigned int)proc->proc_data.stime ,
 				(unsigned int)proc->saved_utime, (unsigned int)proc->saved_stime,
@@ -1717,7 +1717,7 @@ static int fill_system_cpu_info(struct system_info_t *sys_info)
 	int i = 0;
 
 	// calculate for whole cpu load by average all core load
-	LOGI_th_samp("calculate for whole cpu load num_of_cpu=%d\n", num_of_cpu);
+	SWAP_LOGI_th_samp("calculate for whole cpu load num_of_cpu=%d\n", num_of_cpu);
 	for(i = 0 ; i < num_of_cpu; i++)
 		sys_usage += cpus[i].cpu_usage;
 
@@ -1728,14 +1728,14 @@ static int fill_system_cpu_info(struct system_info_t *sys_info)
 	{
 		res = malloc( num_of_cpu * sizeof(*sys_info->cpu_load));
 		if (res == NULL) {
-			LOGE("Cannot alloc cpy load\n");
+			SWAP_LOGE("Cannot alloc cpy load\n");
 			return 1;
 		}
 		sys_info->cpu_load = res;
 		pcpu_usage = sys_info->cpu_load;
 		for(i = 0; i < num_of_cpu; i++)
 		{
-			LOGI_th_samp("cpu#%d : %.1f\n" , i,  cpus[i].cpu_usage);
+			SWAP_LOGI_th_samp("cpu#%d : %.1f\n" , i,  cpus[i].cpu_usage);
 			*pcpu_usage = cpus[i].cpu_usage;
 			pcpu_usage++;
 		}
@@ -1744,7 +1744,7 @@ static int fill_system_cpu_info(struct system_info_t *sys_info)
 	//fill CPU frequency
 	sys_info->cpu_frequency = malloc(num_of_cpu * sizeof(float));
 	if (!sys_info->cpu_frequency) {
-		LOGE("Cannot alloc cpu freq\n");
+		SWAP_LOGE("Cannot alloc cpu freq\n");
 		return 1;
 	}
 	get_cpu_frequency(sys_info->cpu_frequency);
@@ -1761,7 +1761,7 @@ static void skip_lines(FILE * fp, unsigned int count)
 	for (index = 0; index != count; ++index) {
 		buffer = NULL;
 		if (getline(&buffer, &buflen, fp) < 0)
-			LOGE("file scan fail\n");
+			SWAP_LOGE("file scan fail\n");
 		free(buffer);
 	}
 }
@@ -1816,7 +1816,7 @@ static void get_network_stat(uint32_t *recv, uint32_t *send)
 
 	goto exit;
 scan_error:
-	LOGE("scan fail\n");
+	SWAP_LOGE("scan fail\n");
 exit:
 	return;
 }
@@ -1865,14 +1865,14 @@ static uint32_t get_partition_sector_size(char *partition_name)
 			int errsv = errno;
 			if (errsv) {
 				GETSTRERROR(errsv, errno_buf);
-				LOGE("scan file <%s> error: %s\n", buf, errno_buf);
+				SWAP_LOGE("scan file <%s> error: %s\n", buf, errno_buf);
 				res = 0;
 			}
 		}
 		/* close source file */
 		fclose(f);
 	} else
-		LOGE("cannot get size for partition <%s> from file <%s>\n",
+		SWAP_LOGE("cannot get size for partition <%s> from file <%s>\n",
 		     partition_name, buf);
 
 	/* return result value */
@@ -1951,7 +1951,7 @@ static void get_disk_stat(uint32_t *reads, uint32_t *bytes_reads,
 
 	goto exit;
 scan_error:
-	LOGE("scan fail\n");
+	SWAP_LOGE("scan fail\n");
 exit:
 	return;
 }
@@ -2153,7 +2153,7 @@ static int get_inst_pid_array(pid_t *arr, const int n)
 	fflush(manager.fd.inst_tasks);
 
 	while (fscanf(manager.fd.inst_tasks, "%lu", (long unsigned int *)arr) == 1) {
-		LOGI_th_samp("PID scaned %d\n", *arr);
+		SWAP_LOGI_th_samp("PID scaned %d\n", *arr);
 		arr++;
 		pid_count++;
 	}
@@ -2172,7 +2172,7 @@ static int get_other_pid_array(pid_t inst_pid[], const int inst_n, pid_t arr[],
 
 	if (!d) {
 		GETSTRERROR(errno, buf);
-		LOGW("Cannot open /proc dir (%s)\n", buf);
+		SWAP_LOGW("Cannot open /proc dir (%s)\n", buf);
 		return 0;
 	}
 
@@ -2208,7 +2208,7 @@ int get_system_info(struct system_info_t *sys_info)
 	float factor;
 	int i = 0;
 
-	LOGI_th_samp("start\n");
+	SWAP_LOGI_th_samp("start\n");
 
 	memset(sys_info, 0, sizeof(*sys_info));
 
@@ -2230,18 +2230,18 @@ int get_system_info(struct system_info_t *sys_info)
 						     inst_pidcount,
 						     other_pidarray,
 						     max_pid_num);
-		LOGI_th_samp("PID count : inst %d, other %d\n", inst_pidcount,
+		SWAP_LOGI_th_samp("PID count : inst %d, other %d\n", inst_pidcount,
 			     other_pidcount);
 
 		if (update_process_data(&inst_prochead, inst_pidarray,
 					inst_pidcount, PROCDATA_STAT, 1) < 0) {
-			LOGE("Failed to update inst process stat data\n");
+			SWAP_LOGE("Failed to update inst process stat data\n");
 			goto fail_exit;
 		}
 
 		if (update_process_data(&other_prochead, other_pidarray,
 					other_pidcount, PROCDATA_STAT, 0) < 0) {
-			LOGE("Failed to update other process stat data\n");
+			SWAP_LOGE("Failed to update other process stat data\n");
 			goto fail_exit;
 		}
 
@@ -2255,12 +2255,12 @@ int get_system_info(struct system_info_t *sys_info)
 		factor = get_factor(elapsed);
 
 		if (update_system_cpu_data(event_num) < 0) {
-			LOGE("Failed to update system cpu data\n");
+			SWAP_LOGE("Failed to update system cpu data\n");
 			goto fail_exit;
 		}
 
 		if (update_system_cpu_frequency(event_num) < 0) {
-			LOGE("Failed to update system cpu freq data\n");
+			SWAP_LOGE("Failed to update system cpu freq data\n");
 			goto fail_exit;
 		}
 
@@ -2271,54 +2271,54 @@ int get_system_info(struct system_info_t *sys_info)
 		 */
 		if (update_process_data(&inst_prochead, inst_pidarray,
 					inst_pidcount, PROCDATA_SMAPS, 1) < 0) {
-			LOGE("Failed to update inst process smaps data\n");
+			SWAP_LOGE("Failed to update inst process smaps data\n");
 			goto fail_exit;
 		}
 /*
 		if (update_process_data(&other_prochead, other_pidarray,
 					other_pidcount, PROCDATA_SMAPS) < 0) {
-			LOGE("Failed to update other process smaps data\n");
+			SWAP_LOGE("Failed to update other process smaps data\n");
 			goto fail_exit;
 		}
 */
 		for (i = 0; i < inst_pidcount; i++)
 			if (update_thread_data(inst_pidarray[i]) < 0) {
-				LOGE("Failed to update thread stat data\n");
+				SWAP_LOGE("Failed to update thread stat data\n");
 				goto fail_exit;
 			}
 
 		if (update_system_memory_data(&sysmemtotal, &sysmemused) < 0) {
-			LOGE("Failed to update system memory data\n");
+			SWAP_LOGE("Failed to update system memory data\n");
 			goto fail_exit;
 		}
 
 		if (update_cpus_info(event_num, elapsed) < 0) {
-			LOGE("Failed to update cpus info\n");
+			SWAP_LOGE("Failed to update cpus info\n");
 			goto fail_exit;
 		}
 
 		/* calculate process load, memory, app_cpu_usage */
 		if (fill_system_processes_info(inst_prochead, factor, sys_info,
 					       &(sys_info->count_of_inst_processes)) < 0) {
-			LOGE("Failed to fill processes info\n");
+			SWAP_LOGE("Failed to fill processes info\n");
 			goto fail_exit;
 		}
 
 		/* calculate process load, memory, app_cpu_usage */
 		if (fill_system_processes_info(other_prochead, factor, sys_info,
 					       &(sys_info->count_of_other_processes)) < 0) {
-			LOGE("Failed to fill processes info\n");
+			SWAP_LOGE("Failed to fill processes info\n");
 			goto fail_exit;
 		}
 
 		/* calculate thread load */
 		if (fill_system_threads_info(factor, sys_info) < 0) {
-			LOGE("Failed to fill threads info\n");
+			SWAP_LOGE("Failed to fill threads info\n");
 			goto fail_exit;
 		}
 
 		if (fill_system_cpu_info(sys_info) < 0) {
-			LOGE("Failed to fill threads info\n");
+			SWAP_LOGE("Failed to fill threads info\n");
 			goto fail_exit;
 		}
 	}
@@ -2328,7 +2328,7 @@ int get_system_info(struct system_info_t *sys_info)
 		sys_info->system_total_gem_memory = total_gem_memory();
 	}
 
-	LOGI_th_samp("Fill result structure\n");
+	SWAP_LOGI_th_samp("Fill result structure\n");
 
 	if (IS_OPT_SET(FL_SYSTEM_DISK)) {
 		sys_info->total_used_drive = get_total_used_drive();
@@ -2377,13 +2377,13 @@ int get_system_info(struct system_info_t *sys_info)
 #endif
 
 	event_num++;
-	LOGI_th_samp("exit\n");
+	SWAP_LOGI_th_samp("exit\n");
 	return res;
 
 fail_exit:
 	/* Some data corrupted. Free allocated data. */
 	reset_system_info(sys_info);
-	LOGI_th_samp("fail exit\n");
+	SWAP_LOGI_th_samp("fail exit\n");
 	return -1;
 }
 
@@ -2395,7 +2395,7 @@ int initialize_system_info(void)
 	if(num_of_cpu < 1)
 		num_of_cpu = 1;
 	Hertz = sysconf(_SC_CLK_TCK);
-	LOGI("Hertz : %d\n", Hertz);
+	SWAP_LOGI("Hertz : %d\n", Hertz);
 
 	// alloc for cpus
 	if(cpus == NULL)
@@ -2410,7 +2410,7 @@ int initialize_system_info(void)
 	}
 	else
 	{
-		LOGE("Failed to alloc memory for cpu information\n");
+		SWAP_LOGE("Failed to alloc memory for cpu information\n");
 		return -1;
 	}
 
@@ -2450,8 +2450,8 @@ static void ftest_and_close(FILE **fd)
 	*fd = NULL;
 }
 
-#define dtest_and_close(fd) do {LOGI("CLOSE " STR_VALUE(fd) "\n");test_and_close(fd);} while(0)
-#define dftest_and_close(fd) do {LOGI("CLOSE " STR_VALUE(fd) "\n");ftest_and_close(fd);} while(0)
+#define dtest_and_close(fd) do {SWAP_LOGI("CLOSE " STR_VALUE(fd) "\n");test_and_close(fd);} while(0)
+#define dftest_and_close(fd) do {SWAP_LOGI("CLOSE " STR_VALUE(fd) "\n");ftest_and_close(fd);} while(0)
 void uninit_sys_stat(void)
 {
 	dftest_and_close(&manager.fd.gem_memory);
@@ -2481,22 +2481,22 @@ int init_sys_stat(void)
 	init_disk_stat();
 
 	if (manager.fd.gem_memory < 0)
-		LOGW("gem file not found\n");
+		SWAP_LOGW("gem file not found\n");
 	if (manager.fd.brightness < 0)
-		LOGW("brightness file not found\n");
+		SWAP_LOGW("brightness file not found\n");
 	if (manager.fd.voltage < 0)
-		LOGW("voltage file not found\n");
+		SWAP_LOGW("voltage file not found\n");
 	if (manager.fd.procmeminfo < 0)
-		LOGW("procmeminfo file not found\n");
+		SWAP_LOGW("procmeminfo file not found\n");
 
 	if (manager.fd.video == NULL)
-		LOGW("video file not found\n");
+		SWAP_LOGW("video file not found\n");
 	if (manager.fd.procstat == NULL)
-		LOGW("procstat file not found\n");
+		SWAP_LOGW("procstat file not found\n");
 	if (manager.fd.networkstat == NULL)
-		LOGW("networkstat file not found\n");
+		SWAP_LOGW("networkstat file not found\n");
 	if (manager.fd.diskstats == NULL)
-		LOGW("diskstat file not found\n");
+		SWAP_LOGW("diskstat file not found\n");
 
 	init_read_mapinfo();
 
@@ -2583,7 +2583,7 @@ struct msg_data_t *pack_system_info(struct system_info_t *sys_info)
 
 	msg = malloc(MSG_DATA_HDR_LEN + len);
 	if (!msg) {
-		LOGE("Cannot alloc message: %d bytes\n", len);
+		SWAP_LOGE("Cannot alloc message: %d bytes\n", len);
 		return NULL;
 	}
 

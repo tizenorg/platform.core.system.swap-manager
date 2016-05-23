@@ -85,15 +85,15 @@ static pthread_mutex_t launch_timer_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void launch_timer_lock()
 {
-	LOGI("lock launch_timer_mutex\n");
+	SWAP_LOGI("lock launch_timer_mutex\n");
 	pthread_mutex_lock(&launch_timer_mutex);
-	LOGI("locked launch_timer_mutex\n");
+	SWAP_LOGI("locked launch_timer_mutex\n");
 }
 
 static void launch_timer_unlock()
 {
 	pthread_mutex_unlock(&launch_timer_mutex);
-	LOGI("unlock launch_timer_mutex\n");
+	SWAP_LOGI("unlock launch_timer_mutex\n");
 }
 
 //stop application launch timer
@@ -105,12 +105,12 @@ static int stop_app_launch_timer()
 	if (manager.app_launch_timerfd > 0) {
 		ecore_main_fd_handler_del(launch_timer_handler);
 		if (close(manager.app_launch_timerfd)) {
-			LOGE("close app_launch_timerfd failed\n");
+			SWAP_LOGE("close app_launch_timerfd failed\n");
 			res = 1;
 		}
 		manager.app_launch_timerfd = -1;
 	} else {
-		LOGW("trying to stop app launch timer when it stoped\n");
+		SWAP_LOGW("trying to stop app launch timer when it stoped\n");
 	}
 
 	launch_timer_unlock();
@@ -119,9 +119,9 @@ static int stop_app_launch_timer()
 
 static Eina_Bool launch_timer_cb(void *data, Ecore_Fd_Handler *fd_handler)
 {
-	LOGE("Failed to launch application\n");
+	SWAP_LOGE("Failed to launch application\n");
 	if (stop_app_launch_timer())
-		LOGE("cannot stop app launch timer\n");
+		SWAP_LOGE("cannot stop app launch timer\n");
 
 	return ECORE_CALLBACK_CANCEL;
 }
@@ -137,7 +137,7 @@ static int start_app_launch_timer(int apps_count)
 		return res;
 
 	if (manager.app_launch_timerfd > 0) {
-		LOGI("stop previous app launch timer\n");
+		SWAP_LOGI("stop previous app launch timer\n");
 		stop_app_launch_timer();
 	}
 
@@ -152,7 +152,7 @@ static int start_app_launch_timer(int apps_count)
 		ctime.it_interval.tv_sec = 0;
 		ctime.it_interval.tv_nsec = 0;
 		if (timerfd_settime(manager.app_launch_timerfd, 0, &ctime, NULL) < 0) {
-			LOGE("fail to set app launch timer\n");
+			SWAP_LOGE("fail to set app launch timer\n");
 			res = -1;
 			goto unlock_and_stop;
 		} else {
@@ -163,15 +163,15 @@ static int start_app_launch_timer(int apps_count)
 							  NULL,
 							  NULL, NULL);
 			if (!launch_timer_handler) {
-				LOGE("fail to add app launch timer fd to \n");
+				SWAP_LOGE("fail to add app launch timer fd to \n");
 				res = -2;
 				goto unlock_and_stop;
 			} else {
-				LOGI("application launch time started\n");
+				SWAP_LOGI("application launch time started\n");
 			}
 		}
 	} else {
-		LOGE("cannot create launch timer\n");
+		SWAP_LOGE("cannot create launch timer\n");
 		res = -3;
 	}
 
@@ -206,7 +206,7 @@ static int kill_app_by_info(const struct app_info_t *app_info)
 	int res = 0;
 
 	if (app_info == NULL) {
-		LOGE("Cannot exec app. app_info is NULL");
+		SWAP_LOGE("Cannot exec app. app_info is NULL");
 		return -1;
 	}
 
@@ -216,7 +216,7 @@ static int kill_app_by_info(const struct app_info_t *app_info)
 		break;
 	case APP_TYPE_RUNNING:
 		// TODO: nothing, it's running
-		LOGI("already started\n");
+		SWAP_LOGI("already started\n");
 		break;
 	case APP_TYPE_COMMON:
 		res = kill_app(app_info->exe_path);
@@ -225,7 +225,7 @@ static int kill_app_by_info(const struct app_info_t *app_info)
 		/* do nothing (it is restarted by itself) */
 		break;
 	default:
-		LOGE("Unknown app type %d\n", app_info->app_type);
+		SWAP_LOGE("Unknown app type %d\n", app_info->app_type);
 		res = -1;
 		break;
 	}
@@ -239,7 +239,7 @@ static int exec_app(const struct app_info_t *app_info)
 	const char ui_viewer_log[] = "/tmp/uilib.log";
 
 	if (app_info == NULL) {
-		LOGE("Cannot exec app. app_info is NULL");
+		SWAP_LOGE("Cannot exec app. app_info is NULL");
 		return -1;
 	}
 
@@ -247,11 +247,11 @@ static int exec_app(const struct app_info_t *app_info)
 	case APP_TYPE_TIZEN:
 		if (is_feature_enabled(FL_UI_VIEWER_PROFILING)) {
 			if (ui_viewer_set_smack_rules(app_info)) {
-				LOGE("Cannot set smack rules for ui viewer\n");
+				SWAP_LOGE("Cannot set smack rules for ui viewer\n");
 				res = -1;
 			}
 			if (ui_viewer_set_app_info(app_info)) {
-				LOGE("Cannot set app info for ui viewer\n");
+				SWAP_LOGE("Cannot set app info for ui viewer\n");
 				res = -1;
 			}
 		}
@@ -259,7 +259,7 @@ static int exec_app(const struct app_info_t *app_info)
 			remove(ui_viewer_log);
 		}
 		if (exec_app_tizen(app_info->app_id, app_info->exe_path)) {
-			LOGE("Cannot exec tizen app %s\n", app_info->app_id);
+			SWAP_LOGE("Cannot exec tizen app %s\n", app_info->app_id);
 			res = -1;
 		} else {
 			inc_apps_to_run();
@@ -267,11 +267,11 @@ static int exec_app(const struct app_info_t *app_info)
 		break;
 	case APP_TYPE_RUNNING:
 		// TODO: nothing, it's running
-		LOGI("already started\n");
+		SWAP_LOGI("already started\n");
 		break;
 	case APP_TYPE_COMMON:
 		if (exec_app_common(app_info->exe_path)) {
-			LOGE("Cannot exec common app %s\n", app_info->exe_path);
+			SWAP_LOGE("Cannot exec common app %s\n", app_info->exe_path);
 			res = -1;
 		} else {
 			inc_apps_to_run();
@@ -279,28 +279,28 @@ static int exec_app(const struct app_info_t *app_info)
 		break;
 	case APP_TYPE_WEB:
 		if (wsi_set_profile(app_info)) {
-			LOGE("Cannot set web application profiling\n");
+			SWAP_LOGE("Cannot set web application profiling\n");
 			res = -1;
 		}
 
 		if (wsi_enable_profiling(PROF_ON)) {
-			LOGE("Cannot enable web application profiling\n");
+			SWAP_LOGE("Cannot enable web application profiling\n");
 			res = -1;
 		}
 
 		if (wsi_set_smack_rules(app_info)) {
-			LOGE("Cannot set web application smack rules\n");
+			SWAP_LOGE("Cannot set web application smack rules\n");
 			res = -1;
 		}
 
 		if (exec_app_web(app_info->app_id)) {
-			LOGE("Cannot exec web app %s\n", app_info->app_id);
+			SWAP_LOGE("Cannot exec web app %s\n", app_info->app_id);
 			res = -1;
 		}
 
 		if (!is_feature_enabled(FL_WEB_PROFILING)) {
 			if (wsi_enable_profiling(PROF_OFF)) {
-				LOGE("Cannot disable web application profiling\n");
+				SWAP_LOGE("Cannot disable web application profiling\n");
 				res = -1;
 			}
 			break;
@@ -310,12 +310,12 @@ static int exec_app(const struct app_info_t *app_info)
 
 		break;
 	default:
-		LOGE("Unknown app type %d\n", app_info->app_type);
+		SWAP_LOGE("Unknown app type %d\n", app_info->app_type);
 		res = -1;
 		break;
 	}
 
-	LOGI("ret=%d\n", res);
+	SWAP_LOGI("ret=%d\n", res);
 	return res;
 }
 
@@ -328,14 +328,14 @@ int terminate_profiling_apps(void)
 
 	app_info = app_info_get_first(&app);
 	if (app_info == NULL) {
-		LOGE("No app info found\n");
+		SWAP_LOGE("No app info found\n");
 		return -1;
 	}
 
 	/* all apps */
 	while (app_info != NULL) {
 		if (kill_app_by_info(app_info) != 0) {
-			LOGE("kill app failed\n");
+			SWAP_LOGE("kill app failed\n");
 			res = -1;
 		}
 		app_info = app_info_get_next(&app);
@@ -363,16 +363,16 @@ void terminate_all()
 // TODO: don't send data to host
 static void terminate_error(char *errstr, int send_to_host)
 {
-	LOGE("termination all with err '%s'\n", errstr);
+	SWAP_LOGE("termination all with err '%s'\n", errstr);
 	struct msg_data_t *msg = NULL;
 	if (send_to_host != 0) {
 		msg = gen_message_error(errstr);
 		if (msg) {
 			if (write_to_buf(msg) != 0)
-				LOGE("write to buf fail\n");
+				SWAP_LOGE("write to buf fail\n");
 			free_msg_data(msg);
 		} else {
-			LOGI("cannot generate error message\n");
+			SWAP_LOGI("cannot generate error message\n");
 		}
 	}
 	terminate_all();
@@ -383,7 +383,7 @@ void restart_all(void)
 	struct app_list_t *app = NULL;
 	const struct app_info_t *app_info = NULL;
 
-	LOGI("Restart all profiled apps\n");
+	SWAP_LOGI("Restart all profiled apps\n");
 
 	terminate_all();
 	target_stop_all();
@@ -393,12 +393,12 @@ void restart_all(void)
 	// exec all
 	app_info = app_info_get_first(&app);
 	if (app_info == NULL) {
-		LOGE("No app info found\n");
+		SWAP_LOGE("No app info found\n");
 		return;
 	}
 	while (app_info != NULL) {
 		if (exec_app(app_info)) {
-			LOGE("Cannot exec app\n");
+			SWAP_LOGE("Cannot exec app\n");
 		}
 		app_info = app_info_get_next(&app);
 	}
@@ -411,7 +411,7 @@ static Eina_Bool connect_timer_cb(void *data, Ecore_Fd_Handler *fd_handler)
 	terminate_error("no incoming connections", 1);
 	close(manager.connect_timeout_timerfd);
 	manager.connect_timeout_timerfd = -1;
-	LOGE("No connection in %d sec. shutdown.\n",
+	SWAP_LOGE("No connection in %d sec. shutdown.\n",
 	     MAX_CONNECT_TIMEOUT_TIME);
 	ecore_main_loop_quit();
 
@@ -431,7 +431,7 @@ static int launch_timer_start(void)
 		ctime.it_interval.tv_sec = 0;
 		ctime.it_interval.tv_nsec = 0;
 		if (timerfd_settime(manager.connect_timeout_timerfd, 0, &ctime, NULL) < 0) {
-			LOGE("fail to set connect timeout timer\n");
+			SWAP_LOGE("fail to set connect timeout timer\n");
 			close(manager.connect_timeout_timerfd);
 			manager.connect_timeout_timerfd = -1;
 		} else {
@@ -442,18 +442,18 @@ static int launch_timer_start(void)
 							  NULL,
 							  NULL, NULL);
 			if (!connect_timer_handler) {
-				LOGE("fail to add app connection timeout timer fd\n");
+				SWAP_LOGE("fail to add app connection timeout timer fd\n");
 				close(manager.connect_timeout_timerfd);
 				manager.connect_timeout_timerfd = -1;
 			} else {
-				LOGI("connection timeout timer started\n");
+				SWAP_LOGI("connection timeout timer started\n");
 			}
 		}
 	} else {
-		LOGE("cannot create connection timeout timer\n");
+		SWAP_LOGE("cannot create connection timeout timer\n");
 	}
 
-	LOGI("ret=%d\n", res);
+	SWAP_LOGI("ret=%d\n", res);
 	return res;
 }
 
@@ -480,20 +480,20 @@ int start_profiling(void)
 
 	app_info = app_info_get_first(&app);
 	if (app_info == NULL) {
-		LOGE("No app info found\n");
+		SWAP_LOGE("No app info found\n");
 		return -1;
 	}
 	// remove previous screen capture files
 	remove_indir(SCREENSHOT_DIR);
 	if (mkdir(SCREENSHOT_DIR, 0777) == -1 && errno != EEXIST) {
 		GETSTRERROR(errno, buf);
-		LOGW("Failed to create directory for screenshot : %s\n", buf);
+		SWAP_LOGW("Failed to create directory for screenshot : %s\n", buf);
 	}
 
 	set_label_for_all(SCREENSHOT_DIR);
 
 	if (samplingStart() < 0) {
-		LOGE("Cannot start sampling\n");
+		SWAP_LOGE("Cannot start sampling\n");
 		res = -1;
 		goto stop;
 	}
@@ -508,7 +508,7 @@ int start_profiling(void)
 
 	while (app_info != NULL) {
 		if (exec_app(app_info)) {
-			LOGE("Cannot exec app\n");
+			SWAP_LOGE("Cannot exec app\n");
 			res = -1;
 			goto recording_stop;
 		}
@@ -525,7 +525,7 @@ int start_profiling(void)
  stop:
 	fm_stop();
  exit:
-	LOGI("return %d\n", res);
+	SWAP_LOGI("return %d\n", res);
 	return res;
 }
 
@@ -589,7 +589,7 @@ int reconfigure(struct conf_t conf, struct msg_t **msg_reply, struct msg_t **msg
 	samplingStop();
 	memcpy(&prof_session.conf, &conf, sizeof(conf));
 	if (samplingStart() < 0) {
-		LOGE("Cannot start sampling\n");
+		SWAP_LOGE("Cannot start sampling\n");
 		return -1;
 	}
 
@@ -690,7 +690,7 @@ static int target_event_pid_handler(struct target *target)
 	target_set_type(target, app_info);
 
 	if (app_info == NULL) {
-		LOGE("pid %d not found in app list\n",
+		SWAP_LOGE("pid %d not found in app list\n",
 		     target_get_pid(target));
 		return -1;
 	}
@@ -707,7 +707,7 @@ static int target_event_stop_handler(struct target *target)
 	int cnt;
 	enum app_type_t app_type = target->app_type;
 
-	LOGI("target[%p] close, pid(%d) : (remaining %d target) close ecore handler %p\n",
+	SWAP_LOGI("target[%p] close, pid(%d) : (remaining %d target) close ecore handler %p\n",
 	     target, target_get_pid(target), target_cnt_get() - 1, target->handler);
 
 	ecore_main_fd_handler_del(target->handler);
@@ -721,9 +721,9 @@ static int target_event_stop_handler(struct target *target)
 		switch (app_type) {
 		case APP_TYPE_TIZEN:
 		case APP_TYPE_COMMON:
-			LOGI("all targets are stopped\n");
+			SWAP_LOGI("all targets are stopped\n");
 			if (stop_all() != ERR_NO)
-				LOGE("Stop failed\n");
+				SWAP_LOGE("Stop failed\n");
 			return -11;
 		default:
 			break;
@@ -763,7 +763,7 @@ static Eina_Bool target_event_cb(void *data, Ecore_Fd_Handler *fd_handler)
 		// removing fd from event loop
 	} else {
 		if (-11 == target_event_handler(target, u)) {
-			LOGI("all target process is closed\n");
+			SWAP_LOGI("all target process is closed\n");
 		}
 	}
 
@@ -783,7 +783,7 @@ static int targetServerHandler(bool is_probe_sock)
 
 	target = target_ctor();
 	if (target == NULL) {
-		LOGW("(target == NULL) no more target can connected\n");
+		SWAP_LOGW("(target == NULL) no more target can connected\n");
 		return 1;
 	}
 
@@ -798,13 +798,13 @@ static int targetServerHandler(bool is_probe_sock)
 		log.length = snprintf(log.data, sizeof(log.data), "%llu",
 				      prof_session.conf.use_features0) + 1;
 		if (target_send_msg(target, &log) != 0)
-			LOGE("fail to send data to target %p\n", target);
+			SWAP_LOGE("fail to send data to target %p\n", target);
 
 		// make event fd
 		target->event_fd = eventfd(EFD_CLOEXEC, EFD_NONBLOCK);
 		if (target->event_fd == -1) {
 			// fail to make event fd
-			LOGE("fail to make event fd for target[%p]\n", target);
+			SWAP_LOGE("fail to make event fd for target[%p]\n", target);
 			goto TARGET_CONNECT_FAIL;
 		}
 
@@ -815,14 +815,14 @@ static int targetServerHandler(bool is_probe_sock)
 						  (void *)target,
 						  NULL, NULL);
 		if (!target->handler) {
-			LOGE("fail to add event fd for target[%p]\n", target);
+			SWAP_LOGE("fail to add event fd for target[%p]\n", target);
 			goto TARGET_CONNECT_FAIL;
 		}
 
 		// make recv thread for target
 		if (makeRecvThread(target) != 0) {
 			// fail to make recv thread
-			LOGE("fail to make recv thread for target[%p]\n",
+			SWAP_LOGE("fail to make recv thread for target[%p]\n",
 			     target);
 			ecore_main_fd_handler_del(target->handler);
 			goto TARGET_CONNECT_FAIL;
@@ -832,17 +832,17 @@ static int targetServerHandler(bool is_probe_sock)
 
 		if ((manager.app_launch_timerfd > 0) && (get_apps_to_run() == 0)) {
 			if (stop_app_launch_timer())
-				LOGE("cannot stop app launch timer\n");
+				SWAP_LOGE("cannot stop app launch timer\n");
 		}
 
-		LOGI("target connected target[%p](running %d target)\n",
+		SWAP_LOGI("target connected target[%p](running %d target)\n",
 		     target, target_cnt_get() + 1);
 
 		target_cnt_set(target_cnt_get() + 1);
 		return 0;
 	} else {
 		// accept error
-		LOGE("Failed to accept at target server socket\n");
+		SWAP_LOGE("Failed to accept at target server socket\n");
 	}
 
  TARGET_CONNECT_FAIL:
@@ -878,7 +878,7 @@ static void recv_msg_tail(int fd, uint32_t len)
 	return;
 
 error_ret:
-	LOGE("error or close request from host. recv_len = %d\n",
+	SWAP_LOGE("error or close request from host. recv_len = %d\n",
 	     recv_len);
 	return;
 }
@@ -894,7 +894,7 @@ static void *host_control_sock_thread(void *args)
 
 	while (1) {
 		if (manager.connect_timeout_timerfd >= 0) {
-			LOGI("release connect timeout timer\n");
+			SWAP_LOGI("release connect timeout timer\n");
 			close(manager.connect_timeout_timerfd);
 			manager.connect_timeout_timerfd = -1;
 		}
@@ -904,7 +904,7 @@ static void *host_control_sock_thread(void *args)
 
 		/* error or close request from host */
 		if (recv_len == -1 || recv_len == 0) {
-			LOGW("error or close request from host. "
+			SWAP_LOGW("error or close request from host. "
 			     "header recv_len = %d\n",
 			     recv_len);
 			break;
@@ -914,7 +914,7 @@ static void *host_control_sock_thread(void *args)
 
 		/* check payload length */
 		if (msg_head.len > HOST_CTL_MSG_MAX_LEN) {
-			LOGE("Too long message. MSG_ID = 0x%08X; size = %u\n",
+			SWAP_LOGE("Too long message. MSG_ID = 0x%08X; size = %u\n",
 			     msg_head.id, msg_head.len);
 			recv_msg_tail(manager.host.control_socket, msg_head.len);
 			sendACKToHost(msg_head.id, ERR_TO_LONG_MESSAGE, 0, 0);
@@ -924,7 +924,7 @@ static void *host_control_sock_thread(void *args)
 		/* recv payload */
 		msg = malloc(MSG_CMD_HDR_LEN + msg_head.len);
 		if (!msg) {
-			LOGE("Cannot alloc msg. MSG_ID = 0x%08X; size = %u\n",
+			SWAP_LOGE("Cannot alloc msg. MSG_ID = 0x%08X; size = %u\n",
 			     msg_head.id, msg_head.len);
 			recv_msg_tail(manager.host.control_socket, msg_head.len);
 			sendACKToHost(msg_head.id, ERR_WRONG_MESSAGE_FORMAT, 0, 0);
@@ -938,7 +938,7 @@ static void *host_control_sock_thread(void *args)
 			recv_len = recv(manager.host.control_socket,
 					msg->payload, msg->len, MSG_WAITALL);
 			if (recv_len == -1 || recv_len == 0) {
-				LOGW("error or close request from host. "
+				SWAP_LOGW("error or close request from host. "
 				     "MSG_ID = 0x%08X; payload recv_len = %d\n",
 				     msg_head.id, recv_len);
 				free(msg);
@@ -952,7 +952,7 @@ static void *host_control_sock_thread(void *args)
 	}
 
 	/*  connection closed */
-	LOGI("Connection closed. Termination. (%d)\n",
+	SWAP_LOGI("Connection closed. Termination. (%d)\n",
 	     manager.host.control_socket);
 	/* splice will fail without next cmd */
 	manager.host.data_socket = -1;
@@ -960,7 +960,7 @@ static void *host_control_sock_thread(void *args)
 	ecore_main_loop_quit();
 
 	manager.host.control_socket = -1;
-	LOGI("Control socket thread finished\n");
+	SWAP_LOGI("Control socket thread finished\n");
 	return NULL;
 }
 
@@ -984,7 +984,7 @@ static Eina_Bool host_data_cb(void *data, Ecore_Fd_Handler *fd_handler)
 		// TODO: finish transfer thread
 	}
 
-	LOGI("host message from data socket %d\n", recvLen);
+	SWAP_LOGI("host message from data socket %d\n", recvLen);
 
 	return ECORE_CALLBACK_RENEW;
 }
@@ -1008,7 +1008,7 @@ static int hostServerHandler(void)
 		if (hostserverorder == 0) {
 			manager.host.control_socket = csocket;
 			unlink_portfile();
-			LOGI("host control socket connected = %d\n", csocket);
+			SWAP_LOGI("host control socket connected = %d\n", csocket);
 
 			host_ctrl_handler =
 				ecore_main_fd_handler_add(manager.host.control_socket,
@@ -1017,12 +1017,12 @@ static int hostServerHandler(void)
 							  NULL,
 							  NULL, NULL);
 			if (!host_ctrl_handler) {
-				LOGE("Failed to add host control socket fd\n");
+				SWAP_LOGE("Failed to add host control socket fd\n");
 				close(csocket);
 			}
 
 			if (manager.host_control_sock_thread != -1) {
-				LOGI("replay already started\n");
+				SWAP_LOGI("replay already started\n");
 				return -1;
 			}
 
@@ -1031,13 +1031,13 @@ static int hostServerHandler(void)
 					   host_control_sock_thread,
 					   NULL) < 0)
 			{
-				LOGE("Failed to create replay thread\n");
+				SWAP_LOGE("Failed to create replay thread\n");
 				return -1;
 			}
 
 		} else {
 			manager.host.data_socket = csocket;
-			LOGI("host data socket connected = %d\n", csocket);
+			SWAP_LOGI("host data socket connected = %d\n", csocket);
 
 			host_data_handler =
 				ecore_main_fd_handler_add(manager.host.data_socket,
@@ -1046,7 +1046,7 @@ static int hostServerHandler(void)
 							  NULL,
 							  NULL, NULL);
 			if (!host_data_handler) {
-				LOGE("Failed to add host data socket fd\n");
+				SWAP_LOGE("Failed to add host data socket fd\n");
 				close(csocket);
 				return -1;
 			}
@@ -1056,7 +1056,7 @@ static int hostServerHandler(void)
 		return 0;
 	} else {
 		// accept error
-		LOGE("Failed to accept from host server socket\n");
+		SWAP_LOGE("Failed to accept from host server socket\n");
 		return -1;
 	}
 }
@@ -1070,7 +1070,7 @@ static Eina_Bool host_connect_cb(void *data, Ecore_Fd_Handler *fd_handler)
 	// connect request from host
 	int result = hostServerHandler();
 	if (result < 0) {
-		LOGE("Internal DA framework error (hostServerHandler)\n");
+		SWAP_LOGE("Internal DA framework error (hostServerHandler)\n");
 	}
 
 	return ECORE_CALLBACK_RENEW;
@@ -1103,7 +1103,7 @@ static bool initialize_events(void)
 					  NULL,
 					  NULL, NULL);
 	if (!host_connect_handler) {
-		LOGE("Host server socket add error\n");
+		SWAP_LOGE("Host server socket add error\n");
 		return false;
 	}
 
@@ -1113,7 +1113,7 @@ static bool initialize_events(void)
 					  target_connect_cb,
 					  &is_probe_true, NULL, NULL);
 	if (!target_connect_handler) {
-		LOGE("Target server socket add error\n");
+		SWAP_LOGE("Target server socket add error\n");
 		return false;
 	}
 
@@ -1123,7 +1123,7 @@ static bool initialize_events(void)
 					  target_connect_cb,
 					  &is_probe_false, NULL, NULL);
 	if (!ui_target_connect_handler) {
-		LOGE("UI target server socket add error\n");
+		SWAP_LOGE("UI target server socket add error\n");
 		return false;
 	}
 
@@ -1138,7 +1138,7 @@ int daemonLoop(void)
 	ecore_init();
 
 	if (init_input_events() == -1) {
-		LOGE("Init input event failed. "
+		SWAP_LOGE("Init input event failed. "
 		     "Record and replay events failed.\n");
 	}
 
@@ -1148,7 +1148,7 @@ int daemonLoop(void)
 	}
 
 	if (launch_timer_start() < 0) {
-		LOGE("Launch timer start failed\n");
+		SWAP_LOGE("Launch timer start failed\n");
 		return_value = -1;
 		goto END_EFD;
 	}
@@ -1159,7 +1159,7 @@ int daemonLoop(void)
 	ecore_shutdown();
 
 END_EFD:
-	LOGI("close efd\n");
+	SWAP_LOGI("close efd\n");
 	close(manager.efd);
 
 	return return_value;

@@ -82,7 +82,7 @@ static uint32_t get_fbi_probe_size(struct msg_buf_t *msg)
 	struct fbi_probe_t *fbi_probe;
 
 	if (msg == NULL || msg->cur_pos == NULL) {
-		LOGE("wrong msg structure\n");
+		SWAP_LOGE("wrong msg structure\n");
 		goto err_ret;
 	}
 	p = msg->cur_pos;
@@ -101,7 +101,7 @@ static uint32_t get_fbi_probe_size(struct msg_buf_t *msg)
 		       fbi_probe->steps_count * sizeof(fbi_probe->fbi_step[0]);
 
 		if (p + size > msg->end) {
-			LOGE("\nfbi probe #%d parsing error:\n"
+			SWAP_LOGE("\nfbi probe #%d parsing error:\n"
 			     "\tvarid       %016llX\n"
 			     "\treg_offset  %016llX\n"
 			     "\treg_num     %02x\n"
@@ -141,12 +141,12 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 	size = sizeof(*func);
 
 	if (!parse_int64(msg, &addr)) {
-		LOGE("func addr parsing error\n");
+		SWAP_LOGE("func addr parsing error\n");
 		return 0;
 	}
 
 	if (!parse_int8(msg, &type)) {
-		LOGE("func type parsing error\n");
+		SWAP_LOGE("func type parsing error\n");
 		return 0;
 	}
 
@@ -157,7 +157,7 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 	case SWAP_FBI_PROBE:
 		tmp_size = get_fbi_probe_size(msg);
 		if (tmp_size == 0) {
-			LOGE("probe parsing error\n");
+			SWAP_LOGE("probe parsing error\n");
 			goto err_ret;
 		}
 		size += tmp_size;
@@ -169,13 +169,13 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 	case SWAP_WEBPROBE:
 		break;
 	default:
-		LOGE("wrong probe type <%u>\n", type);
+		SWAP_LOGE("wrong probe type <%u>\n", type);
 		goto err_ret;
 	}
 
 	func = malloc(size);
 	if (func == NULL) {
-		LOGE("no memory\n");
+		SWAP_LOGE("no memory\n");
 		return 0;
 	}
 
@@ -187,7 +187,7 @@ static int parse_us_inst_func(struct msg_buf_t *msg, struct probe_list_t **dest)
 
 	*dest = new_probe();
 	if (*dest == NULL) {
-		LOGE("alloc new_probe error\n");
+		SWAP_LOGE("alloc new_probe error\n");
 		goto free_func_ret;
 	}
 	(*dest)->size = size;
@@ -209,7 +209,7 @@ static int parse_func_inst_list(struct msg_buf_t *msg,
 	if (!parse_int32(msg, &num) ||
 		!check_us_app_inst_func_count(num))
 	{
-		LOGE("func num parsing error\n");
+		SWAP_LOGE("func num parsing error\n");
 		return 0;
 	}
 	//parse user space function list
@@ -219,7 +219,7 @@ static int parse_func_inst_list(struct msg_buf_t *msg,
 		parse_deb("app_int #%d\n", i);
 		if (!parse_us_inst_func(msg, &probe_el)) {
 			// TODO maybe need to free allocated memory up there
-			LOGE("parse us inst func #%d failed\n", i + 1);
+			SWAP_LOGE("parse us inst func #%d failed\n", i + 1);
 			return 0;
 		}
 		probe_list_append(dest, probe_el);
@@ -233,7 +233,7 @@ static int parse_inst_lib(struct msg_buf_t *msg, struct lib_list_t **dest)
 	int res = 1;
 	*dest = new_lib();
 	if (*dest == NULL) {
-		LOGE("lib alloc error\n");
+		SWAP_LOGE("lib alloc error\n");
 		res = 0;
 		goto exit;
 	};
@@ -241,12 +241,12 @@ static int parse_inst_lib(struct msg_buf_t *msg, struct lib_list_t **dest)
 	if (!parse_string(msg, &((*dest)->lib->bin_path)) ||
 	    !check_exec_path((*dest)->lib->bin_path))
 	{
-		LOGE("bin path parsing error\n");
+		SWAP_LOGE("bin path parsing error\n");
 		goto exit_free_err;
 	}
 
 	if (!parse_func_inst_list(msg, (struct data_list_t *) *dest)) {
-		LOGE("funcs parsing error\n");
+		SWAP_LOGE("funcs parsing error\n");
 		goto exit_free_err;
 	}
 
@@ -273,14 +273,14 @@ int parse_lib_inst_list(struct msg_buf_t *msg,
 	if (!parse_int32(msg, num) ||
 		!check_lib_inst_count(*num))
 	{
-		LOGE("lib num parsing error\n");
+		SWAP_LOGE("lib num parsing error\n");
 		return 0;
 	}
 
 	for (i = 0; i < *num; i++) {
 		if (!parse_inst_lib(msg, &lib)) {
 			// TODO maybe need free allocated memory up there
-			LOGE("parse is inst lib #%d failed\n", i + 1);
+			SWAP_LOGE("parse is inst lib #%d failed\n", i + 1);
 			return 0;
 		}
 		data_list_append((struct data_list_t **)lib_list,
@@ -302,7 +302,7 @@ static int parse_inst_app_setup_data(struct msg_buf_t *msg,
 
 		/* skip 8 bytes */
 		if (!parse_int64(msg, &val)) {
-			LOGE("main address parsing error\n");
+			SWAP_LOGE("main address parsing error\n");
 			return -EINVAL;
 		}
 
@@ -334,7 +334,7 @@ int parse_inst_app(struct msg_buf_t *msg, struct app_list_t **dest)
 	*dest = new_app();
 
 	if (*dest == NULL) {
-		LOGE("lib alloc error\n");
+		SWAP_LOGE("lib alloc error\n");
 		res = 0;
 		goto exit;
 	};
@@ -344,14 +344,14 @@ int parse_inst_app(struct msg_buf_t *msg, struct app_list_t **dest)
 	if (!parse_int32(msg, &app_info->app_type) ||
 		!check_app_type(app_info->app_type))
 	{
-		LOGE("app type parsing error <0x%X>\n", app_info->app_type);
+		SWAP_LOGE("app type parsing error <0x%X>\n", app_info->app_type);
 		goto exit_free_err;
 	}
 
 	if (!parse_string(msg, &app_info->app_id) ||
 		!check_app_id(app_info->app_type, app_info->app_id))
 	{
-		LOGE("app id parsing error\n");
+		SWAP_LOGE("app id parsing error\n");
 		goto exit_free_err;
 	}
 
@@ -361,18 +361,18 @@ int parse_inst_app(struct msg_buf_t *msg, struct app_list_t **dest)
 	      (app_info->app_id[0] != '\0')) &&
 	     !check_exec_path(app_info->exe_path)))
 	{
-		LOGE("exec path parsing error\n");
+		SWAP_LOGE("exec path parsing error\n");
 		goto exit_free_err;
 	}
 	end = msg->cur_pos;
 
 	if (!parse_func_inst_list(msg, (struct data_list_t *)*dest)) {
-		LOGE("funcs parsing error\n");
+		SWAP_LOGE("funcs parsing error\n");
 		goto exit_free_err;
 	}
 
 	if (parse_inst_app_setup_data(msg, app_info, *dest)) {
-		LOGE("setup data parsing error\n");
+		SWAP_LOGE("setup data parsing error\n");
 		goto exit_free_err;
 	}
 
@@ -396,7 +396,7 @@ int parse_app_inst_list(struct msg_buf_t *msg,
 	if (!parse_int32(msg, num) ||
 		!check_lib_inst_count(*num))
 	{
-		LOGE("app num parsing error\n");
+		SWAP_LOGE("app num parsing error\n");
 		goto exit_fail;
 	}
 
@@ -408,7 +408,7 @@ int parse_app_inst_list(struct msg_buf_t *msg,
 		parse_deb("app_int #%d\n", i);
 		if (!parse_inst_app(msg, &app)) {
 			// TODO maybe need free allocated memory up there
-			LOGE("parse is inst app #%d failed\n", i + 1);
+			SWAP_LOGE("parse is inst app #%d failed\n", i + 1);
 			goto exit_fail_clean_list;
 		}
 
@@ -416,7 +416,7 @@ int parse_app_inst_list(struct msg_buf_t *msg,
 		err = fm_app_add(info->app_type, info->app_id, info->exe_path,
 				 info->setup_data.data, info->setup_data.size);
 		if (err) {
-			LOGE("add app, ret=%d\n", err);
+			SWAP_LOGE("add app, ret=%d\n", err);
 			goto exit_fail_release_app;
 		}
 
@@ -425,7 +425,7 @@ int parse_app_inst_list(struct msg_buf_t *msg,
 	}
 
 	if (!parse_replay_event_seq(msg, &prof_session.replay_event_seq)) {
-		LOGE("replay parsing error\n");
+		SWAP_LOGE("replay parsing error\n");
 		goto exit_fail_clean_list;
 	}
 
@@ -459,12 +459,12 @@ static unsigned long dl_get_addr(const char *lib_name, const char *func_name)
 
 	handle = dlopen(lib_name, RTLD_LAZY);
 	if (handle == NULL) {
-		LOGE("handle not found (%s), error: %s\n", lib_name, dlerror());
+		SWAP_LOGE("handle not found (%s), error: %s\n", lib_name, dlerror());
 		return 0;
 	}
 
 	if (dlinfo(handle, RTLD_DI_LINKMAP, &map) == -1) {
-		LOGE("RTLD_DI_LINKMAP failed: %s\n", dlerror());
+		SWAP_LOGE("RTLD_DI_LINKMAP failed: %s\n", dlerror());
 		goto close_handle;
 	}
 
@@ -473,7 +473,7 @@ static unsigned long dl_get_addr(const char *lib_name, const char *func_name)
 
 	err = dlerror();
 	if (err) {
-		LOGE("dlerror(): %s\n", err);
+		SWAP_LOGE("dlerror(): %s\n", err);
 		addr = 0;
 		goto close_handle;
 	}
@@ -495,12 +495,12 @@ static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
 	num = ld_lib.probe_count;
 
 	if (!check_us_app_inst_func_count(num)) {
-		LOGE("ld probe count is wrong\n");
+		SWAP_LOGE("ld probe count is wrong\n");
 		return 0;
 	}
 	//parse user space function list
 
-	LOGI("app_int_num = %d\n", num);
+	SWAP_LOGI("app_int_num = %d\n", num);
 	for (i = 0; i < num; i++) {
 		unsigned long orig_addr = ld_lib.probes[i].orig_addr;
 
@@ -513,7 +513,7 @@ static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
 
 			orig_addr = dl_get_addr(lib_name, func_name);
 
-			LOGI("IFUNC: [%08lx %s] %s\n", orig_addr, func_name, lib_name);
+			SWAP_LOGI("IFUNC: [%08lx %s] %s\n", orig_addr, func_name, lib_name);
 			if (orig_addr == 0)
 				continue;
 
@@ -524,14 +524,14 @@ static int feature_add_func_inst_list(struct ld_lib_list_el_t ld_lib,
 		probe_el = new_probe();
 
 		if (probe_el == NULL) {
-			LOGE("app_int #%04d: probe alloc error\n", i);
+			SWAP_LOGE("app_int #%04d: probe alloc error\n", i);
 			return 0;
 		}
 
 		func = malloc(sizeof(struct ld_preload_probe_t));
 
 		if (func == NULL) {
-			LOGE("app_int #%04d: func alloc error\n", i);
+			SWAP_LOGE("app_int #%04d: func alloc error\n", i);
 			free(probe_el);
 			return 0;
 		}
@@ -556,19 +556,19 @@ static int feature_add_inst_lib(struct ld_lib_list_el_t ld_lib,
 {
 	*dest = new_lib();
 	if (*dest == NULL) {
-		LOGE("lib alloc error\n");
+		SWAP_LOGE("lib alloc error\n");
 		return 0;
 	};
 
 	if (!check_exec_path(ld_lib.lib_name)) {
-		LOGE("bin path parsing error\n");
+		SWAP_LOGE("bin path parsing error\n");
 		return 0;
 	}
 
 	(*dest)->lib->bin_path = strdup(ld_lib.lib_name);
 
 	if (!feature_add_func_inst_list(ld_lib, (struct data_list_t *)*dest)) {
-		LOGE("funcs parsing error\n");
+		SWAP_LOGE("funcs parsing error\n");
 		return 0;
 	}
 
@@ -587,15 +587,15 @@ int feature_add_lib_inst_list(struct ld_feature_list_el_t *ld_lib_list,
 
 	num = ld_lib_list->lib_count;
 	if (!check_lib_inst_count(num)) {
-		LOGE("lib num parsing error\n");
+		SWAP_LOGE("lib num parsing error\n");
 		return 0;
 	}
 
 	for (i = 0; i < num; i++) {
-		LOGI(">add lib #%d <%s> probes_count=%lu\n", i, ld_lib_list->libs[i].lib_name, ld_lib_list->libs[i].probe_count);
+		SWAP_LOGI(">add lib #%d <%s> probes_count=%lu\n", i, ld_lib_list->libs[i].lib_name, ld_lib_list->libs[i].probe_count);
 		if (!feature_add_inst_lib(ld_lib_list->libs[i], &lib)) {
 			// TODO maybe need free allocated memory up there
-			LOGE("add LD lib #%d failed\n", i + 1);
+			SWAP_LOGE("add LD lib #%d failed\n", i + 1);
 			continue;
 		}
 		data_list_append((struct data_list_t **)lib_list,
@@ -613,7 +613,7 @@ static int create_preload_probe_func(struct probe_list_t **probe,
 
 	func = malloc(sizeof(*func));
 	if (func == NULL) {
-		LOGE("no memory for probe func\n");
+		SWAP_LOGE("no memory for probe func\n");
 		return -ENOMEM;
 	}
 
@@ -637,7 +637,7 @@ int add_preload_probes(struct lib_list_t **lib_list)
 
 	preload_lib = new_lib();
 	if (preload_lib == NULL) {
-		LOGE("preload lib alloc error\n");
+		SWAP_LOGE("preload lib alloc error\n");
 		ret = 0;
 		goto exit_fail;
 	}
@@ -646,7 +646,7 @@ int add_preload_probes(struct lib_list_t **lib_list)
 	get_call_type_probe = new_probe();
 	write_msg_probe = new_probe();
 	if (get_caller_probe == NULL || get_call_type_probe == NULL || write_msg_probe == NULL) {
-		LOGE("probe alloc error\n");
+		SWAP_LOGE("probe alloc error\n");
 		ret = 0;
 		goto free_caller_probe;
 	}

@@ -114,7 +114,7 @@ static void write_int(FILE *fp, int code)
 
 static void _close_server_socket(void)
 {
-	LOGI("close_server_socket\n");
+	SWAP_LOGI("close_server_socket\n");
 	// close server socket
 	if(manager.host_server_socket != -1)
 		close(manager.host_server_socket);
@@ -126,10 +126,10 @@ static void _close_server_socket(void)
 
 static void _unlink_files(void)
 {
-	LOGI("unlink files start\n");
+	SWAP_LOGI("unlink files start\n");
 	unlink(PORTFILE);
 	unlink(SINGLETON_LOCKFILE);
-	LOGI("unlink files done\n");
+	SWAP_LOGI("unlink files done\n");
 }
 
 void unlink_portfile(void)
@@ -156,7 +156,7 @@ static int makeTargetServerSocket(int *target_server_socket, const char *S_NAME)
 					      SOCK_STREAM | SOCK_CLOEXEC, 0);
 	if (*target_server_socket < 0)
 	{
-		LOGE("Target server socket creation failed\n");
+		SWAP_LOGE("Target server socket creation failed\n");
 		return -1;
 	}
 
@@ -169,23 +169,23 @@ static int makeTargetServerSocket(int *target_server_socket, const char *S_NAME)
 	if (-1 == bind(*target_server_socket, (struct sockaddr*) &serverAddrUn,
 					sizeof(serverAddrUn)))
 	{
-		LOGE("Target server socket binding failed\n");
+		SWAP_LOGE("Target server socket binding failed\n");
 		return -1;
 	}
 
 	if(chmod(serverAddrUn.sun_path, 0777) < 0)
 	{
-		LOGE("Failed to change mode for socket file : errno(%d)\n", errno);
+		SWAP_LOGE("Failed to change mode for socket file : errno(%d)\n", errno);
 	}
 
 
 	if (-1 == listen(*target_server_socket, 5))
 	{
-		LOGE("Target server socket listening failed\n");
+		SWAP_LOGE("Target server socket listening failed\n");
 		return -1;
 	}
 
-	LOGI("Created TargetSock %d\n", *target_server_socket);
+	SWAP_LOGI("Created TargetSock %d\n", *target_server_socket);
 	return 0;
 }
 
@@ -205,14 +205,14 @@ static int makeHostServerSocket()
 					    IPPROTO_TCP);
 	if (manager.host_server_socket < 0)
 	{
-		LOGE("Host server socket creation failed\n");
+		SWAP_LOGE("Host server socket creation failed\n");
 		return -1;
 	}
 
 	if(setsockopt(manager.host_server_socket,
 	   SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
 	{
-		LOGE("Failed to set socket option : errno(%d)\n", errno);
+		SWAP_LOGE("Failed to set socket option : errno(%d)\n", errno);
 	}
 
 	memset(&serverAddrIn, 0, sizeof(serverAddrIn));
@@ -230,18 +230,18 @@ static int makeHostServerSocket()
 
 	if(port == LIMIT_PORT)
 	{
-		LOGE("Host server socket binding failed\n");
+		SWAP_LOGE("Host server socket binding failed\n");
 		return -1;
 	}
 
 	// enter listen state from client
 	if (-1 == listen(manager.host_server_socket, 5))
 	{
-		LOGE("Host server socket listening failed\n");
+		SWAP_LOGE("Host server socket listening failed\n");
 		return -1;
 	}
 
-	LOGI("Created HostSock %d\n", manager.host_server_socket);
+	SWAP_LOGI("Created HostSock %d\n", manager.host_server_socket);
 	return port;
 }
 
@@ -256,13 +256,13 @@ static int ensure_singleton(const char *lockfile)
 	/* DO NOT CLOSE lockfile!!! */
 	manager.lockfd = open(lockfile, O_RDWR | O_CREAT, 0600);
 	if (manager.lockfd < 0)
-		LOGI("singleton lock file creation failed\n");
+		SWAP_LOGI("singleton lock file creation failed\n");
 
 	/* To prevent race condition, also check for lock availiability. */
 	locked = (!(flock(manager.lockfd, LOCK_EX | LOCK_NB) < 0));
 
 	if (!locked)
-		LOGE("another instance of daemon is already running\n");
+		SWAP_LOGE("another instance of daemon is already running\n");
 
 	/* DO NOT CLOSE lockfile!!! */
 	return locked;
@@ -293,12 +293,12 @@ static bool initialize_pthread_sigmask()
 static int initializeManager(FILE *portfile)
 {
 	if (init_buf() != 0) {
-		LOGE("Cannot init buffer\n");
+		SWAP_LOGE("Cannot init buffer\n");
 		return -1;
 	}
 
 	if (fm_init() != 0) {
-		LOGE("Cannot init feature manager\n");
+		SWAP_LOGE("Cannot init feature manager\n");
 		return -1;
 	}
 
@@ -329,7 +329,7 @@ static int initializeManager(FILE *portfile)
 		write_int(portfile, port);
 	}
 
-	LOGI("SUCCESS to write port\n");
+	SWAP_LOGI("SUCCESS to write port\n");
 
 	inititialize_manager_targets();
 
@@ -342,36 +342,36 @@ static int initializeManager(FILE *portfile)
 
 static int finalizeManager()
 {
-	LOGI("Finalize daemon\n");
-	LOGI("finalize system info\n");
+	SWAP_LOGI("Finalize daemon\n");
+	SWAP_LOGI("finalize system info\n");
 	finalize_system_info();
 
 	// close host client socket
 	if(manager.host.control_socket != -1){
-		LOGI("close host control socket (%d)\n", manager.host.control_socket);
+		SWAP_LOGI("close host control socket (%d)\n", manager.host.control_socket);
 		close(manager.host.control_socket);
 	}
 	if(manager.host.data_socket != -1){
-		LOGI("close host data socket (%d)\n", manager.host.data_socket);
+		SWAP_LOGI("close host data socket (%d)\n", manager.host.data_socket);
 		close(manager.host.data_socket);
 	}
 
-	LOGI("return\n");
+	SWAP_LOGI("return\n");
 	return 0;
 }
 
 static void remove_buf_modules(void)
 {
-	LOGI("rmmod buffer start\n");
+	SWAP_LOGI("rmmod buffer start\n");
 	if (system("cd /usr/bin && ./swap_stop.sh")) {
-		LOGW("Cannot remove swap modules\n");
+		SWAP_LOGW("Cannot remove swap modules\n");
 	}
-	LOGI("rmmod buffer done\n");
+	SWAP_LOGI("rmmod buffer done\n");
 }
 
 static void terminate(int sig)
 {
-	LOGI("terminate! sig = %d\n", sig);
+	SWAP_LOGI("terminate! sig = %d\n", sig);
 	if (!stop_all_in_process()) {
 		// we are up there if signal accept and stop_all func was not
 		// called yet.
@@ -385,7 +385,7 @@ static void terminate(int sig)
 		exit_buf();
 		remove_buf_modules();
 		if (sig != 0) {
-			LOGW("Terminating due signal %s\n", strsignal(sig));
+			SWAP_LOGW("Terminating due signal %s\n", strsignal(sig));
 			signal(sig, SIG_DFL);
 			raise(sig);
 		}
@@ -395,9 +395,9 @@ static void terminate(int sig)
 
 		// if stop_all called we cannot call remove_buf_modules and
 		// other funcs because of threads are not stopped yet
-		LOGW("Stop in progress\n");
+		SWAP_LOGW("Stop in progress\n");
 		if (sig != 0) {
-			LOGW("ignore signal %s\n", strsignal(sig));
+			SWAP_LOGW("ignore signal %s\n", strsignal(sig));
 			signal(sig, SIG_IGN);
 		}
 	}
@@ -428,29 +428,29 @@ int main()
 {
 
 	if (!ensure_singleton(SINGLETON_LOCKFILE)) {
-		LOGE("Daemon cannot be launched\n");
+		SWAP_LOGE("Daemon cannot be launched\n");
 		return 1;
 	}
 
 	if (initialize_log() != 0) {
-		LOGE("Init log failed. uninit\n");
+		SWAP_LOGE("Init log failed. uninit\n");
 		terminate0();
-		LOGE("Daemon terminated\n");
+		SWAP_LOGE("Daemon terminated\n");
 		exit(0);
 	}
 
-	LOGI("da_started\n");
+	SWAP_LOGI("da_started\n");
 	atexit(terminate0);
 
 
 	//for terminal exit
 	setup_signals();
 	daemon(0, 1);
-	LOGI("--- daemonized (pid %d) ---\n", getpid());
+	SWAP_LOGI("--- daemonized (pid %d) ---\n", getpid());
 
 	FILE *portfile = fopen(PORTFILE, "w");
 	if (!portfile) {
-		LOGE("cannot create portfile");
+		SWAP_LOGE("cannot create portfile");
 		return 1;
 	}
 
@@ -465,7 +465,7 @@ int main()
 	//FIX ME remove samplingThread it is only for debug
 	//samplingThread(NULL);
 	daemonLoop();
-	LOGI("daemon loop finished\n");
+	SWAP_LOGI("daemon loop finished\n");
 	stop_all();
 	finalizeManager();
 
@@ -476,7 +476,7 @@ int main()
 	msg_swap_free_all_data(&prof_session.user_space_inst);
 #endif
 	release_singleton();
-	LOGI("main finished\n");
+	SWAP_LOGI("main finished\n");
 	print_malloc_list(NULL, 0);
 	return 0;
 }

@@ -13,8 +13,8 @@
 #undef free
 
 #if MALLOC_DEBUG_LEVEL == 2
-#define logi LOGI
-#define loge LOGE
+#define logi SWAP_LOGI
+#define loge SWAP_LOGE
 #else
 #define logi(...)
 #define loge(...)
@@ -105,26 +105,26 @@ void print_file_malloc_list(struct mlist_t *file, int only_count)
 	struct mlist_t *el = NULL;
 	int count = 0;
 
-	LOGI(" -> malloc list for file (%s)\n", file->info);
+	SWAP_LOGI(" -> malloc list for file (%s)\n", file->info);
 	el = file->addr;
 	if (el == NULL)
-		LOGI("list is empty\n");
+		SWAP_LOGI("list is empty\n");
 	while (el != NULL) {
 		count++;
 		if (only_count == 0)
-			LOGI("  %04d) 0x%lX <%s>\n", el->line, el->addr,
+			SWAP_LOGI("  %04d) 0x%lX <%s>\n", el->line, el->addr,
 			     el->info);
 		el = el->next;
 	}
 
 	if (only_count == 1)
-		LOGI("  malloc count = %d\n", count);
+		SWAP_LOGI("  malloc count = %d\n", count);
 }
 
 void print_malloc_list(char *file_name, int only_count)
 {
 	struct mlist_t *file = NULL;
-	LOGI("BEGIN--------------------------------------------------------\n");
+	SWAP_LOGI("BEGIN--------------------------------------------------------\n");
 	if (file_name == NULL) {
 		file = files_list;
 		while (file != NULL) {
@@ -135,7 +135,7 @@ void print_malloc_list(char *file_name, int only_count)
 		struct mlist_t *file = find_list(file_name);
 		print_file_malloc_list(file, only_count);
 	}
-	LOGI("END----------------------------------------------------------\n");
+	SWAP_LOGI("END----------------------------------------------------------\n");
 }
 
 int rm_malloc(struct mlist_t *file_list, void *addr)
@@ -228,7 +228,7 @@ void free_call_d(int line, const char *file_name, const char *function,
 		free(addr);
 		return;
 	}
-	LOGW("cannot free element!!! 0x%08lX (%d:%s '%s')\n",
+	SWAP_LOGW("cannot free element!!! 0x%08lX (%d:%s '%s')\n",
 	     addr, line, function, file_name);
 
 }

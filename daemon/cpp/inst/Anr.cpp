@@ -98,7 +98,7 @@ int del(const std::string &name)
 
         std::string new_line(*it + '\n');
         if (fwrite(new_line.c_str(), new_line.length(), 1, f) != 1)
-            LOGE("failed write '%s' to file '%s'\n", new_line.c_str(), EXCLUDE_PATH);
+            SWAP_LOGE("failed write '%s' to file '%s'\n", new_line.c_str(), EXCLUDE_PATH);
     }
 
     fclose(f);

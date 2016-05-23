@@ -55,6 +55,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <dlog.h>
 
 #include "x_define_api_id_list.h"
 
@@ -218,7 +219,7 @@ void feature_code_str(uint64_t feature0, uint64_t feature1, char *to,
 
 	goto exit;
 err_exit:
-	LOGE("Not enought mem to print\n");
+	SWAP_LOGE("Not enought mem to print\n");
 exit:
 	return;
 }
@@ -327,31 +328,31 @@ static int parse_conf(struct msg_buf_t *msg, struct conf_t *conf)
 
 	parse_deb("parse_conf\n");
 	if (!parse_int64(msg, &conf->use_features0)) {
-		LOGE("use features0 error\n");
+		SWAP_LOGE("use features0 error\n");
 		return 0;
 	}
 
 	if (!parse_int64(msg, &conf->use_features1)) {
-		LOGE("use features1 parsing error\n");
+		SWAP_LOGE("use features1 parsing error\n");
 		return 0;
 	}
 	//Check features value
 	if (!check_conf_features(conf->use_features0, conf->use_features1)) {
-		LOGE("check features fail\n");
+		SWAP_LOGE("check features fail\n");
 		return 0;
 	}
 
 	if (!parse_int32( msg, &conf->system_trace_period) ||
 		!check_conf_systrace_period(conf->system_trace_period))
 	{
-		LOGE("system trace period error\n");
+		SWAP_LOGE("system trace period error\n");
 		return 0;
 	}
 
 	if (!parse_int32( msg, &conf->data_message_period) ||
 		!check_conf_datamsg_period(conf->data_message_period))
 	{
-		LOGE("data message period error\n");
+		SWAP_LOGE("data message period error\n");
 		return 0;
 	}
 	//print_conf(conf);
@@ -366,12 +367,12 @@ static int parse_timeval(struct msg_buf_t *msg, struct timeval *tv)
 	parse_deb("time\n");
 
 	if (!parse_int32(msg, (uint32_t *)&tv->tv_sec)) {
-		LOGE("sec parsing error\n");
+		SWAP_LOGE("sec parsing error\n");
 		return 0;
 	}
 
 	if (!parse_int32(msg, &nsec)) {
-		LOGE("usec parsing error\n");
+		SWAP_LOGE("usec parsing error\n");
 		return 0;
 	}
 	tv->tv_usec = nsec / 1000;
@@ -385,30 +386,30 @@ static int parse_replay_event(struct msg_buf_t *msg,
 	uint32_t dummy;
 
 	if (!parse_timeval(msg, &re->ev.time)) {
-		LOGE("time parsing error\n");
+		SWAP_LOGE("time parsing error\n");
 		return 0;
 	}
 
 	if (!parse_int32(msg, &re->id)) {
-		LOGE("id parsing error\n");
+		SWAP_LOGE("id parsing error\n");
 		return 0;
 	}
 
 	/* FIXME ev.type, ev.code should be uint16_t */
 	if (!parse_int32(msg, &dummy)) {
-		LOGE("type parsing error\n");
+		SWAP_LOGE("type parsing error\n");
 		return 0;
 	}
 	re->ev.type = (uint16_t)dummy;
 
 	if (!parse_int32(msg, &dummy)) {
-		LOGE("code parsing error\n");
+		SWAP_LOGE("code parsing error\n");
 		return 0;
 	}
 	re->ev.code = (uint16_t)dummy;
 
 	if (!parse_int32(msg, (uint32_t *)&re->ev.value)) {
-		LOGE("value parsing error\n");
+		SWAP_LOGE("value parsing error\n");
 		return 0;
 	}
 
@@ -430,7 +431,7 @@ int parse_replay_event_seq(struct msg_buf_t *msg,
 	int i = 0;
 	parse_deb("REPLAY\n");
 	if (!parse_int32(msg, &res->enabled)) {
-		LOGE("enabled parsing error\n");
+		SWAP_LOGE("enabled parsing error\n");
 		return 0;
 	}
 
@@ -441,31 +442,31 @@ int parse_replay_event_seq(struct msg_buf_t *msg,
 
 	parse_deb("time main\n");
 	if (!parse_timeval(msg, &res->tv)) {
-		LOGE("time parsing error\n");
+		SWAP_LOGE("time parsing error\n");
 		return 0;
 	}
 
 	parse_deb("count\n");
 	if (!parse_int32(msg, &res->event_num)) {
-		LOGE("event num parsing error\n");
+		SWAP_LOGE("event num parsing error\n");
 		return 0;
 	}
 	parse_deb("events num=%d\n", res->event_num);
 
-	LOGI("Replay events: count = %u; total_size = %u\n",
+	SWAP_LOGI("Replay events: count = %u; total_size = %u\n",
 	     res->event_num, res->event_num * sizeof(*res->events));
 
 	res->events = (struct replay_event_t *)malloc(res->event_num *
 						      sizeof(*res->events));
 	if (!res->events) {
-		LOGE("events alloc error\n");
+		SWAP_LOGE("events alloc error\n");
 		return 0;
 	}
 
 	for (i = 0; i < res->event_num; i++) {
 		parse_deb("sub_rep\n");
 		if (!parse_replay_event(msg, &res->events[i])) {
-			LOGE("event #%d parsing error\n", i + 1);
+			SWAP_LOGE("event #%d parsing error\n", i + 1);
 			free(res->events);
 			res->event_num = 0;
 			return 0;
@@ -481,7 +482,7 @@ static int parse_msg_config(struct msg_buf_t *msg_payload,
 			      struct conf_t *conf)
 {
 	if (!parse_conf(msg_payload, conf)) {
-		LOGE("conf parsing error\n");
+		SWAP_LOGE("conf parsing error\n");
 		return 0;
 	}
 
@@ -558,7 +559,7 @@ static int send_reply(struct msg_t *msg)
 	if (send(manager.host.control_socket,
 		 msg, MSG_CMD_HDR_LEN + msg->len, MSG_NOSIGNAL) == -1) {
 		GETSTRERROR(errno, buf);
-		LOGE("Cannot send reply : %s\n", buf);
+		SWAP_LOGE("Cannot send reply : %s\n", buf);
 		return -1;
 	}
 
@@ -571,11 +572,11 @@ static void write_msg_error(const char *err_str)
 
 	err_msg = gen_message_error(err_str);
 	if (err_msg == NULL) {
-		LOGE("cannot generate error message\n");
+		SWAP_LOGE("cannot generate error message\n");
 		return;
 	}
 	if (write_to_buf(err_msg) != 0)
-		LOGE("write to buf fail\n");
+		SWAP_LOGE("write to buf fail\n");
 	free_msg_data(err_msg);
 }
 
@@ -586,8 +587,8 @@ static enum HostMessageT get_ack_msg_id(const enum HostMessageT id)
 		MSG_ID_LIST
 		#undef X
 	default:
-		LOGW("Unknown message ID [0x%X]\n", id);
-		LOGW("Generated ack ID [0x%X]\n", id | NMSG_ACK_FLAG);
+		SWAP_LOGW("Unknown message ID [0x%X]\n", id);
+		SWAP_LOGW("Generated ack ID [0x%X]\n", id | NMSG_ACK_FLAG);
 		return id | NMSG_ACK_FLAG;
 	}
 }
@@ -604,13 +605,13 @@ int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 	char *p;
 
 	if (manager.host.control_socket == -1) {
-		LOGE("no connection\n");
+		SWAP_LOGE("no connection\n");
 		goto exit;
 	}
 
 	msg = malloc(loglen);
 	if (msg == NULL) {
-		LOGE("Cannot allocates memory for msg\n");
+		SWAP_LOGE("Cannot allocates memory for msg\n");
 		goto exit;
 	}
 	p = msg->payload;
@@ -627,7 +628,7 @@ int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 	if (payload != NULL && payload_size != 0)
 		memcpy(p, payload, payload_size);
 
-	LOGI("ACK (%s) errcode<%s> payload=0x%08X; size=%d\n", msg_ID_str(resp),
+	SWAP_LOGI("ACK (%s) errcode<%s> payload=0x%08X; size=%d\n", msg_ID_str(resp),
 			msgErrStr(err_code), (int)payload, payload_size);
 	printBuf((char *)msg, loglen);
 
@@ -635,7 +636,7 @@ int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 	if (send(manager.host.control_socket, msg,
 		 loglen, MSG_NOSIGNAL) == -1) {
 		GETSTRERROR(errno, buf);
-//		LOGE("Cannot send reply: %s\n", buf);
+//		SWAP_LOGE("Cannot send reply: %s\n", buf);
 //		goto exit_free_msg;
 	}
 
@@ -643,7 +644,7 @@ int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 	if (send(manager.ui_target_server_socket, msg,
 		 loglen, MSG_NOSIGNAL) == -1) {
 		GETSTRERROR(errno, buf);
-//		LOGE("Cannot send reply: %s\n", buf);
+//		SWAP_LOGE("Cannot send reply: %s\n", buf);
 //		goto exit_free_msg;
 	}
 
@@ -664,7 +665,7 @@ static struct msg_t *gen_stop_msg(void)
 		res->id = NMSG_STOP;
 		res->len = 0;
 	} else {
-		LOGE("Cannot allocate memory for struct msg_t\n");
+		SWAP_LOGE("Cannot allocate memory for struct msg_t\n");
 	}
 	return res;
 }
@@ -687,12 +688,12 @@ enum ErrorCode stop_all_no_lock(void)
 		stop_replay();
 
 		if (msg == NULL) {
-			LOGE("cannot generate stop message\n");
+			SWAP_LOGE("cannot generate stop message\n");
 			error_code = ERR_UNKNOWN;
 			goto stop_all_exit;
 		} else {
 			if (ioctl_send_msg(msg) != 0) {
-				LOGE("ioctl send failed\n");
+				SWAP_LOGE("ioctl send failed\n");
 				error_code = ERR_UNKNOWN;
 				free_msg(msg);
 				goto stop_all_exit;
@@ -705,10 +706,10 @@ enum ErrorCode stop_all_no_lock(void)
 		stop_transfer();
 		running_status_off(&prof_session);
 	} else
-		LOGI("already stopped\n");
+		SWAP_LOGI("already stopped\n");
 
 stop_all_exit:
-	LOGI("finished: ret = %d\n", error_code);
+	SWAP_LOGI("finished: ret = %d\n", error_code);
 	return error_code;
 }
 
@@ -822,7 +823,7 @@ static void get_file_md5sum(md5_byte_t digest[16], const char *filename)
 			md5_append(&md5_state, buffer, size);
 		close(fd);
 	} else {
-		LOGW("File does not exists <%s>\n", filename);
+		SWAP_LOGW("File does not exists <%s>\n", filename);
 	}
 
 	md5_finish(&md5_state, digest);
@@ -858,7 +859,7 @@ static struct binary_ack* binary_ack_alloc(const char *filename)
 	char local_bin_path[PATH_MAX];
 
 	if (filename == NULL) {
-		LOGW("request filename is NULL\n");
+		SWAP_LOGW("request filename is NULL\n");
 		goto exit_fail;
 	}
 
@@ -867,7 +868,7 @@ static struct binary_ack* binary_ack_alloc(const char *filename)
 	ba = malloc(sizeof(*ba));
 
 	if (ba == NULL) {
-		LOGE("cannot allocate memory for binary_ack\n");
+		SWAP_LOGE("cannot allocate memory for binary_ack\n");
 		goto exit_fail;
 	}
 
@@ -906,7 +907,7 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 	printBuf(msg->cur_pos, msg->len);
 
 	if (!parse_int32(msg, &bincount)) {
-		LOGE("MSG_BINARY_INFO error: No binaries count\n");
+		SWAP_LOGE("MSG_BINARY_INFO error: No binaries count\n");
 		goto exit_fail;
 	}
 
@@ -916,31 +917,31 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 
 	acks = (struct binary_ack **)malloc(bincount * sizeof(acks[0]));
 	if (acks == NULL) {
-		LOGE("cannon allocate acks\n");
+		SWAP_LOGE("cannon allocate acks\n");
 		goto exit_fail;
 	}
 
 	for (allocated_acks = 0; allocated_acks != bincount; ++allocated_acks) {
 		const char *str = parse_string_inplace(msg);
 		if (!str) {
-			LOGE("MSG_BINARY_INFO error: No enough binaries\n");
+			SWAP_LOGE("MSG_BINARY_INFO error: No enough binaries\n");
 			goto exit_fail_free_ack;
 		}
 		new = binary_ack_alloc(str);
 		/* check for errors */
 		if (new == NULL) {
-			LOGE("cannot create bin info structure\n");
+			SWAP_LOGE("cannot create bin info structure\n");
 			goto exit_fail_free_ack;
 		} else if (new->type == BINARY_TYPE_FILE_NOT_EXIST) {
 			error_code = ERR_WRONG_MESSAGE_DATA;
-			LOGW("binary file not exists <%s>\n", str);
+			SWAP_LOGW("binary file not exists <%s>\n", str);
 		} else if (new->type == BINARY_TYPE_UNKNOWN) {
 			error_code = ERR_WRONG_MESSAGE_DATA;
-			LOGW("binary is not ELF binary <%s>\n", str);
+			SWAP_LOGW("binary is not ELF binary <%s>\n", str);
 		}
 
 		if (new->local_bin_path[0] == '\0')
-			LOGW("section '.debug_str' not found in <%s>\n", str);
+			SWAP_LOGW("section '.debug_str' not found in <%s>\n", str);
 		acks[allocated_acks] = new;
 		total_size += binary_ack_size(new);
 	}
@@ -953,7 +954,7 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 					 + sizeof(binary_ack_count)
 					 + total_size);
 	if (msg_reply == NULL) {
-		LOGE("Cannot allocates memory for msg_reply\n");
+		SWAP_LOGE("Cannot allocates memory for msg_reply\n");
 		goto exit_fail_free_ack;
 	}
 	p = msg_reply->payload;
@@ -1018,29 +1019,29 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 	get_serialized_time(serialized_time);
 
 	if (check_running_status(&prof_session) == 1) {
-		LOGW("Profiling has already been started\n");
+		SWAP_LOGW("Profiling has already been started\n");
 		err_code = ERR_ALREADY_RUNNING;
 		goto send_ack;
 	}
 
 	if (!check_conf(&prof_session.conf)) {
-		LOGE("wrong profile config\n");
+		SWAP_LOGE("wrong profile config\n");
 		goto send_ack;
 	}
 
 	if (msg_start(msg_control, &prof_session.user_space_inst,
 		      &msg_reply, &err_code) != 0) {
-		LOGE("parse error\n");
+		SWAP_LOGE("parse error\n");
 		goto send_ack;
 	}
 
 	if (prepare_profiling() != 0) {
-		LOGE("failed to prepare profiling\n");
+		SWAP_LOGE("failed to prepare profiling\n");
 		goto send_ack;
 	}
 
 	if (start_transfer() != 0) {
-		LOGE("Cannot start transfer\n");
+		SWAP_LOGE("Cannot start transfer\n");
 		goto send_ack;
 	}
 
@@ -1048,27 +1049,28 @@ static int process_msg_start(struct msg_buf_t *msg_control)
 	get_serialized_time(serialized_time);
 
 	if (ioctl_send_msg(msg_reply) != 0) {
-		LOGE("cannot send message to device\n");
+		SWAP_LOGE("cannot send message to device\n");
 		goto send_ack;
 	}
 
 	/* TODO move it back */
 	if (start_replay() != 0) {
-		LOGE("Cannot start replay thread\n");
+		SWAP_LOGE("Cannot start replay thread\n");
 		goto send_ack;
 	}
 
 	running_status_on(&prof_session);
 
 	if (start_profiling() < 0) {
-		LOGE("cannot start profiling\n");
+		SWAP_LOGE("cannot start profiling\n");
 		if (stop_all() != ERR_NO) {
-			LOGE("Stop failed\n");
+			SWAP_LOGE("Stop failed\n");
 			write_msg_error("Stop failed");
 		}
 		goto send_ack;
 	}
 
+	dlog_print(DLOG_DEBUG, "SWAP", "action:", "%s", "Start application");
 	err_code = ERR_NO;
 send_ack:
 	sendACKToHost(NMSG_START, err_code, (void *)&serialized_time,
@@ -1087,7 +1089,7 @@ int send_msg_to_sock(int sock, struct msg_target_t *msg)
 	n = sizeof(struct _msg_target_t) + msg->length;
 	ret = send(sock, msg, n, MSG_NOSIGNAL);
 	if (ret != n) {
-		LOGE("fail to send data to socket(%d) n=%u, ret=%d\n",
+		SWAP_LOGE("fail to send data to socket(%d) n=%u, ret=%d\n",
 		     sock, n, ret);
 		err = 1;
 	}
@@ -1170,7 +1172,7 @@ static char *get_process_cmd_line(uint32_t pid)
 		buf[count] = '\0';
 		close(f);
 	} else {
-		LOGE("file not found <%s>\n", buf);
+		SWAP_LOGE("file not found <%s>\n", buf);
 		buf[0] = '\0';
 	}
 	return strdup(buf);
@@ -1188,7 +1190,7 @@ static int process_msg_get_process_add_info(struct msg_buf_t *msg)
 
 	/* get pid count */
 	if (!parse_int32(msg, &count)) {
-		LOGE("NMSG_GET_PROCESS_ADD_INFO error: No process count\n");
+		SWAP_LOGE("NMSG_GET_PROCESS_ADD_INFO error: No process count\n");
 		err_code = ERR_WRONG_MESSAGE_DATA;
 		goto send_fail;
 	}
@@ -1197,18 +1199,18 @@ static int process_msg_get_process_add_info(struct msg_buf_t *msg)
 	pidarr = malloc(count * sizeof(*pidarr));
 	cmd_line_arr = malloc(count * sizeof(*cmd_line_arr));
 	if (pidarr == NULL) {
-		LOGE("can not alloc pid array (%u)", count);
+		SWAP_LOGE("can not alloc pid array (%u)", count);
 		goto send_fail;
 	}
 	if (cmd_line_arr == NULL) {
-		LOGE("can not alloc cmd line array (%u)", count);
+		SWAP_LOGE("can not alloc cmd line array (%u)", count);
 		goto send_fail;
 	}
 
 	/* parse all pids */
 	for (i = 0; i != count; i++) {
 		if (!parse_int32(msg, &pidarr[i])) {
-			LOGE("can not parse pid #%u", i);
+			SWAP_LOGE("can not parse pid #%u", i);
 			goto send_fail;
 		}
 	}
@@ -1272,16 +1274,16 @@ int process_msg_get_real_path(struct msg_buf_t *msg)
 	/* get file path */
 	file_path = parse_string_inplace(msg);
 	if (file_path == NULL) {
-		LOGE("NMSG_GET_REAL_PATH error: wrong string\n");
+		SWAP_LOGE("NMSG_GET_REAL_PATH error: wrong string\n");
 		err_code = ERR_WRONG_MESSAGE_DATA;
 		goto send_fail;
 	}
 
 	/* resolve file path */
 	resolved_path = realpath(file_path, NULL);
-	LOGI("NMSG_GET_REAL_PATH resolved path <%s>\n", resolved_path);
+	SWAP_LOGI("NMSG_GET_REAL_PATH resolved path <%s>\n", resolved_path);
 	if (resolved_path == NULL) {
-		LOGE("NMSG_GET_REAL_PATH error: cannot resolve path <%s>\n",
+		SWAP_LOGE("NMSG_GET_REAL_PATH error: cannot resolve path <%s>\n",
 		      file_path);
 		err_code = ERR_WRONG_MESSAGE_DATA;
 		goto send_fail;
@@ -1289,7 +1291,7 @@ int process_msg_get_real_path(struct msg_buf_t *msg)
 
 	response_len = strnlen(resolved_path, PATH_MAX) + 1;
 	if (response_len == (PATH_MAX + 1)) {
-		LOGE("NMSG_GET_REAL_PATH error: cannot resolve path <%s>"
+		SWAP_LOGE("NMSG_GET_REAL_PATH error: cannot resolve path <%s>"
 		     "too long path\n", file_path);
 		err_code = ERR_WRONG_MESSAGE_DATA;
 		goto send_fail;
@@ -1327,7 +1329,7 @@ int process_msg_get_target_info()
 					   supported_devices_count));
 
 	if (payload == NULL) {
-		LOGE("Cannot alloc target info msg\n");
+		SWAP_LOGE("Cannot alloc target info msg\n");
 		/* TODO set error out of memory */
 		error_code = ERR_UNKNOWN;
 		goto send_ack;
@@ -1352,7 +1354,7 @@ int process_msg_get_target_info()
 
 send_ack:
 	if (sendACKToHost(NMSG_GET_TARGET_INFO, error_code, payload, payload_len) != 0) {
-		LOGE("Cannot send ACK");
+		SWAP_LOGE("Cannot send ACK");
 		error_code = ERR_UNKNOWN;
 		goto exit;
 	}
@@ -1371,7 +1373,7 @@ static int process_msg_get_ui_hierarchy(struct msg_buf_t *msg)
 
 	// get rendering time option
 	if (!parse_int8(msg, &rendering)) {
-		LOGE("NMSG_GET_UI_HIERARCHY error: No rendering time option\n");
+		SWAP_LOGE("NMSG_GET_UI_HIERARCHY error: No rendering time option\n");
 		err_code = ERR_WRONG_MESSAGE_DATA;
 		goto send_fail;
 	}
@@ -1423,7 +1425,7 @@ static int process_msg_get_ui_screenshot(struct msg_buf_t *msg)
 
 	// get ui object address
 	if (!parse_int64(msg, &obj_id)) {
-		LOGE("NMSG_GET_UI_PROPERTIES error: No object id\n");
+		SWAP_LOGE("NMSG_GET_UI_PROPERTIES error: No object id\n");
 		err_code = ERR_WRONG_MESSAGE_DATA;
 		goto send_fail;
 	}
@@ -1458,7 +1460,7 @@ int host_message_handler(struct msg_t *msg)
 
 	struct msg_target_t sendlog;
 
-	LOGI("MY HANDLE %s (%X)\n", msg_ID_str(msg->id), msg->id);
+	SWAP_LOGI("MY HANDLE %s (%X)\n", msg_ID_str(msg->id), msg->id);
 	init_parse_control(&msg_control, msg);
 
 	switch (msg->id) {
@@ -1474,20 +1476,20 @@ int host_message_handler(struct msg_t *msg)
 	case NMSG_STOP:
 		sendACKToHost(msg->id, ERR_NO, 0, 0);
 		if (stop_all() != ERR_NO) {
-			LOGE("Stop failed\n");
+			SWAP_LOGE("Stop failed\n");
 			write_msg_error("Stop failed");
 		}
 		break;
 	case NMSG_CONFIG:
 //		error_code = ERR_NO;
 		if (!parse_msg_config(&msg_control, &conf)) {
-			LOGE("config parsing error\n");
+			SWAP_LOGE("config parsing error\n");
 			error_code = ERR_WRONG_MESSAGE_FORMAT;
 			goto send_ack;
 		}
 
 		if (reconfigure(conf, &msg_reply, &msg_reply_additional ) != 0) {
-			LOGE("Cannot change configuration\n");
+			SWAP_LOGE("Cannot change configuration\n");
 			error_code = ERR_UNKNOWN;
 			goto send_ack;
 		}
@@ -1506,26 +1508,26 @@ int host_message_handler(struct msg_t *msg)
 		*((uint64_t *)msg->payload) = feature0;
 
 		if (ioctl_send_msg(msg) != 0) {
-			LOGI("send probes\n");
-			LOGE("ioctl send error\n");
+			SWAP_LOGI("send probes\n");
+			SWAP_LOGE("ioctl send error\n");
 			error_code = ERR_UNKNOWN;
 			goto send_ack;
 		}
 
 		if (msg_reply != NULL) {
-			LOGI("send ld preload add probes\n");
+			SWAP_LOGI("send ld preload add probes\n");
 			if (ioctl_send_msg(msg_reply) != 0) {
 				error_code = ERR_UNKNOWN;
-				LOGE("ioclt send error\n");
+				SWAP_LOGE("ioclt send error\n");
 				goto send_ack;
 			}
 		}
 
 		if (msg_reply_additional != NULL) {
-			LOGI("send ld preload remove probes\n");
+			SWAP_LOGI("send ld preload remove probes\n");
 			if (ioctl_send_msg(msg_reply_additional) != 0) {
 				error_code = ERR_UNKNOWN;
-				LOGE("ioclt send error\n");
+				SWAP_LOGE("ioclt send error\n");
 				goto send_ack;
 			}
 		}
@@ -1545,20 +1547,20 @@ int host_message_handler(struct msg_t *msg)
 	case NMSG_SWAP_INST_ADD:
 		if (msg_swap_inst_add(&msg_control, &prof_session.user_space_inst,
 				      &msg_reply, &error_code) != 0) {
-			LOGE("swap inst add\n");
+			SWAP_LOGE("swap inst add\n");
 			goto send_ack;
 		}
 		if (msg_reply != NULL)
 			if (ioctl_send_msg(msg_reply) != 0) {
 				error_code = ERR_UNKNOWN;
-				LOGE("ioclt send error\n");
+				SWAP_LOGE("ioclt send error\n");
 			}
 		//send ack to host
 		goto send_ack;
 	case NMSG_SWAP_INST_REMOVE:
 		if (msg_swap_inst_remove(&msg_control, &prof_session.user_space_inst,
 					 &msg_reply, &error_code) != 0) {
-			LOGE("swap inst remove\n");
+			SWAP_LOGE("swap inst remove\n");
 			error_code = ERR_UNKNOWN;
 			goto send_ack;
 		}
@@ -1584,7 +1586,7 @@ int host_message_handler(struct msg_t *msg)
 	case NMSG_GET_UI_SCREENSHOT:
 		return process_msg_get_ui_screenshot(&msg_control);
 	default:
-		LOGE("unknown message %d <0x%08X>\n", msg->id, msg->id);
+		SWAP_LOGE("unknown message %d <0x%08X>\n", msg->id, msg->id);
 		error_code = ERR_WRONG_MESSAGE_TYPE;
 		msg->id = NMSG_UNKNOWN;
 		goto send_ack;
@@ -1608,10 +1610,10 @@ static void print_conf(struct conf_t *conf)
 	char buf[1024];
 	memset(&buf[0], 0, 1024);
 	feature_code_str(conf->use_features0, conf->use_features1, buf, sizeof(buf));
-	LOGI("conf = \n");
-	LOGI("\tuse_features = 0x%016LX : 0x%016LX \n(\t%s)\n",
+	SWAP_LOGI("conf = \n");
+	SWAP_LOGI("\tuse_features = 0x%016LX : 0x%016LX \n(\t%s)\n",
 	     conf->use_features0, conf->use_features1, buf);
-	LOGI(
+	SWAP_LOGI(
 		 "\tsystem_trace_period = %d ms\n"
 		 "\tdata message period = %d ms\n",
 		 conf->system_trace_period,
@@ -1621,7 +1623,7 @@ static void print_conf(struct conf_t *conf)
 
 void print_replay_event(struct replay_event_t *ev, uint32_t num, char *tab)
 {
-	LOGW("%s\t#%04d:time=0x%08X %08X, "
+	SWAP_LOGW("%s\t#%04d:time=0x%08X %08X, "
 		" id=0x%08X,"
 		" type=0x%08X,"
 		" code=0x%08X,"

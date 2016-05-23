@@ -28,7 +28,8 @@ INCLUDE := \
 	-I/usr/include/efl-1 \
 	-I/usr/include/json-c \
 	-I/usr/include/eo-1 \
-	-I/usr/include/evas-1
+	-I/usr/include/evas-1 \
+	-I/usr/include/dlog
 
 INCLUDE_CPP := \
 	-I. \
@@ -78,7 +79,8 @@ LDFLAGS := \
 	-lcapi-system-info \
 	-lwebsockets \
 	-lparserelf \
-	-ldl
+	-ldl \
+	-ldlog
 
 # CALL_MNGR
 ifeq ($(CALL_MNGR),y)

@@ -39,7 +39,7 @@ static int is_available(const char *path)
 
 	if (system_info_get_platform_bool(path, &res) != SYSTEM_INFO_ERROR_NONE) {
 		/* TODO do something */
-		LOGE("get bool value fail\n");
+		SWAP_LOGE("get bool value fail\n");
 	}
 
 	return res;

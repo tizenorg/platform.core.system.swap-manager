@@ -49,13 +49,13 @@ static FeatureManager *fm = 0;
 extern "C" int fm_init(void)
 {
     if (fm) {
-        LOGE("allredy init\n");
+        SWAP_LOGE("allredy init\n");
         return -EINVAL;
     }
 
     fm = new FeatureManager;
     if (fm->init() != FeatureManager::Ok) {
-        LOGE("init FeatureManager\n");
+        SWAP_LOGE("init FeatureManager\n");
         delete fm;
         fm = 0;
         return -EINVAL;
@@ -67,7 +67,7 @@ extern "C" int fm_init(void)
 extern "C" void fm_uninit(void)
 {
     if (fm == 0) {
-        LOGE("FeatureManager in not init\n");
+        SWAP_LOGE("FeatureManager in not init\n");
         return;
     }
 
@@ -79,7 +79,7 @@ extern "C" void fm_uninit(void)
 extern "C" int fm_start(void)
 {
     if (fm->start() != FeatureManager::Ok) {
-        LOGE("start features\n");
+        SWAP_LOGE("start features\n");
         return -EINVAL;
     }
 
@@ -89,7 +89,7 @@ extern "C" int fm_start(void)
 extern "C" int fm_stop(void)
 {
     if (fm->stop() != FeatureManager::Ok) {
-        LOGE("stop features\n");
+        SWAP_LOGE("stop features\n");
         return -EINVAL;
     }
 
@@ -103,7 +103,7 @@ static uint64_t checkSupportFeatures(uint64_t f, uint64_t fs, size_t offset)
 
         for (int i = 0; diff; diff >>= 1, ++i) {
             if (diff & 1)
-                LOGW("feature[%d] is not support\n", i + offset);
+                SWAP_LOGW("feature[%d] is not support\n", i + offset);
         }
     }
 
@@ -117,7 +117,7 @@ extern "C" int fm_set(uint64_t f0, uint64_t f1)
     const std::string f(u64toString(fSupport1) + u64toString(fSupport0));
 
     if (fm->setFeatures(feature_bs(f)) != FeatureManager::Ok) {
-        LOGE("set features\n");
+        SWAP_LOGE("set features\n");
         return -EINVAL;
     }
 
@@ -149,7 +149,7 @@ extern "C" int fm_app_add(uint32_t app_type, const char *id, const char *path,
 
     int ret = AppInstCont::instance().add(to_apptype(app_type), id, path, ba);
     if (ret)
-        LOGE("add app error, ret=%d\n", ret);
+        SWAP_LOGE("add app error, ret=%d\n", ret);
 
     return ret;
 }

@@ -21,13 +21,13 @@ bool File::isOpen()
 int File::open(const std::string &path)
 {
     if (isOpen()) {
-        LOGE("already open flie '%s'\n", _path.c_str());
+        SWAP_LOGE("already open flie '%s'\n", _path.c_str());
         return -EINVAL;
     }
 
     _f = fopen(path.c_str(), "rb");
     if (_f == 0) {
-        LOGE("Failed to open file %s. Error %d!\n", path.c_str(), errno);
+        SWAP_LOGE("Failed to open file %s. Error %d!\n", path.c_str(), errno);
         return errno;
     }
 

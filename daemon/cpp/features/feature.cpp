@@ -53,13 +53,13 @@ int Feature::init()
     switch (_flag) {
     case F_INIT:
     case F_ENABLE:
-        LOGE("allredy init feature '%s'\n", name().c_str());
+        SWAP_LOGE("allredy init feature '%s'\n", name().c_str());
         return -EINVAL;
 
     case F_UNINIT:
         int ret = doInit();
         if (ret) {
-            LOGE("init feature '%s', err=%d\n", name().c_str(), ret);
+            SWAP_LOGE("init feature '%s', err=%d\n", name().c_str(), ret);
             return ret;
         }
         break;
@@ -77,7 +77,7 @@ int Feature::uninit()
 
     switch (_flag) {
     case F_ENABLE:
-        LOGW("feature '%s' disable\n", name().c_str());
+        SWAP_LOGW("feature '%s' disable\n", name().c_str());
         ret = doDisable();
         if (ret)
             return ret;
@@ -85,13 +85,13 @@ int Feature::uninit()
     case F_INIT:
         ret = doUninit();
         if (ret) {
-            LOGE("uninit feature '%s', ret=%d\n", name().c_str(), ret);
+            SWAP_LOGE("uninit feature '%s', ret=%d\n", name().c_str(), ret);
             return ret;
         }
         break;
 
     case F_UNINIT:
-        LOGE("feature '%s' is not init\n", name().c_str());
+        SWAP_LOGE("feature '%s' is not init\n", name().c_str());
         return -EINVAL;
     }
 
@@ -105,17 +105,17 @@ int Feature::enable()
 
     switch (_flag) {
     case F_UNINIT:
-        LOGE("feature '%s' is not init\n", name().c_str());
+        SWAP_LOGE("feature '%s' is not init\n", name().c_str());
         return -EINVAL;
 
     case F_ENABLE:
-        LOGE("allredy enable feature '%s'\n", name().c_str());
+        SWAP_LOGE("allredy enable feature '%s'\n", name().c_str());
         return -EINVAL;
 
     case F_INIT:
         int ret = doEnable();
         if (ret) {
-            LOGE("enable feature '%s', ret=%d\n", name().c_str(), ret);
+            SWAP_LOGE("enable feature '%s', ret=%d\n", name().c_str(), ret);
             return ret;
         }
     }
@@ -130,17 +130,17 @@ int Feature::disable()
 
     switch (_flag) {
     case F_INIT:
-        LOGE("already disable feature '%s'\n", name().c_str());
+        SWAP_LOGE("already disable feature '%s'\n", name().c_str());
         return -EINVAL;
 
     case F_UNINIT:
-        LOGE("feature '%s' is not init\n", name().c_str());
+        SWAP_LOGE("feature '%s' is not init\n", name().c_str());
         return -EINVAL;
 
     case F_ENABLE:
         int ret = doDisable();
         if (ret) {
-            LOGE("disabe feature '%s', ret=%d\n", name().c_str(), ret);
+            SWAP_LOGE("disabe feature '%s', ret=%d\n", name().c_str(), ret);
             return ret;
         }
     }
