@@ -141,11 +141,12 @@ int remove_indir(const char *dirname)
 int change_user(const char *username)
 {
 	struct passwd *pw;
-	int uid, gid;
+	struct passwd pw_entry;
+	char buf[1024];
+	int uid, gid, err;
 
-
-	pw = getpwnam(username);
-	if (!pw) {
+	err = getpwnam_r(username, &pw_entry, buf, sizeof(buf), &pw);
+	if (err || !pw) {
 		LOGE("user %s is unknown\n", username);
 		return -1;
 	}

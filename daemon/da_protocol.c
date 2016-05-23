@@ -901,7 +901,7 @@ exit_fail:
 
 static int process_msg_binary_info(struct msg_buf_t *msg)
 {
-	int err;
+	int err = -1;
 	uint32_t allocated_acks, i, bincount;
 	enum ErrorCode error_code = ERR_NO;
 
@@ -966,23 +966,20 @@ static int process_msg_binary_info(struct msg_buf_t *msg)
 	pack_int32(p, error_code);
 	pack_int32(p, bincount);
 
-	for (i = 0; i != bincount; ++i) {
+	for (i = 0; i != bincount; ++i)
 		p += binary_ack_pack(p, acks[i]);
-		binary_ack_free(acks[i]);
-	}
 
 	printBuf((char *)msg_reply, msg_reply->len + sizeof(*msg_reply));
 	err = send_reply(msg_reply);
 	free(msg_reply);
 
-	return err;
-
 exit_fail_free_ack:
 	for (i = 0; i < allocated_acks; i++)
 		binary_ack_free(acks[i]);
 	free(acks);
+
 exit_fail:
-	return -1;
+	return err;
 }
 
 static int process_msg_get_probe_map()
