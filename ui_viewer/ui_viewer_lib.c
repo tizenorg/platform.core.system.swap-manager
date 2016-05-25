@@ -221,7 +221,6 @@ static void *recvThread(void __unused *data)
 	fd_set readfds, workfds;
 	int maxfd = 0, rc;
 	uint64_t xtime;
-	uint32_t tmp;
 	ssize_t recvlen;
 	log_t log;
 	char *data_buf = NULL;

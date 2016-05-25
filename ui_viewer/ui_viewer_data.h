@@ -505,7 +505,7 @@ typedef struct _win_prop_t {
 } win_prop_t;
 
 char *pack_string(char *to, const char *str);
-void pack_ui_obj_info_list(FILE *file, enum rendering_option_t rendering,
+void pack_ui_obj_info_list(int file, enum rendering_option_t rendering,
 			    Eina_Bool *cancelled);
 char *pack_ui_obj_screenshot(char *to, Evas_Object *obj);
 enum hierarchy_status_t get_hierarchy_status(void);
@@ -517,43 +517,5 @@ static inline char *pack_int32(char *to, uint32_t val)
 	return to + sizeof(uint32_t);
 }
 
-static inline void write_int8(FILE *file, uint8_t val)
-{
-	fwrite(&val, sizeof(val), 1, file);
-}
-
-static inline void write_int32(FILE *file, uint32_t val)
-{
-	fwrite(&val, sizeof(val), 1, file);
-}
-
-static inline void write_int64(FILE *file, uint64_t val)
-{
-	fwrite(&val, sizeof(val), 1, file);
-}
-
-static inline void write_float(FILE *file, float val)
-{
-	fwrite(&val, sizeof(val), 1, file);
-}
-static inline void write_ptr(FILE *file, const void *val)
-{
-	uint64_t ptr = (uint64_t)(uintptr_t)val;
-
-	fwrite(&ptr, sizeof(ptr), 1, file);
-}
-
-static inline void write_timeval(FILE *file, struct timeval tv)
-{
-	write_int32(file, tv.tv_sec);
-	write_int32(file, tv.tv_usec * 1000);
-}
-
-static inline void write_string(FILE  *file, const char *str)
-{
-	size_t len = strlen(str) + 1;
-
-	fwrite(str, len, 1, file);
-}
 
 #endif /* _UI_VIEWER_DATA_ */
