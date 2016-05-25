@@ -44,7 +44,7 @@
 #include "ui_viewer_data.h"
 
 struct temp_file_t {
-	FILE *file;
+	int file;
 	char *name;
 };
 
@@ -185,15 +185,10 @@ bool print_log_fmt(int msgType, const char *func_name, int line, ...)
 static int tmp_file_open(struct temp_file_t *tmp_file)
 {
 	char template_name[] = TMP_DIR"/swap_ui_viewer_XXXXXX";
-	FILE *file;
 
-	mktemp(template_name);
-	file = fopen(template_name, "w");
-	if (file == NULL)
+	int file = mkstemp(template_name);
+	if (file == -1)
 		return -1;
-
-	if (tmp_file->name != NULL)
-		free(tmp_file->name);
 
 	tmp_file->name = malloc(strlen(template_name) + 1);
 	if (tmp_file->name == NULL)
@@ -206,7 +201,7 @@ static int tmp_file_open(struct temp_file_t *tmp_file)
 	return 0;
 
 tmp_file_open_no_mem:
-	fclose(file);
+	close(file);
 
 	return -ENOMEM;
 }
@@ -214,7 +209,7 @@ tmp_file_open_no_mem:
 static void tmp_file_close(struct temp_file_t *tmp_file)
 {
 	free(tmp_file->name);
-	fclose(tmp_file->file);
+	close(tmp_file->file);
 }
 
 
@@ -274,7 +269,7 @@ void* print_log_ui_viewer_info_list(void *prendering)
 {
 	log_t log;
 	ssize_t res, len;
-	char *log_ptr, *tmp_ptr;
+	char *log_ptr;
 	struct temp_file_t tmp_f;
 	struct timeval start_tv, finish_tv, tv;
 	Eina_Bool rendering, cancelled = EINA_FALSE;
@@ -345,7 +340,8 @@ bool print_log_ui_obj_screenshot(Evas_Object *obj)
 
 void raise_app_window(void)
 {
-	x_raise_win(gPid);
+	/* TODO: Port this to Tizen 3.0 */
+	/* x_raise_win(gPid); */
 }
 
 void ui_viewer_clean_log(void)
