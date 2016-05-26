@@ -1,0 +1,11 @@
+[Unit]
+Description=SWAP chown debugfs files
+
+[Service]
+User=root
+Group=root
+SmackProcessLabel=swap
+PermissionsStartOnly=true
+Type=oneshot
+
+ExecStart=/bin/chown -R system:system /sys/kernel/debug/swap

@@ -95,6 +95,28 @@ $SWAP_BUILD_CONF make
 rm -rf ${RPM_BUILD_ROOT}
 mkdir -p %{buildroot}/usr/share/license
 cp LICENSE %{buildroot}/usr/share/license/%{name}
+
+#systemd
+mkdir -p %{buildroot}%{_libdir}/systemd/system
+
+#tmpfiles.d
+mkdir -p %{buildroot}%{_libdir}/tmpfiles.d
+#udev rules
+mkdir -p %{buildroot}/etc/udev/rules.d
+
+%ifarch %{arm}
+install -m 0644 swap.service %{buildroot}%{_libdir}/systemd/system/swap.service
+install -m 0644 swap.init.service %{buildroot}%{_libdir}/systemd/system/swap.init.service
+install -m 0644 swap.socket %{buildroot}%{_libdir}/systemd/system/swap.socket
+install -m 0666 swap.conf %{buildroot}%{_libdir}/tmpfiles.d/swap.conf
+install -m 0666 99-swap_dev.rules %{buildroot}/etc/udev/rules.d/99-swap_dev.rules
+
+mkdir -p %{buildroot}/%{_libdir}/systemd/system/multi-user.target.wants
+mkdir -p %{buildroot}/%{_libdir}/systemd/system/sockets.target.wants
+
+ln -s %{_libdir}/systemd/system/swap.socket %{buildroot}/%{_libdir}/systemd/system/sockets.target.wants/
+%endif
+
 cd daemon
 %make_install
 
@@ -106,9 +128,29 @@ mkdir -p /opt/usr/etc
 touch /opt/usr/etc/resourced_proc_exclude.ini
 
 %files
+#systemd
+%ifarch %{arm}
+%defattr(-,root,root,-)
+%{_libdir}/systemd/system/swap.init.service
+%{_libdir}/systemd/system/swap.service
+%{_libdir}/systemd/system/swap.socket
+%{_libdir}/tmpfiles.d/swap.conf
+/etc/udev/rules.d
+
+%{_libdir}/systemd/system/sockets.target.wants/swap.socket
+%endif
+
+%defattr(-,developer,developer,-)
 /usr/share/license/%{name}
 %manifest swap-manager.manifest
+
+%ifarch %{arm}
+%defattr(-,system,system,-)
+%else
+
 %defattr(-,root,root,-)
+%endif
+
 %{_prefix}/bin/da_manager
 /opt/swap/sdk/start.sh
 /opt/swap/sdk/stop.sh

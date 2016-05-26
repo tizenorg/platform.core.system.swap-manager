@@ -1,0 +1,10 @@
+[Unit]
+Description=swap
+
+[Service]
+User=system
+Group=system
+SmackProcessLabel=swap
+PermissionsStartOnly=true
+
+ExecStart=/usr/bin/da_manager

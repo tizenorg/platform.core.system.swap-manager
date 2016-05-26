@@ -14,6 +14,16 @@ fi
 
 PATH=$PATH:/usr/sbin/
 
+# swap enable and change access permissions
+/bin/echo "1" > /sys/kernel/debug/swap/enable
+/usr/bin/dbus-send --system --type=method_call --print-reply --dest=org.tizen.system.busactd /Org/Tizen/System/BusActD org.tizen.system.busactd.SystemD.StartUnit string:swap.init.service string:wait
+
+err=$?
+if [ ! $err -eq 0 ];then
+    echo "systemd launch error $err"
+    exit 2
+fi
+
 config_file="/etc/config/model-config.xml"
 if [ -e $config_file ]; then
 	grep -i "feature/container[^>]*>[[:blank:]]*true" "$config_file" > /dev/null
@@ -49,7 +59,7 @@ fi
 
 # TODO add error message on fail
 # swap enebling
-/bin/echo 1 > /sys/kernel/debug/swap/enable
+#/bin/echo 1 > /sys/kernel/debug/swap/enable
 
 # Energy coefficients
 # CPU coefficients are divided by 10^6 because

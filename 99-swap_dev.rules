@@ -1,0 +1,2 @@
+KERNEL=="swap_device", OWNER="system", GROUP="system"
+
