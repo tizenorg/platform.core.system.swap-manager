@@ -54,12 +54,6 @@ int ui_viewer_set_app_info(const struct app_info_t *app_info)
 	int ret = 0, c = 0;
 	uint64_t main_offset;
 
-	if (app_info->setup_data.data == NULL) {
-		LOGE("Setup data path is not correct\n");
-		ret = -EINVAL;
-		goto fail;
-	}
-
 	main_offset = *(uint64_t*)app_info->setup_data.data;
 
 	if (app_info->exe_path == NULL || !strlen(app_info->exe_path)) {

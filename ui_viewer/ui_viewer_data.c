@@ -1392,8 +1392,8 @@ static void pack_ui_obj_prop(int file, Evas_Object *obj, const char *type_name)
 		ui_obj_elm_prop_t elm_prop;
 
 		if (!strcmp(type_name, "elm_pan")) {
-			strcpy(elm_prop.text, "");
-			strcpy(elm_prop.style, "");
+			elm_prop.text[0] = '\0';
+			elm_prop.style[0] = '\0';
 			elm_prop.disabled = 0;
 		} else {
 			_strncpy(elm_prop.text, elm_object_text_get(obj), MAX_TEXT_LENGTH);

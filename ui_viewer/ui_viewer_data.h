@@ -32,6 +32,9 @@
 #define MAX_PATH_LENGTH		256
 #define MAX_TEXT_LENGTH		1024
 
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
 enum ErrorCode {
 	ERR_NO				= 0,	/* success */
 	ERR_ALREADY_RUNNING		= -102,	/* already running */

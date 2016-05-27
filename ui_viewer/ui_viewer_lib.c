@@ -98,7 +98,7 @@ void application_exit()
 	snprintf(buf, sizeof(buf), "/proc/%d/cmdline", gpid);
 	f = fopen(buf, "r");
 	if (f != NULL) {
-		fscanf(f, "%s", buf);
+		fscanf(f, "%" TOSTRING(MAX_PATH_LENGTH) "s", buf);
 		fclose(f);
 		if (strlen(buf) == strlen(manager_name) &&
 		    strncmp(buf, manager_name, sizeof(manager_name)) == 0) {

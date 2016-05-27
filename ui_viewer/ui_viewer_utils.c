@@ -185,16 +185,17 @@ bool print_log_fmt(int msgType, const char *func_name, int line, ...)
 static int tmp_file_open(struct temp_file_t *tmp_file)
 {
 	char template_name[] = TMP_DIR"/swap_ui_viewer_XXXXXX";
+	size_t len = strlen(template_name);
 
 	int file = mkstemp(template_name);
 	if (file == -1)
 		return -1;
 
-	tmp_file->name = malloc(strlen(template_name) + 1);
+	tmp_file->name = malloc(len + 1);
 	if (tmp_file->name == NULL)
 		goto tmp_file_open_no_mem;
 
-	strcpy(tmp_file->name, template_name);
+	strncpy(tmp_file->name, template_name, len + 1);
 
 	tmp_file->file = file;
 
@@ -352,15 +353,16 @@ void ui_viewer_clean_log(void)
 void ui_viewer_log(const char *format, ...)
 {
 	FILE *fp;
-	va_list args;
 
 	pthread_mutex_lock(&log_lock);
 	fp = fopen(log_filename, "a");
-	if (fp == NULL)
-		return;
-	va_start (args, format);
-	vfprintf (fp, format, args);
-	va_end (args);
-	fclose(fp);
+	if (fp) {
+		va_list args;
+
+		va_start (args, format);
+		vfprintf (fp, format, args);
+		va_end (args);
+		fclose(fp);
+	}
 	pthread_mutex_unlock(&log_lock);
 }
