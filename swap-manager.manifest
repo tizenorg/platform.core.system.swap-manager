@@ -10,4 +10,7 @@
 	<request>
 		<domain name="swap" />
 	</request>
+	<assign>
+		<filesystem path="/usr/lib/da_ui_viewer.so" label="_"/>
+	</assign>
 </manifest>

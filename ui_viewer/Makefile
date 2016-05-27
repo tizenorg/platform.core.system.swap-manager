@@ -77,10 +77,11 @@ LDFLAGS := \
 
 
 SRC_C := \
+	wayland-api.c \
 	ui_viewer_lib.c \
 	ui_viewer_utils.c \
 	ui_viewer_data.c \
-#	ui_viewer_screenshot.c
+	ui_viewer_screenshot.c
 
 TARGET = da_ui_viewer.so
 
