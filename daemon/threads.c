@@ -67,7 +67,7 @@ static int chsmack(const char *filename)
 		break;
 	case 0:
 		/* child */
-		snprintf(cmd, sizeof(cmd), "chsmack -a sdbd \"%s\"", filename);
+		snprintf(cmd, sizeof(cmd), "chsmack -a \"*\" \"%s\"", filename);
 		execl(SHELL_CMD, SHELL_CMD, "-c", cmd, NULL);
 
 		/* exec fail */

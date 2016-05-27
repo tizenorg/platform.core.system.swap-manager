@@ -11,7 +11,11 @@ Source:    %{name}_%{version}.tar.gz
 %define NSP_SUPPORT 0
 %define WSP_SUPPORT 0
 %define WSI_SUPPORT 0
+%define WAYLAND_SUPPORT 0
 
+%if "%{_with_wayland}" == "1"
+%define WAYLAND_SUPPORT 1
+%endif # _with_wayland
 
 ExcludeArch: aarch64 x86_64
 BuildRequires: smack-devel
@@ -35,6 +39,12 @@ BuildRequires: swap-probe-devel
 BuildRequires: swap-probe-elf
 BuildRequires: pkgconfig(libtzplatform-config)
 
+# graphic support
+%if %{WAYLAND_SUPPORT}
+BuildRequires: pkgconfig(gles20)
+BuildRequires: pkgconfig(wayland-egl)
+BuildRequires: pkgconfig(egl)
+%endif
 
 %define NSP_SUPPORT 1
 # FIXME: add WSP_SUPPORT wrt webkit2-efl and webkit2-efl-debuginfo
@@ -53,6 +63,10 @@ This binary will be installed in target.
 %setup -q -n %{name}_%{version}
 
 %build
+%if %{WSI_SUPPORT}
+export WAYLAND_SUPPORT=y
+%endif
+
 pushd scripts
 echo "__tizen_profile_name__="%{?tizen_profile_name} > dyn_vars
 echo "__tizen_product_tv__="%{?TIZEN_PRODUCT_TV} >> dyn_vars

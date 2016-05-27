@@ -1705,6 +1705,7 @@ static void pack_ui_obj_prop(int file, Evas_Object *obj, const char *type_name)
 		index_prop.omit_enabled = elm_index_omit_enabled_get(obj);
 		/* TODO: Port this to Tizen 3.0 */
 		/* index_prop.priority = elm_index_priority_get(obj); */
+		index_prop.priority = 0;
 		index_prop.horizontal = elm_index_horizontal_get(obj);
 		index_prop.change_time = elm_index_delay_change_time_get(obj);
 		index_prop.indicator_disabled = elm_index_indicator_disabled_get(obj);
@@ -1943,12 +1944,7 @@ char *pack_ui_obj_screenshot(char *to, Evas_Object *obj)
 		evas_object_ref(obj);
 		evas = evas_object_evas_get(obj);
 		evas_event_freeze(evas);
-		/* win_id = _get_win_id(evas); */
-		/* win_focus = elm_win_focus_get(win_id); */
-
-		/* if (win_focus || _get_shot_in_bg(obj)) */
-		/* 	ui_viewer_capture_screen(screenshot, obj); */
-		/* else */
+		if (ui_viewer_capture_screen(screenshot, obj) != 0)
 			err_code = ERR_UI_OBJ_SCREENSHOT_FAILED;
 		evas_event_thaw(evas);
 		evas_object_unref(obj);
