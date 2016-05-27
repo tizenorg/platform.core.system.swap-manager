@@ -1705,6 +1705,7 @@ static void pack_ui_obj_prop(int file, Evas_Object *obj, const char *type_name)
 		index_prop.omit_enabled = elm_index_omit_enabled_get(obj);
 		/* TODO: Port this to Tizen 3.0 */
 		/* index_prop.priority = elm_index_priority_get(obj); */
+		index_prop.priority = 0;
 		index_prop.horizontal = elm_index_horizontal_get(obj);
 		index_prop.change_time = elm_index_delay_change_time_get(obj);
 		index_prop.indicator_disabled = elm_index_indicator_disabled_get(obj);
