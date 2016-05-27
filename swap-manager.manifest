@@ -2,4 +2,7 @@
 	<request>
 		<domain name="_" />
 	</request>
+	<assign>
+		<filesystem path="/usr/lib/da_ui_viewer.so" label="_"/>
+	</assign>
 </manifest>
