@@ -150,6 +150,12 @@ static int createSocket(void)
 				if (recvlen > 0) {
 					char *data_buf = NULL;
 
+					if (log.length < 0 ||
+					    (unsigned int)log.length > sizeof(log.data)) {
+						PRINTERR("Too long message");
+						continue;
+					}
+
 					data_buf = malloc(log.length);
 
 					if (data_buf == NULL) {
@@ -276,7 +282,8 @@ static void *recvThread(void __unused *data)
 			if(recvlen > 0)	// recv succeed
 			{
 
-				if(log.length > 0) {
+				if (log.length > 0 &&
+				    (unsigned int)log.length <= sizeof(log.data)) {
 					data_buf = malloc(log.length);
 					if (data_buf == NULL) {
 						PRINTERR("cannot allocate buf to recv msg");
