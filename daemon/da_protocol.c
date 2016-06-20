@@ -49,6 +49,7 @@
 #include "md5.h"
 #include "da_data.h"
 #include "wsi.h"
+#include "cpp/benchmark/Benchmark.h"
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -623,7 +624,7 @@ int sendACKToHost(enum HostMessageT resp, enum ErrorCode err_code,
 	//set return id
 	pack_int32(p, err);
 	//copy payload data
-	memcpy(p, payload, payload_size);
+		memcpy(p, payload, payload_size);
 
 	LOGI("ACK (%s) errcode<%s> payload=0x%08X; size=%d\n", msg_ID_str(resp),
 			msgErrStr(err_code), (int)payload, payload_size);
@@ -1140,6 +1141,51 @@ static int process_msg_get_screenshot(struct msg_buf_t *msg_control)
 	return -(err_code != ERR_NO);
 }
 
+static int process_msg_get_benchmark(struct msg_buf_t *msg_control)
+{
+	enum ErrorCode error_code = ERR_NO;
+	uint32_t payload_len = 0;
+	char *payload;
+	char *p = NULL;
+	SystemBenchmark benchmark;
+	
+
+	payload = malloc(100);
+
+	if (payload == NULL) {
+		LOGE("Cannot alloc target info msg\n");
+		/* TODO set error out of memory */
+		error_code = ERR_UNKNOWN;
+		goto send_ack;
+	}
+
+	performBenchmark(&benchmark)
+	
+
+	p = payload;
+
+	pack_int64(p, benchmark.avg_syscall_overhead);
+//	pack_int64(p, benchmark.sys_mem_size);
+//	pack_int32(p, target_info.bluetooth_supp);
+//	pack_str(p, target_info.network_type);
+//	p = pack_str_array(p, supported_devices_strings,
+//			   supported_devices_count);
+
+	payload_len = p - payload;
+
+send_ack:
+	if (sendACKToHost(NMSG_GET_BENCHMARK, error_code, payload, payload_len) != 0) {
+		LOGE("Cannot send ACK");
+		error_code = ERR_UNKNOWN;
+		goto exit;
+	}
+
+exit:
+	free(payload);
+
+	return -(error_code != ERR_NO);
+}
+
 static char *get_process_cmd_line(uint32_t pid)
 {
 	char buf[MAX_FILENAME];
@@ -1570,6 +1616,8 @@ int host_message_handler(struct msg_t *msg)
 		return process_msg_get_ui_hierarchy_cancel();
 	case NMSG_GET_UI_SCREENSHOT:
 		return process_msg_get_ui_screenshot(&msg_control);
+	case NMSG_GET_BENCHMARK:
+		return process_msg_get_benchmark(&msg_control);
 	default:
 		LOGE("unknown message %d <0x%08X>\n", msg->id, msg->id);
 		error_code = ERR_WRONG_MESSAGE_TYPE;

@@ -126,7 +126,9 @@ SRC_CPP := \
 	cpp/inst/Anr.cpp \
 \
 	cpp/elf/File.cpp \
-	cpp/elf/FileElf.cpp
+	cpp/elf/FileElf.cpp \
+\
+	cpp/benchmark/Benchmark.cpp
 
 TARGET = da_manager
 DASCRIPT = da_command
