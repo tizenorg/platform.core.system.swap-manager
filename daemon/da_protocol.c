@@ -1147,7 +1147,7 @@ static int process_msg_get_benchmark(struct msg_buf_t *msg_control)
 	uint32_t payload_len = 0;
 	char *payload;
 	char *p = NULL;
-	SystemBenchmark benchmark;
+	struct SystemBenchmark benchmark;
 	
 
 	payload = malloc(100);
@@ -1159,8 +1159,7 @@ static int process_msg_get_benchmark(struct msg_buf_t *msg_control)
 		goto send_ack;
 	}
 
-	performBenchmark(&benchmark)
-	
+	performBenchmark(&benchmark);
 
 	p = payload;
 
