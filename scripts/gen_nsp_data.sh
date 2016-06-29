@@ -45,6 +45,19 @@ else
 fi
 check_null_or_exit dpath_app_core_efl
 
+
+# get libcapi-appfw-application.so path
+path_capi_appfw_application=$(rpm -ql capi-appfw-application  | grep libcapi-appfw-application | head -1)
+check_null_or_exit path_capi_appfw_application
+
+# get libcapi-appfw-application.so debug_path
+if [ "$__tizen_product_tv__" == "1" ]; then
+	dpath_capi_appfw_application=$path_app_core_efl
+else
+	dpath_capi_appfw_application=$(rpm -ql capi-appfw-application-debuginfo | grep "libcapi-appfw-application\.so.*\.debug$" | head -1)
+fi
+check_null_or_exit dpath_capi_appfw_application
+
 # get launchpad path
 if [ "$__tizen_product_2_4_wearable__" == "1" ]; then
 	path_launchpad=$(rpm -ql launchpad-loader | grep launchpad-loader | head -1)
@@ -53,39 +66,34 @@ else
 	path_launchpad=$(rpm -ql launchpad | grep launchpad-loader | head -1)
 	path_launchpad=${path_launchpad:-$(rpm -ql launchpad | grep launchpad-process-pool | head -1)}
 fi
-
-
 check_null_or_exit path_launchpad
 
 
-# get appcore_efl_main addr
-addr_appcore_efl_main=$(parse_elf ${path_app_core_efl} -s appcore_efl_main)
-check_null_or_exit addr_appcore_efl_main
+# get appcore_efl_init addr
+addr_appcore_efl_init=$(parse_elf ${dpath_app_core_efl} -s appcore_efl_init)
+check_null_or_exit addr_appcore_efl_init
 
 # get __do_app addr
 addr_do_app=$(parse_elf ${dpath_app_core_efl} -s __do_app)
 check_null_or_exit addr_do_app
 
-
-tmp=$(mktemp)
-
-# libappcore-efl.so
-addr_appcore_init_plt=$(parse_elf $path_app_core_efl -r appcore_init)
-addr_elm_run_plt=$(parse_elf $path_app_core_efl -r elm_run)
-
+# libcapi-appfw-application.so
+addr_appcore_init=$(parse_elf $dpath_capi_appfw_application -s ui_app_init)
+addr_elm_run_plt=$(parse_elf $path_capi_appfw_application -r elm_run)
 
 # PLT
 addr_dlopen_plt=0
 addr_dlsym_plt=0
-addr_appcore_init_plt=${addr_appcore_init_plt:-0}
 addr_elm_run_plt=${addr_elm_run_plt:-0}
 
 # libappcore-efl
 PATH_LIBAPPCORE_EFL=$(gen_define_str PATH_LIBAPPCORE_EFL $path_app_core_efl)
-ADDR_APPCORE_EFL_MAIN=$(gen_define ADDR_APPCORE_EFL_MAIN 0x$addr_appcore_efl_main)
-ADDR_APPCORE_INIT_PLT=$(gen_define ADDR_APPCORE_INIT_PLT 0x$addr_appcore_init_plt)
-ADDR_ELM_RUN_PLT=$(gen_define ADDR_ELM_RUN_PLT 0x$addr_elm_run_plt)
+ADDR_APPCORE_EFL_INIT=$(gen_define ADDR_APPCORE_EFL_INIT 0x$addr_appcore_efl_init)
 ADDR_DO_APP=$(gen_define ADDR_DO_APP 0x$addr_do_app)
+
+PATH_LIBCAPI_APPFW_APPLICATION=$(gen_define_str PATH_LIBCAPI_APPFW_APPLICATION $path_capi_appfw_application)
+ADDR_APPCORE_INIT=$(gen_define ADDR_APPCORE_INIT 0x$addr_appcore_init)
+ADDR_ELM_RUN_PLT=$(gen_define ADDR_ELM_RUN_PLT 0x$addr_elm_run_plt)
 
 # launchpad
 PATH_LAUNCHPAD=$(gen_define_str PATH_LAUNCHPAD $path_launchpad)
@@ -96,9 +104,10 @@ ADDR_DLSYM_PLT_LPAD=$(gen_define ADDR_DLSYM_PLT_LPAD 0x$addr_dlsym_plt)
 NSP_DEFINES="
 /* libappcore-efl */
 $PATH_LIBAPPCORE_EFL
-$ADDR_APPCORE_EFL_MAIN
+$ADDR_APPCORE_EFL_INIT
 $ADDR_DO_APP
-$ADDR_APPCORE_INIT_PLT
+$PATH_LIBCAPI_APPFW_APPLICATION
+$ADDR_APPCORE_INIT
 $ADDR_ELM_RUN_PLT
 
 /* launchpad */

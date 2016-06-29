@@ -126,18 +126,9 @@ static uint32_t getAddrPlt(const char *path, const char *name)
 
 static int initLibAppCore()
 {
-    uint32_t appcoreInitAddr = ADDR_APPCORE_INIT_PLT ?
-                                ADDR_APPCORE_INIT_PLT :
-                                getAddrPlt(PATH_LIBAPPCORE_EFL, "appcore_init");
-
-    if (appcoreInitAddr == 0) {
-        LOGE("not found 'appcore_init@plt' addr in '%s'\n", PATH_LIBAPPCORE_EFL);
-        return -EINVAL;
-    }
-
     uint32_t elmRunAddr = ADDR_ELM_RUN_PLT ?
                             ADDR_ELM_RUN_PLT :
-                            getAddrPlt(PATH_LIBAPPCORE_EFL, "elm_run");
+                            getAddrPlt(PATH_LIBCAPI_APPFW_APPLICATION, "elm_run");
 
     if (elmRunAddr == 0) {
         LOGE("not found 'elm_run@plt' addr in '%s'\n", PATH_LIBAPPCORE_EFL);
@@ -147,11 +138,12 @@ static int initLibAppCore()
 
     /* cmd: "l appcore_efl_main:__do_app:appcore_init@plt:elm_run@plt:lib_path" */
     std::string cmd = "l "
-                    + addr2hex(ADDR_APPCORE_EFL_MAIN) + ":"
+                    + addr2hex(ADDR_APPCORE_EFL_INIT) + ":"
                     + addr2hex(ADDR_DO_APP) + ":"
-                    + addr2hex(appcoreInitAddr) + ":"
+                    + PATH_LIBAPPCORE_EFL + " "
+                    + addr2hex(ADDR_APPCORE_INIT) + ":"
                     + addr2hex(elmRunAddr) + ":"
-                    + PATH_LIBAPPCORE_EFL;
+                    + PATH_LIBCAPI_APPFW_APPLICATION;
 
     int ret = write_to_file(path_cmd, cmd);
     if (ret < 0) {
