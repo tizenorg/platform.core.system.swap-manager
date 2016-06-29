@@ -29,11 +29,13 @@ BuildRequires: pkgconfig(json-c)
 BuildRequires: pkgconfig(ecore)
 BuildRequires: launchpad
 BuildRequires: app-core-efl
+BuildRequires: capi-appfw-application
 BuildRequires: libwayland-egl
 BuildRequires:  evas-devel
 BuildRequires:  elementary-devel
 %if "%{TIZEN_PRODUCT_TV}" != "1"
 BuildRequires: app-core-efl-debuginfo
+BuildRequires: capi-appfw-application-debuginfo
 %endif
 BuildRequires: swap-probe-devel
 BuildRequires: swap-probe-elf
