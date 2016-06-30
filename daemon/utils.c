@@ -263,7 +263,7 @@ int exec_app_web(const char *app_id)
 
 	LOGI("wrt-launcher path is %s,\n"
 	     "wrt-launcher name (%s), app_id (%s)\n",
-	     WRT_LAUNCHER_PATH, WRT_LAUNCHER_NAME, app_id);
+	     APP_LAUNCHER_PATH, APP_LAUNCHER_NAME, app_id);
 
 	pid = fork();
 	if (pid == -1)
@@ -277,24 +277,24 @@ int exec_app_web(const char *app_id)
 		return 0;
 	} else { /* child */
 		char *web_argv_with_profile[] = {
-			WRT_LAUNCHER_NAME,
+			APP_LAUNCHER_NAME,
+			"-w"
 			"-s",
-			"-k",
 			(char *)app_id,
 			NULL
 		};
 		char *web_argv[] = {
-			WRT_LAUNCHER_NAME,
+			APP_LAUNCHER_NAME,
 			"-s",
 			(char *)app_id,
 			NULL
 		};
 
 		if (is_feature_enabled(FL_WEB_PROFILING))
-			exec_with_user(EXEC_USER, WRT_LAUNCHER_PATH,
+			exec_with_user(EXEC_USER, APP_LAUNCHER_PATH,
 				       web_argv_with_profile);
 		else
-			exec_with_user(EXEC_USER, WRT_LAUNCHER_PATH, web_argv);
+			exec_with_user(EXEC_USER, APP_LAUNCHER_PATH, web_argv);
 	}
 
 	return 0;
@@ -306,7 +306,7 @@ void kill_app_web(const char *app_id)
 
 	LOGI("wrt-launcher path is %s,\n"
 	     "wrt-launcher name (%s), app_id (%s)\n",
-	     WRT_LAUNCHER_PATH, WRT_LAUNCHER_NAME, app_id);
+	     APP_LAUNCHER_PATH, APP_LAUNCHER_NAME, app_id);
 
 	pid = fork();
 	if (pid == -1)
@@ -319,9 +319,9 @@ void kill_app_web(const char *app_id)
 		while (ret == -1 && errno == EINTR);
 		return;
 	} else { /* child */
-		execl(WRT_LAUNCHER_PATH,
-		      WRT_LAUNCHER_NAME,
-		      WRT_LAUNCHER_KILL,
+		execl(APP_LAUNCHER_PATH,
+		      APP_LAUNCHER_NAME,
+		      "-k",
 		      app_id,
 		      NULL);
 		/* FIXME: If code flows here, it deserves greater attention */
