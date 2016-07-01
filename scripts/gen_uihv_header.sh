@@ -7,8 +7,10 @@ output=$1
 function print_header()
 {
     filename=$1
-    echo -e "#!/bin/bash\n"\
-            "#Preload\n" > $filename
+    echo "#!/bin/bash
+#Preload
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+" > $filename
 }
 
 function print_ui_viewer_lib()

@@ -1,5 +1,7 @@
 #!/bin/sh
 
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+
 # swap disabling
 /bin/echo 0 > /sys/kernel/debug/swap/enable
 

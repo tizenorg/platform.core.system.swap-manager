@@ -15,8 +15,10 @@ output=$1
 function print_header()
 {
     filename=$1
-    echo -e "#!/bin/bash\n"\
-            "#Loader\n" > $filename
+    echo "#!/bin/bash
+#Loader
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+" > $filename
 }
 
 function print_loader()
