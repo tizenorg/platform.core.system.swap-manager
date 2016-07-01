@@ -1,5 +1,7 @@
 #!/bin/sh
 
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+
 #ERROR CODES
 ERR_CONTAINER_NOT_SUPPORTED=1
 ERR_NO=0
@@ -12,7 +14,6 @@ if [ "$1" != "" ];then
     exit $1
 fi
 
-PATH=$PATH:/usr/sbin/
 
 config_file="/etc/config/model-config.xml"
 if [ -e $config_file ]; then

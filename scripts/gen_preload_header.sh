@@ -11,7 +11,8 @@ function print_header()
 {
     filename=$1
     echo -e "#!/bin/bash\n"\
-            "#Preload\n" > $filename
+            "#Preload\n"\
+	    "PATH=/bin:/usr/bin:/sbin:/usr/sbin\n" > $filename
 }
 
 function print_probe_lib()
