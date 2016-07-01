@@ -45,17 +45,16 @@ else
 fi
 check_null_or_exit dpath_app_core_efl
 
-
-# get libcapi-appfw-application.so path
-path_capi_appfw_application=$(rpm -ql capi-appfw-application  | grep libcapi-appfw-application | head -1)
-check_null_or_exit path_capi_appfw_application
-
 # get libcapi-appfw-application.so debug_path
 if [ "$__tizen_product_tv__" == "1" ]; then
+        path_capi_appfw_application=$path_app_core_efl
 	dpath_capi_appfw_application=$path_app_core_efl
 else
+	# get libcapi-appfw-application.so path
+	path_capi_appfw_application=$(rpm -ql capi-appfw-application  | grep libcapi-appfw-application | head -1)
 	dpath_capi_appfw_application=$(rpm -ql capi-appfw-application-debuginfo | grep "libcapi-appfw-application\.so.*\.debug$" | head -1)
 fi
+check_null_or_exit path_capi_appfw_application
 check_null_or_exit dpath_capi_appfw_application
 
 # get launchpad path
@@ -78,7 +77,12 @@ addr_do_app=$(parse_elf ${dpath_app_core_efl} -s __do_app)
 check_null_or_exit addr_do_app
 
 # libcapi-appfw-application.so
+if [ "$__tizen_product_tv__" == "1" ]; then
+addr_appcore_init=$(parse_elf $dpath_capi_appfw_application -r appcore_init)
+addr_appcore_init=${addr_appcore_init_plt:-0}
+else
 addr_appcore_init=$(parse_elf $dpath_capi_appfw_application -s ui_app_init)
+fi
 addr_elm_run_plt=$(parse_elf $path_capi_appfw_application -r elm_run)
 
 # PLT

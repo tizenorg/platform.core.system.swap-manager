@@ -126,6 +126,14 @@ static uint32_t getAddrPlt(const char *path, const char *name)
 
 static int initLibAppCore()
 {
+   uint32_t appcoreInitAddr = ADDR_APPCORE_INIT ?
+                              ADDR_APPCORE_INIT :
+                              getAddrPlt(PATH_LIBAPPCORE_EFL, "appcore_init");
+   if (appcoreInitAddr == 0) {
+       LOGE("not found 'appcore_init@plt' addr in '%s'\n", PATH_LIBAPPCORE_EFL);
+       return -EINVAL;
+   }
+
     uint32_t elmRunAddr = ADDR_ELM_RUN_PLT ?
                             ADDR_ELM_RUN_PLT :
                             getAddrPlt(PATH_LIBCAPI_APPFW_APPLICATION, "elm_run");
@@ -141,7 +149,7 @@ static int initLibAppCore()
                     + addr2hex(ADDR_APPCORE_EFL_INIT) + ":"
                     + addr2hex(ADDR_DO_APP) + ":"
                     + PATH_LIBAPPCORE_EFL + " "
-                    + addr2hex(ADDR_APPCORE_INIT) + ":"
+                    + addr2hex(appcoreInitAddr) + ":"
                     + addr2hex(elmRunAddr) + ":"
                     + PATH_LIBCAPI_APPFW_APPLICATION;
 
