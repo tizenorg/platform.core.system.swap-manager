@@ -161,6 +161,7 @@ ifeq ($(WSP_SUPPORT),y)
 	bash $(WSP_SCRIPT) -s > $@
 else # WSP_SUPPORT
 	echo "#!/bin/bash" > $@
+	echo "PATH=/bin:/usr/bin:/sbin:/usr/sbin" >> $@
 	echo "echo \"Do not init WSP!\" " >> $@
 endif # WSP_SUPPORT
 
