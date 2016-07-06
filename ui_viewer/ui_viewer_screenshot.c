@@ -405,7 +405,7 @@ finish:
 		 screenshotIndex);
 
 	if (evas_object_image_save(img, dstpath, NULL, "compress=5") != 0) {
-		strcpy(screenshot_path, dstpath);
+		strncpy(screenshot_path, dstpath, MAX_PATH_LENGTH);
 	} else {
 		ui_viewer_log("ERROR: capture_object : can't save image\n");
 		ret = -1;
