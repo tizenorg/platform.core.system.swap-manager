@@ -38,16 +38,31 @@
 #include <Elementary.h>
 
 #include <wayland-client.h>
-#include "wayland-api.h"
+#include <wayland-tbm-client.h>
+#include <tbm_bufmgr.h>
+#include <tbm_surface.h>
+#include <tbm_surface_internal.h>
+#include <tizen-extension-client-protocol.h>
+#include <screenshooter-client-protocol.h>
 
 #include "ui_viewer_utils.h"
 
-#define MAX_HEIGHT		720
-#define CAPTURE_TIMEOUT		2.0
+//#define MAX_HEIGHT		720
+//#define CAPTURE_TIMEOUT		2.0
 #define MAX_PATH_LENGTH		256
 
 static int screenshotIndex = 0;
 static pthread_mutex_t captureScreenLock = PTHREAD_MUTEX_INITIALIZER;
+
+struct efl_data {
+	struct wl_display *wl_display;
+	struct wl_registry *wl_registry;
+	struct screenshooter *screenshooter;
+	struct wl_list output_list;
+	int min_x, min_y, max_x, max_y;
+	int buffer_copy_done;
+	int width, height;
+};
 
 struct screenshot_data {
 	struct wl_shm *shm;
@@ -113,7 +128,7 @@ static void
 screenshot_done(void *data,
 		struct screenshooter __attribute__((unused)) *screenshooter)
 {
-	struct screenshot_data *sdata = data;
+	struct efl_data *sdata = data;
 	sdata->buffer_copy_done = 1;
 }
 
@@ -126,7 +141,7 @@ handle_global(void *data, struct wl_registry *registry,
 	      uint32_t name, const char *interface,
 	      uint32_t __attribute__((unused)) version)
 {
-	struct screenshot_data *sdata = data;
+	struct efl_data *sdata = data;
 
 	if (strcmp(interface, "wl_output") == 0) {
 		struct screenshooter_output *output = malloc(sizeof(*output));
@@ -140,13 +155,13 @@ handle_global(void *data, struct wl_registry *registry,
 			wl_output_add_listener(output->output,
 					       &output_listener, output);
 		}
-	} else if (strcmp(interface, "wl_shm") == 0) {
-		sdata->shm = wl_registry_bind(registry, name,
-					      &wl_shm_interface, 1);
 	} else if (strcmp(interface, "screenshooter") == 0) {
 		sdata->screenshooter = wl_registry_bind(registry, name,
 						 &screenshooter_interface,
 						 1);
+		screenshooter_add_listener(sdata->screenshooter,
+					   &screenshooter_listener,
+					   sdata);
 	}
 }
 
@@ -155,122 +170,32 @@ static const struct wl_registry_listener registry_listener = {
 	NULL
 };
 
-static struct wl_buffer *create_shm_buffer(struct wl_shm *shm, int width,
-					   int height, void **data_out)
+static struct efl_data *__edata = NULL;
+
+void wayland_deinit(void)
 {
-	char filename[] = "/tmp/wayland-shm-XXXXXX";
-	struct wl_shm_pool *pool;
-	struct wl_buffer *buffer;
-	int fd, size, stride;
-	void *data;
-
-	stride = width * 4;
-	size = stride * height;
-
-	fd = mkstemp(filename);
-	if (fd < 0)
-		return NULL;
-
-	if (ftruncate(fd, size) < 0) {
-		close(fd);
-		return NULL;
-	}
-
-	data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	unlink(filename);
-
-	if (data == MAP_FAILED) {
-		close(fd);
-		return NULL;
-	}
-
-	pool = wl_shm_create_pool(shm, fd, size);
-	close(fd);
-	buffer = wl_shm_pool_create_buffer(pool, 0, width, height, stride,
-					   WL_SHM_FORMAT_XRGB8888);
-	wl_shm_pool_destroy(pool);
-	*data_out = data;
-
-	return buffer;
-}
-
-static void *__screenshot_to_buf(struct screenshot_data *sdata, int x, int y,
-				 int width, int height)
-{
-	int dest_stride, src_stride, i;
-	void *data, *dest, *src;
 	struct screenshooter_output *output, *next;
-	dest_stride = width * 4;
 
-	data = malloc(width * height * 4);
-	if (!data)
-		return NULL;
+	if (!__edata)
+		return;
 
-	wl_list_for_each_safe(output, next, &sdata->output_list, link) {
-		src_stride = output->width * 4;
-		dest = data;
-		if (y + height <= output->height) {
-			src = output->data + y * src_stride + x * 4;
-
-			for (i = 0; i < height; i++) {
-				memcpy(dest, src, dest_stride);
-				dest += dest_stride;
-				src += src_stride;
-			}
-		} else {
-			PRINTERR("Cannot get screenshot. wrong height."
-				 "src_height=%d [y=%d, h=%d]", output->height,
-				 y, height);
-			memset(dest, 0xab, height * width * 4);
-		}
-
-		wl_list_remove(&output->link);
+	wl_list_for_each_safe(output, next, &__edata->output_list, link)
 		free(output);
-	}
 
-	return data;
+	wl_registry_destroy(__edata->wl_registry);
+	wl_display_disconnect(__edata->wl_display);
+	free(__edata);
 }
 
-static int
-set_buffer_size(struct screenshot_data *sdata, int *width, int *height)
-{
-	struct screenshooter_output *output;
-
-	sdata->min_x = sdata->min_y = INT_MAX;
-	sdata->max_x = sdata->max_y = INT_MIN;
-	int position = 0;
-
-	wl_list_for_each_reverse(output, &sdata->output_list, link) {
-		output->offset_x = position;
-		position += output->width;
-	}
-
-	wl_list_for_each(output, &sdata->output_list, link) {
-		sdata->min_x = MIN(sdata->min_x, output->offset_x);
-		sdata->min_y = MIN(sdata->min_y, output->offset_y);
-		sdata->max_x = MAX(sdata->max_x,
-				   output->offset_x + output->width);
-		sdata->max_y = MAX(sdata->max_y,
-				   output->offset_y + output->height);
-	}
-
-	if (sdata->max_x <= sdata->min_x || sdata->max_y <= sdata->min_y)
-		return -1;
-
-	*width = sdata->max_x - sdata->min_x;
-	*height = sdata->max_y - sdata->min_y;
-
-	return 0;
-}
-
-static void *__capture_screnshot_wayland(int x, int y, int width, int height)
+static struct efl_data *__wayland_init(void)
 {
 	struct wl_display *display = NULL;
 	struct wl_registry *registry;
-	struct screenshooter_output *output;
-	void *buf = NULL;
-	struct screenshot_data *sdata;
+	struct efl_data *data;
 	const char *wayland_socket = NULL;
+
+	if (__edata)
+		return __edata;
 
 	wayland_socket = getenv("WAYLAND_SOCKET");
 	if (!wayland_socket)
@@ -281,62 +206,181 @@ static void *__capture_screnshot_wayland(int x, int y, int width, int height)
 		return NULL;
 	}
 
-	sdata = malloc(sizeof(*sdata));
-	if (!sdata)
+	data = malloc(sizeof(*data));
+	if (!data)
 		return NULL;
 
-	sdata->shm = NULL;
-	sdata->screenshooter = NULL;
-	wl_list_init(&sdata->output_list);
-	sdata->min_x = 0;
-	sdata->min_y = 0;
-	sdata->max_x = 0;
-	sdata->max_y = 0;
-	sdata->buffer_copy_done = 0;
+	data->screenshooter = NULL;
+	wl_list_init(&data->output_list);
+	data->min_x = 0;
+	data->min_y = 0;
+	data->max_x = 0;
+	data->max_y = 0;
+	data->buffer_copy_done = 0;
 
 	display = wl_display_connect(wayland_socket);
-	if (display == NULL)
-		goto out;
+	if (display == NULL) {
+		fprintf(stderr, "failed to create display: %m\n");
+		goto fail;
+	}
+	data->wl_display = display;
 
 	/* wl_list_init(&output_list); */
 	registry = wl_display_get_registry(display);
-	wl_registry_add_listener(registry, &registry_listener, sdata);
+	wl_registry_add_listener(registry, &registry_listener, data);
 	wl_display_dispatch(display);
 	wl_display_roundtrip(display);
 
-	if (sdata->screenshooter == NULL) {
-		PRINTERR("display doesn't support screenshooter");
+	data->wl_registry = registry;
+
+	__edata = data;
+
+	return data;
+fail:
+	free(data);
+	return NULL;
+}
+
+static void  __set_buffer_size(struct efl_data *data)
+{
+	struct screenshooter_output *output;
+
+	data->min_x = data->min_y = INT_MAX;
+	data->max_x = data->max_y = INT_MIN;
+	int position = 0;
+
+	wl_list_for_each_reverse(output, &data->output_list, link) {
+		output->offset_x = position;
+		position += output->width;
+	}
+
+	wl_list_for_each(output, &data->output_list, link) {
+		data->min_x = MIN(data->min_x, output->offset_x);
+		data->min_y = MIN(data->min_y, output->offset_y);
+		data->max_x = MAX(data->max_x, output->offset_x + output->width);
+		data->max_y = MAX(data->max_y, output->offset_y + output->height);
+	}
+
+	if (data->max_x <= data->min_x || data->max_y <= data->min_y) {
+		data->width = 0;
+		data->height = 0;
+	} else {
+		data->width = data->max_x - data->min_x;
+		data->height = data->max_y - data->min_y;
+	}
+}
+
+static void *__tbm_surface_to_buf(unsigned char *src, uint32_t src_stride,
+				  uint32_t src_size, int x, int y,
+				  int width, int height)
+{
+	int dest_stride;
+	void *data, *dest;
+	uint32_t dest_size, n;
+
+	dest_stride = width * 4;
+	dest_size = dest_stride * height;
+
+	if (dest_size > src_size)
+		return NULL;
+
+	data = malloc(dest_size);
+	if (!data)
+		return NULL;
+
+	dest = data;
+	src = src + y * src_stride + x * 4;
+
+	n = 0;
+	while (n < dest_size) {
+		memcpy(dest, src, dest_stride);
+		n += dest_stride;
+	        dest += dest_stride;
+		src += src_stride;
+	}
+
+	return data;
+}
+
+static void *__capture_screnshot_wayland(int x, int y, int width, int height)
+{
+	struct screenshooter_output *output;
+	struct efl_data *data;
+	tbm_surface_h t_surface;
+	struct wl_buffer *buffer;
+	struct wayland_tbm_client *tbm_client;
+	tbm_surface_info_s tsuri;
+	int plane_idx = 0;
+	int err;
+	void *buf = NULL;
+
+	data =  __wayland_init();
+	if (!data) {
+		PRINTERR("failed to init wayland protocol\n");
 		return NULL;
 	}
 
-	screenshooter_add_listener(sdata->screenshooter,
-				   &screenshooter_listener, sdata);
-
-	int buf_width, buf_height;
-	if (set_buffer_size(sdata, &buf_width, &buf_height))
+	if (!data->screenshooter) {
+		PRINTERR("display doesn't support screenshooter\n");
 		return NULL;
+	}
 
-	wl_list_for_each(output, &sdata->output_list, link) {
-		output->buffer = create_shm_buffer(sdata->shm, output->width,
-						   output->height,
-						   &output->data);
-		screenshooter_shoot(sdata->screenshooter, output->output,
-				    output->buffer);
-		sdata->buffer_copy_done = 0;
-		while (!sdata->buffer_copy_done) {
-			wl_display_roundtrip(display);
+	__set_buffer_size(data);
+
+	tbm_client = wayland_tbm_client_init(data->wl_display);
+	if (!tbm_client) {
+		PRINTERR("failed to init tbm client\n");
+		return NULL;
+	}
+
+	t_surface = tbm_surface_create(data->width, data->height, TBM_FORMAT_XRGB8888);
+	if (!t_surface) {
+		PRINTERR("failed to create tbm_surface\n");
+		goto fail_tbm_client;
+	}
+
+	buffer = wayland_tbm_client_create_buffer(tbm_client, t_surface);
+	if (!buffer) {
+		PRINTERR("failed to create wl_buffer for screenshot\n");
+		goto fail_tbm_surface;
+	}
+
+	wl_list_for_each(output, &data->output_list, link) {
+		screenshooter_shoot(data->screenshooter,
+					   output->output,
+					   buffer);
+		data->buffer_copy_done = 0;
+		while (!data->buffer_copy_done) {
+			wl_display_roundtrip(data->wl_display);
 		}
 	}
 
-	buf = __screenshot_to_buf(sdata, x, y, width, height);
+	err = tbm_surface_map(t_surface,
+			      TBM_SURF_OPTION_READ | TBM_SURF_OPTION_WRITE,
+			      &tsuri);
+	if (err != TBM_SURFACE_ERROR_NONE) {
+		PRINTERR("failed to map tbm_surface\n");
+		goto fail_map_surface;
+	}
 
-out:
-	if (display)
-		wl_display_disconnect(display);
-	free(sdata);
+        buf = __tbm_surface_to_buf(tsuri.planes[plane_idx].ptr,
+				   tsuri.planes[plane_idx].stride,
+				   tsuri.planes[plane_idx].size,
+				   x, y, width, height);
+
+	tbm_surface_unmap(t_surface);
+
+fail_map_surface:
+	wayland_tbm_client_destroy_buffer(tbm_client, buffer);
+
+fail_tbm_surface:
+	tbm_surface_destroy(t_surface);
+
+fail_tbm_client:
+	wayland_tbm_client_deinit(tbm_client);
+
 	return buf;
 }
-
 static int capture_object(char *screenshot_path, int width, int height,
 			  Evas_Object *obj, const char *type_name)
 {

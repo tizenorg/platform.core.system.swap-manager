@@ -40,6 +40,7 @@
 #include "ui_viewer_lib.h"
 #include "ui_viewer_utils.h"
 #include "ui_viewer_data.h"
+#include "ui_viewer_screenshot.h"
 
 static const char socket_name[] = "/tmp/da_ui.socket";
 
@@ -69,6 +70,8 @@ __attribute__((destructor)) void finite_ui_viewer (void)
 
 	if (gTraceInfo.socket.daemonSock != -1)
 		close(gTraceInfo.socket.daemonSock);
+
+	wayland_deinit();
 }
 
 static int create_recv_thread(void)
