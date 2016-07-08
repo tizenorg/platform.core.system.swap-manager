@@ -38,6 +38,8 @@ INCLUDE := \
 	-I/usr/include/dbus-1.0 \
 	-I/usr/lib/dbus-1.0/include
 
+INCLUDE += -I/usr/include/wayland-extension
+
 WARN_CFLAGS = -g                        \
                 -Wall                   \
                 -funwind-tables         \
@@ -75,9 +77,18 @@ LDFLAGS := \
 	-lelementary \
 	-ldl
 
+LDFLAGS+=-lecore			\
+	 -levas				\
+	 -ltizen-extension-client	\
+	 -ltbm				\
+	 -leina				\
+	 -lecore_wayland		\
+	 -lwayland-client		\
+	 -lwayland-tbm-client 		\
+	 -lcapi-base-common		\
+	 -lscreenshooter-client
 
 SRC_C := \
-	wayland-api.c \
 	ui_viewer_lib.c \
 	ui_viewer_utils.c \
 	ui_viewer_data.c \
