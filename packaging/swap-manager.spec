@@ -46,6 +46,12 @@ BuildRequires: pkgconfig(libtzplatform-config)
 BuildRequires: pkgconfig(gles20)
 BuildRequires: pkgconfig(wayland-egl)
 BuildRequires: pkgconfig(egl)
+BuildRequires: pkgconfig(wayland-server)
+BuildRequires: pkgconfig(wayland-tbm-client)
+BuildRequires: pkgconfig(screenshooter-client)
+BuildRequires: pkgconfig(ecore-wayland)
+BuildRequires: pkgconfig(wayland-client) >= 1.0.0
+BuildRequires: pkgconfig(tizen-extension-client)
 %endif
 
 %define NSP_SUPPORT 1
