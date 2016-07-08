@@ -36,7 +36,8 @@ INCLUDE := \
 	-I/usr/include/ethumb-1 \
 	-I/usr/include/e_dbus-1 \
 	-I/usr/include/dbus-1.0 \
-	-I/usr/lib/dbus-1.0/include
+	-I/usr/lib/dbus-1.0/include \
+	-I/usr/include/wayland-extension
 
 WARN_CFLAGS = -g                        \
                 -Wall                   \
@@ -73,11 +74,17 @@ LDFLAGS := \
 	-lecore \
 	-levas \
 	-lelementary \
-	-ldl
-
+	-ldl \
+	-ltizen-extension-client \
+	-ltbm \
+	-leina \
+	-lecore_wayland \
+	-lwayland-client \
+	-lwayland-tbm-client \
+	-lcapi-base-common \
+	-lscreenshooter-client
 
 SRC_C := \
-	wayland-api.c \
 	ui_viewer_lib.c \
 	ui_viewer_utils.c \
 	ui_viewer_data.c \
