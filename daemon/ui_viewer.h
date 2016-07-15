@@ -30,7 +30,7 @@
 
 #include "da_inst.h"
 
-int ui_viewer_set_smack_rules(const struct app_info_t *app_info);
-int ui_viewer_set_app_info(const struct app_info_t *app_info);
+int ui_viewer_enable(const struct app_info_t *app_info);
+int ui_viewer_disable(void);
 
 #endif /* UI_VIEWER_H_ */

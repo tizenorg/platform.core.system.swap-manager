@@ -214,6 +214,7 @@ static int kill_app_by_info(const struct app_info_t *app_info)
 
 	switch (app_info->app_type) {
 	case APP_TYPE_TIZEN:
+		ui_viewer_disable();
 		res = kill_app(app_info->exe_path);
 		break;
 	case APP_TYPE_RUNNING:
@@ -248,14 +249,8 @@ static int exec_app(const struct app_info_t *app_info)
 	switch (app_info->app_type) {
 	case APP_TYPE_TIZEN:
 		if (is_feature_enabled(FL_UI_VIEWER_PROFILING)) {
-			if (ui_viewer_set_smack_rules(app_info)) {
-				LOGE("Cannot set smack rules for ui viewer\n");
-				res = -1;
-			}
-			if (ui_viewer_set_app_info(app_info)) {
-				LOGE("Cannot set app info for ui viewer\n");
-				res = -1;
-			}
+			if (ui_viewer_enable(app_info))
+				LOGE("Failed to enabled UI viewer profiling\n");
 		}
 		if (access(ui_viewer_log, F_OK) != -1) {
 			remove(ui_viewer_log);

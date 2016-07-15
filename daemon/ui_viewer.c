@@ -27,6 +27,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <errno.h>
 
@@ -35,7 +36,7 @@
 #include "swap_debug.h"
 #include "smack.h"
 
-int ui_viewer_set_smack_rules(const struct app_info_t *app_info)
+static int ui_viewer_set_smack_rules(const struct app_info_t *app_info)
 {
 	const char OBJECT[] = "swap";
 	const char ACCESS_TYPE[] = "r";
@@ -46,7 +47,7 @@ int ui_viewer_set_smack_rules(const struct app_info_t *app_info)
 	return ret;
 }
 
-int ui_viewer_set_app_info(const struct app_info_t *app_info)
+static int ui_viewer_set_app_info(const struct app_info_t *app_info)
 {
 	const char APP_INFO_FILE[] =
 		"/sys/kernel/debug/swap/uihv/app_info";
@@ -77,4 +78,54 @@ int ui_viewer_set_app_info(const struct app_info_t *app_info)
 	}
 fail:
 	return ret;
+}
+
+static int ui_viewer_ctrl(bool enable)
+{
+	const char UI_ENABLE_FILE[] =
+		"/sys/kernel/debug/swap/uihv/enable";
+	FILE *fp;
+	int ret = 0, c = 0;
+
+	fp = fopen(UI_ENABLE_FILE, "w");
+	if (fp != NULL) {
+		c = fprintf(fp, "%d\n", enable ? 1 : 0);
+		if (c < 0) {
+			LOGE("Can't write to file: %s\n", UI_ENABLE_FILE);
+			ret = -EIO;
+		}
+		fclose(fp);
+	} else {
+		LOGE("Can't open file: %s\n", UI_ENABLE_FILE);
+		ret = -ENOENT;
+	}
+
+	return ret;
+}
+
+int ui_viewer_enable(const struct app_info_t *app_info)
+{
+	int ret = 0;
+
+	if (ui_viewer_set_smack_rules(app_info)) {
+		LOGE("Cannot set smack rules for ui viewer\n");
+		ret = -1;
+		goto out;
+	}
+
+	if (ui_viewer_set_app_info(app_info)) {
+		LOGE("Cannot set app info for ui viewer\n");
+		ret = -1;
+		goto out;
+	}
+
+	ret = ui_viewer_ctrl(true);
+
+out:
+	return ret;
+}
+
+int ui_viewer_disable(void)
+{
+	return ui_viewer_ctrl(false);
 }
